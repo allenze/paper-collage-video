@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "scene1-shelter-source",
+  "capability": "image",
+  "output": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-source.png",
+  "prompt": "Use case: illustration-story. Asset type: complete registered source master for scene 01 of a Chinese paper-collage animation. Use the approved snail-on-leaf image only as the exact identity, material, palette, paper-fiber, edge, and lighting reference. Recompose exactly one matching warm-beige right-facing snail on a low horizontal ochre-brown torn-paper ground patch; place exactly one matching long crimson autumn leaf above it as a protective sloping roof, with the curved stem on the left and pointed tip on the right. Keep a clearly readable air gap between leaf and snail; the leaf must not merge with or crop the two separated eye stalks. Add a thin darker ochre foreground ground lip that overlaps only the lowest edge of the snail foot, making the on-ground support relationship readable. The snail keeps exactly two separated long eye stalks, one compact continuous foot, one ochre-gold shell, and exactly one dark-brown spiral. The red leaf keeps its complete long silhouette, pale central vein, crimson body, short left stem, and sharp right tip. Side profile, wide 16:9 arrangement, cluster centered slightly left and in the lower middle with generous margin on every side. Tactile hand-torn paper collage with visible natural fibers, restrained deckled edges, warm elegant autumn storybook palette, and soft upper-left lighting within the paper pieces. Background must be one perfectly uniform flat chroma green #00FF00 edge to edge, with no texture, gradient, shadow, floor plane, scenery, water, plants, typography, border, signature, or watermark. Do not use green in any subject. No extra eyes, stalks, shells, limbs, leaves, ground objects, or decorative elements. Do not crop any eye stalk, shell, leaf tip, leaf stem, or ground edge.",
+  "compositionBinding": {
+    "sceneId": "scene-01",
+    "nodeId": "ground-snail-rig",
+    "pattern": "supported-subject",
+    "registrationId": "scene1-shelter-style-01",
+    "sourceMasterAssetId": "scene1-shelter-master",
+    "outputRole": "provider-source-master",
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "derivation": {
+      "method": "provider-generation"
+    }
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": [
+      "story-icons",
+      "snail-topology"
+    ],
+    "generationFamily": {
+      "familyId": "last-red-leaf-icons-01",
+      "memberIds": [
+        "snail",
+        "red-leaf"
+      ],
+      "referenceAssetIds": [
+        "style-leaf-snail-master"
+      ]
+    }
+  },
+  "quality": {
+    "kind": "image",
+    "requiredChecks": [
+      "no-text",
+      "no-watermark",
+      "subject-complete",
+      "identity-distinct-within-frame",
+      "identity-family-consistent",
+      "cross-scene-identity-continuity",
+      "silhouette-fidelity",
+      "negative-space-clean",
+      "background-leak-free",
+      "background-uniform",
+      "edge-clean",
+      "style-consistent"
+    ]
+  }
+}

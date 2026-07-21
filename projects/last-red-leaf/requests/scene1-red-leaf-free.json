@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "scene1-red-leaf-free",
+  "capability": "image",
+  "output": "public/projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png",
+  "prompt": "Derive the complete crimson leaf roof from scene1-shelter-master without redrawing; preserve exact canvas registration, both visible paper layers, left stem, pale vein, pointed right tip and transparent surroundings.",
+  "compositionBinding": {
+    "sceneId": "scene-01",
+    "nodeId": "scene1-red-leaf-free",
+    "pattern": "free",
+    "sourceMasterAssetId": "scene1-shelter-master",
+    "outputRole": "free-leaf-roof",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "mask-application", "parentAssetId": "scene1-shelter-master"}
+  },
+  "semanticBinding": {
+    "riskClass": "identity-critical",
+    "contractIds": ["story-icons"],
+    "generationFamily": {
+      "familyId": "last-red-leaf-icons-01",
+      "memberIds": ["red-leaf"],
+      "referenceAssetIds": ["style-leaf-snail-master"]
+    }
+  },
+  "quality": {"kind": "prop", "requiredChecks": ["subject-complete", "identity-consistent", "identity-family-consistent", "cross-scene-identity-continuity", "edge-clean", "style-consistent"]}
+}

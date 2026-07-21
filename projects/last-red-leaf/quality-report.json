@@ -1,0 +1,3017 @@
+{
+  "$schema": "../../schemas/quality-report.schema.json",
+  "schemaVersion": 2,
+  "projectSlug": "last-red-leaf",
+  "updatedAt": "2026-07-21T17:18:02.183Z",
+  "cueEvents": [
+    {
+      "sceneId": "scene-01",
+      "cueId": "s1-establish-autumn",
+      "beatId": "s1-b1-establish-autumn",
+      "targetId": "puddle-environment",
+      "action": "reveal",
+      "localFrame": 28,
+      "absoluteFrame": 28,
+      "seconds": 0.9333333333333333,
+      "proofTimeId": "s1-proof-establish",
+      "sound": null
+    },
+    {
+      "sceneId": "scene-01",
+      "cueId": "s1-reveal-puddle",
+      "beatId": "s1-b2-reveal-puddle",
+      "targetId": "ground-snail-rig",
+      "action": "pulse",
+      "localFrame": 112,
+      "absoluteFrame": 112,
+      "seconds": 3.7333333333333334,
+      "proofTimeId": null,
+      "sound": null
+    },
+    {
+      "sceneId": "scene-01",
+      "cueId": "s1-wind-arrives",
+      "beatId": "s1-b3-wind-arrives",
+      "targetId": "wind-lines-free",
+      "action": "shake",
+      "localFrame": 203,
+      "absoluteFrame": 203,
+      "seconds": 6.766666666666667,
+      "proofTimeId": "s1-proof-wind-shelter",
+      "sound": "projects/last-red-leaf/audio/sfx/cold-wind-gust.wav"
+    },
+    {
+      "sceneId": "scene-01",
+      "cueId": "s1-shelter-holds",
+      "beatId": "s1-b4-shelter-holds",
+      "targetId": "scene-01-tableau",
+      "action": "settle",
+      "localFrame": 294,
+      "absoluteFrame": 294,
+      "seconds": 9.8,
+      "proofTimeId": "s1-proof-final",
+      "sound": "projects/last-red-leaf/audio/sfx/leaf-rustle.wav"
+    },
+    {
+      "sceneId": "scene-02",
+      "cueId": "s2-leaf-lifts",
+      "beatId": "s2-b1-leaf-lifts",
+      "targetId": "leaf-boat-rig",
+      "action": "lift",
+      "localFrame": 35,
+      "absoluteFrame": 377,
+      "seconds": 12.566666666666666,
+      "proofTimeId": "s2-proof-leaf-landing",
+      "sound": "projects/last-red-leaf/audio/sfx/strong-wind-gust.wav"
+    },
+    {
+      "sceneId": "scene-02",
+      "cueId": "s2-leaf-lands",
+      "beatId": "s2-b2-leaf-lands",
+      "targetId": "leaf-boat-rig",
+      "action": "settle",
+      "localFrame": 133,
+      "absoluteFrame": 475,
+      "seconds": 15.833333333333334,
+      "proofTimeId": "s2-proof-leaf-landing",
+      "sound": "projects/last-red-leaf/audio/sfx/soft-leaf-splash.wav"
+    },
+    {
+      "sceneId": "scene-02",
+      "cueId": "s2-snail-boards",
+      "beatId": "s2-b3-snail-boards",
+      "targetId": "snail-subject",
+      "action": "lift",
+      "localFrame": 230,
+      "absoluteFrame": 572,
+      "seconds": 19.066666666666666,
+      "proofTimeId": "s2-proof-snail-aboard",
+      "sound": null
+    },
+    {
+      "sceneId": "scene-02",
+      "cueId": "s2-crossing",
+      "beatId": "s2-b4-crossing",
+      "targetId": "leaf-boat-rig",
+      "action": "lift",
+      "localFrame": 318,
+      "absoluteFrame": 660,
+      "seconds": 22,
+      "proofTimeId": null,
+      "sound": null
+    },
+    {
+      "sceneId": "scene-02",
+      "cueId": "s2-warm-arrival",
+      "beatId": "s2-b5-warm-arrival",
+      "targetId": "leaf-boat-rig",
+      "action": "settle",
+      "localFrame": 398,
+      "absoluteFrame": 740,
+      "seconds": 24.666666666666668,
+      "proofTimeId": "s2-proof-final",
+      "sound": null
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "bank-upper",
+      "file": "public/projects/last-red-leaf/assets/style/bank-upper.png",
+      "kind": "environment",
+      "sources": [
+        "scene:scene-01:node:bank-upper",
+        "scene:scene-02:node:bank-upper",
+        "manifest:bank-upper"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "shore-water-boundary"
+        ]
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "edge-clean"
+      ],
+      "semanticContractFingerprints": {
+        "shore-water-boundary": "1341676ab665534de5eae6af03493fdbddb26f19afcffb14df1f069c8c2da7e4"
+      },
+      "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+      "fingerprint": "5e27c185590d907fc8edae2a4ed73f96f6724d2192eaa856c7c7fa2e3c611fa5",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 113421
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "edge-clean": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "完整岸线与芦苇轮廓在原分辨率证据和跨时刻证明中连续，无文字、泄漏或裁切。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/bank-upper-alpha.png",
+          "sha256": "f31c36958af13bcd49337708ec8faf0b7788cf0bfaa48c45f3a2a0561ffe34f8"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/bank-upper-checkerboard.png",
+          "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/bank-upper-tight.png",
+          "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/bank-upper-motion-stress.jpg",
+          "sha256": "f787f52dbbb9505a871bd5bb1adee16510de16f5b1e6ad6c2d2a3ca6b8fb531f"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "water-lower",
+      "file": "public/projects/last-red-leaf/assets/style/water-lower.png",
+      "kind": "environment",
+      "sources": [
+        "scene:scene-01:node:water-lower",
+        "scene:scene-02:node:water-lower",
+        "manifest:water-lower"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "shore-water-boundary"
+        ]
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "edge-clean"
+      ],
+      "semanticContractFingerprints": {
+        "shore-water-boundary": "1341676ab665534de5eae6af03493fdbddb26f19afcffb14df1f069c8c2da7e4"
+      },
+      "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+      "fingerprint": "5e27c185590d907fc8edae2a4ed73f96f6724d2192eaa856c7c7fa2e3c611fa5",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 113421
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "edge-clean": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "水面分层和暖色光路完整，边缘与岸线注册一致。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/water-lower-alpha.png",
+          "sha256": "f31c36958af13bcd49337708ec8faf0b7788cf0bfaa48c45f3a2a0561ffe34f8"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/water-lower-checkerboard.png",
+          "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/water-lower-tight.png",
+          "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/water-lower-motion-stress.jpg",
+          "sha256": "f787f52dbbb9505a871bd5bb1adee16510de16f5b1e6ad6c2d2a3ca6b8fb531f"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "scene1-ground-rear",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-ground-rear.png",
+      "kind": "prop",
+      "sources": [
+        "scene:scene-01:node:scene1-ground-rear",
+        "manifest:scene1-ground-rear"
+      ],
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "edge-clean"
+      ],
+      "semanticContractFingerprints": {},
+      "sha256": "d28f4173cf0902022853a2e8ab7607ed2cb949a63d814f35afb32c904b46a643",
+      "fingerprint": "15b75b71e3a835e24648d8b7bf9dd567d630f6418d0f5c71d843cf920feb4a06",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 1029765
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "edge-clean": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "后地面保留自然纸缘并在蜗牛下形成连续承托，无矩形切边。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/scene1/scene1-ground-rear.png",
+          "sha256": "d28f4173cf0902022853a2e8ab7607ed2cb949a63d814f35afb32c904b46a643"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "scene1-snail-subject",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-snail-subject.png",
+      "kind": "character",
+      "sources": [
+        "scene:scene-01:node:snail-subject",
+        "manifest:scene1-snail-subject"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "subject-complete",
+        "identity-consistent",
+        "edge-clean",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "identity-family-consistent",
+        "cross-scene-identity-continuity"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed",
+        "snail-topology": "1929d26376b9196adc9e2fdd1e9a08f5fa6d91e66ca5b3bae4ae6d34551e7d37"
+      },
+      "sha256": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1",
+      "fingerprint": "bc18f92ee858ca34c409cd0f00bf96fecdd1f02029afbac4477b2b5a3d35567a",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 1029053
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          }
+        ]
+      },
+      "semanticChecks": {
+        "subject-complete": "passed",
+        "identity-consistent": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "identity-family-consistent": "passed",
+        "cross-scene-identity-continuity": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "两根眼柄、单枚螺旋壳和连续腹足完整；与第二幕同角色在配色、朝向和纸张语言上连续。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/scene1/scene1-snail-subject.png",
+          "sha256": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "scene1-ground-front",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-ground-front.png",
+      "kind": "prop",
+      "sources": [
+        "scene:scene-01:node:scene1-ground-front",
+        "manifest:scene1-ground-front"
+      ],
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "edge-clean"
+      ],
+      "semanticContractFingerprints": {},
+      "sha256": "f87e1a9089216f3621602ea64db40f54353b29e5adf4c4b50bc8c6e6d825d7d0",
+      "fingerprint": "de5452ea9b9776ddb957ae6f1beb64069f547a9b94e76891862d0416e1f10d59",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 1029025
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "edge-clean": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "弧形前景压边追随原始地面轮廓，修复了首轮证明中的竖直矩形切口。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/scene1/scene1-ground-front.png",
+          "sha256": "f87e1a9089216f3621602ea64db40f54353b29e5adf4c4b50bc8c6e6d825d7d0"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "scene1-red-leaf-free",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png",
+      "kind": "prop",
+      "sources": [
+        "scene:scene-01:node:scene1-red-leaf-free",
+        "manifest:scene1-red-leaf-free"
+      ],
+      "semanticBinding": {
+        "riskClass": "identity-critical",
+        "contractIds": [
+          "story-icons"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "subject-complete",
+        "identity-consistent",
+        "identity-family-consistent",
+        "cross-scene-identity-continuity",
+        "edge-clean",
+        "style-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed"
+      },
+      "sha256": "7ed3d70501dd167a18a363a43ac14ea2004937897d3368ee1b3ef27a0e27e002",
+      "fingerprint": "44efc3a35ffd48544117da784beeab9c3997ff6c67d441934fd79a7375a8fa5c",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 1026470
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          }
+        ]
+      },
+      "semanticChecks": {
+        "subject-complete": "passed",
+        "identity-consistent": "passed",
+        "identity-family-consistent": "passed",
+        "cross-scene-identity-continuity": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "朱红叶片、浅色主叶脉、弯曲叶柄和尖长叶端完整，并与第二幕船形红叶保持同一身份。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png",
+          "sha256": "7ed3d70501dd167a18a363a43ac14ea2004937897d3368ee1b3ef27a0e27e002"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "wind-lines",
+      "file": "public/projects/last-red-leaf/assets/style/wind-lines.png",
+      "kind": "decorative",
+      "sources": [
+        "scene:scene-01:node:wind-lines",
+        "scene:scene-02:node:wind-lines",
+        "manifest:wind-lines"
+      ],
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "requiredChecks": [
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "edge-clean"
+      ],
+      "semanticContractFingerprints": {},
+      "sha256": "61bf38a76fbec2765da0a5f880a216919499dbec7f5003939b86f1f9323a1979",
+      "fingerprint": "300964b92996d8c5febb948206b1f678f3e3308996e412a6496c3f4130e2a725",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 27135
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "style-consistent": "passed",
+        "edge-clean": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "风线在关键帧中方向清楚、不过度遮挡角色，且保持纸拼贴线条语言。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/style/wind-lines.png",
+          "sha256": "61bf38a76fbec2765da0a5f880a216919499dbec7f5003939b86f1f9323a1979"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-wind-shelter.png",
+          "sha256": "580cd61ebf985de8e4a59fc799d84cece2ab17a78ea75a5643638aed929883da"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "leaf-boat-rear",
+      "file": "public/projects/last-red-leaf/assets/style/leaf-boat-rear.png",
+      "kind": "prop",
+      "sources": [
+        "scene:scene-02:node:leaf-boat-rear",
+        "manifest:leaf-boat-rear"
+      ],
+      "semanticBinding": {
+        "riskClass": "identity-critical",
+        "contractIds": [
+          "story-icons"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "subject-complete",
+        "edge-clean",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "identity-distinct-within-frame",
+        "identity-family-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed"
+      },
+      "sha256": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+      "fingerprint": "10d18ed32391fb77030802dbc1bcce28f829aa87e6c178198d2ecb21318a8374",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 467107
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          }
+        ]
+      },
+      "semanticChecks": {
+        "subject-complete": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "叶船后层完整、与蜗牛可一眼区分，移动后轮廓和负空间保持稳定。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-alpha.png",
+          "sha256": "586713749b4b894fb76a7d1fd9ab28601e29366ff5b61b94e0154fe3ead38d02"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-checkerboard.png",
+          "sha256": "31db788ff24f3cac0c44837bea7655bf7be6f44375766bd10db07d868c858f1d"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-tight.png",
+          "sha256": "915f2679c657f73e277b9da1f25dc389e5e6ad1fe408b6efb0568874ebadcc5d"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-motion-stress.jpg",
+          "sha256": "4bbe4d61ea7fb4e5fde3b9251d42b2cbdd5f79365997eb790339c6c67123b358"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "snail-subject",
+      "file": "public/projects/last-red-leaf/assets/style/snail-subject.png",
+      "kind": "character",
+      "sources": [
+        "scene:scene-02:node:snail-subject",
+        "manifest:snail-subject"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "subject-complete",
+        "identity-consistent",
+        "edge-clean",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "identity-distinct-within-frame",
+        "identity-family-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed",
+        "snail-topology": "1929d26376b9196adc9e2fdd1e9a08f5fa6d91e66ca5b3bae4ae6d34551e7d37"
+      },
+      "sha256": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188",
+      "fingerprint": "f273fdbd245fcde432208b3a97d6f395ad312a7ce4ae9d381cf93e73084d128c",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 295791
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          }
+        ]
+      },
+      "semanticChecks": {
+        "subject-complete": "passed",
+        "identity-consistent": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "第二幕蜗牛的眼柄间隙、腹足和单壳螺旋均完整，移动应力证据无背景携带。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/snail-subject-alpha.png",
+          "sha256": "508d480953d146b66bde4bcfc2aa2d839b400f59ad0b74639cce978d0a13e94d"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/snail-subject-checkerboard.png",
+          "sha256": "f192dce003ff0ceea584229d63e797e7f336f0608b61a5d38f09a9f24fe814a7"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/snail-subject-tight.png",
+          "sha256": "8c398c4b93cc30d62d3d8fb03b929b25ee9c0fc99e4286c545f3cf865ff5b156"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/snail-subject-motion-stress.jpg",
+          "sha256": "db825ebfcb9e0a38661278ae3e1fa1d5699ff57e1f73ead5816dcd61a45e87e5"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "leaf-boat-front",
+      "file": "public/projects/last-red-leaf/assets/style/leaf-boat-front.png",
+      "kind": "prop",
+      "sources": [
+        "scene:scene-02:node:leaf-boat-front",
+        "manifest:leaf-boat-front"
+      ],
+      "semanticBinding": {
+        "riskClass": "identity-critical",
+        "contractIds": [
+          "story-icons"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "subject-complete",
+        "edge-clean",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "identity-distinct-within-frame",
+        "identity-family-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed"
+      },
+      "sha256": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+      "fingerprint": "f678b0ebc08bdf2749013d0b48218b5369f80c2404b825152871797b6ad23e2c",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 191282
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          }
+        ]
+      },
+      "semanticChecks": {
+        "subject-complete": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "浅珊瑚红前缘完整且只遮挡蜗牛最低腹足，前后叶层身份一致。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-alpha.png",
+          "sha256": "0f5bb2cd9f904e7a48194c942b4ac501e16c17378e779cc4c52df22a24c58674"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-checkerboard.png",
+          "sha256": "ea3bc8ff122ca37e379ba9b20417a2e6f8d56349476ab0153291144dff7cf4dc"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-tight.png",
+          "sha256": "4bf61b41cd3c852e7886e6bd37385bd0d72010a50c1379dc7cf0a5155a4faa07"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-motion-stress.jpg",
+          "sha256": "f1223f3eaed34c0ad9191e247de00bf33739bccd98d0552f12bdf8570fe372b6"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-snail-aboard.png",
+          "sha256": "5bf1af5457ea628eb51cc78d0226e633e10b32b0e8ff2574658f93847334dfb4"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "style-leaf-snail-source",
+      "file": "public/projects/last-red-leaf/assets/style/style-leaf-snail-source.png",
+      "kind": "image",
+      "sources": [
+        "manifest:style-leaf-snail-source"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": []
+        }
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "identity-distinct-within-frame",
+        "identity-family-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "background-uniform",
+        "edge-clean",
+        "style-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed",
+        "snail-topology": "1929d26376b9196adc9e2fdd1e9a08f5fa6d91e66ca5b3bae4ae6d34551e7d37"
+      },
+      "sha256": "698238a583937a1f51078b61ea8b321d8cb6214b77c9ad53656a817a66131bc4",
+      "fingerprint": "a51d26e3ad6409e8c4b9bce9dad9b08feb18c9d474b4ecc0763c257dc5de7a82",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 1590635
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "background-uniform": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "原始绿幕板仅含一只蜗牛与一片红叶，背景均匀、无文字水印，四周留白和关键负空间完整。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/style/style-leaf-snail-source.png",
+          "sha256": "698238a583937a1f51078b61ea8b321d8cb6214b77c9ad53656a817a66131bc4"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/frames/proof-2-s2-proof-snail-aboard.png",
+          "sha256": "e61dc556714071e366beb1d192de09d6ae7a0bff87644dccc2a55aac1811e8e0"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "puddle-environment-master",
+      "file": "public/projects/last-red-leaf/assets/style/puddle-environment-master.png",
+      "kind": "environment",
+      "sources": [
+        "manifest:puddle-environment-master"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "shore-water-boundary"
+        ]
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "semanticContractFingerprints": {
+        "shore-water-boundary": "1341676ab665534de5eae6af03493fdbddb26f19afcffb14df1f069c8c2da7e4"
+      },
+      "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+      "fingerprint": "5e27c185590d907fc8edae2a4ed73f96f6724d2192eaa856c7c7fa2e3c611fa5",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 113421
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "style-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "环境母版的岸线、水面、天空与暖岸分区完整，两幕注册边界一致。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/style/puddle-environment-master.png",
+          "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "style-leaf-snail-master",
+      "file": "public/projects/last-red-leaf/assets/style/style-leaf-snail-master.png",
+      "kind": "style-sample",
+      "sources": [
+        "manifest:style-leaf-snail-master"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-source"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "identity-distinct-within-frame",
+        "identity-family-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "edge-clean",
+        "style-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed",
+        "snail-topology": "1929d26376b9196adc9e2fdd1e9a08f5fa6d91e66ca5b3bae4ae6d34551e7d37"
+      },
+      "sha256": "fdfdd4ab2788139a9ef43b53edc3ac6c8ab9fc3a0bc32a245c160aabea0a96bb",
+      "fingerprint": "5d8f243127ef09d163cf716c49ba111c424cd1e6b5c4234294e297af389eb74c",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 755340
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "透明完整母图保留同源光向、纹理、比例和所有角色轮廓。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/style/style-leaf-snail-master.png",
+          "sha256": "fdfdd4ab2788139a9ef43b53edc3ac6c8ab9fc3a0bc32a245c160aabea0a96bb"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/snail-subject-checkerboard.png",
+          "sha256": "f192dce003ff0ceea584229d63e797e7f336f0608b61a5d38f09a9f24fe814a7"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-checkerboard.png",
+          "sha256": "31db788ff24f3cac0c44837bea7655bf7be6f44375766bd10db07d868c858f1d"
+        },
+        {
+          "file": "dist/last-red-leaf/style-proof/frames/proof-3-s2-proof-final.png",
+          "sha256": "b67b418005a943461324dcfa9f52004a74bdcf7f93993f91e0f160f394b409ad"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "scene1-shelter-source",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-source.png",
+      "kind": "image",
+      "sources": [
+        "manifest:scene1-shelter-source"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "identity-distinct-within-frame",
+        "identity-family-consistent",
+        "cross-scene-identity-continuity",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "background-uniform",
+        "edge-clean",
+        "style-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed",
+        "snail-topology": "1929d26376b9196adc9e2fdd1e9a08f5fa6d91e66ca5b3bae4ae6d34551e7d37"
+      },
+      "sha256": "b1a687f33621715c4bd3debc24155ce39ba24285944d5fb4b7af64505b91df79",
+      "fingerprint": "c1ea9f5ebebfba049c430e16cf3d83ead98706c5dc8cb07865867729be4b642b",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 1990983
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed",
+        "cross-scene-identity-continuity": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "background-uniform": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "第一幕绿幕源仅含红叶、单只蜗牛和地面；背景均匀，角色与第二幕视觉家族连续。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-source.png",
+          "sha256": "b1a687f33621715c4bd3debc24155ce39ba24285944d5fb4b7af64505b91df79"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "assetId": "scene1-shelter-master",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-master.png",
+      "kind": "style-sample",
+      "sources": [
+        "manifest:scene1-shelter-master"
+      ],
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "requiredChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "identity-distinct-within-frame",
+        "identity-family-consistent",
+        "cross-scene-identity-continuity",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free",
+        "edge-clean",
+        "style-consistent"
+      ],
+      "semanticContractFingerprints": {
+        "story-icons": "847559eadc6b4ba972b7624dd130de6d8159df2a882aed857d15b44f4bfff1ed",
+        "snail-topology": "1929d26376b9196adc9e2fdd1e9a08f5fa6d91e66ca5b3bae4ae6d34551e7d37"
+      },
+      "sha256": "f89330c515e8ccc2f80d859b7b5db5ce3a6ceb8217416ff95dfba78bafa4f4da",
+      "fingerprint": "713c61d4200cc6efed79f8329f63bf1b6a9fe6c1329aed704d6613915b5eae62",
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 1028661
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "no-text": "passed",
+        "no-watermark": "passed",
+        "subject-complete": "passed",
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed",
+        "cross-scene-identity-continuity": "passed",
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed",
+        "edge-clean": "passed",
+        "style-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "透明完整母图的红叶屋顶、蜗牛、地面和眼柄空气间隙均完整，无绿幕泄漏。",
+      "evidenceFiles": [
+        {
+          "file": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-master.png",
+          "sha256": "f89330c515e8ccc2f80d859b7b5db5ce3a6ceb8217416ff95dfba78bafa4f4da"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-wind-shelter.png",
+          "sha256": "68114804d6714d6ec0e9d50ef0a8def92f02779c4a544bce160d9ba4f5b20866"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        }
+      ],
+      "status": "passed"
+    }
+  ],
+  "composites": [
+    {
+      "compositeId": "group:scene-01:puddle-environment",
+      "sceneId": "scene-01",
+      "pattern": "registered-environment",
+      "nodeId": "puddle-environment",
+      "memberNodeIds": [
+        "bank-upper",
+        "water-lower"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/bank-upper.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+        "projects/last-red-leaf/assets/style/water-lower.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+      },
+      "compositionHash": "37ba47f866221636c7f22e9cc7246206a11c90752af873cbd29d58a458886ad5",
+      "fingerprint": "7da886e9432df6a7a6d8602164658ea9fac3e6c179547441b312e403de7ef38b",
+      "proofTimeIds": [
+        "s1-proof-establish",
+        "s1-proof-wind-shelter",
+        "s1-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-establish",
+          "absoluteFrame": 49,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-establish.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-01-puddle-environment-scene-01-s1-proof-establish.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-01-puddle-environment-scene-01-s1-proof-establish.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-wind-shelter",
+          "absoluteFrame": 216,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-wind-shelter.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-01-puddle-environment-scene-01-s1-proof-wind-shelter.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-01-puddle-environment-scene-01-s1-proof-wind-shelter.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-final",
+          "absoluteFrame": 307,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-01-puddle-environment-scene-01-s1-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-01-puddle-environment-scene-01-s1-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "registration-aligned",
+        "boundary-respected",
+        "no-semantic-duplication",
+        "depth-readable",
+        "final-composition-readable"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "7da886e9432df6a7a6d8602164658ea9fac3e6c179547441b312e403de7ef38b",
+            "actual": "7da886e9432df6a7a6d8602164658ea9fac3e6c179547441b312e403de7ef38b"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          },
+          {
+            "id": "boundary-clips-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "registered-source-family",
+            "passed": true,
+            "actual": true
+          }
+        ]
+      },
+      "semanticChecks": {
+        "registration-aligned": "passed",
+        "boundary-respected": "passed",
+        "no-semantic-duplication": "passed",
+        "depth-readable": "passed",
+        "final-composition-readable": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.431Z",
+      "note": "第一幕岸线以上为远岸、以下为水面，无裂缝、重复带或漂移；层次和右侧彼岸清楚。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-01-puddle-environment-scene-01-s1-proof-establish.png",
+          "sha256": "5d7e2026378f158eed0372e56bb2c80759c366d80890a544afa55480b5e64a20"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-01-puddle-environment-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/group-scene-01-puddle-environment-scene-01-s1-proof-final.png",
+          "sha256": "55de9a3a2b2a8623bcc8f23a8ebb187aee209f20afc670bc672c71c764b62c77"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "group:scene-01:ground-snail-rig",
+      "sceneId": "scene-01",
+      "pattern": "supported-subject",
+      "nodeId": "ground-snail-rig",
+      "memberNodeIds": [
+        "scene1-ground-rear",
+        "snail-subject",
+        "scene1-ground-front"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/scene1/scene1-ground-front.png": "f87e1a9089216f3621602ea64db40f54353b29e5adf4c4b50bc8c6e6d825d7d0",
+        "projects/last-red-leaf/assets/scene1/scene1-ground-rear.png": "d28f4173cf0902022853a2e8ab7607ed2cb949a63d814f35afb32c904b46a643",
+        "projects/last-red-leaf/assets/scene1/scene1-snail-subject.png": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1"
+      },
+      "compositionHash": "a1d550bb2aa7b905d54802e87a96d6888c04d943004576ea89652bac7d357ae2",
+      "fingerprint": "6922b14ad0b00586237a90a7aefd6931ca33470cb71415e25ed99edce961150e",
+      "proofTimeIds": [
+        "s1-proof-establish",
+        "s1-proof-wind-shelter",
+        "s1-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-establish",
+          "absoluteFrame": 49,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-establish.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-establish.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-01-ground-snail-rig-scene-01-s1-proof-establish.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-wind-shelter",
+          "absoluteFrame": 216,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-wind-shelter.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-wind-shelter.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-01-ground-snail-rig-scene-01-s1-proof-wind-shelter.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-final",
+          "absoluteFrame": 307,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "support-contact",
+        "inside-or-on-readable",
+        "front-occlusion",
+        "shared-motion",
+        "identity-continuity",
+        "motion-isolation-clean"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "6922b14ad0b00586237a90a7aefd6931ca33470cb71415e25ed99edce961150e",
+            "actual": "6922b14ad0b00586237a90a7aefd6931ca33470cb71415e25ed99edce961150e"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          },
+          {
+            "id": "front-alpha-in-occlusion-zone",
+            "passed": true,
+            "expected": "> 0.002",
+            "actual": 0.7464958775029447
+          },
+          {
+            "id": "registered-source-family",
+            "passed": true,
+            "actual": true
+          }
+        ]
+      },
+      "semanticChecks": {
+        "support-contact": "passed",
+        "inside-or-on-readable": "passed",
+        "front-occlusion": "passed",
+        "shared-motion": "passed",
+        "identity-continuity": "passed",
+        "motion-isolation-clean": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "蜗牛连续落在岸上纸片，前缘自然压住最低腹足；三时刻共同移动且无地面背景被带入主体。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-establish.png",
+          "sha256": "5d7e2026378f158eed0372e56bb2c80759c366d80890a544afa55480b5e64a20"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-wind-shelter.png",
+          "sha256": "68114804d6714d6ec0e9d50ef0a8def92f02779c4a544bce160d9ba4f5b20866"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png",
+          "sha256": "b7d584ea93e5c9e304f836cdf03508998ace9a0c381c91400f7f32dda71378f4"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "cue:scene-01:s1-establish-autumn",
+      "sceneId": "scene-01",
+      "pattern": "cue",
+      "nodeId": "puddle-environment",
+      "memberNodeIds": [
+        "puddle-environment"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/bank-upper.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+        "projects/last-red-leaf/assets/style/water-lower.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+      },
+      "compositionHash": "a78cd417f6d28a3e14a9b46370f33f70be338b3df40aa5ec9d5edcba1216414f",
+      "fingerprint": "678f544f5c1af5506338ec4971dba6e51db83aac9f09160515d767bda6470b18",
+      "proofTimeIds": [
+        "s1-proof-establish"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-establish",
+          "absoluteFrame": 49,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-establish.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-establish-autumn-scene-01-s1-proof-establish.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-establish-autumn-scene-01-s1-proof-establish.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "678f544f5c1af5506338ec4971dba6e51db83aac9f09160515d767bda6470b18",
+            "actual": "678f544f5c1af5506338ec4971dba6e51db83aac9f09160515d767bda6470b18"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "cue-proof-bound",
+            "passed": true,
+            "actual": "s1-proof-establish"
+          },
+          {
+            "id": "cue-sound-valid",
+            "passed": true,
+            "actual": "not-required"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "环境建立与标题在证明点清楚出现；该节拍无需音效，最终岸水状态保留。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-establish-autumn-scene-01-s1-proof-establish.png",
+          "sha256": "5d7e2026378f158eed0372e56bb2c80759c366d80890a544afa55480b5e64a20"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-establish-autumn-scene-01-s1-proof-establish.png",
+          "sha256": "0b6d3081b869a8c3fe4ad9c5809cf2d3a08025611d9280b572bf015c3352b84f"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "cue:scene-01:s1-wind-arrives",
+      "sceneId": "scene-01",
+      "pattern": "cue",
+      "nodeId": "wind-lines-free",
+      "memberNodeIds": [
+        "wind-lines-free"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/wind-lines.png": "61bf38a76fbec2765da0a5f880a216919499dbec7f5003939b86f1f9323a1979"
+      },
+      "compositionHash": "6bd6c7314b6dd918f2c0588aa485d74f15ac540dc7cc3a3e72dd6a25e827855d",
+      "fingerprint": "48d6f85391fdc1b2bb8dec50a2b8dd0c4f9ea2aeb428e71d9c192997de82598a",
+      "proofTimeIds": [
+        "s1-proof-wind-shelter"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-wind-shelter",
+          "absoluteFrame": 216,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-wind-shelter.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-wind-arrives-scene-01-s1-proof-wind-shelter.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-wind-arrives-scene-01-s1-proof-wind-shelter.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "48d6f85391fdc1b2bb8dec50a2b8dd0c4f9ea2aeb428e71d9c192997de82598a",
+            "actual": "48d6f85391fdc1b2bb8dec50a2b8dd0c4f9ea2aeb428e71d9c192997de82598a"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "cue-proof-bound",
+            "passed": true,
+            "actual": "s1-proof-wind-shelter"
+          },
+          {
+            "id": "cue-sound-valid",
+            "passed": true,
+            "actual": "projects/last-red-leaf/audio/sfx/cold-wind-gust.wav"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "斜向风线与红叶颤动在绑定证明点可见，cold-wind-gust 已绑定且后续庇护状态保留。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-wind-arrives-scene-01-s1-proof-wind-shelter.png",
+          "sha256": "68114804d6714d6ec0e9d50ef0a8def92f02779c4a544bce160d9ba4f5b20866"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-wind-arrives-scene-01-s1-proof-wind-shelter.png",
+          "sha256": "b700095b8908c32777e77bcc82a2a1ce22671f260d67ef8fb1959be30222a880"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "cue:scene-01:s1-shelter-holds",
+      "sceneId": "scene-01",
+      "pattern": "cue",
+      "nodeId": "scene-01-tableau",
+      "memberNodeIds": [
+        "scene-01-tableau"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/scene1/scene1-ground-front.png": "f87e1a9089216f3621602ea64db40f54353b29e5adf4c4b50bc8c6e6d825d7d0",
+        "projects/last-red-leaf/assets/scene1/scene1-ground-rear.png": "d28f4173cf0902022853a2e8ab7607ed2cb949a63d814f35afb32c904b46a643",
+        "projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png": "7ed3d70501dd167a18a363a43ac14ea2004937897d3368ee1b3ef27a0e27e002",
+        "projects/last-red-leaf/assets/scene1/scene1-snail-subject.png": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1"
+      },
+      "compositionHash": "77ecdfa16926e2413f146b7d3d7c3c293026e8c22c2c2d0cb4c9a06e2d0f8cce",
+      "fingerprint": "48bc878d79d8f151d29fb3b7792ea0a2dae89c22423781ff907e6a2f6fab9de5",
+      "proofTimeIds": [
+        "s1-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-final",
+          "absoluteFrame": 307,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-shelter-holds-scene-01-s1-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-shelter-holds-scene-01-s1-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "48bc878d79d8f151d29fb3b7792ea0a2dae89c22423781ff907e6a2f6fab9de5",
+            "actual": "48bc878d79d8f151d29fb3b7792ea0a2dae89c22423781ff907e6a2f6fab9de5"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "cue-proof-bound",
+            "passed": true,
+            "actual": "s1-proof-final"
+          },
+          {
+            "id": "cue-sound-valid",
+            "passed": true,
+            "actual": "projects/last-red-leaf/audio/sfx/leaf-rustle.wav"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "红叶屋顶与蜗牛远望在最终证明点成立，leaf-rustle 已绑定且水洼阻隔仍清楚。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-shelter-holds-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-shelter-holds-scene-01-s1-proof-final.png",
+          "sha256": "e32530fc5a6b8f6dc1267ff859e7f9318d9912f1ad3bc984cab06478dcf8c583"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "group:scene-02:puddle-environment",
+      "sceneId": "scene-02",
+      "pattern": "registered-environment",
+      "nodeId": "puddle-environment",
+      "memberNodeIds": [
+        "bank-upper",
+        "water-lower"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/bank-upper.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+        "projects/last-red-leaf/assets/style/water-lower.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+      },
+      "compositionHash": "37ba47f866221636c7f22e9cc7246206a11c90752af873cbd29d58a458886ad5",
+      "fingerprint": "7c16b80fca3cf76f9cd5e38b16217bd38364eed829efaa41fd7cef5b58dcda1f",
+      "proofTimeIds": [
+        "s2-proof-leaf-landing",
+        "s2-proof-snail-aboard",
+        "s2-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-leaf-landing",
+          "absoluteFrame": 492,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-leaf-landing.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-02-puddle-environment-scene-02-s2-proof-leaf-landing.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-02-puddle-environment-scene-02-s2-proof-leaf-landing.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-snail-aboard",
+          "absoluteFrame": 598,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-snail-aboard.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-02-puddle-environment-scene-02-s2-proof-snail-aboard.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-02-puddle-environment-scene-02-s2-proof-snail-aboard.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-final",
+          "absoluteFrame": 739,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-02-puddle-environment-scene-02-s2-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-02-puddle-environment-scene-02-s2-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "registration-aligned",
+        "boundary-respected",
+        "no-semantic-duplication",
+        "depth-readable",
+        "final-composition-readable"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "7c16b80fca3cf76f9cd5e38b16217bd38364eed829efaa41fd7cef5b58dcda1f",
+            "actual": "7c16b80fca3cf76f9cd5e38b16217bd38364eed829efaa41fd7cef5b58dcda1f"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          },
+          {
+            "id": "boundary-clips-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "registered-source-family",
+            "passed": true,
+            "actual": true
+          }
+        ]
+      },
+      "semanticChecks": {
+        "registration-aligned": "passed",
+        "boundary-respected": "passed",
+        "no-semantic-duplication": "passed",
+        "depth-readable": "passed",
+        "final-composition-readable": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "第二幕相同注册母版无岸水漂移，叶船四周保留足够水面，右侧暖岸可读。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-02-puddle-environment-scene-02-s2-proof-leaf-landing.png",
+          "sha256": "0cbb3490ce8fac8876da764c539073ba9780b08a976a0d26e42c82f829ec1601"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-02-puddle-environment-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/group-scene-02-puddle-environment-scene-02-s2-proof-final.png",
+          "sha256": "fb51994b688ed37acdf07a707ed1090a6f4c99c620bc2e393612fc10673d4697"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "group:scene-02:leaf-boat-rig",
+      "sceneId": "scene-02",
+      "pattern": "supported-subject",
+      "nodeId": "leaf-boat-rig",
+      "memberNodeIds": [
+        "leaf-boat-rear",
+        "snail-subject",
+        "leaf-boat-front"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/leaf-boat-front.png": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+        "projects/last-red-leaf/assets/style/leaf-boat-rear.png": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "8f8175fa70567906bc84b5cda68f17ac91e761a89d284ade117af1d1af568499",
+      "fingerprint": "d8ac3d1ef010146b423f548906f109412306e8401233ec0710292d8ff4b710aa",
+      "proofTimeIds": [
+        "s2-proof-leaf-landing",
+        "s2-proof-snail-aboard",
+        "s2-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-leaf-landing",
+          "absoluteFrame": 492,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-leaf-landing.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-leaf-landing.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-02-leaf-boat-rig-scene-02-s2-proof-leaf-landing.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-snail-aboard",
+          "absoluteFrame": 598,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-snail-aboard.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-snail-aboard.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-02-leaf-boat-rig-scene-02-s2-proof-snail-aboard.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-final",
+          "absoluteFrame": 739,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/group-scene-02-leaf-boat-rig-scene-02-s2-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "support-contact",
+        "inside-or-on-readable",
+        "front-occlusion",
+        "shared-motion",
+        "identity-continuity",
+        "motion-isolation-clean"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "d8ac3d1ef010146b423f548906f109412306e8401233ec0710292d8ff4b710aa",
+            "actual": "d8ac3d1ef010146b423f548906f109412306e8401233ec0710292d8ff4b710aa"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          },
+          {
+            "id": "front-alpha-in-occlusion-zone",
+            "passed": true,
+            "expected": "> 0.002",
+            "actual": 0.20175245233109226
+          },
+          {
+            "id": "registered-source-family",
+            "passed": true,
+            "actual": true
+          }
+        ]
+      },
+      "semanticChecks": {
+        "support-contact": "passed",
+        "inside-or-on-readable": "passed",
+        "front-occlusion": "passed",
+        "shared-motion": "passed",
+        "identity-continuity": "passed",
+        "motion-isolation-clean": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "蜗牛位于叶船承托区，浅红前缘形成局部遮挡；载体从左向右共动并保持身份完整。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-leaf-landing.png",
+          "sha256": "0cbb3490ce8fac8876da764c539073ba9780b08a976a0d26e42c82f829ec1601"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-snail-aboard.png",
+          "sha256": "5bf1af5457ea628eb51cc78d0226e633e10b32b0e8ff2574658f93847334dfb4"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/group-scene-02-leaf-boat-rig-scene-02-s2-proof-final.png",
+          "sha256": "cc851aa71e40312c7bc45d2947e88bfdbdfa920382af1b864928e6290549806a"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-leaf-lifts",
+      "sceneId": "scene-02",
+      "pattern": "cue",
+      "nodeId": "leaf-boat-rig",
+      "memberNodeIds": [
+        "leaf-boat-rig"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/leaf-boat-front.png": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+        "projects/last-red-leaf/assets/style/leaf-boat-rear.png": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "5c46963cf64fa1da08653f0e03888dc5cbcc2c01006e25eeca2966752eebe007",
+      "fingerprint": "89a9b672502095eee2ee0b1aa0872cecdf919f924e6d91302a9a385af7e2ca2d",
+      "proofTimeIds": [
+        "s2-proof-leaf-landing"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-leaf-landing",
+          "absoluteFrame": 492,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-leaf-landing.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-leaf-lifts-scene-02-s2-proof-leaf-landing.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-leaf-lifts-scene-02-s2-proof-leaf-landing.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "89a9b672502095eee2ee0b1aa0872cecdf919f924e6d91302a9a385af7e2ca2d",
+            "actual": "89a9b672502095eee2ee0b1aa0872cecdf919f924e6d91302a9a385af7e2ca2d"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "cue-proof-bound",
+            "passed": true,
+            "actual": "s2-proof-leaf-landing"
+          },
+          {
+            "id": "cue-sound-valid",
+            "passed": true,
+            "actual": "projects/last-red-leaf/audio/sfx/strong-wind-gust.wav"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "叶片已离开第一幕庇护状态并响应强风进入水面动作，strong-wind-gust 绑定有效，落水结果被后续保留。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-leaf-lifts-scene-02-s2-proof-leaf-landing.png",
+          "sha256": "0cbb3490ce8fac8876da764c539073ba9780b08a976a0d26e42c82f829ec1601"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-leaf-lifts-scene-02-s2-proof-leaf-landing.png",
+          "sha256": "88ad67359843233fb39b7c6cccf451494013c96dccf4e5b26a1af07e94b286b5"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-leaf-lands",
+      "sceneId": "scene-02",
+      "pattern": "cue",
+      "nodeId": "leaf-boat-rig",
+      "memberNodeIds": [
+        "leaf-boat-rig"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/leaf-boat-front.png": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+        "projects/last-red-leaf/assets/style/leaf-boat-rear.png": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "e4301536e4a68644ca003e9227a1b2f3f5c5dbdb9c4f02906b927a3ffeed1fd5",
+      "fingerprint": "f132b2e13a73a65ae6fae37b8eec4563edaf763b31641791fa12e9ca440eac1a",
+      "proofTimeIds": [
+        "s2-proof-leaf-landing"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-leaf-landing",
+          "absoluteFrame": 492,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-leaf-landing.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-leaf-lands-scene-02-s2-proof-leaf-landing.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-leaf-lands-scene-02-s2-proof-leaf-landing.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "f132b2e13a73a65ae6fae37b8eec4563edaf763b31641791fa12e9ca440eac1a",
+            "actual": "f132b2e13a73a65ae6fae37b8eec4563edaf763b31641791fa12e9ca440eac1a"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "cue-proof-bound",
+            "passed": true,
+            "actual": "s2-proof-leaf-landing"
+          },
+          {
+            "id": "cue-sound-valid",
+            "passed": true,
+            "actual": "projects/last-red-leaf/audio/sfx/soft-leaf-splash.wav"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "红叶平放水面形成船形，soft-leaf-splash 已绑定，叶船状态延续到登船与抵岸。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-leaf-lands-scene-02-s2-proof-leaf-landing.png",
+          "sha256": "0cbb3490ce8fac8876da764c539073ba9780b08a976a0d26e42c82f829ec1601"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-leaf-lands-scene-02-s2-proof-leaf-landing.png",
+          "sha256": "c9121f3a7094e0904b50fc18507f39151b4f2b8f00c69cbb0025e25826fc257e"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-snail-boards",
+      "sceneId": "scene-02",
+      "pattern": "cue",
+      "nodeId": "snail-subject",
+      "memberNodeIds": [
+        "snail-subject"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "2d9a2332647f96bd39c2a6c4f2157ed42f4a0511505e2182919a57cf55e53cd7",
+      "fingerprint": "422e99603c0b1fd4c73f465cc913cee6a977432748dcfcd4d54b53e9b78c224b",
+      "proofTimeIds": [
+        "s2-proof-snail-aboard"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-snail-aboard",
+          "absoluteFrame": 598,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-snail-aboard.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-snail-boards-scene-02-s2-proof-snail-aboard.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-snail-boards-scene-02-s2-proof-snail-aboard.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "422e99603c0b1fd4c73f465cc913cee6a977432748dcfcd4d54b53e9b78c224b",
+            "actual": "422e99603c0b1fd4c73f465cc913cee6a977432748dcfcd4d54b53e9b78c224b"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "cue-proof-bound",
+            "passed": true,
+            "actual": "s2-proof-snail-aboard"
+          },
+          {
+            "id": "cue-sound-valid",
+            "passed": true,
+            "actual": "not-required"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "蜗牛完整进入承托区并与叶船同向起伏；此节拍无需音效，登船结果保留到结尾。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-snail-boards-scene-02-s2-proof-snail-aboard.png",
+          "sha256": "5bf1af5457ea628eb51cc78d0226e633e10b32b0e8ff2574658f93847334dfb4"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-snail-boards-scene-02-s2-proof-snail-aboard.png",
+          "sha256": "daeadc7d0941a370ef87976afdeef2646bad06f08a709b89afbc4c117eea5b59"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-warm-arrival",
+      "sceneId": "scene-02",
+      "pattern": "cue",
+      "nodeId": "leaf-boat-rig",
+      "memberNodeIds": [
+        "leaf-boat-rig"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/leaf-boat-front.png": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+        "projects/last-red-leaf/assets/style/leaf-boat-rear.png": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "63c525efc5d990e107c50d100f904e3d95d5d67aee8dbae65e1aaf39d89f4d58",
+      "fingerprint": "0ffa56e503279747ca45d22fdd82e79d9a5fffee4b02fc93ebf2fa48d8dbef5f",
+      "proofTimeIds": [
+        "s2-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-final",
+          "absoluteFrame": 739,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-warm-arrival-scene-02-s2-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-warm-arrival-scene-02-s2-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "0ffa56e503279747ca45d22fdd82e79d9a5fffee4b02fc93ebf2fa48d8dbef5f",
+            "actual": "0ffa56e503279747ca45d22fdd82e79d9a5fffee4b02fc93ebf2fa48d8dbef5f"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "cue-proof-bound",
+            "passed": true,
+            "actual": "s2-proof-final"
+          },
+          {
+            "id": "cue-sound-valid",
+            "passed": true,
+            "actual": "not-required"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "叶船抵近右侧暖岸、蜗牛抬头且整体缓停；最终状态在证明帧完整保留。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-warm-arrival-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-warm-arrival-scene-02-s2-proof-final.png",
+          "sha256": "3d9de6428b2046dea807b48c307d294e04c14d40b3f77a9bc53c52931de16943"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "semantic:story-icons:story-icons-same-frame",
+      "sceneId": "scene-01",
+      "pattern": "semantic-contract",
+      "nodeId": "scene-01-tableau",
+      "memberNodeIds": [
+        "scene1-ground-rear",
+        "snail-subject",
+        "scene1-ground-front",
+        "scene1-red-leaf-free",
+        "leaf-boat-rear",
+        "leaf-boat-front"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/scene1/scene1-ground-front.png": "f87e1a9089216f3621602ea64db40f54353b29e5adf4c4b50bc8c6e6d825d7d0",
+        "projects/last-red-leaf/assets/scene1/scene1-ground-rear.png": "d28f4173cf0902022853a2e8ab7607ed2cb949a63d814f35afb32c904b46a643",
+        "projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png": "7ed3d70501dd167a18a363a43ac14ea2004937897d3368ee1b3ef27a0e27e002",
+        "projects/last-red-leaf/assets/scene1/scene1-snail-subject.png": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1",
+        "projects/last-red-leaf/assets/style/leaf-boat-front.png": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+        "projects/last-red-leaf/assets/style/leaf-boat-rear.png": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "c1ef3317eebc9f4a286f6ed07b168b3f309fc5393fb34b9854be5d57c2ebc696",
+      "fingerprint": "64fc204a12cfbf554d60ed14bdfb216c9439ec7d9fa38f73e139be9f34f8247a",
+      "proofTimeIds": [
+        "s1-proof-wind-shelter",
+        "s1-proof-final",
+        "s2-proof-snail-aboard",
+        "s2-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-wind-shelter",
+          "absoluteFrame": 216,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-wind-shelter.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-wind-shelter.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-wind-shelter.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-final",
+          "absoluteFrame": 307,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-snail-aboard",
+          "absoluteFrame": 598,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-snail-aboard.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-snail-aboard.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-snail-aboard.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-final",
+          "absoluteFrame": 739,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "identity-distinct-within-frame",
+        "identity-family-consistent"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "64fc204a12cfbf554d60ed14bdfb216c9439ec7d9fa38f73e139be9f34f8247a",
+            "actual": "64fc204a12cfbf554d60ed14bdfb216c9439ec7d9fa38f73e139be9f34f8247a"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 4
+          }
+        ]
+      },
+      "semanticChecks": {
+        "identity-distinct-within-frame": "passed",
+        "identity-family-consistent": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "两幕同框中赭金蜗牛与朱红叶片均可一眼区分，纹理、光向和比例属于同一纸拼贴家族。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-wind-shelter.png",
+          "sha256": "68114804d6714d6ec0e9d50ef0a8def92f02779c4a544bce160d9ba4f5b20866"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-snail-aboard.png",
+          "sha256": "5bf1af5457ea628eb51cc78d0226e633e10b32b0e8ff2574658f93847334dfb4"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-snail-aboard.png",
+          "sha256": "dc0d143ba145b001b53acfe9537825ecec56394216864dd828ace56b12396747"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "semantic:story-icons:story-icons-cross-scene",
+      "sceneId": "scene-01",
+      "pattern": "semantic-contract",
+      "nodeId": "scene-01-tableau",
+      "memberNodeIds": [
+        "scene1-ground-rear",
+        "snail-subject",
+        "scene1-ground-front",
+        "scene1-red-leaf-free",
+        "leaf-boat-rear",
+        "leaf-boat-front"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/scene1/scene1-ground-front.png": "f87e1a9089216f3621602ea64db40f54353b29e5adf4c4b50bc8c6e6d825d7d0",
+        "projects/last-red-leaf/assets/scene1/scene1-ground-rear.png": "d28f4173cf0902022853a2e8ab7607ed2cb949a63d814f35afb32c904b46a643",
+        "projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png": "7ed3d70501dd167a18a363a43ac14ea2004937897d3368ee1b3ef27a0e27e002",
+        "projects/last-red-leaf/assets/scene1/scene1-snail-subject.png": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1",
+        "projects/last-red-leaf/assets/style/leaf-boat-front.png": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+        "projects/last-red-leaf/assets/style/leaf-boat-rear.png": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "85c2549c47b01e34541238171d95100c401d1650c6a97f08475ffa33a36f8007",
+      "fingerprint": "0c076e37cf6e7e6f7f00f892a4fbfa07b112ed5e6e827d8a276f65ede0db10ba",
+      "proofTimeIds": [
+        "s1-proof-final",
+        "s2-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-final",
+          "absoluteFrame": 307,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-final",
+          "absoluteFrame": 739,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "cross-scene-identity-continuity"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "0c076e37cf6e7e6f7f00f892a4fbfa07b112ed5e6e827d8a276f65ede0db10ba",
+            "actual": "0c076e37cf6e7e6f7f00f892a4fbfa07b112ed5e6e827d8a276f65ede0db10ba"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 2
+          }
+        ]
+      },
+      "semanticChecks": {
+        "cross-scene-identity-continuity": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "并排检查两幕最终目标：蜗牛保持米色身体、赭金单壳和双眼柄，红叶保持朱红船形与浅色主脉。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+          "sha256": "bd5c5150d40c6bf58a2cc4c5a5e37bcb0fad012e21232cf0d0c524afb04a1416"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+          "sha256": "235176ee1b265b85e0c1e3188d4f3d3aa5669f427de1151a5343b91f900d927c"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "semantic:snail-topology:snail-topology-style",
+      "sceneId": "scene-01",
+      "pattern": "semantic-contract",
+      "nodeId": "snail-subject",
+      "memberNodeIds": [
+        "snail-subject"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/scene1/scene1-snail-subject.png": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1",
+        "projects/last-red-leaf/assets/style/snail-subject.png": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188"
+      },
+      "compositionHash": "f3030b9de784cf2ed96318a90d56c2f6b297bdb4852b9548990ee980447b198b",
+      "fingerprint": "9113cfc2d8c597f15fba01f2bdd91a605fcbee780688a74cd61746bc55e45e9c",
+      "proofTimeIds": [
+        "s1-proof-wind-shelter",
+        "s1-proof-final",
+        "s2-proof-snail-aboard",
+        "s2-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-wind-shelter",
+          "absoluteFrame": 216,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-wind-shelter.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-wind-shelter.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-wind-shelter.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-final",
+          "absoluteFrame": 307,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-snail-aboard",
+          "absoluteFrame": 598,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-snail-aboard.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-snail-aboard.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-snail-aboard.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-final",
+          "absoluteFrame": 739,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "9113cfc2d8c597f15fba01f2bdd91a605fcbee780688a74cd61746bc55e45e9c",
+            "actual": "9113cfc2d8c597f15fba01f2bdd91a605fcbee780688a74cd61746bc55e45e9c"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 4
+          }
+        ]
+      },
+      "semanticChecks": {
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "四个目标中均只有两根分离眼柄、一枚螺旋壳和连续腹足；眼柄间与叶缘间空气间隙清楚。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-wind-shelter.png",
+          "sha256": "68114804d6714d6ec0e9d50ef0a8def92f02779c4a544bce160d9ba4f5b20866"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-snail-aboard.png",
+          "sha256": "5bf1af5457ea628eb51cc78d0226e633e10b32b0e8ff2574658f93847334dfb4"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "semantic:shore-water-boundary:shore-water-registration",
+      "sceneId": "scene-01",
+      "pattern": "semantic-contract",
+      "nodeId": "puddle-environment",
+      "memberNodeIds": [
+        "bank-upper",
+        "water-lower"
+      ],
+      "memberHashes": {
+        "projects/last-red-leaf/assets/style/bank-upper.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+        "projects/last-red-leaf/assets/style/water-lower.png": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3"
+      },
+      "compositionHash": "a219236a842097530eaa24c6d018f577525b7e4b0e8e709463edff6a42dbe676",
+      "fingerprint": "666178324dbeda1fa62f24048c793b440a56701dce604b9614d3854fdec04456",
+      "proofTimeIds": [
+        "s1-proof-establish",
+        "s1-proof-final",
+        "s2-proof-leaf-landing",
+        "s2-proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-establish",
+          "absoluteFrame": 49,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-establish.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-establish.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-establish.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-01",
+          "proofTimeId": "s1-proof-final",
+          "absoluteFrame": 307,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-leaf-landing",
+          "absoluteFrame": 492,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-leaf-landing.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-leaf-landing.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-leaf-landing.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "scene-02",
+          "proofTimeId": "s2-proof-final",
+          "absoluteFrame": 739,
+          "fullFrame": "dist/last-red-leaf/composition-proof/frames/scene-02-s2-proof-final.png",
+          "crop": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-final.png",
+          "debugFrame": "dist/last-red-leaf/composition-proof/debug/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "requiredChecks": [
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "666178324dbeda1fa62f24048c793b440a56701dce604b9614d3854fdec04456",
+            "actual": "666178324dbeda1fa62f24048c793b440a56701dce604b9614d3854fdec04456"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 4
+          }
+        ]
+      },
+      "semanticChecks": {
+        "silhouette-fidelity": "passed",
+        "negative-space-clean": "passed",
+        "background-leak-free": "passed"
+      },
+      "reviewer": "host-vision",
+      "reviewedAt": "2026-07-21T17:12:19.432Z",
+      "note": "四个目标中岸线连续，水面始终位于其下；无透明裂缝、重复覆盖或跨幕漂移。",
+      "evidenceFiles": [
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-establish.png",
+          "sha256": "5d7e2026378f158eed0372e56bb2c80759c366d80890a544afa55480b5e64a20"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-final.png",
+          "sha256": "8a046999c200bf4411ee00e0e6115b7800237669dffa300b404aa1b16d6534e7"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-leaf-landing.png",
+          "sha256": "0cbb3490ce8fac8876da764c539073ba9780b08a976a0d26e42c82f829ec1601"
+        },
+        {
+          "file": "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-final.png",
+          "sha256": "c7faaa3d0cc864bacec760d22c5e92a2dcf54ce29fd90c4970d822cf597afda1"
+        }
+      ],
+      "status": "passed"
+    }
+  ]
+}

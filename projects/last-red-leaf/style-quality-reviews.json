@@ -1,0 +1,133 @@
+{
+  "reviews": [
+    {
+      "assetId": "bank-upper",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean"],
+      "failedChecks": [],
+      "note": "透明边缘完整，岸线纸片没有水面泄漏；在运动压力图中边界保持连续。",
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-motion-stress.jpg"
+      ]
+    },
+    {
+      "assetId": "water-lower",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean"],
+      "failedChecks": [],
+      "note": "水面层覆盖完整，和岸线共享注册坐标；透明底与运动压力图均无断裂。",
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/water-lower-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/water-lower-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/water-lower-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/water-lower-motion-stress.jpg"
+      ]
+    },
+    {
+      "assetId": "leaf-boat-rear",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["subject-complete", "edge-clean", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "identity-distinct-within-frame", "identity-family-consistent"],
+      "failedChecks": [],
+      "note": "红叶后承托层保留叶柄、叶尖、主脉和连续纸张轮廓；无独立背景碎片。",
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-motion-stress.jpg"
+      ]
+    },
+    {
+      "assetId": "snail-subject",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["subject-complete", "identity-consistent", "edge-clean", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "identity-distinct-within-frame", "identity-family-consistent"],
+      "failedChecks": [],
+      "note": "两根眼柄、单一螺旋壳和连续腹足均完整；透明底无红叶残留，运动压力图身份稳定。",
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-motion-stress.jpg"
+      ]
+    },
+    {
+      "assetId": "leaf-boat-front",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["subject-complete", "edge-clean", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "identity-distinct-within-frame", "identity-family-consistent"],
+      "failedChecks": [],
+      "note": "前沿遮挡层只覆盖红叶近侧边缘，纸纹透明孔来自同一母图且不遮盖蜗牛关键身份特征。",
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-motion-stress.jpg"
+      ]
+    },
+    {
+      "assetId": "puddle-environment-master",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["no-text", "no-watermark", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free"],
+      "failedChecks": [],
+      "note": "环境母版为无文字纸拼贴，岸与水的分界清楚，并与注册派生层视觉一致。",
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/style/puddle-environment-master.png",
+        "dist/last-red-leaf/style-motion-proof-contact-sheet.jpg"
+      ]
+    },
+    {
+      "assetId": "style-leaf-snail-master",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "identity-distinct-within-frame", "identity-family-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean", "style-consistent"],
+      "failedChecks": [],
+      "note": "单次生成母图无文字水印，蜗牛和红叶身份清楚；所有拆分层均来自此母图并保持同一注册。",
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/style/style-leaf-snail-master.png",
+        "dist/last-red-leaf/style-motion-proof-contact-sheet.jpg",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-checkerboard.png"
+      ]
+    },
+    {
+      "compositeId": "group:scene-02:puddle-environment",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["registration-aligned", "boundary-respected", "no-semantic-duplication", "depth-readable", "final-composition-readable"],
+      "failedChecks": [],
+      "note": "三个证明时刻中岸线和水面始终对齐，无重复边界；前后景层次可读。",
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/frames/proof-1-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/style-proof/crops/group-scene-02-puddle-environment-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/style-proof/debug/group-scene-02-puddle-environment-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/style-proof/frames/proof-2-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/style-proof/crops/group-scene-02-puddle-environment-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/style-proof/debug/group-scene-02-puddle-environment-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/style-proof/frames/proof-3-s2-proof-final.png",
+        "dist/last-red-leaf/style-proof/crops/group-scene-02-puddle-environment-s2-proof-final.png",
+        "dist/last-red-leaf/style-proof/debug/group-scene-02-puddle-environment-s2-proof-final.png",
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-motion-stress.jpg",
+        "dist/last-red-leaf/style-proof/evidence/water-lower-motion-stress.jpg"
+      ]
+    },
+    {
+      "compositeId": "group:scene-02:leaf-boat-rig",
+      "reviewer": "codex-full-depth-vision-review",
+      "passedChecks": ["support-contact", "inside-or-on-readable", "front-occlusion", "shared-motion", "identity-continuity", "motion-isolation-clean"],
+      "failedChecks": [],
+      "note": "蜗牛全程落在红叶承托区内，前沿遮挡成立；整船共动与轻微独立起伏均未破坏接触或身份。",
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/frames/proof-1-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/style-proof/crops/group-scene-02-leaf-boat-rig-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/style-proof/debug/group-scene-02-leaf-boat-rig-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/style-proof/frames/proof-2-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/style-proof/crops/group-scene-02-leaf-boat-rig-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/style-proof/debug/group-scene-02-leaf-boat-rig-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/style-proof/frames/proof-3-s2-proof-final.png",
+        "dist/last-red-leaf/style-proof/crops/group-scene-02-leaf-boat-rig-s2-proof-final.png",
+        "dist/last-red-leaf/style-proof/debug/group-scene-02-leaf-boat-rig-s2-proof-final.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-motion-stress.jpg",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-motion-stress.jpg",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-motion-stress.jpg"
+      ]
+    }
+  ]
+}

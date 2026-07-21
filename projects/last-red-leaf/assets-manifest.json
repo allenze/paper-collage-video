@@ -1,0 +1,1592 @@
+{
+  "$schema": "../../schemas/assets-manifest.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assets": [
+    {
+      "assetId": "style-voice-audition-ruyayichen",
+      "capability": "voice",
+      "file": "public/projects/last-red-leaf/audio/narration/style-audition-ruyayichen.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "bb09c11564",
+      "attemptId": null,
+      "requestFingerprint": "438637e0f85f5f863d39745b5c45297d6964ec87d7c6aaffb6b1cb20d836f72b",
+      "reusedFrom": null,
+      "sha256": "31542b3733d2968ccc4a8f4fba8ceda2286b9afa6a6d1aaa1ceb1e56cf5aca4b",
+      "sizeBytes": 36141,
+      "media": null,
+      "recordedAt": "2026-07-21T15:57:09.021Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "style-voice-audition-ruyayichen",
+        "capability": "voice",
+        "output": "public/projects/last-red-leaf/audio/narration/style-audition-ruyayichen.mp3",
+        "text": "红叶落上水面，轻轻变成一艘小船。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "provider": "doubao",
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "performancePrompt": "温柔、克制、富有秋日童话感；吐字清楚，在‘小船’前带轻微惊喜，结尾温暖但不过度煽情"
+        }
+      },
+      "compositionBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "style-leaf-snail-source",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/style-leaf-snail-source.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": "019f8564-442f-7783-ab76-28a63106b1e6",
+      "attemptId": "img-6802d27f-f213-43c0-bede-285b37221073",
+      "requestFingerprint": "4c6e17689705d84b149060bd860da603db51fdf65c3bc2034dfd9f4c612e7090",
+      "reusedFrom": null,
+      "sha256": "698238a583937a1f51078b61ea8b321d8cb6214b77c9ad53656a817a66131bc4",
+      "sizeBytes": 1590635,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-21T16:04:55.749Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "style-leaf-snail-source",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/style-leaf-snail-source.png",
+        "prompt": "Create one production-ready landscape source plate for a Chinese paper-cut collage animation. The only subject is a small warm-beige snail riding inside a long crimson autumn leaf shaped like a shallow canoe, shown in clean right-facing side profile. Preserve the entire silhouette of both snail and leaf with generous empty margin on every side. The snail has exactly two long separated eye stalks, one compact continuous foot, one large ochre-gold shell, and exactly one clearly readable dark-brown spiral on the shell. The leaf has a pointed right tip, a short curved stem at the left, a pale cream central vein, a deep crimson rear body, and a slightly lighter coral-red front rim that overlaps only the lowest edge of the snail foot. Make the snail about one third of the leaf length. Use tactile hand-torn paper, visible natural fibers, restrained deckled edges, flat layered shapes, a warm elegant autumn storybook palette, and consistent soft upper-left studio lighting within the paper pieces. Place the assembly centered around the lower-middle of the image, with the leaf nearly horizontal and the snail sitting securely on its middle. Background must be one perfectly uniform flat chroma green #00FF00 from edge to edge, with no texture, gradient, noise, shadows, reflections, scenery, water, plants, typography, border, signature, or watermark. Do not use green anywhere in the snail or leaf. Do not crop any eye stalk, shell, leaf tip, or stem. Do not add extra eyes, stalks, shells, limbs, leaves, or decorative objects.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "leaf-boat-rig",
+          "pattern": "supported-subject",
+          "registrationId": "leaf-boat-style-01",
+          "sourceMasterAssetId": "style-leaf-snail-source",
+          "outputRole": "provider-source-master",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "provider-generation"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "story-icons",
+            "snail-topology"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "snail",
+              "red-leaf"
+            ],
+            "referenceAssetIds": []
+          }
+        },
+        "quality": {
+          "kind": "image",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "subject-complete",
+            "identity-distinct-within-frame",
+            "identity-family-consistent",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "background-uniform",
+            "edge-clean",
+            "style-consistent"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "leaf-boat-rig",
+        "pattern": "supported-subject",
+        "registrationId": "leaf-boat-style-01",
+        "sourceMasterAssetId": "style-leaf-snail-source",
+        "outputRole": "provider-source-master",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "provider-generation"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": []
+        }
+      },
+      "familyFingerprint": "46ae2a799320e2b16e01d15de30a15a9b7d96416093a2ca07cf9723a01b73af3"
+    },
+    {
+      "assetId": "puddle-environment-master",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/puddle-environment-master.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "deterministic-svg-local",
+      "externalId": "derive-style-environment",
+      "attemptId": null,
+      "requestFingerprint": "9703da79cd496181b512a0f7fdeefb5fec0a2b4d0183e95e0627f7a0a0da7453",
+      "reusedFrom": null,
+      "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+      "sizeBytes": 113421,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:05:05.863Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "puddle-environment-master",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/puddle-environment-master.png",
+        "prompt": "Deterministic 1920x1080 paper-collage environment master for the autumn puddle crossing: mist-blue sky and water, layered ochre banks and reeds, one continuous cream shoreline, and a warm reflected path toward the right bank. No text or watermark.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "puddle-environment",
+          "pattern": "registered-environment",
+          "registrationId": "puddle-environment-style-01",
+          "sourceMasterAssetId": "puddle-environment-master",
+          "outputRole": "registered-environment-master",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "manual-import"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "shore-water-boundary"
+          ]
+        },
+        "quality": {
+          "kind": "environment",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "style-consistent",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "puddle-environment",
+        "pattern": "registered-environment",
+        "registrationId": "puddle-environment-style-01",
+        "sourceMasterAssetId": "puddle-environment-master",
+        "outputRole": "registered-environment-master",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "manual-import"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "shore-water-boundary"
+        ]
+      },
+      "familyFingerprint": "1244b1942a077a6cf1d5822fb5b4ddef1176e50b6bda3ae42a6a0fc35612e9d6"
+    },
+    {
+      "assetId": "bank-upper",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/bank-upper.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "puddle-environment-master",
+      "attemptId": null,
+      "requestFingerprint": "43c66f0a644103cedca912ace8f0b7a546100912e9f7cc07ae75f62174f66731",
+      "reusedFrom": null,
+      "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+      "sizeBytes": 113421,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:05:06.028Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "bank-upper",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/bank-upper.png",
+        "prompt": "Upper registered layer derived from puddle-environment-master at the authored bank-water boundary; preserve exact 1920x1080 registration and transparent lower region.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "bank-upper",
+          "pattern": "registered-environment",
+          "registrationId": "puddle-environment-style-01",
+          "sourceMasterAssetId": "puddle-environment-master",
+          "outputRole": "upper-boundary-member",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "puddle-environment-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "shore-water-boundary"
+          ]
+        },
+        "quality": {
+          "kind": "environment",
+          "requiredChecks": [
+            "style-consistent",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "edge-clean"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "bank-upper",
+        "pattern": "registered-environment",
+        "registrationId": "puddle-environment-style-01",
+        "sourceMasterAssetId": "puddle-environment-master",
+        "outputRole": "upper-boundary-member",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "puddle-environment-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "shore-water-boundary"
+        ]
+      },
+      "familyFingerprint": "1244b1942a077a6cf1d5822fb5b4ddef1176e50b6bda3ae42a6a0fc35612e9d6"
+    },
+    {
+      "assetId": "water-lower",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/water-lower.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "puddle-environment-master",
+      "attemptId": null,
+      "requestFingerprint": "305da41fc0fa8b2fef280cbd32acfdbf8da65b27ad3412246175b85f8d9e32ee",
+      "reusedFrom": null,
+      "sha256": "0078d682422e47d385ff7674ee02014b92ce86c54685ca7ae2daa10392244ba3",
+      "sizeBytes": 113421,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:05:06.193Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "water-lower",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/water-lower.png",
+        "prompt": "Lower registered water layer derived from puddle-environment-master at the authored bank-water boundary; preserve exact 1920x1080 registration and transparent upper region.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "water-lower",
+          "pattern": "registered-environment",
+          "registrationId": "puddle-environment-style-01",
+          "sourceMasterAssetId": "puddle-environment-master",
+          "outputRole": "lower-boundary-member",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "puddle-environment-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "shore-water-boundary"
+          ]
+        },
+        "quality": {
+          "kind": "environment",
+          "requiredChecks": [
+            "style-consistent",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "edge-clean"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "water-lower",
+        "pattern": "registered-environment",
+        "registrationId": "puddle-environment-style-01",
+        "sourceMasterAssetId": "puddle-environment-master",
+        "outputRole": "lower-boundary-member",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "puddle-environment-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "shore-water-boundary"
+        ]
+      },
+      "familyFingerprint": "1244b1942a077a6cf1d5822fb5b4ddef1176e50b6bda3ae42a6a0fc35612e9d6"
+    },
+    {
+      "assetId": "wind-lines",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/wind-lines.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "deterministic-svg-local",
+      "externalId": "derive-style-environment",
+      "attemptId": null,
+      "requestFingerprint": "349a954228cf24494f52d5616d08c165f3d2be1e194c8e26b0551ecb26c6998e",
+      "reusedFrom": null,
+      "sha256": "61bf38a76fbec2765da0a5f880a216919499dbec7f5003939b86f1f9323a1979",
+      "sizeBytes": 27135,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:10:52.515Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "wind-lines",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/wind-lines.png",
+        "prompt": "Deterministic transparent paper-strip wind accents for the autumn story style proof, with three cream sweeping lines and sparse muted-red accents; no text or watermark.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "wind-lines",
+          "pattern": "free",
+          "outputRole": "decorative-motion-layer",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "manual-import"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "decorative",
+          "contractIds": []
+        },
+        "quality": {
+          "kind": "decorative",
+          "requiredChecks": [
+            "no-watermark",
+            "subject-complete",
+            "style-consistent",
+            "edge-clean"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "wind-lines",
+        "pattern": "free",
+        "outputRole": "decorative-motion-layer",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "manual-import"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": "bd3339dcd8074d95c25558d8dca6ad5af4751f4684b2c4a212eefcfa7e288ad2"
+    },
+    {
+      "assetId": "style-leaf-snail-master",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/style-leaf-snail-master.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in-local-alpha",
+      "externalId": "style-leaf-snail-source",
+      "attemptId": null,
+      "requestFingerprint": "1fa9d9b352c156e64f66a84e1139f0681040ad04b98c58105b770cdcb2ec314b",
+      "reusedFrom": null,
+      "sha256": "fdfdd4ab2788139a9ef43b53edc3ac6c8ab9fc3a0bc32a245c160aabea0a96bb",
+      "sizeBytes": 755340,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:29:56.006Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "style-leaf-snail-master",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/style-leaf-snail-master.png",
+        "prompt": "Remove the uniform chroma background from style-leaf-snail-source while preserving the exact authored paper silhouette, internal paper texture, two separated eye stalks, shell spiral, leaf tip, leaf stem, and clean semi-transparent edge pixels. Do not redraw or regenerate the subject.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "leaf-boat-rig",
+          "pattern": "supported-subject",
+          "registrationId": "leaf-boat-style-01",
+          "sourceMasterAssetId": "style-leaf-snail-master",
+          "outputRole": "transparent-style-master",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "alpha-extraction",
+            "parentAssetId": "style-leaf-snail-source"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "story-icons",
+            "snail-topology"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "snail",
+              "red-leaf"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-source"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "style-sample",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "subject-complete",
+            "identity-distinct-within-frame",
+            "identity-family-consistent",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "edge-clean",
+            "style-consistent"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "leaf-boat-rig",
+        "pattern": "supported-subject",
+        "registrationId": "leaf-boat-style-01",
+        "sourceMasterAssetId": "style-leaf-snail-master",
+        "outputRole": "transparent-style-master",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "style-leaf-snail-source"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-source"
+          ]
+        }
+      },
+      "familyFingerprint": "fdd68f8011359efcd3a5593b6a5b2b6ec56da127740488fc0e0e6755d56f7262"
+    },
+    {
+      "assetId": "leaf-boat-rear",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/leaf-boat-rear.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "style-leaf-snail-master",
+      "attemptId": null,
+      "requestFingerprint": "da7a6b3cc7b5d76e90b89d133d7cb63467924a1051a7ee030a5b1525ee97da09",
+      "reusedFrom": null,
+      "sha256": "ab392b2c53f38dab536df8ce0afe0dd5cf3f8667f79a7e48b0eaab37a90f3468",
+      "sizeBytes": 467107,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:29:56.213Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "leaf-boat-rear",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/leaf-boat-rear.png",
+        "prompt": "Derive the complete rear red-leaf support layer from style-leaf-snail-master without redrawing; preserve exact 1920x1080 registration, leaf stem, tip, cream vein, paper texture, and transparent surroundings.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "leaf-boat-rear",
+          "pattern": "supported-subject",
+          "registrationId": "leaf-boat-style-01",
+          "sourceMasterAssetId": "style-leaf-snail-master",
+          "outputRole": "support-rear",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "style-leaf-snail-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "identity-critical",
+          "contractIds": [
+            "story-icons"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "red-leaf"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-master"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "prop",
+          "requiredChecks": [
+            "style-consistent",
+            "subject-complete",
+            "identity-distinct-within-frame",
+            "identity-family-consistent",
+            "edge-clean"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "leaf-boat-rear",
+        "pattern": "supported-subject",
+        "registrationId": "leaf-boat-style-01",
+        "sourceMasterAssetId": "style-leaf-snail-master",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "style-leaf-snail-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "identity-critical",
+        "contractIds": [
+          "story-icons"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "familyFingerprint": "fdd68f8011359efcd3a5593b6a5b2b6ec56da127740488fc0e0e6755d56f7262"
+    },
+    {
+      "assetId": "snail-subject",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/snail-subject.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "style-leaf-snail-master",
+      "attemptId": null,
+      "requestFingerprint": "c4666ef60988ff5a428a69b534928803ad104725850a8e588bc1a6f65a94312a",
+      "reusedFrom": null,
+      "sha256": "a2a3974e53a43d7fc036d50efe36315ae18d82999fafb1bf7c550901e5554188",
+      "sizeBytes": 295791,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:29:56.418Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "snail-subject",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/snail-subject.png",
+        "prompt": "Derive the complete snail subject layer from style-leaf-snail-master without redrawing; preserve exact 1920x1080 registration, both separated eye stalks, one continuous foot, one ochre shell, one spiral, paper texture, and transparent surroundings.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "snail-subject",
+          "pattern": "supported-subject",
+          "registrationId": "leaf-boat-style-01",
+          "sourceMasterAssetId": "style-leaf-snail-master",
+          "outputRole": "subject",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "style-leaf-snail-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "story-icons",
+            "snail-topology"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "snail"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-master"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "character",
+          "requiredChecks": [
+            "style-consistent",
+            "subject-complete",
+            "identity-distinct-within-frame",
+            "identity-family-consistent",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "edge-clean"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "snail-subject",
+        "pattern": "supported-subject",
+        "registrationId": "leaf-boat-style-01",
+        "sourceMasterAssetId": "style-leaf-snail-master",
+        "outputRole": "subject",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "style-leaf-snail-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "familyFingerprint": "fdd68f8011359efcd3a5593b6a5b2b6ec56da127740488fc0e0e6755d56f7262"
+    },
+    {
+      "assetId": "leaf-boat-front",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/style/leaf-boat-front.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "style-leaf-snail-master",
+      "attemptId": null,
+      "requestFingerprint": "d805382eb6a09b6646d90e97d5da5139b66b0432984575c954ef2a695876f4ba",
+      "reusedFrom": null,
+      "sha256": "59ba3fd110fb2e3a4da722b0c497880a3941b52d59ef9c3e0d94e8ca54b449b8",
+      "sizeBytes": 191282,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:29:56.627Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "leaf-boat-front",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/style/leaf-boat-front.png",
+        "prompt": "Derive only the coral-red front rim that visibly overlaps the lowest edge of the snail foot from style-leaf-snail-master; preserve exact 1920x1080 registration and transparent surroundings, without polygon redrawing.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "leaf-boat-front",
+          "pattern": "supported-subject",
+          "registrationId": "leaf-boat-style-01",
+          "sourceMasterAssetId": "style-leaf-snail-master",
+          "outputRole": "support-front",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "style-leaf-snail-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "identity-critical",
+          "contractIds": [
+            "story-icons"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "red-leaf"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-master"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "prop",
+          "requiredChecks": [
+            "style-consistent",
+            "subject-complete",
+            "identity-distinct-within-frame",
+            "identity-family-consistent",
+            "edge-clean"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "leaf-boat-front",
+        "pattern": "supported-subject",
+        "registrationId": "leaf-boat-style-01",
+        "sourceMasterAssetId": "style-leaf-snail-master",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "style-leaf-snail-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "identity-critical",
+        "contractIds": [
+          "story-icons"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "familyFingerprint": "fdd68f8011359efcd3a5593b6a5b2b6ec56da127740488fc0e0e6755d56f7262"
+    },
+    {
+      "assetId": "scene1-shelter-source",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-source.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": "exec-2bd0b5c6-e061-4470-9c54-e84b8ffca4a3",
+      "attemptId": "img-497d3a26-62b9-480b-a991-b5399d2aab1b",
+      "requestFingerprint": "28052bcde31473e31d421ef4895e58d0d4242323224cd42800dfa1052f6715c9",
+      "reusedFrom": null,
+      "sha256": "b1a687f33621715c4bd3debc24155ce39ba24285944d5fb4b7af64505b91df79",
+      "sizeBytes": 1990983,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-21T16:50:32.895Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene1-shelter-source",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-source.png",
+        "prompt": "Use case: illustration-story. Asset type: complete registered source master for scene 01 of a Chinese paper-collage animation. Use the approved snail-on-leaf image only as the exact identity, material, palette, paper-fiber, edge, and lighting reference. Recompose exactly one matching warm-beige right-facing snail on a low horizontal ochre-brown torn-paper ground patch; place exactly one matching long crimson autumn leaf above it as a protective sloping roof, with the curved stem on the left and pointed tip on the right. Keep a clearly readable air gap between leaf and snail; the leaf must not merge with or crop the two separated eye stalks. Add a thin darker ochre foreground ground lip that overlaps only the lowest edge of the snail foot, making the on-ground support relationship readable. The snail keeps exactly two separated long eye stalks, one compact continuous foot, one ochre-gold shell, and exactly one dark-brown spiral. The red leaf keeps its complete long silhouette, pale central vein, crimson body, short left stem, and sharp right tip. Side profile, wide 16:9 arrangement, cluster centered slightly left and in the lower middle with generous margin on every side. Tactile hand-torn paper collage with visible natural fibers, restrained deckled edges, warm elegant autumn storybook palette, and soft upper-left lighting within the paper pieces. Background must be one perfectly uniform flat chroma green #00FF00 edge to edge, with no texture, gradient, shadow, floor plane, scenery, water, plants, typography, border, signature, or watermark. Do not use green in any subject. No extra eyes, stalks, shells, limbs, leaves, ground objects, or decorative elements. Do not crop any eye stalk, shell, leaf tip, leaf stem, or ground edge.",
+        "compositionBinding": {
+          "sceneId": "scene-01",
+          "nodeId": "ground-snail-rig",
+          "pattern": "supported-subject",
+          "registrationId": "scene1-shelter-style-01",
+          "sourceMasterAssetId": "scene1-shelter-master",
+          "outputRole": "provider-source-master",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "provider-generation"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "story-icons",
+            "snail-topology"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "snail",
+              "red-leaf"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-master"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "image",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "subject-complete",
+            "identity-distinct-within-frame",
+            "identity-family-consistent",
+            "cross-scene-identity-continuity",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "background-uniform",
+            "edge-clean",
+            "style-consistent"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "ground-snail-rig",
+        "pattern": "supported-subject",
+        "registrationId": "scene1-shelter-style-01",
+        "sourceMasterAssetId": "scene1-shelter-master",
+        "outputRole": "provider-source-master",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "provider-generation"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "familyFingerprint": "a08ebd78ce0ec24896f2bdd413bf66c13d321eb7f080b378a49dc0930a65cb7e"
+    },
+    {
+      "assetId": "scene1-shelter-master",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-master.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in-local-alpha",
+      "externalId": "scene1-shelter-source",
+      "attemptId": null,
+      "requestFingerprint": "b135c46239e58d3ac10aa7f1f20c87aadd786b05ce2835c00b9a8659f0573aaf",
+      "reusedFrom": null,
+      "sha256": "f89330c515e8ccc2f80d859b7b5db5ce3a6ceb8217416ff95dfba78bafa4f4da",
+      "sizeBytes": 1028661,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:54:18.368Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene1-shelter-master",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/scene1/scene1-shelter-master.png",
+        "prompt": "Remove only the chroma background from scene1-shelter-source while preserving the exact complete paper collage, including leaf roof, snail, ground support, eye-stalk gaps, paper fibers and antialiased edges. Do not redraw.",
+        "compositionBinding": {
+          "sceneId": "scene-01",
+          "nodeId": "ground-snail-rig",
+          "pattern": "supported-subject",
+          "registrationId": "scene1-shelter-style-01",
+          "sourceMasterAssetId": "scene1-shelter-master",
+          "outputRole": "transparent-complete-master",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "alpha-extraction",
+            "parentAssetId": "scene1-shelter-source"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "story-icons",
+            "snail-topology"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "snail",
+              "red-leaf"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-master"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "style-sample",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "subject-complete",
+            "identity-distinct-within-frame",
+            "identity-family-consistent",
+            "cross-scene-identity-continuity",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "edge-clean",
+            "style-consistent"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "ground-snail-rig",
+        "pattern": "supported-subject",
+        "registrationId": "scene1-shelter-style-01",
+        "sourceMasterAssetId": "scene1-shelter-master",
+        "outputRole": "transparent-complete-master",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "scene1-shelter-source"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "familyFingerprint": "a08ebd78ce0ec24896f2bdd413bf66c13d321eb7f080b378a49dc0930a65cb7e"
+    },
+    {
+      "assetId": "scene1-red-leaf-free",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "scene1-shelter-master",
+      "attemptId": null,
+      "requestFingerprint": "dfbcd2bf4d941ddc6ecde07e67ea7addf7321e016c9abfb2411ad2923871fd99",
+      "reusedFrom": null,
+      "sha256": "7ed3d70501dd167a18a363a43ac14ea2004937897d3368ee1b3ef27a0e27e002",
+      "sizeBytes": 1026470,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:54:18.576Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene1-red-leaf-free",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png",
+        "prompt": "Derive the complete crimson leaf roof from scene1-shelter-master without redrawing; preserve exact canvas registration, both visible paper layers, left stem, pale vein, pointed right tip and transparent surroundings.",
+        "compositionBinding": {
+          "sceneId": "scene-01",
+          "nodeId": "scene1-red-leaf-free",
+          "pattern": "free",
+          "sourceMasterAssetId": "scene1-shelter-master",
+          "outputRole": "free-leaf-roof",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "scene1-shelter-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "identity-critical",
+          "contractIds": [
+            "story-icons"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "red-leaf"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-master"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "prop",
+          "requiredChecks": [
+            "subject-complete",
+            "identity-consistent",
+            "identity-family-consistent",
+            "cross-scene-identity-continuity",
+            "edge-clean",
+            "style-consistent"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "scene1-red-leaf-free",
+        "pattern": "free",
+        "sourceMasterAssetId": "scene1-shelter-master",
+        "outputRole": "free-leaf-roof",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "scene1-shelter-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "identity-critical",
+        "contractIds": [
+          "story-icons"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "red-leaf"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "familyFingerprint": "8c1a0f8dc4556c69c5055f9628bdd7a160a2bde723571f3a3ea0a2da6c165376"
+    },
+    {
+      "assetId": "scene1-ground-rear",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-ground-rear.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "scene1-shelter-master",
+      "attemptId": null,
+      "requestFingerprint": "0e9dc49f361d480c971092a5e40fc4fdf199492a1680b7acbfed2e39521e02fe",
+      "reusedFrom": null,
+      "sha256": "d28f4173cf0902022853a2e8ab7607ed2cb949a63d814f35afb32c904b46a643",
+      "sizeBytes": 1029765,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:54:18.790Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene1-ground-rear",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/scene1/scene1-ground-rear.png",
+        "prompt": "Derive the complete ochre ground support from scene1-shelter-master without redrawing; preserve exact canvas registration, torn-paper outline, paper fibers and transparent surroundings.",
+        "compositionBinding": {
+          "sceneId": "scene-01",
+          "nodeId": "scene1-ground-rear",
+          "pattern": "supported-subject",
+          "registrationId": "scene1-shelter-style-01",
+          "sourceMasterAssetId": "scene1-shelter-master",
+          "outputRole": "support-rear",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "scene1-shelter-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "decorative",
+          "contractIds": []
+        },
+        "quality": {
+          "kind": "prop",
+          "requiredChecks": [
+            "subject-complete",
+            "edge-clean",
+            "style-consistent"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "scene1-ground-rear",
+        "pattern": "supported-subject",
+        "registrationId": "scene1-shelter-style-01",
+        "sourceMasterAssetId": "scene1-shelter-master",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "scene1-shelter-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": "a08ebd78ce0ec24896f2bdd413bf66c13d321eb7f080b378a49dc0930a65cb7e"
+    },
+    {
+      "assetId": "scene1-snail-subject",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-snail-subject.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "scene1-shelter-master",
+      "attemptId": null,
+      "requestFingerprint": "345427f8a2c8cc6b88fbaef05aaf875f8175c8f0f1c9ed2ee41223943cfe35d0",
+      "reusedFrom": null,
+      "sha256": "caba73d41d690b9e164b3876a69fe749ab55e6555ca655746a20b731d91b67b1",
+      "sizeBytes": 1029053,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T16:54:18.999Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene1-snail-subject",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/scene1/scene1-snail-subject.png",
+        "prompt": "Derive the complete snail from scene1-shelter-master without redrawing; preserve exact canvas registration, two separated eye stalks, continuous pale foot, one ochre shell, one dark spiral, paper texture and transparent surroundings.",
+        "compositionBinding": {
+          "sceneId": "scene-01",
+          "nodeId": "snail-subject",
+          "pattern": "supported-subject",
+          "registrationId": "scene1-shelter-style-01",
+          "sourceMasterAssetId": "scene1-shelter-master",
+          "outputRole": "subject",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "scene1-shelter-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "story-icons",
+            "snail-topology"
+          ],
+          "generationFamily": {
+            "familyId": "last-red-leaf-icons-01",
+            "memberIds": [
+              "snail"
+            ],
+            "referenceAssetIds": [
+              "style-leaf-snail-master"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "character",
+          "requiredChecks": [
+            "subject-complete",
+            "identity-consistent",
+            "identity-family-consistent",
+            "cross-scene-identity-continuity",
+            "edge-clean",
+            "style-consistent",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "snail-subject",
+        "pattern": "supported-subject",
+        "registrationId": "scene1-shelter-style-01",
+        "sourceMasterAssetId": "scene1-shelter-master",
+        "outputRole": "subject",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "scene1-shelter-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "story-icons",
+          "snail-topology"
+        ],
+        "generationFamily": {
+          "familyId": "last-red-leaf-icons-01",
+          "memberIds": [
+            "snail"
+          ],
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      },
+      "familyFingerprint": "a08ebd78ce0ec24896f2bdd413bf66c13d321eb7f080b378a49dc0930a65cb7e"
+    },
+    {
+      "assetId": "scene-01-narration-ruyayichen",
+      "capability": "voice",
+      "file": "public/projects/last-red-leaf/audio/narration/scene-01-ruyayichen.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "9f592058c9",
+      "attemptId": null,
+      "requestFingerprint": "e4401bdcc6d30e9b1f8b1a48d4572ee7ee9e3ef22a5fc9e5b49a001f75003a09",
+      "reusedFrom": null,
+      "sha256": "74d3f84dc0e99649e9a8309188b4b73ddfe8a17be354a11980c8b39682136e9f",
+      "sizeBytes": 82413,
+      "media": null,
+      "recordedAt": "2026-07-21T16:54:19.500Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene-01-narration-ruyayichen",
+        "capability": "voice",
+        "output": "public/projects/last-red-leaf/audio/narration/scene-01-ruyayichen.mp3",
+        "text": "小蜗牛走到宽宽的水洼前。冷风吹来，最后一片红叶低下身子，像小屋一样，为它挡住寒意。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "provider": "doubao",
+          "speedRatio": 1,
+          "pitch": -1,
+          "emotion": "comfort",
+          "emotionScale": 2,
+          "performancePrompt": "温柔、克制、富有秋日童话感；前句平静建立深秋和水洼，冷风出现时稍收紧，最后一句放柔，吐字清楚，不过度煽情"
+        }
+      },
+      "compositionBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "scene-02-narration-ruyayichen",
+      "capability": "voice",
+      "file": "public/projects/last-red-leaf/audio/narration/scene-02-ruyayichen.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "bacde5e237",
+      "attemptId": null,
+      "requestFingerprint": "925c9aac049f53320153cef8136bb72364542646e686fffadabcd9a039be28ab",
+      "reusedFrom": null,
+      "sha256": "06bf5b000c70465233fab4d7186b96d41ebfe50c27dd6af41b50229a8322d3d2",
+      "sizeBytes": 104493,
+      "media": null,
+      "recordedAt": "2026-07-21T16:54:19.708Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene-02-narration-ruyayichen",
+        "capability": "voice",
+        "output": "public/projects/last-red-leaf/audio/narration/scene-02-ruyayichen.mp3",
+        "text": "忽然，一阵大风把红叶吹进水里。红叶没有远去，它变成一只小船，载着小蜗牛，慢慢驶向温暖的彼岸。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "provider": "doubao",
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "emotion": "happy",
+          "emotionScale": 2,
+          "performancePrompt": "温柔、克制、富有秋日童话感；开头的大风带轻微惊讶，‘没有远去’后转为欣喜，结尾温暖舒展，吐字清楚，不过度煽情"
+        }
+      },
+      "compositionBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "scene1-ground-front",
+      "capability": "image",
+      "file": "public/projects/last-red-leaf/assets/scene1/scene1-ground-front.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "local-mask-application",
+      "externalId": "scene1-shelter-master",
+      "attemptId": null,
+      "requestFingerprint": "a12461af35bed59fa779a73c1fb43575485b2b605248d8f3078ad8ba075c2eaf",
+      "reusedFrom": null,
+      "sha256": "f87e1a9089216f3621602ea64db40f54353b29e5adf4c4b50bc8c6e6d825d7d0",
+      "sizeBytes": 1029025,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-21T17:08:31.983Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 3,
+        "projectSlug": "last-red-leaf",
+        "assetId": "scene1-ground-front",
+        "capability": "image",
+        "output": "public/projects/last-red-leaf/assets/scene1/scene1-ground-front.png",
+        "prompt": "Derive only the ochre foreground lip that overlaps the lowest edge of the snail foot from scene1-shelter-master; preserve exact canvas registration and transparent surroundings without redrawing.",
+        "compositionBinding": {
+          "sceneId": "scene-01",
+          "nodeId": "scene1-ground-front",
+          "pattern": "supported-subject",
+          "registrationId": "scene1-shelter-style-01",
+          "sourceMasterAssetId": "scene1-shelter-master",
+          "outputRole": "support-front",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "mask-application",
+            "parentAssetId": "scene1-shelter-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "decorative",
+          "contractIds": []
+        },
+        "quality": {
+          "kind": "prop",
+          "requiredChecks": [
+            "subject-complete",
+            "edge-clean",
+            "style-consistent"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "scene1-ground-front",
+        "pattern": "supported-subject",
+        "registrationId": "scene1-shelter-style-01",
+        "sourceMasterAssetId": "scene1-shelter-master",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "scene1-shelter-master"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": "a08ebd78ce0ec24896f2bdd413bf66c13d321eb7f080b378a49dc0930a65cb7e"
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+{
+  "reviews": [
+    {
+      "assetId": "bank-upper",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/bank-upper-motion-stress.jpg"
+      ],
+      "note": "完整岸线与芦苇轮廓在原分辨率证据和跨时刻证明中连续，无文字、泄漏或裁切。"
+    },
+    {
+      "assetId": "water-lower",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/water-lower-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/water-lower-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/water-lower-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/water-lower-motion-stress.jpg"
+      ],
+      "note": "水面分层和暖色光路完整，边缘与岸线注册一致。"
+    },
+    {
+      "assetId": "scene1-ground-rear",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/scene1/scene1-ground-rear.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png"
+      ],
+      "note": "后地面保留自然纸缘并在蜗牛下形成连续承托，无矩形切边。"
+    },
+    {
+      "assetId": "scene1-snail-subject",
+      "reviewer": "host-vision",
+      "passedChecks": ["subject-complete", "identity-consistent", "edge-clean", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "identity-family-consistent", "cross-scene-identity-continuity"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/scene1/scene1-snail-subject.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png"
+      ],
+      "note": "两根眼柄、单枚螺旋壳和连续腹足完整；与第二幕同角色在配色、朝向和纸张语言上连续。"
+    },
+    {
+      "assetId": "scene1-ground-front",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/scene1/scene1-ground-front.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png"
+      ],
+      "note": "弧形前景压边追随原始地面轮廓，修复了首轮证明中的竖直矩形切口。"
+    },
+    {
+      "assetId": "scene1-red-leaf-free",
+      "reviewer": "host-vision",
+      "passedChecks": ["subject-complete", "identity-consistent", "identity-family-consistent", "cross-scene-identity-continuity", "edge-clean", "style-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png"
+      ],
+      "note": "朱红叶片、浅色主叶脉、弯曲叶柄和尖长叶端完整，并与第二幕船形红叶保持同一身份。"
+    },
+    {
+      "assetId": "wind-lines",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-watermark", "subject-complete", "style-consistent", "edge-clean"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/style/wind-lines.png",
+        "dist/last-red-leaf/composition-proof/frames/scene-01-s1-proof-wind-shelter.png"
+      ],
+      "note": "风线在关键帧中方向清楚、不过度遮挡角色，且保持纸拼贴线条语言。"
+    },
+    {
+      "assetId": "leaf-boat-rear",
+      "reviewer": "host-vision",
+      "passedChecks": ["subject-complete", "edge-clean", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "identity-distinct-within-frame", "identity-family-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-motion-stress.jpg",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-final.png"
+      ],
+      "note": "叶船后层完整、与蜗牛可一眼区分，移动后轮廓和负空间保持稳定。"
+    },
+    {
+      "assetId": "snail-subject",
+      "reviewer": "host-vision",
+      "passedChecks": ["subject-complete", "identity-consistent", "edge-clean", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "identity-distinct-within-frame", "identity-family-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-motion-stress.jpg",
+        "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-final.png"
+      ],
+      "note": "第二幕蜗牛的眼柄间隙、腹足和单壳螺旋均完整，移动应力证据无背景携带。"
+    },
+    {
+      "assetId": "leaf-boat-front",
+      "reviewer": "host-vision",
+      "passedChecks": ["subject-complete", "edge-clean", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "identity-distinct-within-frame", "identity-family-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-alpha.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-tight.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-front-motion-stress.jpg",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-snail-aboard.png"
+      ],
+      "note": "浅珊瑚红前缘完整且只遮挡蜗牛最低腹足，前后叶层身份一致。"
+    },
+    {
+      "assetId": "style-leaf-snail-source",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "identity-distinct-within-frame", "identity-family-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "background-uniform", "edge-clean", "style-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/style/style-leaf-snail-source.png",
+        "dist/last-red-leaf/style-proof/frames/proof-2-s2-proof-snail-aboard.png"
+      ],
+      "note": "原始绿幕板仅含一只蜗牛与一片红叶，背景均匀、无文字水印，四周留白和关键负空间完整。"
+    },
+    {
+      "assetId": "puddle-environment-master",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/style/puddle-environment-master.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-final.png"
+      ],
+      "note": "环境母版的岸线、水面、天空与暖岸分区完整，两幕注册边界一致。"
+    },
+    {
+      "assetId": "style-leaf-snail-master",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "identity-distinct-within-frame", "identity-family-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean", "style-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/style/style-leaf-snail-master.png",
+        "dist/last-red-leaf/style-proof/evidence/snail-subject-checkerboard.png",
+        "dist/last-red-leaf/style-proof/evidence/leaf-boat-rear-checkerboard.png",
+        "dist/last-red-leaf/style-proof/frames/proof-3-s2-proof-final.png"
+      ],
+      "note": "透明完整母图保留同源光向、纹理、比例和所有角色轮廓。"
+    },
+    {
+      "assetId": "scene1-shelter-source",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "identity-distinct-within-frame", "identity-family-consistent", "cross-scene-identity-continuity", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "background-uniform", "edge-clean", "style-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/scene1/scene1-shelter-source.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png"
+      ],
+      "note": "第一幕绿幕源仅含红叶、单只蜗牛和地面；背景均匀，角色与第二幕视觉家族连续。"
+    },
+    {
+      "assetId": "scene1-shelter-master",
+      "reviewer": "host-vision",
+      "passedChecks": ["no-text", "no-watermark", "subject-complete", "identity-distinct-within-frame", "identity-family-consistent", "cross-scene-identity-continuity", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean", "style-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/last-red-leaf/assets/scene1/scene1-shelter-master.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-wind-shelter.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png"
+      ],
+      "note": "透明完整母图的红叶屋顶、蜗牛、地面和眼柄空气间隙均完整，无绿幕泄漏。"
+    },
+    {
+      "compositeId": "group:scene-01:puddle-environment",
+      "reviewer": "host-vision",
+      "passedChecks": ["registration-aligned", "boundary-respected", "no-semantic-duplication", "depth-readable", "final-composition-readable"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/group-scene-01-puddle-environment-scene-01-s1-proof-establish.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-01-puddle-environment-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/group-scene-01-puddle-environment-scene-01-s1-proof-final.png"
+      ],
+      "note": "第一幕岸线以上为远岸、以下为水面，无裂缝、重复带或漂移；层次和右侧彼岸清楚。"
+    },
+    {
+      "compositeId": "group:scene-01:ground-snail-rig",
+      "reviewer": "host-vision",
+      "passedChecks": ["support-contact", "inside-or-on-readable", "front-occlusion", "shared-motion", "identity-continuity", "motion-isolation-clean"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-establish.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-wind-shelter.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/group-scene-01-ground-snail-rig-scene-01-s1-proof-final.png"
+      ],
+      "note": "蜗牛连续落在岸上纸片，前缘自然压住最低腹足；三时刻共同移动且无地面背景被带入主体。"
+    },
+    {
+      "compositeId": "cue:scene-01:s1-establish-autumn",
+      "reviewer": "host-vision",
+      "passedChecks": ["visual-event-visible", "sound-event-bound", "proof-time-bound", "final-state-preserved"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-establish-autumn-scene-01-s1-proof-establish.png",
+        "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-establish-autumn-scene-01-s1-proof-establish.png"
+      ],
+      "note": "环境建立与标题在证明点清楚出现；该节拍无需音效，最终岸水状态保留。"
+    },
+    {
+      "compositeId": "cue:scene-01:s1-wind-arrives",
+      "reviewer": "host-vision",
+      "passedChecks": ["visual-event-visible", "sound-event-bound", "proof-time-bound", "final-state-preserved"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-wind-arrives-scene-01-s1-proof-wind-shelter.png",
+        "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-wind-arrives-scene-01-s1-proof-wind-shelter.png"
+      ],
+      "note": "斜向风线与红叶颤动在绑定证明点可见，cold-wind-gust 已绑定且后续庇护状态保留。"
+    },
+    {
+      "compositeId": "cue:scene-01:s1-shelter-holds",
+      "reviewer": "host-vision",
+      "passedChecks": ["visual-event-visible", "sound-event-bound", "proof-time-bound", "final-state-preserved"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/cue-scene-01-s1-shelter-holds-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/cue-scene-01-s1-shelter-holds-scene-01-s1-proof-final.png"
+      ],
+      "note": "红叶屋顶与蜗牛远望在最终证明点成立，leaf-rustle 已绑定且水洼阻隔仍清楚。"
+    },
+    {
+      "compositeId": "group:scene-02:puddle-environment",
+      "reviewer": "host-vision",
+      "passedChecks": ["registration-aligned", "boundary-respected", "no-semantic-duplication", "depth-readable", "final-composition-readable"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/group-scene-02-puddle-environment-scene-02-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-02-puddle-environment-scene-02-s2-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/group-scene-02-puddle-environment-scene-02-s2-proof-final.png"
+      ],
+      "note": "第二幕相同注册母版无岸水漂移，叶船四周保留足够水面，右侧暖岸可读。"
+    },
+    {
+      "compositeId": "group:scene-02:leaf-boat-rig",
+      "reviewer": "host-vision",
+      "passedChecks": ["support-contact", "inside-or-on-readable", "front-occlusion", "shared-motion", "identity-continuity", "motion-isolation-clean"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/composition-proof/crops/group-scene-02-leaf-boat-rig-scene-02-s2-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/group-scene-02-leaf-boat-rig-scene-02-s2-proof-final.png"
+      ],
+      "note": "蜗牛位于叶船承托区，浅红前缘形成局部遮挡；载体从左向右共动并保持身份完整。"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-leaf-lifts",
+      "reviewer": "host-vision",
+      "passedChecks": ["visual-event-visible", "sound-event-bound", "proof-time-bound", "final-state-preserved"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-leaf-lifts-scene-02-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-leaf-lifts-scene-02-s2-proof-leaf-landing.png"
+      ],
+      "note": "叶片已离开第一幕庇护状态并响应强风进入水面动作，strong-wind-gust 绑定有效，落水结果被后续保留。"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-leaf-lands",
+      "reviewer": "host-vision",
+      "passedChecks": ["visual-event-visible", "sound-event-bound", "proof-time-bound", "final-state-preserved"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-leaf-lands-scene-02-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-leaf-lands-scene-02-s2-proof-leaf-landing.png"
+      ],
+      "note": "红叶平放水面形成船形，soft-leaf-splash 已绑定，叶船状态延续到登船与抵岸。"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-snail-boards",
+      "reviewer": "host-vision",
+      "passedChecks": ["visual-event-visible", "sound-event-bound", "proof-time-bound", "final-state-preserved"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-snail-boards-scene-02-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-snail-boards-scene-02-s2-proof-snail-aboard.png"
+      ],
+      "note": "蜗牛完整进入承托区并与叶船同向起伏；此节拍无需音效，登船结果保留到结尾。"
+    },
+    {
+      "compositeId": "cue:scene-02:s2-warm-arrival",
+      "reviewer": "host-vision",
+      "passedChecks": ["visual-event-visible", "sound-event-bound", "proof-time-bound", "final-state-preserved"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/cue-scene-02-s2-warm-arrival-scene-02-s2-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/cue-scene-02-s2-warm-arrival-scene-02-s2-proof-final.png"
+      ],
+      "note": "叶船抵近右侧暖岸、蜗牛抬头且整体缓停；最终状态在证明帧完整保留。"
+    },
+    {
+      "compositeId": "semantic:story-icons:story-icons-same-frame",
+      "reviewer": "host-vision",
+      "passedChecks": ["identity-distinct-within-frame", "identity-family-consistent"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-01-s1-proof-wind-shelter.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-same-frame-scene-02-s2-proof-snail-aboard.png"
+      ],
+      "note": "两幕同框中赭金蜗牛与朱红叶片均可一眼区分，纹理、光向和比例属于同一纸拼贴家族。"
+    },
+    {
+      "compositeId": "semantic:story-icons:story-icons-cross-scene",
+      "reviewer": "host-vision",
+      "passedChecks": ["cross-scene-identity-continuity"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-cross-scene-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/debug/semantic-story-icons-story-icons-cross-scene-scene-02-s2-proof-final.png"
+      ],
+      "note": "并排检查两幕最终目标：蜗牛保持米色身体、赭金单壳和双眼柄，红叶保持朱红船形与浅色主脉。"
+    },
+    {
+      "compositeId": "semantic:snail-topology:snail-topology-style",
+      "reviewer": "host-vision",
+      "passedChecks": ["silhouette-fidelity", "negative-space-clean", "background-leak-free"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-wind-shelter.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-snail-aboard.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-snail-topology-snail-topology-style-scene-02-s2-proof-final.png"
+      ],
+      "note": "四个目标中均只有两根分离眼柄、一枚螺旋壳和连续腹足；眼柄间与叶缘间空气间隙清楚。"
+    },
+    {
+      "compositeId": "semantic:shore-water-boundary:shore-water-registration",
+      "reviewer": "host-vision",
+      "passedChecks": ["silhouette-fidelity", "negative-space-clean", "background-leak-free"],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-establish.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-01-s1-proof-final.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-leaf-landing.png",
+        "dist/last-red-leaf/composition-proof/crops/semantic-shore-water-boundary-shore-water-registration-scene-02-s2-proof-final.png"
+      ],
+      "note": "四个目标中岸线连续，水面始终位于其下；无透明裂缝、重复覆盖或跨幕漂移。"
+    }
+  ]
+}

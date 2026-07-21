@@ -1,0 +1,1276 @@
+{
+  "$schema": "../../schemas/project.schema.json",
+  "schemaVersion": 4,
+  "slug": "last-red-leaf",
+  "title": "最后一片红叶",
+  "plan": {
+    "schemaVersion": 1,
+    "slug": "last-red-leaf",
+    "status": "resolved",
+    "inputMode": "scenes-only",
+    "productionProfile": "full-depth",
+    "requested": {
+      "durationSeconds": null,
+      "sceneCount": 2
+    },
+    "resolved": {
+      "durationSeconds": 28,
+      "sceneCount": 2,
+      "estimatedNarrationSeconds": 24,
+      "rationale": "用户将本项目定位为 Skill 能力峰值测试；两幕各约14秒，并使用 full-depth 最大化环境视差、红叶渡水层次与蜗牛姿态变化",
+      "resolvedAt": "2026-07-21T15:46:54.715Z"
+    },
+    "assetBudget": {
+      "backgrounds": 2,
+      "environmentLayers": 4,
+      "characterSheets": 2,
+      "styleSamples": 1,
+      "maxGeneratedImages": 9
+    },
+    "updatedAt": "2026-07-21T15:46:54.715Z"
+  },
+  "quality": {
+    "minimumAssetScale": 1
+  },
+  "video": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30
+  },
+  "theme": {
+    "canvas": "#6e1e19",
+    "sceneBackground": "#8a271f",
+    "accent": "#a33a2d",
+    "ink": "#4a291f",
+    "subtitle": "#fff8ea",
+    "subtitleBackground": "rgba(58, 25, 18, .72)",
+    "paperEdge": "#f5eedc",
+    "foreground": "#8d251e",
+    "texture": "textures/paper-grain.png"
+  },
+  "voice": {
+    "mode": "fictional",
+    "provider": "doubao",
+    "voiceId": "ruyayichen",
+    "profile": "elegant-poetic-storyteller",
+    "displayName": "儒雅逸辰",
+    "settings": {
+      "speedRatio": 1,
+      "pitch": -1,
+      "performancePrompt": "温柔、克制、富有秋日童话感；吐字清楚，转折处带轻微惊喜，结尾温暖但不过度煽情"
+    }
+  },
+  "audio": {
+    "narration": {
+      "volume": 1.85
+    },
+    "music": null,
+    "mastering": {
+      "targetLufs": -16,
+      "toleranceLufs": 3,
+      "truePeakDbtp": -1
+    }
+  },
+  "scenes": [
+    {
+      "id": "scene-01",
+      "label": "水洼前的庇护",
+      "eyebrow": "第一幕 · 困境",
+      "tailSeconds": 1,
+      "motion": {
+        "blueprint": "layered-reveal",
+        "intensity": 0.82,
+        "seed": 811,
+        "proofTimes": [
+          {
+            "id": "s1-proof-establish",
+            "at": 0.14,
+            "label": "深秋旅途建立",
+            "kind": "establish",
+            "assertions": [
+              "小蜗牛完整可见并由左向右行进",
+              "远岸、芦苇与天空呈现至少三层纸片景深",
+              "红叶是画面中唯一高饱和朱红主体"
+            ]
+          },
+          {
+            "id": "s1-proof-wind-shelter",
+            "at": 0.62,
+            "label": "红叶挡风",
+            "kind": "peak",
+            "assertions": [
+              "蜗牛与地面保持连续接触且轮廓未被错误裁切",
+              "红叶完整覆盖在蜗牛上方但没有与蜗牛轮廓粘连",
+              "水面保持在注册岸线下方且彼岸仍位于右侧"
+            ]
+          },
+          {
+            "id": "s1-proof-final",
+            "at": 0.88,
+            "label": "庇护下的远望",
+            "kind": "final",
+            "assertions": [
+              "小蜗牛从红叶下探出触角并朝向右侧彼岸",
+              "水洼仍清楚阻断前路",
+              "构图留出进入第二幕的向右运动空间"
+            ]
+          }
+        ]
+      },
+      "composition": {
+        "coordinateSpace": {
+          "width": 1920,
+          "height": 1080
+        },
+        "nodes": [
+          {
+            "id": "puddle-environment",
+            "kind": "group",
+            "pattern": "registered-environment",
+            "z": 0,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": 0
+                },
+                {
+                  "at": 1,
+                  "x": 0
+                }
+              ]
+            },
+            "registration": {
+              "id": "puddle-environment-style-01",
+              "sourceMasterAssetId": "puddle-environment-master",
+              "canvas": {
+                "width": 1920,
+                "height": 1080
+              },
+              "origin": "top-left"
+            },
+            "boundaries": [
+              {
+                "id": "bank-water-edge",
+                "normalizedY": 0.565,
+                "upperSemantic": "sky-bank-and-reeds",
+                "lowerSemantic": "puddle-water"
+              }
+            ],
+            "children": [
+              {
+                "id": "bank-upper",
+                "kind": "asset",
+                "assetRole": "environment",
+                "src": "projects/last-red-leaf/assets/style/bank-upper.png",
+                "z": 0,
+                "registrationId": "puddle-environment-style-01",
+                "semanticCoverage": [
+                  "sky-bank-and-reeds"
+                ],
+                "depth": -0.35,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": -0.004
+                    },
+                    {
+                      "at": 1,
+                      "x": 0.004
+                    }
+                  ]
+                },
+                "clip": {
+                  "boundaryId": "bank-water-edge",
+                  "side": "upper"
+                }
+              },
+              {
+                "id": "water-lower",
+                "kind": "asset",
+                "assetRole": "environment",
+                "src": "projects/last-red-leaf/assets/style/water-lower.png",
+                "z": 1,
+                "registrationId": "puddle-environment-style-01",
+                "semanticCoverage": [
+                  "puddle-water"
+                ],
+                "depth": -0.1,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": 0.002
+                    },
+                    {
+                      "at": 1,
+                      "x": -0.002
+                    }
+                  ]
+                },
+                "clip": {
+                  "boundaryId": "bank-water-edge",
+                  "side": "lower"
+                }
+              }
+            ]
+          },
+          {
+            "id": "scene-01-tableau",
+            "kind": "group",
+            "pattern": "free",
+            "z": 10,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": -0.03,
+              "y": -0.08,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scale": 0.72
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": -0.02,
+                  "y": 0.006
+                },
+                {
+                  "at": 0.62,
+                  "x": 0,
+                  "y": 0,
+                  "ease": "ease-in-out"
+                },
+                {
+                  "at": 1,
+                  "x": 0.018,
+                  "y": -0.003,
+                  "ease": "ease-out"
+                }
+              ],
+              "idle": {
+                "preset": "breathe",
+                "intensity": 0.14,
+                "cycleSeconds": 3.2,
+                "phase": 0.1
+              }
+            },
+            "children": [
+              {
+                "id": "ground-snail-rig",
+                "kind": "group",
+                "pattern": "supported-subject",
+                "z": 0,
+                "coordinateSpace": {
+                  "width": 1920,
+                  "height": 1080
+                },
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": -0.012,
+                      "y": 0.002,
+                      "rotation": -0.6
+                    },
+                    {
+                      "at": 0.62,
+                      "x": 0,
+                      "y": 0,
+                      "rotation": 0.25,
+                      "ease": "ease-in-out"
+                    },
+                    {
+                      "at": 1,
+                      "x": 0.012,
+                      "y": -0.002,
+                      "rotation": 0,
+                      "ease": "ease-out"
+                    }
+                  ]
+                },
+                "registration": {
+                  "id": "scene1-shelter-style-01",
+                  "sourceMasterAssetId": "scene1-shelter-master",
+                  "canvas": {
+                    "width": 1920,
+                    "height": 1080
+                  },
+                  "origin": "top-left"
+                },
+                "support": {
+                  "subjectId": "snail-subject",
+                  "contactAnchor": {
+                    "x": 0.47,
+                    "y": 0.77
+                  },
+                  "contactZone": [
+                    [
+                      0.26,
+                      0.68
+                    ],
+                    [
+                      0.78,
+                      0.68
+                    ],
+                    [
+                      0.78,
+                      0.88
+                    ],
+                    [
+                      0.22,
+                      0.88
+                    ]
+                  ],
+                  "occlusionZone": [
+                    [
+                      0.21,
+                      0.75
+                    ],
+                    [
+                      0.8,
+                      0.75
+                    ],
+                    [
+                      0.8,
+                      0.86
+                    ],
+                    [
+                      0.21,
+                      0.86
+                    ]
+                  ]
+                },
+                "children": [
+                  {
+                    "id": "scene1-ground-rear",
+                    "kind": "asset",
+                    "assetRole": "environment",
+                    "src": "projects/last-red-leaf/assets/scene1/scene1-ground-rear.png",
+                    "z": 0,
+                    "slot": "support-rear",
+                    "registrationId": "scene1-shelter-style-01",
+                    "semanticCoverage": [
+                      "dry-ground-support"
+                    ],
+                    "transform": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 1,
+                      "height": 1,
+                      "anchorX": 0,
+                      "anchorY": 0
+                    },
+                    "motion": {
+                      "keyframes": [
+                        {
+                          "at": 0,
+                          "x": 0
+                        },
+                        {
+                          "at": 1,
+                          "x": 0
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "snail-subject",
+                    "kind": "asset",
+                    "assetRole": "character",
+                    "src": "projects/last-red-leaf/assets/scene1/scene1-snail-subject.png",
+                    "z": 1,
+                    "slot": "subject",
+                    "registrationId": "scene1-shelter-style-01",
+                    "semanticCoverage": [
+                      "snail"
+                    ],
+                    "transform": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 1,
+                      "height": 1,
+                      "anchorX": 0,
+                      "anchorY": 0
+                    },
+                    "motion": {
+                      "keyframes": [
+                        {
+                          "at": 0,
+                          "x": 0,
+                          "y": 0
+                        },
+                        {
+                          "at": 0.62,
+                          "x": 0.003,
+                          "y": -0.004,
+                          "ease": "ease-in-out"
+                        },
+                        {
+                          "at": 1,
+                          "x": 0.008,
+                          "y": -0.003,
+                          "ease": "ease-out"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "id": "scene1-ground-front",
+                    "kind": "asset",
+                    "assetRole": "environment",
+                    "src": "projects/last-red-leaf/assets/scene1/scene1-ground-front.png",
+                    "z": 2,
+                    "slot": "support-front",
+                    "registrationId": "scene1-shelter-style-01",
+                    "semanticCoverage": [
+                      "dry-ground-front-lip"
+                    ],
+                    "transform": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 1,
+                      "height": 1,
+                      "anchorX": 0,
+                      "anchorY": 0
+                    },
+                    "motion": {
+                      "keyframes": [
+                        {
+                          "at": 0,
+                          "x": 0
+                        },
+                        {
+                          "at": 1,
+                          "x": 0
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "scene1-red-leaf-free",
+                "kind": "asset",
+                "assetRole": "prop",
+                "src": "projects/last-red-leaf/assets/scene1/scene1-red-leaf-free.png",
+                "z": 4,
+                "semanticCoverage": [
+                  "red-leaf"
+                ],
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": -0.008,
+                      "y": -0.014,
+                      "rotation": -1.2
+                    },
+                    {
+                      "at": 0.62,
+                      "x": 0,
+                      "y": 0,
+                      "rotation": 0.5,
+                      "ease": "ease-in-out"
+                    },
+                    {
+                      "at": 1,
+                      "x": 0.004,
+                      "y": -0.004,
+                      "rotation": 0,
+                      "ease": "ease-out"
+                    }
+                  ],
+                  "idle": {
+                    "preset": "float",
+                    "intensity": 0.18,
+                    "cycleSeconds": 2.6,
+                    "phase": 0.3
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "wind-lines-free",
+            "kind": "group",
+            "pattern": "free",
+            "z": 20,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": -0.02,
+                  "opacity": 0.12
+                },
+                {
+                  "at": 0.62,
+                  "x": 0.012,
+                  "opacity": 0.78,
+                  "ease": "ease-in-out"
+                },
+                {
+                  "at": 1,
+                  "x": 0.026,
+                  "opacity": 0.22,
+                  "ease": "ease-out"
+                }
+              ],
+              "idle": {
+                "preset": "drift",
+                "intensity": 0.3,
+                "cycleSeconds": 2.1,
+                "phase": 0.7
+              }
+            },
+            "children": [
+              {
+                "id": "wind-lines",
+                "kind": "asset",
+                "assetRole": "decorative",
+                "src": "projects/last-red-leaf/assets/style/wind-lines.png",
+                "z": 0,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": 0
+                    },
+                    {
+                      "at": 1,
+                      "x": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "camera": {
+        "preset": "push",
+        "intensity": 0.28
+      },
+      "transition": {
+        "type": "none",
+        "durationSeconds": 0
+      },
+      "narration": {
+        "src": "projects/last-red-leaf/audio/narration/scene-01-ruyayichen.mp3",
+        "startSeconds": 0.35,
+        "durationSeconds": 10.296,
+        "text": "小蜗牛走到宽宽的水洼前。冷风吹来，最后一片红叶低下身子，像小屋一样，为它挡住寒意。"
+      },
+      "subtitles": [
+        {
+          "fromSeconds": 0.36666666666666664,
+          "toSeconds": 3.3,
+          "text": "小蜗牛走到宽宽的水洼前。"
+        },
+        {
+          "fromSeconds": 3.3666666666666667,
+          "toSeconds": 4.6,
+          "text": "冷风吹来，"
+        },
+        {
+          "fromSeconds": 4.666666666666667,
+          "toSeconds": 7.2,
+          "text": "最后一片红叶低下身子，"
+        },
+        {
+          "fromSeconds": 7.266666666666667,
+          "toSeconds": 8.733333333333333,
+          "text": "像小屋一样，"
+        },
+        {
+          "fromSeconds": 8.8,
+          "toSeconds": 10.666666666666666,
+          "text": "为它挡住寒意。"
+        }
+      ],
+      "cues": [
+        {
+          "id": "s1-establish-autumn",
+          "beatId": "s1-b1-establish-autumn",
+          "at": 0.08,
+          "durationSeconds": 1.5,
+          "targetId": "puddle-environment",
+          "action": "reveal",
+          "intensity": 0.35,
+          "proofTimeId": "s1-proof-establish"
+        },
+        {
+          "id": "s1-reveal-puddle",
+          "beatId": "s1-b2-reveal-puddle",
+          "at": 0.32,
+          "durationSeconds": 2.2,
+          "targetId": "ground-snail-rig",
+          "action": "pulse",
+          "intensity": 0.18
+        },
+        {
+          "id": "s1-wind-arrives",
+          "beatId": "s1-b3-wind-arrives",
+          "at": 0.58,
+          "durationSeconds": 1.8,
+          "targetId": "wind-lines-free",
+          "action": "shake",
+          "intensity": 0.65,
+          "proofTimeId": "s1-proof-wind-shelter",
+          "sound": {
+            "src": "projects/last-red-leaf/audio/sfx/cold-wind-gust.wav",
+            "volume": 0.28
+          }
+        },
+        {
+          "id": "s1-shelter-holds",
+          "beatId": "s1-b4-shelter-holds",
+          "at": 0.84,
+          "durationSeconds": 1.4,
+          "targetId": "scene-01-tableau",
+          "action": "settle",
+          "intensity": 0.25,
+          "proofTimeId": "s1-proof-final",
+          "sound": {
+            "src": "projects/last-red-leaf/audio/sfx/leaf-rustle.wav",
+            "volume": 0.25
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene-02",
+      "label": "红叶变成小船",
+      "eyebrow": "第二幕 · 转机",
+      "tailSeconds": 1.4,
+      "motion": {
+        "blueprint": "transformation-tableau",
+        "intensity": 0.92,
+        "seed": 1129,
+        "proofTimes": [
+          {
+            "id": "s2-proof-leaf-landing",
+            "at": 0.34,
+            "label": "红叶落水成舟",
+            "kind": "action",
+            "assertions": [
+              "红叶完整平放在水面且底缘与水面接触带一致",
+              "接触点周围存在清楚涟漪而非悬空",
+              "水面和岸缘的注册边界没有漂移"
+            ]
+          },
+          {
+            "id": "s2-proof-snail-aboard",
+            "at": 0.58,
+            "label": "蜗牛登上叶船",
+            "kind": "peak",
+            "assertions": [
+              "蜗牛完整位于红叶承托区内且腹足接触清楚",
+              "红叶前缘对蜗牛形成自然局部遮挡但不损伤轮廓",
+              "红叶与蜗牛使用同一载体方向和漂浮节奏"
+            ]
+          },
+          {
+            "id": "s2-proof-final",
+            "at": 0.9,
+            "label": "驶向温暖彼岸",
+            "kind": "final",
+            "assertions": [
+              "红叶小船与蜗牛完整可见并抵近右侧暖色彼岸",
+              "水面光路把出发岸与彼岸连接起来",
+              "画面明确表达阻碍已转化为道路且没有静态空白区"
+            ]
+          }
+        ]
+      },
+      "composition": {
+        "coordinateSpace": {
+          "width": 1920,
+          "height": 1080
+        },
+        "nodes": [
+          {
+            "id": "puddle-environment",
+            "kind": "group",
+            "pattern": "registered-environment",
+            "z": 0,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": 0
+                },
+                {
+                  "at": 1,
+                  "x": 0
+                }
+              ]
+            },
+            "registration": {
+              "id": "puddle-environment-style-01",
+              "sourceMasterAssetId": "puddle-environment-master",
+              "canvas": {
+                "width": 1920,
+                "height": 1080
+              },
+              "origin": "top-left"
+            },
+            "boundaries": [
+              {
+                "id": "bank-water-edge",
+                "normalizedY": 0.565,
+                "upperSemantic": "sky-bank-and-reeds",
+                "lowerSemantic": "puddle-water"
+              }
+            ],
+            "children": [
+              {
+                "id": "bank-upper",
+                "kind": "asset",
+                "assetRole": "environment",
+                "src": "projects/last-red-leaf/assets/style/bank-upper.png",
+                "z": 0,
+                "registrationId": "puddle-environment-style-01",
+                "semanticCoverage": [
+                  "sky-bank-and-reeds"
+                ],
+                "depth": -0.35,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": -0.004
+                    },
+                    {
+                      "at": 1,
+                      "x": 0.004
+                    }
+                  ]
+                },
+                "clip": {
+                  "boundaryId": "bank-water-edge",
+                  "side": "upper"
+                }
+              },
+              {
+                "id": "water-lower",
+                "kind": "asset",
+                "assetRole": "environment",
+                "src": "projects/last-red-leaf/assets/style/water-lower.png",
+                "z": 1,
+                "registrationId": "puddle-environment-style-01",
+                "semanticCoverage": [
+                  "puddle-water"
+                ],
+                "depth": -0.1,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": 0.002
+                    },
+                    {
+                      "at": 1,
+                      "x": -0.002
+                    }
+                  ]
+                },
+                "clip": {
+                  "boundaryId": "bank-water-edge",
+                  "side": "lower"
+                }
+              }
+            ]
+          },
+          {
+            "id": "leaf-boat-rig",
+            "kind": "group",
+            "pattern": "supported-subject",
+            "z": 10,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": -0.095,
+                  "y": 0.012,
+                  "rotation": -1.3,
+                  "ease": "ease-in-out"
+                },
+                {
+                  "at": 0.34,
+                  "x": -0.058,
+                  "y": 0.002,
+                  "rotation": -0.35,
+                  "ease": "ease-in-out"
+                },
+                {
+                  "at": 0.58,
+                  "x": 0.008,
+                  "y": -0.006,
+                  "rotation": 0.45,
+                  "ease": "ease-in-out"
+                },
+                {
+                  "at": 1,
+                  "x": 0.14,
+                  "y": -0.018,
+                  "rotation": -0.15,
+                  "ease": "ease-out"
+                }
+              ],
+              "idle": {
+                "preset": "float",
+                "intensity": 0.38,
+                "cycleSeconds": 2.8,
+                "phase": 0.2
+              }
+            },
+            "registration": {
+              "id": "leaf-boat-style-01",
+              "sourceMasterAssetId": "style-leaf-snail-master",
+              "canvas": {
+                "width": 1920,
+                "height": 1080
+              },
+              "origin": "top-left"
+            },
+            "support": {
+              "subjectId": "snail-subject",
+              "contactAnchor": {
+                "x": 0.521,
+                "y": 0.622
+              },
+              "contactZone": [
+                [
+                  0.3,
+                  0.53
+                ],
+                [
+                  0.76,
+                  0.53
+                ],
+                [
+                  0.78,
+                  0.75
+                ],
+                [
+                  0.28,
+                  0.75
+                ]
+              ],
+              "occlusionZone": [
+                [
+                  0.16,
+                  0.56
+                ],
+                [
+                  0.82,
+                  0.56
+                ],
+                [
+                  0.82,
+                  0.72
+                ],
+                [
+                  0.16,
+                  0.72
+                ]
+              ]
+            },
+            "children": [
+              {
+                "id": "leaf-boat-rear",
+                "kind": "asset",
+                "assetRole": "prop",
+                "src": "projects/last-red-leaf/assets/style/leaf-boat-rear.png",
+                "z": 0,
+                "slot": "support-rear",
+                "registrationId": "leaf-boat-style-01",
+                "semanticCoverage": [
+                  "red-leaf"
+                ],
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": 0
+                    },
+                    {
+                      "at": 1,
+                      "x": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "snail-subject",
+                "kind": "asset",
+                "assetRole": "character",
+                "src": "projects/last-red-leaf/assets/style/snail-subject.png",
+                "z": 1,
+                "slot": "subject",
+                "registrationId": "leaf-boat-style-01",
+                "semanticCoverage": [
+                  "snail"
+                ],
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": 0,
+                      "y": 0
+                    },
+                    {
+                      "at": 0.58,
+                      "x": 0,
+                      "y": -0.0035,
+                      "ease": "ease-in-out"
+                    },
+                    {
+                      "at": 1,
+                      "x": 0,
+                      "y": 0,
+                      "ease": "ease-in-out"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "leaf-boat-front",
+                "kind": "asset",
+                "assetRole": "prop",
+                "src": "projects/last-red-leaf/assets/style/leaf-boat-front.png",
+                "z": 2,
+                "slot": "support-front",
+                "registrationId": "leaf-boat-style-01",
+                "semanticCoverage": [
+                  "red-leaf-front-rim"
+                ],
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": 0
+                    },
+                    {
+                      "at": 1,
+                      "x": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "wind-lines-free",
+            "kind": "group",
+            "pattern": "free",
+            "z": 20,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": -0.02,
+                  "opacity": 0.3
+                },
+                {
+                  "at": 0.5,
+                  "x": 0.008,
+                  "opacity": 0.75,
+                  "ease": "ease-in-out"
+                },
+                {
+                  "at": 1,
+                  "x": 0.024,
+                  "opacity": 0.18,
+                  "ease": "ease-out"
+                }
+              ],
+              "idle": {
+                "preset": "drift",
+                "intensity": 0.24,
+                "cycleSeconds": 2.4,
+                "phase": 0.4
+              }
+            },
+            "children": [
+              {
+                "id": "wind-lines",
+                "kind": "asset",
+                "assetRole": "decorative",
+                "src": "projects/last-red-leaf/assets/style/wind-lines.png",
+                "z": 0,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": 0
+                    },
+                    {
+                      "at": 1,
+                      "x": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "camera": {
+        "preset": "pan-right",
+        "intensity": 0.38
+      },
+      "transition": {
+        "type": "fade",
+        "durationSeconds": 0.25
+      },
+      "narration": {
+        "src": "projects/last-red-leaf/audio/narration/scene-02-ruyayichen.mp3",
+        "startSeconds": 0.25,
+        "durationSeconds": 13.056,
+        "text": "忽然，一阵大风把红叶吹进水里。红叶没有远去，它变成一只小船，载着小蜗牛，慢慢驶向温暖的彼岸。"
+      },
+      "subtitles": [
+        {
+          "fromSeconds": 0.26666666666666666,
+          "toSeconds": 4.4,
+          "text": "忽然，一阵大风把红叶吹进水里。"
+        },
+        {
+          "fromSeconds": 4.466666666666667,
+          "toSeconds": 6.4,
+          "text": "红叶没有远去，"
+        },
+        {
+          "fromSeconds": 6.466666666666667,
+          "toSeconds": 8.633333333333333,
+          "text": "它变成一只小船，"
+        },
+        {
+          "fromSeconds": 8.7,
+          "toSeconds": 10.366666666666667,
+          "text": "载着小蜗牛，"
+        },
+        {
+          "fromSeconds": 10.433333333333334,
+          "toSeconds": 13.333333333333334,
+          "text": "慢慢驶向温暖的彼岸。"
+        }
+      ],
+      "cues": [
+        {
+          "id": "s2-leaf-lifts",
+          "beatId": "s2-b1-leaf-lifts",
+          "at": 0.08,
+          "durationSeconds": 4,
+          "targetId": "leaf-boat-rig",
+          "action": "lift",
+          "intensity": 0.72,
+          "proofTimeId": "s2-proof-leaf-landing",
+          "sound": {
+            "src": "projects/last-red-leaf/audio/sfx/strong-wind-gust.wav",
+            "volume": 0.35
+          }
+        },
+        {
+          "id": "s2-leaf-lands",
+          "beatId": "s2-b2-leaf-lands",
+          "at": 0.3,
+          "durationSeconds": 1.4,
+          "targetId": "leaf-boat-rig",
+          "action": "settle",
+          "intensity": 0.62,
+          "proofTimeId": "s2-proof-leaf-landing",
+          "sound": {
+            "src": "projects/last-red-leaf/audio/sfx/soft-leaf-splash.wav",
+            "volume": 0.42
+          }
+        },
+        {
+          "id": "s2-snail-boards",
+          "beatId": "s2-b3-snail-boards",
+          "at": 0.52,
+          "durationSeconds": 1.4,
+          "targetId": "snail-subject",
+          "action": "lift",
+          "intensity": 0.22,
+          "proofTimeId": "s2-proof-snail-aboard"
+        },
+        {
+          "id": "s2-crossing",
+          "beatId": "s2-b4-crossing",
+          "at": 0.72,
+          "durationSeconds": 3,
+          "targetId": "leaf-boat-rig",
+          "action": "lift",
+          "intensity": 0.25
+        },
+        {
+          "id": "s2-warm-arrival",
+          "beatId": "s2-b5-warm-arrival",
+          "at": 0.9,
+          "durationSeconds": 1.2,
+          "targetId": "leaf-boat-rig",
+          "action": "settle",
+          "intensity": 0.35,
+          "proofTimeId": "s2-proof-final"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "water-lower",
+  "capability": "image",
+  "output": "public/projects/last-red-leaf/assets/style/water-lower.png",
+  "prompt": "Lower registered water layer derived from puddle-environment-master at the authored bank-water boundary; preserve exact 1920x1080 registration and transparent upper region.",
+  "compositionBinding": {
+    "sceneId": "scene-02",
+    "nodeId": "water-lower",
+    "pattern": "registered-environment",
+    "registrationId": "puddle-environment-style-01",
+    "sourceMasterAssetId": "puddle-environment-master",
+    "outputRole": "lower-boundary-member",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "mask-application", "parentAssetId": "puddle-environment-master"}
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": ["shore-water-boundary"]
+  },
+  "quality": {
+    "kind": "environment",
+    "requiredChecks": ["style-consistent", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "edge-clean"]
+  }
+}

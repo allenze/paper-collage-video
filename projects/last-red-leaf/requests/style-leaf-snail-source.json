@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "style-leaf-snail-source",
+  "capability": "image",
+  "output": "public/projects/last-red-leaf/assets/style/style-leaf-snail-source.png",
+  "prompt": "Create one production-ready landscape source plate for a Chinese paper-cut collage animation. The only subject is a small warm-beige snail riding inside a long crimson autumn leaf shaped like a shallow canoe, shown in clean right-facing side profile. Preserve the entire silhouette of both snail and leaf with generous empty margin on every side. The snail has exactly two long separated eye stalks, one compact continuous foot, one large ochre-gold shell, and exactly one clearly readable dark-brown spiral on the shell. The leaf has a pointed right tip, a short curved stem at the left, a pale cream central vein, a deep crimson rear body, and a slightly lighter coral-red front rim that overlaps only the lowest edge of the snail foot. Make the snail about one third of the leaf length. Use tactile hand-torn paper, visible natural fibers, restrained deckled edges, flat layered shapes, a warm elegant autumn storybook palette, and consistent soft upper-left studio lighting within the paper pieces. Place the assembly centered around the lower-middle of the image, with the leaf nearly horizontal and the snail sitting securely on its middle. Background must be one perfectly uniform flat chroma green #00FF00 from edge to edge, with no texture, gradient, noise, shadows, reflections, scenery, water, plants, typography, border, signature, or watermark. Do not use green anywhere in the snail or leaf. Do not crop any eye stalk, shell, leaf tip, or stem. Do not add extra eyes, stalks, shells, limbs, leaves, or decorative objects.",
+  "compositionBinding": {
+    "sceneId": "scene-02",
+    "nodeId": "leaf-boat-rig",
+    "pattern": "supported-subject",
+    "registrationId": "leaf-boat-style-01",
+    "sourceMasterAssetId": "style-leaf-snail-source",
+    "outputRole": "provider-source-master",
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "derivation": {
+      "method": "provider-generation"
+    }
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": [
+      "story-icons",
+      "snail-topology"
+    ],
+    "generationFamily": {
+      "familyId": "last-red-leaf-icons-01",
+      "memberIds": [
+        "snail",
+        "red-leaf"
+      ],
+      "referenceAssetIds": []
+    }
+  },
+  "quality": {
+    "kind": "image",
+    "requiredChecks": [
+      "no-text",
+      "no-watermark",
+      "subject-complete",
+      "identity-distinct-within-frame",
+      "identity-family-consistent",
+      "silhouette-fidelity",
+      "negative-space-clean",
+      "background-leak-free",
+      "background-uniform",
+      "edge-clean",
+      "style-consistent"
+    ]
+  }
+}

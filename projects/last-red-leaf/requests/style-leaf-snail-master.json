@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "style-leaf-snail-master",
+  "capability": "image",
+  "output": "public/projects/last-red-leaf/assets/style/style-leaf-snail-master.png",
+  "prompt": "Remove the uniform chroma background from style-leaf-snail-source while preserving the exact authored paper silhouette, internal paper texture, two separated eye stalks, shell spiral, leaf tip, leaf stem, and clean semi-transparent edge pixels. Do not redraw or regenerate the subject.",
+  "compositionBinding": {
+    "sceneId": "scene-02",
+    "nodeId": "leaf-boat-rig",
+    "pattern": "supported-subject",
+    "registrationId": "leaf-boat-style-01",
+    "sourceMasterAssetId": "style-leaf-snail-master",
+    "outputRole": "transparent-style-master",
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "derivation": {
+      "method": "alpha-extraction",
+      "parentAssetId": "style-leaf-snail-source"
+    }
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": [
+      "story-icons",
+      "snail-topology"
+    ],
+    "generationFamily": {
+      "familyId": "last-red-leaf-icons-01",
+      "memberIds": [
+        "snail",
+        "red-leaf"
+      ],
+      "referenceAssetIds": [
+        "style-leaf-snail-source"
+      ]
+    }
+  },
+  "quality": {
+    "kind": "style-sample",
+    "requiredChecks": [
+      "no-text",
+      "no-watermark",
+      "subject-complete",
+      "identity-distinct-within-frame",
+      "identity-family-consistent",
+      "silhouette-fidelity",
+      "negative-space-clean",
+      "background-leak-free",
+      "edge-clean",
+      "style-consistent"
+    ]
+  }
+}

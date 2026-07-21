@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "scene1-ground-front",
+  "capability": "image",
+  "output": "public/projects/last-red-leaf/assets/scene1/scene1-ground-front.png",
+  "prompt": "Derive only the ochre foreground lip that overlaps the lowest edge of the snail foot from scene1-shelter-master; preserve exact canvas registration and transparent surroundings without redrawing.",
+  "compositionBinding": {
+    "sceneId": "scene-01",
+    "nodeId": "scene1-ground-front",
+    "pattern": "supported-subject",
+    "registrationId": "scene1-shelter-style-01",
+    "sourceMasterAssetId": "scene1-shelter-master",
+    "outputRole": "support-front",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "mask-application", "parentAssetId": "scene1-shelter-master"}
+  },
+  "semanticBinding": {"riskClass": "decorative", "contractIds": []},
+  "quality": {"kind": "prop", "requiredChecks": ["subject-complete", "edge-clean", "style-consistent"]}
+}

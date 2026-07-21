@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "leaf-boat-front",
+  "capability": "image",
+  "output": "public/projects/last-red-leaf/assets/style/leaf-boat-front.png",
+  "prompt": "Derive only the coral-red front rim that visibly overlaps the lowest edge of the snail foot from style-leaf-snail-master; preserve exact 1920x1080 registration and transparent surroundings, without polygon redrawing.",
+  "compositionBinding": {
+    "sceneId": "scene-02",
+    "nodeId": "leaf-boat-front",
+    "pattern": "supported-subject",
+    "registrationId": "leaf-boat-style-01",
+    "sourceMasterAssetId": "style-leaf-snail-master",
+    "outputRole": "support-front",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "mask-application", "parentAssetId": "style-leaf-snail-master"}
+  },
+  "semanticBinding": {
+    "riskClass": "identity-critical",
+    "contractIds": ["story-icons"],
+    "generationFamily": {
+      "familyId": "last-red-leaf-icons-01",
+      "memberIds": ["red-leaf"],
+      "referenceAssetIds": ["style-leaf-snail-master"]
+    }
+  },
+  "quality": {
+    "kind": "prop",
+    "requiredChecks": ["style-consistent", "subject-complete", "identity-distinct-within-frame", "identity-family-consistent", "edge-clean"]
+  }
+}

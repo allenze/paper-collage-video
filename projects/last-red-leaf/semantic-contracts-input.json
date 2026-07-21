@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "last-red-leaf",
+  "status": "ready",
+  "contracts": [
+    {
+      "id": "story-icons",
+      "kind": "identity",
+      "title": "小蜗牛与最后一片红叶的视觉身份",
+      "invariants": [
+        "蜗牛与红叶必须在同一画面中一眼可分，不能共享相同的主色或轮廓语言。",
+        "蜗牛始终保持暖米色身体、赭金螺旋壳和两根细长眼柄；红叶始终保持朱红船形、浅色主叶脉和尖长叶端。",
+        "同一母图派生的蜗牛、红叶后层和红叶前缘必须保持纸张纹理、光向和比例一致。"
+      ],
+      "members": [
+        {
+          "id": "snail",
+          "label": "小蜗牛",
+          "fingerprint": {
+            "faceOrFront": "圆润小头朝向画面右侧，两根细长眼柄清楚分开",
+            "bodyOrProportion": "低矮紧凑的暖米色腹足，身体长度明显短于红叶",
+            "headOrTop": "头顶无帽饰，只有两根向上弯曲的眼柄",
+            "facialHairOrDetail": "背负单枚赭金色大螺旋壳，壳上仅一条清楚螺旋纹",
+            "palette": [
+              "暖米色",
+              "赭金",
+              "深棕"
+            ],
+            "distinguishingFeatures": [
+              "两根分离的长眼柄",
+              "单枚大螺旋壳",
+              "连续低矮腹足"
+            ]
+          },
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        },
+        {
+          "id": "red-leaf",
+          "label": "最后一片红叶",
+          "fingerprint": {
+            "faceOrFront": "叶尖朝向画面右侧，外轮廓细长而完整",
+            "bodyOrProportion": "浅弧形船身，长度约为蜗牛身体的三倍",
+            "headOrTop": "左端保留一小段自然弯曲叶柄",
+            "facialHairOrDetail": "一条浅米色中央主叶脉贯穿叶身但不切断外轮廓",
+            "palette": [
+              "朱红",
+              "珊瑚红",
+              "浅米色"
+            ],
+            "distinguishingFeatures": [
+              "尖长叶端",
+              "船形浅弧侧面",
+              "浅色中央主叶脉"
+            ]
+          },
+          "referenceAssetIds": [
+            "style-leaf-snail-master"
+          ]
+        }
+      ],
+      "coexistenceSets": [
+        {
+          "sceneId": "scene-01",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ]
+        },
+        {
+          "sceneId": "scene-02",
+          "memberIds": [
+            "snail",
+            "red-leaf"
+          ]
+        }
+      ],
+      "evidenceTargets": [
+        {
+          "id": "story-icons-same-frame",
+          "checks": [
+            "identity-distinct-within-frame",
+            "identity-family-consistent"
+          ],
+          "shots": [
+            {
+              "sceneId": "scene-01",
+              "nodeId": "scene-01-tableau",
+              "proofTimeIds": [
+                "s1-proof-wind-shelter",
+                "s1-proof-final"
+              ]
+            },
+            {
+              "sceneId": "scene-02",
+              "nodeId": "leaf-boat-rig",
+              "proofTimeIds": [
+                "s2-proof-snail-aboard",
+                "s2-proof-final"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "story-icons-cross-scene",
+          "checks": [
+            "cross-scene-identity-continuity"
+          ],
+          "shots": [
+            {
+              "sceneId": "scene-01",
+              "nodeId": "scene-01-tableau",
+              "proofTimeIds": [
+                "s1-proof-final"
+              ]
+            },
+            {
+              "sceneId": "scene-02",
+              "nodeId": "leaf-boat-rig",
+              "proofTimeIds": [
+                "s2-proof-final"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "snail-topology",
+      "kind": "topology",
+      "title": "小蜗牛轮廓与负空间",
+      "invariants": [
+        "两根眼柄在所有证明帧中均与头部连接且彼此分离。",
+        "腹足、头部与螺旋壳形成一个连续主体，不得被红叶前缘误切断。",
+        "壳体只出现一枚清楚的大螺旋，不生成额外肢体、眼柄或壳体。"
+      ],
+      "subjectIds": [
+        "snail"
+      ],
+      "requiredVisibleParts": [
+        "完整头部",
+        "两根分离眼柄",
+        "连续腹足",
+        "单枚螺旋壳"
+      ],
+      "requiredNegativeSpaces": [
+        "两根眼柄之间的空气间隙",
+        "眼柄与螺旋壳之间的轮廓间隙",
+        "蜗牛上轮廓与红叶前缘之间的可读分离"
+      ],
+      "evidenceTargets": [
+        {
+          "id": "snail-topology-style",
+          "checks": [
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free"
+          ],
+          "shots": [
+            {
+              "sceneId": "scene-01",
+              "nodeId": "snail-subject",
+              "proofTimeIds": [
+                "s1-proof-wind-shelter",
+                "s1-proof-final"
+              ]
+            },
+            {
+              "sceneId": "scene-02",
+              "nodeId": "snail-subject",
+              "proofTimeIds": [
+                "s2-proof-snail-aboard",
+                "s2-proof-final"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shore-water-boundary",
+      "kind": "topology",
+      "title": "岸缘与水面注册边界",
+      "invariants": [
+        "雾蓝水面始终位于同一条岸缘边界下方。",
+        "岸缘与水面来自同一 1920×1080 注册母版，镜头和载体运动不得造成边界漂移。",
+        "岸缘与水面之间不得出现透明裂缝、重复覆盖或颜色泄漏。"
+      ],
+      "subjectIds": [
+        "bank-upper",
+        "water-lower"
+      ],
+      "requiredVisibleParts": [
+        "连续岸线",
+        "岸线上方的纸片芦苇与远岸",
+        "岸线下方的雾蓝水面与暖色光路"
+      ],
+      "requiredNegativeSpaces": [
+        "岸线上方保持天空空间",
+        "红叶小船四周保留可读水面空间"
+      ],
+      "evidenceTargets": [
+        {
+          "id": "shore-water-registration",
+          "checks": [
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free"
+          ],
+          "shots": [
+            {
+              "sceneId": "scene-01",
+              "nodeId": "puddle-environment",
+              "proofTimeIds": [
+                "s1-proof-establish",
+                "s1-proof-final"
+              ]
+            },
+            {
+              "sceneId": "scene-02",
+              "nodeId": "puddle-environment",
+              "proofTimeIds": [
+                "s2-proof-leaf-landing",
+                "s2-proof-final"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

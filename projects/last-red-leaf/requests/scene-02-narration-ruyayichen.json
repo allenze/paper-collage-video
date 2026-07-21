@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "scene-02-narration-ruyayichen",
+  "capability": "voice",
+  "output": "public/projects/last-red-leaf/audio/narration/scene-02-ruyayichen.mp3",
+  "text": "忽然，一阵大风把红叶吹进水里。红叶没有远去，它变成一只小船，载着小蜗牛，慢慢驶向温暖的彼岸。",
+  "voiceId": "ruyayichen",
+  "model": "seed-tts-2.0",
+  "settings": {
+    "provider": "doubao",
+    "speedRatio": 0.94,
+    "pitch": -1,
+    "emotion": "happy",
+    "emotionScale": 2,
+    "performancePrompt": "温柔、克制、富有秋日童话感；开头的大风带轻微惊讶，‘没有远去’后转为欣喜，结尾温暖舒展，吐字清楚，不过度煽情"
+  }
+}

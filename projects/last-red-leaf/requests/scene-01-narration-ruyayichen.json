@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "last-red-leaf",
+  "assetId": "scene-01-narration-ruyayichen",
+  "capability": "voice",
+  "output": "public/projects/last-red-leaf/audio/narration/scene-01-ruyayichen.mp3",
+  "text": "小蜗牛走到宽宽的水洼前。冷风吹来，最后一片红叶低下身子，像小屋一样，为它挡住寒意。",
+  "voiceId": "ruyayichen",
+  "model": "seed-tts-2.0",
+  "settings": {
+    "provider": "doubao",
+    "speedRatio": 1,
+    "pitch": -1,
+    "emotion": "comfort",
+    "emotionScale": 2,
+    "performancePrompt": "温柔、克制、富有秋日童话感；前句平静建立深秋和水洼，冷风出现时稍收紧，最后一句放柔，吐字清楚，不过度煽情"
+  }
+}
