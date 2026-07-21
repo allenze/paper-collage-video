@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -30,7 +30,8 @@
           "purpose": "建立空间",
           "visual": "纸面与背景出现",
           "motion": "场景淡入",
-          "audioCue": null
+          "audioCue": null,
+          "proofTimeId": "proof-establish"
         },
         {
           "id": "subject-arrives",
@@ -38,7 +39,8 @@
           "purpose": "交付主体",
           "visual": "人物纸片进入中心",
           "motion": "主体上提并轻微放大",
-          "audioCue": null
+          "audioCue": null,
+          "proofTimeId": "proof-action"
         },
         {
           "id": "lockup",
@@ -46,7 +48,8 @@
           "purpose": "稳定结论",
           "visual": "人物与标题形成锁定构图",
           "motion": "主体回落稳定",
-          "audioCue": null
+          "audioCue": null,
+          "proofTimeId": "proof-final"
         }
       ],
       "proofTimes": [

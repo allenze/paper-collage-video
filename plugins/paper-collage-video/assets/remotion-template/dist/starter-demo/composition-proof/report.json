@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "projectSlug": "starter-demo",
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "frames": [
+    {
+      "sceneId": "starter",
+      "proofTimeId": "proof-establish",
+      "absoluteFrame": 3,
+      "fingerprint": "bundled-proof-establish",
+      "file": "dist/starter-demo/composition-proof/frames/proof-establish.png"
+    },
+    {
+      "sceneId": "starter",
+      "proofTimeId": "proof-action",
+      "absoluteFrame": 18,
+      "fingerprint": "bundled-proof-action",
+      "file": "dist/starter-demo/composition-proof/frames/proof-action.png"
+    },
+    {
+      "sceneId": "starter",
+      "proofTimeId": "proof-final",
+      "absoluteFrame": 32,
+      "fingerprint": "bundled-proof-final",
+      "file": "dist/starter-demo/composition-proof/frames/proof-final.png"
+    }
+  ],
+  "composites": [
+    {
+      "compositeId": "cue:starter:establish",
+      "sceneId": "starter",
+      "pattern": "cue",
+      "fingerprint": "853120ae3667f1f8a4728871f0efd06b0cd2072525350e8114796aba812aa750",
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-establish",
+          "absoluteFrame": 3,
+          "frameFingerprint": "bundled-proof-establish",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.png",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.png",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ]
+    },
+    {
+      "compositeId": "cue:starter:subject-arrives",
+      "sceneId": "starter",
+      "pattern": "cue",
+      "fingerprint": "1ee9b00ce22b3aadeea04a2ed935136cf6ee993751dd5efa2ad3366c730c5bdc",
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-action",
+          "absoluteFrame": 18,
+          "frameFingerprint": "bundled-proof-action",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.png",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ]
+    },
+    {
+      "compositeId": "cue:starter:lockup",
+      "sceneId": "starter",
+      "pattern": "cue",
+      "fingerprint": "55f6b19ff43b4acd252ece973567675822d382209b592a582ca7d6198e8cb43c",
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-final",
+          "absoluteFrame": 32,
+          "frameFingerprint": "bundled-proof-final",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.png",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.png",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.png",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ]
+    }
+  ],
+  "assetEvidence": [],
+  "cache": {
+    "frames": {
+      "reused": 0,
+      "rendered": 3
+    },
+    "composites": {
+      "reused": 0,
+      "generated": 3
+    },
+    "evidence": {
+      "reused": 0,
+      "generated": 0
+    }
+  }
+}

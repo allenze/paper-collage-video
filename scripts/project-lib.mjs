@@ -740,6 +740,13 @@ export const validateProject = async (project, options = {}) => {
       if (!beat) add('error', 'scene-cue-beat-missing', `故事板中没有节拍 ${cue.beatId}。`, `${cueLocation}.beatId`);
       if (!Number.isFinite(cue.at) || cue.at < 0 || cue.at > 1) add('error', 'scene-cue-time', 'cue.at 必须位于 0..1。', `${cueLocation}.at`);
       if (beat && Math.abs(cue.at - beat.at) > 0.035) add('error', 'scene-cue-drift', 'cue.at 必须与故事板节拍保持在 0.035 以内。', `${cueLocation}.at`);
+      if (storyboard?.schemaVersion >= 2 && beat?.proofTimeId && cue.proofTimeId !== beat.proofTimeId) {
+        add(
+          'scene-cue-proof-drift',
+          `cue 必须使用故事板节拍批准的证明时刻 ${beat.proofTimeId}。`,
+          `${cueLocation}.proofTimeId`,
+        );
+      }
       if (!isPositiveNumber(cue.durationSeconds)) add('error', 'scene-cue-duration', 'cue.durationSeconds 必须大于 0。', `${cueLocation}.durationSeconds`);
       if (!validTargets.has(cue.targetId)) add('error', 'scene-cue-target', `cue 目标不存在：${cue.targetId}`, `${cueLocation}.targetId`);
       if (!CUE_ACTIONS.includes(cue.action)) add('error', 'scene-cue-action', `未知 cue action：${cue.action}`, `${cueLocation}.action`);

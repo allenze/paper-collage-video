@@ -3,6 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import {collectCompositionGroups, flattenCompositionNodes} from './composition-lib.mjs';
+import {
+  buildAssetEvidence,
+  padEvidenceBounds,
+  safeEvidenceId,
+} from './asset-evidence-lib.mjs';
 import {collectCompositeQualityTargets} from './quality-lib.mjs';
 import {
   styleFingerprintForTarget,
@@ -28,50 +33,6 @@ const slug = args.find((argument) => !argument.startsWith('--'));
 const valueFor = (name) => args.find((argument) => argument.startsWith(`${name}=`))?.slice(name.length + 1);
 const durationSeconds = Number(valueFor('--duration') ?? 5);
 
-const safeId = (value) => value.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
-const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
-
-const checkerboard = ({width, height, cell = 48}) => Buffer.from(`
-  <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <defs><pattern id="grid" width="${cell * 2}" height="${cell * 2}" patternUnits="userSpaceOnUse">
-      <rect width="${cell * 2}" height="${cell * 2}" fill="#ece8df"/>
-      <rect width="${cell}" height="${cell}" fill="#8b8275"/>
-      <rect x="${cell}" y="${cell}" width="${cell}" height="${cell}" fill="#8b8275"/>
-    </pattern></defs>
-    <rect width="100%" height="100%" fill="url(#grid)"/>
-  </svg>
-`);
-
-const alphaBoundsFor = async (file) => {
-  const {data, info} = await sharp(file).ensureAlpha().extractChannel(3).raw().toBuffer({resolveWithObject: true});
-  let left = info.width;
-  let top = info.height;
-  let right = -1;
-  let bottom = -1;
-  for (let y = 0; y < info.height; y += 1) {
-    for (let x = 0; x < info.width; x += 1) {
-      if (data[y * info.width + x] <= 16) continue;
-      left = Math.min(left, x);
-      top = Math.min(top, y);
-      right = Math.max(right, x);
-      bottom = Math.max(bottom, y);
-    }
-  }
-  if (right < left || bottom < top) return {left: 0, top: 0, width: info.width, height: info.height};
-  return {left, top, width: right - left + 1, height: bottom - top + 1};
-};
-
-const padBounds = (bounds, {width, height}, padding = 24) => {
-  const left = clamp(bounds.left - padding, 0, width - 1);
-  const top = clamp(bounds.top - padding, 0, height - 1);
-  return {
-    left,
-    top,
-    width: clamp(bounds.width + padding * 2, 1, width - left),
-    height: clamp(bounds.height + padding * 2, 1, height - top),
-  };
-};
-
 const proofBoundsFor = ({group, localBounds, video}) => {
   const transform = group.transform ?? {};
   const groupWidth = Number(transform.width ?? 1) * video.width;
@@ -82,7 +43,7 @@ const proofBoundsFor = ({group, localBounds, video}) => {
   const groupTop = Number(transform.y ?? 0) * video.height - Number(transform.anchorY ?? 0) * groupHeight;
   const scaleX = groupWidth / group.coordinateSpace.width;
   const scaleY = groupHeight / group.coordinateSpace.height;
-  return padBounds({
+  return padEvidenceBounds({
     left: Math.floor(groupLeft + localBounds.left * scaleX),
     top: Math.floor(groupTop + localBounds.top * scaleY),
     width: Math.ceil(localBounds.width * scaleX),
@@ -105,47 +66,6 @@ const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
     <text x="${bounds.left + 12}" y="${Math.max(30, bounds.top - 12)}" fill="white" font-size="24" font-family="sans-serif">${label.replace(/[<>&]/g, '')}</text>
   </svg>
 `);
-
-const buildAssetEvidence = async ({node, directory}) => {
-  const sourceFile = resolvePublicFile(node.src);
-  const metadata = await sharp(sourceFile).metadata();
-  const width = metadata.width;
-  const height = metadata.height;
-  if (!width || !height) throw new Error(`${node.id} 无法读取尺寸。`);
-  const id = safeId(node.id);
-  const alphaMaskFile = path.join(directory, `${id}-alpha.png`);
-  const checkerboardFile = path.join(directory, `${id}-checkerboard.png`);
-  const tightCropFile = path.join(directory, `${id}-tight.png`);
-  const motionStressFile = path.join(directory, `${id}-motion-stress.jpg`);
-  const bounds = await alphaBoundsFor(sourceFile);
-  const padded = padBounds(bounds, {width, height}, Math.max(12, Math.round(Math.max(width, height) * 0.015)));
-  await sharp(sourceFile).ensureAlpha().extractChannel(3).png().toFile(alphaMaskFile);
-  const checker = checkerboard({width, height});
-  const normal = await sharp(checker).composite([{input: sourceFile}]).png().toBuffer();
-  await sharp(normal).png().toFile(checkerboardFile);
-  await sharp(normal).extract(padded).png().toFile(tightCropFile);
-  const shiftX = Math.max(8, Math.round(width * 0.02));
-  const shiftY = Math.max(4, Math.round(height * 0.01));
-  const shiftedAsset = await sharp(sourceFile)
-    .affine([[1, 0], [0, 1]], {idx: shiftX, idy: shiftY, background: '#00000000'})
-    .png()
-    .toBuffer();
-  const shifted = await sharp(checker).composite([{input: shiftedAsset}]).png().toBuffer();
-  const panels = await Promise.all([normal, shifted].map((input) => sharp(input).resize(640, 360, {fit: 'contain', background: '#2b2622'}).jpeg({quality: 92}).toBuffer()));
-  await sharp({create: {width: 1280, height: 360, channels: 3, background: '#2b2622'}})
-    .composite([{input: panels[0], left: 0, top: 0}, {input: panels[1], left: 640, top: 0}])
-    .jpeg({quality: 92})
-    .toFile(motionStressFile);
-  return {
-    nodeId: node.id,
-    source: node.src,
-    alphaBounds: bounds,
-    alphaMask: path.relative(ROOT, alphaMaskFile),
-    checkerboard: path.relative(ROOT, checkerboardFile),
-    tightCrop: path.relative(ROOT, tightCropFile),
-    motionStress: path.relative(ROOT, motionStressFile),
-  };
-};
 
 const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
   const sampleCount = sampleRate * seconds;
@@ -260,7 +180,7 @@ try {
     for (const proofTimeId of target.proofTimeIds) {
       const fullFrame = renderedFrames.get(proofTimeId);
       if (!fullFrame) continue;
-      const id = `${safeId(target.compositeId)}-${safeId(proofTimeId)}`;
+      const id = `${safeEvidenceId(target.compositeId)}-${safeEvidenceId(proofTimeId)}`;
       const cropFile = path.join(cropDirectory, `${id}.png`);
       const debugFile = path.join(debugDirectory, `${id}.png`);
       await sharp(fullFrame).extract(bounds).png().toFile(cropFile);

@@ -5,7 +5,7 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGIN_ROOT = path.join(ROOT, 'plugins', 'paper-collage-video');
@@ -88,6 +88,7 @@ test('packaged runtime is lightweight and independent from production projects',
   );
   assert.equal(packageJson.scripts['project:quality'], 'node scripts/project-quality.mjs');
   assert.equal(packageJson.scripts['project:composition-proof'], 'node scripts/project-composition-proof.mjs');
+  assert.equal(packageJson.scripts['project:audio-preflight'], 'node scripts/project-audio-preflight.mjs');
   assert.equal(packageJson.scripts['project:subtitles'], 'node scripts/project-subtitles.mjs');
   assert.equal(packageJson.scripts['style:proof'], 'node scripts/style-motion-proof.mjs');
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
@@ -111,15 +112,22 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
   assert.equal(starterProject.scenes[0].cues.length, 3);
+  assert.deepEqual(
+    starterProject.scenes[0].cues.map(({proofTimeId}) => proofTimeId),
+    ['proof-establish', 'proof-action', 'proof-final'],
+  );
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
   assert.equal(starterManifest.schemaVersion, 3);
   assert.equal(starterQuality.schemaVersion, 2);
-  assert.deepEqual(starterQuality.composites, []);
+  assert.equal(starterQuality.composites.length, 3);
+  assert.ok(starterQuality.composites.every(({status}) => status === 'passed'));
   assert.equal(starterQuality.assets.length, 2);
   assert.ok(starterQuality.assets.every(({status}) => status === 'passed'));
 
   for (const relative of [
     'scripts/production-state.mjs',
+    'scripts/asset-evidence-lib.mjs',
+    'scripts/audio-preflight-lib.mjs',
     'scripts/provider-lib.mjs',
     'scripts/generation-attempt-lib.mjs',
     'scripts/semantic-contract-lib.mjs',
@@ -129,6 +137,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/python-runtime.mjs',
     'scripts/quality-lib.mjs',
     'scripts/project-quality.mjs',
+    'scripts/project-audio-preflight.mjs',
+    'scripts/render-cache-lib.mjs',
     'scripts/subtitle-lib.mjs',
     'scripts/project-subtitles.mjs',
     'scripts/creative-plan-lib.mjs',
@@ -164,6 +174,39 @@ test('packaged runtime is lightweight and independent from production projects',
       `${relative} must be resynced with npm run plugin:sync`,
     );
   }
+});
+
+test('packaged resolved plans can be inspected without rewriting them', () => {
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/project-plan.mjs', 'starter-demo', '--json'],
+    {cwd: RUNTIME_ROOT, encoding: 'utf8'},
+  );
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.decision.productionProfile, 'draft');
+  assert.equal(output.decision.durationAuthority, 'human-target');
+  assert.deepEqual(
+    output.decision.profileOptions.map(({id}) => id),
+    ['draft', 'balanced', 'full-depth'],
+  );
+  assert.ok(
+    output.decision.profileOptions.every(
+      ({assetBudget}) => Number.isInteger(assetBudget.maxGeneratedImages),
+    ),
+  );
+});
+
+test('packaged starter proof keeps the complete quality gate ready', async () => {
+  const runtimeQuality = await import(
+    `${pathToFileURL(path.join(RUNTIME_ROOT, 'scripts', 'quality-lib.mjs')).href}?test=${Date.now()}`,
+  );
+  const prepared = await runtimeQuality.prepareQualityReport('starter-demo', {
+    write: false,
+  });
+  assert.equal(prepared.ready, true);
+  assert.equal(prepared.total, 5);
+  assert.equal(prepared.passed, 5);
 });
 
 test('bootstrap creates an isolated resumable workspace and is idempotent', async () => {

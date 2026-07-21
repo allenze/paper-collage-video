@@ -98,6 +98,9 @@ try {
       attemptId: reserved?.event.attemptId ?? null,
     });
     console.log(`✓ provider 输出：${recorded.record.file}`);
+    if (recorded.record.capability === 'voice') {
+      console.log(`✓ 实测语音时长：${recorded.record.media.durationSeconds.toFixed(3)}s`);
+    }
     console.log(`✓ 资产溯源：${path.relative(ROOT, recorded.manifestFile)}`);
   }
 } catch (error) {

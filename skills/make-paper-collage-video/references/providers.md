@@ -64,3 +64,20 @@ npm run provider:record -- --request=projects/<slug>/requests/<asset>.json --pro
 Try exact reuse before reserving an attempt. `provider:run` reserves automatically; a host tool call must use the explicit reserve command first. If a host result is abandoned instead of recorded, close it with `provider:attempt close` and state whether quota was consumed. Never delete or rewrite `generation-attempts.jsonl`.
 
 The manifest owns accepted asset provenance. The append-only attempt ledger owns real generation usage, including rejected and abandoned results. Production scheduling stays in `production.json`.
+
+## Preflight Production Narration
+
+Add `timingBinding` to every production (non-audition) voice request. Use the storyboard scene id and a minimum and/or maximum duration derived from the approved scene allocation after reserving narration start, meaningful action, and bounded tail time:
+
+```json
+{
+  "capability": "voice",
+  "timingBinding": {
+    "sceneId": "scene-01",
+    "minDurationSeconds": 8,
+    "maxDurationSeconds": 12.5
+  }
+}
+```
+
+`provider:record` and command adapters probe the real media before provenance is committed. An output outside the bound remains on disk for diagnosis but is rejected from the manifest; revise text or voice speed and generate a fitting take. Style auditions do not need `timingBinding`.

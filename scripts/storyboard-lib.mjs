@@ -41,8 +41,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 1) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 1。', 'schemaVersion');
+  if (![1, 2].includes(storyboard?.schemaVersion)) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 1 或 2。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -139,6 +139,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       add('storyboard-beats', '每个镜头至少需要 3 个节拍。', `${location}.beats`);
     }
     const beatIds = new Set();
+    const beatEvidenceBindings = [];
     let previousBeat = -1;
     for (const [beatIndex, beat] of (scene.beats ?? []).entries()) {
       const beatLocation = `${location}.beats[${beatIndex}]`;
@@ -153,6 +154,18 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       }
       if (beat.audioCue !== null && beat.audioCue !== undefined && !nonEmpty(beat.audioCue)) {
         add('storyboard-beat-audio', 'audioCue 必须为非空字符串或 null。', `${beatLocation}.audioCue`);
+      }
+      if (storyboard.schemaVersion >= 2 && !Object.hasOwn(beat, 'proofTimeId')) {
+        add('storyboard-beat-proof-field', 'v2 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
+      }
+      if (beat.proofTimeId !== null && beat.proofTimeId !== undefined && !nonEmpty(beat.proofTimeId)) {
+        add('storyboard-beat-proof-id', 'proofTimeId 必须为非空字符串或 null。', `${beatLocation}.proofTimeId`);
+      }
+      if (storyboard.schemaVersion >= 2 && beat.audioCue && !nonEmpty(beat.proofTimeId)) {
+        add('storyboard-audio-proof-required', '带 audioCue 的节拍必须绑定事件级 proofTimeId。', `${beatLocation}.proofTimeId`);
+      }
+      if (nonEmpty(beat.proofTimeId)) {
+        beatEvidenceBindings.push({proofTimeId: beat.proofTimeId, location: beatLocation});
       }
     }
     if (!Array.isArray(scene.proofTimes) || scene.proofTimes.length < 3) {
@@ -177,6 +190,15 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         add('storyboard-proof-assertions', '证明时刻必须声明至少一项可见关系断言。', `${proofLocation}.assertions`);
       }
       if (proof.kind === 'final' && proof.at >= 0.82) hasFinal = true;
+    }
+    for (const binding of beatEvidenceBindings) {
+      if (!proofIds.has(binding.proofTimeId)) {
+        add(
+          'storyboard-beat-proof-missing',
+          `节拍绑定的证明时刻不存在：${binding.proofTimeId}。`,
+          `${binding.location}.proofTimeId`,
+        );
+      }
     }
     if (!hasFinal) add('storyboard-final-proof', '每个镜头必须在 0.82 之后设置 final 证明时刻。', `${location}.proofTimes`);
   }
@@ -224,6 +246,7 @@ export const summarizeStoryboard = (storyboard) => ({
           blueprint,
           patterns: compositionPlan.patterns,
           beatCount: beats.length,
+          evidenceBoundBeatCount: beats.filter(({proofTimeId}) => Boolean(proofTimeId)).length,
           proofCount: proofTimes.length,
         }))
       : [],

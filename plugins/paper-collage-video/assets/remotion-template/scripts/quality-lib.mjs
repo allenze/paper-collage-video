@@ -630,4 +630,123 @@ export const readQualityReportStatus = async (slug) => {
   return {file, ...summarizeQualityReport(report)};
 };
 
+const proofEvidenceFiles = (proofFrame) =>
+  [proofFrame?.fullFrame, proofFrame?.crop, proofFrame?.debugFrame].filter(Boolean);
+
+const assetEvidenceFiles = (entry) =>
+  [entry?.alphaMask, entry?.checkerboard, entry?.tightCrop, entry?.motionStress]
+    .filter(Boolean);
+
+export const createQualityReviewScaffold = ({
+  status,
+  projectSlug,
+  reviewer,
+  compositionProof = null,
+  styleProof = null,
+  includePassed = false,
+}) => {
+  const proofReports = [compositionProof, styleProof].filter(Boolean);
+  const proofComposites = proofReports.flatMap((report) => report.composites ?? []);
+  const proofAssets = proofReports.flatMap((report) => report.assetEvidence ?? []);
+  const evidenceForAsset = (asset) => {
+    const files = [asset.file];
+    const normalizedAssetFile = path.normalize(asset.file);
+    for (const entry of proofAssets) {
+      const sourceFile = entry.source
+        ? path.relative(ROOT, resolvePublicFile(entry.source))
+        : null;
+      if (sourceFile && path.normalize(sourceFile) === normalizedAssetFile) {
+        files.push(...assetEvidenceFiles(entry));
+      }
+    }
+    const sourceBindings = (asset.sources ?? [])
+      .map((source) => source.match(/^scene:([^:]+):node:(.+)$/))
+      .filter(Boolean)
+      .map((match) => ({sceneId: match[1], nodeId: match[2]}));
+    for (const composite of status.report.composites ?? []) {
+      if (!(composite.memberNodeIds ?? []).some((nodeId) =>
+        sourceBindings.some((binding) => binding.nodeId === nodeId),
+      )) continue;
+      const proof = proofComposites.find(({compositeId}) =>
+        compositeId === composite.compositeId,
+      );
+      files.push(...(proof?.proofFrames ?? []).flatMap(proofEvidenceFiles));
+    }
+    return [...new Set(files.filter(Boolean))];
+  };
+  const evidenceForComposite = (composite) => {
+    const proof = proofComposites.find(({compositeId}) =>
+      compositeId === composite.compositeId,
+    );
+    const files = (proof?.proofFrames ?? []).flatMap(proofEvidenceFiles);
+    for (const nodeId of composite.memberNodeIds ?? []) {
+      for (const entry of proofAssets.filter((candidate) => candidate.nodeId === nodeId)) {
+        files.push(...assetEvidenceFiles(entry));
+      }
+    }
+    return [...new Set(files.filter(Boolean))];
+  };
+  const entries = [...status.report.assets, ...status.report.composites]
+    .filter((entry) => includePassed || entry.status !== 'passed');
+  return {
+    schemaVersion: 1,
+    projectSlug,
+    generatedAt: new Date().toISOString(),
+    instructions:
+      'Inspect every evidence file. Move each pending check into passedChecks or failedChecks and write a concrete note; never pass a check only to unblock production.',
+    reviews: entries.map((entry) => {
+      const assetId = entry.assetId ?? null;
+      const compositeId = entry.compositeId ?? null;
+      return {
+        ...(assetId ? {assetId} : {compositeId}),
+        reviewer,
+        requiredChecks: entry.requiredChecks,
+        pendingChecks: Object.entries(entry.semanticChecks)
+          .filter(([, checkStatus]) => checkStatus !== 'passed')
+          .map(([check]) => check),
+        passedChecks: [],
+        failedChecks: [],
+        evidenceFiles: assetId
+          ? evidenceForAsset(entry)
+          : evidenceForComposite(entry),
+        note: '',
+      };
+    }),
+  };
+};
+
+export const buildQualityReviewScaffold = async ({
+  slug,
+  reviewer = 'host-vision',
+  includePassed = false,
+}) => {
+  const status = await prepareQualityReport(slug);
+  const compositionFile = compositionProofReportPath(slug);
+  const styleFile = path.join(ROOT, 'dist', slug, 'style-motion-proof.json');
+  const [compositionProof, styleProof] = await Promise.all([
+    (await fileExists(compositionFile)) ? readJson(compositionFile) : null,
+    (await fileExists(styleFile)) ? readJson(styleFile) : null,
+  ]);
+  const scaffold = createQualityReviewScaffold({
+    status,
+    projectSlug: slug,
+    reviewer,
+    compositionProof,
+    styleProof,
+    includePassed,
+  });
+  for (const review of scaffold.reviews) {
+    review.evidenceFiles = (
+      await Promise.all(review.evidenceFiles.map(async (file) => {
+        try {
+          return (await fileExists(assertWorkspaceFile(file))) ? file : null;
+        } catch {
+          return null;
+        }
+      }))
+    ).filter(Boolean);
+  }
+  return {status, scaffold};
+};
+
 export const formatQualityStatus = (status) => `${status.ready ? '✓' : '✗'} quality: ${status.passed}/${status.total} passed, ${status.pending} pending, ${status.failed} failed (assets ${status.scopes.assets.passed}/${status.scopes.assets.total}, composites ${status.scopes.composites.passed}/${status.scopes.composites.total})`;

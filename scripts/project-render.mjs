@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   ROOT,
+  fileExists,
   formatValidation,
   loadProject,
   projectPaths,
@@ -13,6 +14,12 @@ import {
 } from './project-lib.mjs';
 import {assertRenderAllowed, recordRender} from './production-state.mjs';
 import {assertQualityReady, formatQualityStatus} from './quality-lib.mjs';
+import {
+  classifyRenderCache,
+  createRenderFingerprints,
+  readRenderCache,
+  updateRenderCache,
+} from './render-cache-lib.mjs';
 
 const [mode, slug] = process.argv.slice(2);
 
@@ -66,6 +73,11 @@ try {
   }
   await assertRenderAllowed(slug, mode);
   await runInherited(process.execPath, ['scripts/project-sync.mjs', slug]);
+  await runInherited(process.execPath, [
+    'scripts/project-audio-preflight.mjs',
+    slug,
+    '--strict',
+  ]);
   const quality = await assertQualityReady(slug);
   console.log(formatQualityStatus(quality));
   const {project} = await loadProject(slug);
@@ -98,13 +110,61 @@ try {
     );
   }
   const remotion = path.join(ROOT, 'node_modules', '.bin', 'remotion');
-  await runInherited(remotion, ['browser', 'ensure'], {captureOutput: true}).catch(
-    (error) => {
+  const fingerprints = await createRenderFingerprints(project, mode);
+  let cache = await readRenderCache(slug);
+  const cacheState = await classifyRenderCache({
+    cache,
+    mode,
+    artifact: output,
+    fingerprints,
+  });
+  if (cacheState === 'exact') {
+    console.log(`✓ render cache: ${mode} 视觉与音频均未变化，复用 ${path.relative(ROOT, output)}`);
+  } else if (cacheState === 'visual-only') {
+    const audioMix = path.join(paths.distDirectory, 'audio-preflight.wav');
+    if (!(await fileExists(audioMix))) throw new Error('缺少 audio-preflight.wav，不能执行音频-only 修订。');
+    const temporary = path.join(paths.distDirectory, `.${mode}-audio-refresh.mp4`);
+    await runInherited('ffmpeg', [
+      '-v',
+      'error',
+      '-i',
+      output,
+      '-i',
+      audioMix,
+      '-map',
+      '0:v:0',
+      '-map',
+      '1:a:0',
+      '-c:v',
+      'copy',
+      '-c:a',
+      'aac',
+      '-b:a',
+      mode === 'preview' ? '96k' : '192k',
+      '-shortest',
+      '-movflags',
+      '+faststart',
+      '-y',
+      temporary,
+    ]);
+    await fs.rename(temporary, output);
+    console.log(`✓ render cache: 视觉未变化，仅重新混音/封装 ${path.relative(ROOT, output)}`);
+  } else {
+    await runInherited(remotion, ['browser', 'ensure'], {captureOutput: true}).catch(
+      (error) => {
+        throw friendlyRenderError(error);
+      },
+    );
+    await runInherited(remotion, args, {captureOutput: true}).catch((error) => {
       throw friendlyRenderError(error);
-    },
-  );
-  await runInherited(remotion, args, {captureOutput: true}).catch((error) => {
-    throw friendlyRenderError(error);
+    });
+  }
+  cache = await updateRenderCache({
+    slug,
+    cache,
+    mode,
+    artifact: output,
+    fingerprints,
   });
   await runInherited(process.execPath, [
     'scripts/project-report.mjs',

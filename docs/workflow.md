@@ -37,11 +37,13 @@ capability-review
 
 它执行一次精简 provider 检查，按四种时长/幕数输入模式完成计划，并选择：
 
-- `draft`：低成本迭代，强复用，景深只用于关键场景；
-- `balanced`：默认，逐幕背景、共享角色、少数重点地点独立景深；
-- `full-depth`：完整视差和更多姿态，图片预算最高。
+- `draft`：低成本迭代，强复用，适合先验证故事、旁白和节奏；
+- `balanced`：默认，关键场景独立分层，兼顾视差、姿态和成本；
+- `full-depth`：完整环境视差和更多姿态，证据工作、制作时间和图片预算最高。
 
-计划完成后，Codex 先用 `project:storyboard` 锁定全片叙事弧、逐幕蓝图、三个以上节拍、组合模式/关系和带可见断言的证明时刻。它不增加审批次数，而是与叙事、事实、制作档位/图片预算和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入 provider 选择并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
+`project:plan --json` 会针对当前幕数返回三个档位的准确生图尝试上限、成片影响和时长权威。首次规划时同时传入时长、幕数等写入参数；已有已解析计划时，只传 slug 与 `--json` 即可只读重显选项而不改写项目。概念确认卡与“修改后再继续”路径都直接显示这些结构化选项；批准文件用 `planDecision` 回填档位、时长、幕数和 `human-target` / `content-derived`，避免自然语言备注与机器计划漂移。
+
+计划完成后，Codex 先用 `project:storyboard` 锁定 schema-v2 全片叙事弧、逐幕蓝图、三个以上节拍、组合模式/关系和带可见断言的证明时刻。每个节拍显式声明 proof 绑定或 null；带声音的节拍必须在昂贵生产前拥有事件级 proof。它不增加审批次数，而是与叙事、事实、制作档位/图片预算和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入 provider 选择并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
 
 ## 2. 风格与虚构音色确认
 
@@ -53,7 +55,7 @@ capability-review
 
 生成时遵守概念批准的图片尝试预算；废稿、质量拒绝和生成后放弃的结果在发生额度消耗时同样计数。持续接触或共享边界的素材先生成一个完整母版，再从同一注册源家族派生前后遮挡、主体、上下环境带和 mask；不得分别生成后靠 z-index 拼接，也不得用粗多边形抠人物、动物等复杂轮廓。没有可靠分割能力时保留完整母版整体运动。角色 generation family 与图层 source family 独立。图片质量逐文件绑定 SHA-256 和语义契约指纹，组合质量绑定成员、变换、边界、cue、证明和语义目标。
 
-组装后先运行 `project:composition-proof`，检查真实渲染的全帧、关系裁切、跨场景人物比较、机构受力链和说明图原分辨率裁切，再用 `project:quality record-batch` 记录组合语义检查。说明图 SVG 的程序噪声滤镜由运行时确定性拒绝。这个内部证据步骤不增加第四个人工门。
+组装后先运行 `project:composition-proof`。它只重渲染指纹变化的证明帧/目标，并为风格批准后新增的耦合素材生成 alpha、棋盘格、紧裁和运动压力证据。随后用 `project:quality scaffold` 生成待填写审核批次，检查真实全帧、关系裁切、跨场景人物比较、机构受力链和说明图原分辨率裁切，再用 `record-batch` 记录真实判断。脚手架不会预先通过任何检查。说明图 SVG 的程序噪声滤镜由运行时确定性拒绝。这个内部证据步骤不增加第四个人工门。
 
 素材完成后只运行：
 
@@ -61,7 +63,7 @@ capability-review
 npm run project:assets-ready -- <slug>
 ```
 
-该命令依次同步真实旁白时长、生成/导入字幕时间、核对故事板蓝图/v4 组合/关键帧/cue、核验组合证明指纹、执行资产与组合双质量门并推进到 `preview`。随后 `project:preview` 渲染半尺寸预览、技术报告和证明时刻联系表。
+该命令依次同步真实旁白时长、生成/导入字幕时间、执行音频-only LUFS/真峰预检、核对故事板蓝图/v4 组合/关键帧/cue、核验组合证明指纹、执行资产与组合双质量门并推进到 `preview`。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 渲染半尺寸预览、技术报告和证明时刻联系表；视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流并重新混音/封装，任何视觉指纹变化都强制完整渲染。
 
 ## 4. 预览、修改与正式交付
 

@@ -27,7 +27,7 @@ try {
   const storyboard = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 1,
+    schemaVersion: 2,
     slug,
     status: 'ready',
     updatedAt: new Date().toISOString(),
@@ -40,7 +40,7 @@ try {
   const summary = summarizeStoryboard(storyboard);
   console.log(`✓ 故事板已锁定：${summary.sceneCount} 个镜头`);
   for (const scene of summary.scenes) {
-    console.log(`  ${scene.id}: ${scene.blueprint} · ${scene.beatCount} beats · ${scene.proofCount} proofs`);
+    console.log(`  ${scene.id}: ${scene.blueprint} · ${scene.beatCount} beats · ${scene.proofCount} proofs · ${scene.evidenceBoundBeatCount} evidence bindings`);
   }
 } catch (error) {
   console.error(`project:storyboard failed: ${error.message}`);

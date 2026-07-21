@@ -9,6 +9,7 @@ import {
   assertQualityReady,
   collectCompositeQualityTargets,
   compositionProofReportPath,
+  createQualityReviewScaffold,
   prepareQualityReport,
   recordQualityReviews,
 } from '../scripts/quality-lib.mjs';
@@ -97,6 +98,57 @@ test('request fingerprints ignore project-specific destinations but preserve gen
     model: 'image-model',
   });
   assert.notEqual(registered, otherFamily);
+});
+
+test('quality scaffold exposes pending checks and current proof evidence without pre-approving them', () => {
+  const status = {
+    report: {
+      assets: [{
+        assetId: 'subject',
+        file: 'public/projects/scaffold/subject.png',
+        sources: ['scene:scene-01:node:subject-node'],
+        requiredChecks: ['subject-complete', 'silhouette-fidelity'],
+        semanticChecks: {'subject-complete': 'passed', 'silhouette-fidelity': 'pending'},
+        status: 'pending',
+      }],
+      composites: [{
+        compositeId: 'group:scene-01:rig',
+        memberNodeIds: ['subject-node'],
+        requiredChecks: ['support-contact'],
+        semanticChecks: {'support-contact': 'pending'},
+        status: 'pending',
+      }],
+    },
+  };
+  const compositionProof = {
+    assetEvidence: [{
+      nodeId: 'subject-node',
+      source: 'projects/scaffold/subject.png',
+      alphaMask: 'dist/scaffold/evidence/alpha.png',
+      checkerboard: 'dist/scaffold/evidence/checker.png',
+      tightCrop: 'dist/scaffold/evidence/tight.png',
+      motionStress: 'dist/scaffold/evidence/stress.jpg',
+    }],
+    composites: [{
+      compositeId: 'group:scene-01:rig',
+      proofFrames: [{
+        fullFrame: 'dist/scaffold/frame.png',
+        crop: 'dist/scaffold/crop.png',
+        debugFrame: 'dist/scaffold/debug.png',
+      }],
+    }],
+  };
+  const scaffold = createQualityReviewScaffold({
+    status,
+    projectSlug: 'scaffold',
+    reviewer: 'host-vision',
+    compositionProof,
+  });
+  assert.equal(scaffold.reviews.length, 2);
+  assert.deepEqual(scaffold.reviews[0].pendingChecks, ['silhouette-fidelity']);
+  assert.deepEqual(scaffold.reviews[0].passedChecks, []);
+  assert.ok(scaffold.reviews[0].evidenceFiles.includes('dist/scaffold/evidence/alpha.png'));
+  assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
 });
 
 test('v4 scene transitions use one seconds-based timing protocol', () => {

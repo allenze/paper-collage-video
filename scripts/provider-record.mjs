@@ -39,6 +39,9 @@ try {
     attemptId: valueFor('--attempt-id'),
   });
   console.log(`✓ 已登记资产：${recorded.record.file}`);
+  if (recorded.record.capability === 'voice') {
+    console.log(`✓ 实测语音时长：${recorded.record.media.durationSeconds.toFixed(3)}s`);
+  }
   console.log(`✓ 资产溯源：${path.relative(ROOT, recorded.manifestFile)}`);
 } catch (error) {
   console.error(`provider:record failed: ${error.message}`);

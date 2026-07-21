@@ -16,6 +16,20 @@
     "voiceId": {"type": "string"},
     "model": {"type": "string"},
     "settings": {"type": "object"},
+    "timingBinding": {
+      "type": "object",
+      "required": ["sceneId"],
+      "properties": {
+        "sceneId": {"type": "string", "minLength": 1},
+        "minDurationSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "maxDurationSeconds": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "anyOf": [
+        {"required": ["minDurationSeconds"]},
+        {"required": ["maxDurationSeconds"]}
+      ],
+      "additionalProperties": false
+    },
     "compositionBinding": {
       "type": "object",
       "required": ["sceneId", "nodeId", "pattern", "outputRole", "canvas", "derivation"],
@@ -108,7 +122,8 @@
   "allOf": [
     {"if": {"properties": {"capability": {"const": "text"}}}, "then": {"required": ["prompt"]}},
     {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["prompt", "compositionBinding"]}},
-    {"if": {"properties": {"capability": {"const": "image"}, "schemaVersion": {"const": 3}}, "then": {"required": ["semanticBinding"]}},
-    {"if": {"properties": {"capability": {"const": "voice"}}}, "then": {"required": ["text"]}}
+    {"if": {"properties": {"capability": {"const": "image"}, "schemaVersion": {"const": 3}}}, "then": {"required": ["semanticBinding"]}},
+    {"if": {"properties": {"capability": {"const": "voice"}}}, "then": {"required": ["text"]}},
+    {"if": {"required": ["timingBinding"]}, "then": {"properties": {"capability": {"const": "voice"}}}}
   ]
 }

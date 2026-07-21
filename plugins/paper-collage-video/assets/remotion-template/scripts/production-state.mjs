@@ -257,6 +257,14 @@ export const summarizeResumeState = (state, plan = null, storyboard = null) => {
   };
 };
 
+export const resolveAssetsReadyMode = (stage) => {
+  if (stage === 'asset-production') return 'advance';
+  if (['preview', 'human-review'].includes(stage)) return 'recheck';
+  throw new Error(
+    `project:assets-ready 只能在 asset-production、preview 或 human-review 阶段执行；当前为 ${stage}。`,
+  );
+};
+
 const assertStage = (state, allowed, action) => {
   if (!allowed.includes(state.stage)) {
     throw new Error(

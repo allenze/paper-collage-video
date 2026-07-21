@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import {
   assertCreativePlanReady,
+  assertConfirmedPlanDecision,
 } from './creative-plan-lib.mjs';
 import {
   PROVIDER_CAPABILITIES,
@@ -65,6 +66,7 @@ try {
   }
   const {project} = await loadProject(slug);
   assertCreativePlanReady(project.plan, {slug});
+  const confirmedPlan = assertConfirmedPlanDecision(payload.planDecision, project.plan);
   await assertStoryboardReady(slug, project.plan);
   const at = new Date().toISOString();
   const confirmed = await writeProviderSelections({
@@ -86,6 +88,9 @@ try {
     `✓ 已一次确认概念与 provider：${confirmed.selections
       .map(({provider}) => `${provider.capability}=${provider.id}`)
       .join(', ')}`,
+  );
+  console.log(
+    `✓ 已锁定制作规格：${confirmedPlan.productionProfile} · ${confirmedPlan.durationSeconds}s · ${confirmedPlan.sceneCount} 幕 · ${confirmedPlan.durationAuthority}`,
   );
   console.log(`✓ 生产状态：${next.stage}`);
 } catch (error) {

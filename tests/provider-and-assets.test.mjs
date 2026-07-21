@@ -15,6 +15,7 @@ import {
   runProviderCommand,
   validateAssetRequest,
   validateProviderConfig,
+  verifyOutputFile,
 } from '../scripts/provider-lib.mjs';
 import {
   countProviderGeneratedImages,
@@ -47,9 +48,9 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
       ],
     },
     beats: [
-      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', motion: 'Scene reveal', audioCue: null},
-      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', motion: 'Subject lift', audioCue: null},
-      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', motion: 'Settle all layers', audioCue: null},
+      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', motion: 'Scene reveal', audioCue: null, proofTimeId: null},
+      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', motion: 'Subject lift', audioCue: null, proofTimeId: `s${index + 1}-proof-action`},
+      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', motion: 'Settle all layers', audioCue: null, proofTimeId: `s${index + 1}-proof-final`},
     ],
     proofTimes: [
       {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable']},
@@ -223,6 +224,39 @@ test('command adapters write a local output and provenance records its hash', as
     assert.equal(manifest.assets[0].assetId, 'draft-script');
   } finally {
     await fsp.rm(projectDirectory, {recursive: true, force: true});
+  }
+});
+
+test('voice outputs are measured and rejected before recording when scene timing cannot fit', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'voice-timing-'));
+  const output = path.join(directory, 'tone.wav');
+  try {
+    const generated = spawnSync('ffmpeg', [
+      '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
+      '-t', '1.2', '-y', output,
+    ], {encoding: 'utf8'});
+    assert.equal(generated.status, 0, generated.stderr);
+    const base = {
+      schemaVersion: 3,
+      projectSlug: 'voice-timing-test',
+      assetId: 'scene-one-narration',
+      capability: 'voice',
+      output: path.relative(ROOT, output),
+      text: 'A short line.',
+      timingBinding: {sceneId: 'scene-01', minDurationSeconds: 1, maxDurationSeconds: 2},
+    };
+    assert.doesNotThrow(() => validateAssetRequest(base));
+    const measured = await verifyOutputFile(output, base);
+    assert.ok(measured.metadata.durationSeconds >= 1.19);
+    await assert.rejects(
+      verifyOutputFile(output, {
+        ...base,
+        timingBinding: {sceneId: 'scene-01', maxDurationSeconds: 1},
+      }),
+      /超过 scene-01 允许的最长/,
+    );
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
   }
 });
 
@@ -552,6 +586,12 @@ test('concept and all providers can be confirmed in one workflow command', async
       `${JSON.stringify(
         {
           note: 'Approve the concept, balanced budget, and detected providers',
+          planDecision: {
+            productionProfile: 'balanced',
+            durationSeconds: 30,
+            sceneCount: 3,
+            durationAuthority: 'content-derived',
+          },
           selections: {
             text: {providerId: 'host-text'},
             image: {providerId: 'manual-image'},

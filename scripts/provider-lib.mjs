@@ -3,7 +3,7 @@ import {spawn} from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
-import {ROOT, SLUG_PATTERN, fileExists, readJson, writeJson} from './project-lib.mjs';
+import {ROOT, SLUG_PATTERN, fileExists, probeMedia, readJson, writeJson} from './project-lib.mjs';
 import {
   SEMANTIC_RISK_CLASSES,
   assertRequestSemanticContracts,
@@ -547,6 +547,26 @@ export const validateAssetRequest = (request) => {
     errors.push('schema-v3 image request 缺少 semanticBinding');
   }
   if (request?.capability === 'voice' && !request.text) errors.push('voice request 缺少 text');
+  if (request?.timingBinding !== undefined) {
+    if (request.capability !== 'voice') errors.push('只有 voice request 可以声明 timingBinding');
+    const binding = request.timingBinding;
+    if (!isPlainObject(binding) || !binding.sceneId || typeof binding.sceneId !== 'string') {
+      errors.push('timingBinding 必须声明 sceneId');
+    } else {
+      const minimum = binding.minDurationSeconds;
+      const maximum = binding.maxDurationSeconds;
+      const validBound = (value) => value === undefined || (Number.isFinite(value) && value > 0);
+      if (!validBound(minimum) || !validBound(maximum)) {
+        errors.push('timingBinding 的时长边界必须是正数');
+      }
+      if (minimum === undefined && maximum === undefined) {
+        errors.push('timingBinding 至少需要 minDurationSeconds 或 maxDurationSeconds');
+      }
+      if (Number.isFinite(minimum) && Number.isFinite(maximum) && minimum > maximum) {
+        errors.push('timingBinding.minDurationSeconds 不能大于 maxDurationSeconds');
+      }
+    }
+  }
   if (request?.quality !== undefined) {
     if (request.capability !== 'image') {
       errors.push('只有 image request 可以声明 quality');
@@ -689,6 +709,31 @@ export const verifyOutputFile = async (file, request = null) => {
         );
       }
     }
+  } else if (request?.capability === 'voice') {
+    const probe = await probeMedia(file).catch(() => null);
+    const audio = probe?.streams?.find(({codec_type: type}) => type === 'audio');
+    const durationSeconds = Number(probe?.format?.duration ?? 0);
+    if (!audio || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      throw new Error(`provider 语音媒体不可读：${path.relative(ROOT, file)}`);
+    }
+    const minimum = request.timingBinding?.minDurationSeconds;
+    const maximum = request.timingBinding?.maxDurationSeconds;
+    if (Number.isFinite(minimum) && durationSeconds < minimum) {
+      throw new Error(
+        `provider 语音 ${durationSeconds.toFixed(3)}s 短于 ${request.timingBinding.sceneId} 允许的最短 ${minimum}s；请补充文案或调整语速后重新生成。`,
+      );
+    }
+    if (Number.isFinite(maximum) && durationSeconds > maximum) {
+      throw new Error(
+        `provider 语音 ${durationSeconds.toFixed(3)}s 超过 ${request.timingBinding.sceneId} 允许的最长 ${maximum}s；请压缩文案或提高语速后重新生成。`,
+      );
+    }
+    metadata = {
+      durationSeconds,
+      codec: audio.codec_name ?? null,
+      sampleRate: Number(audio.sample_rate ?? 0) || null,
+      channels: audio.channels ?? null,
+    };
   }
   return {stat, metadata};
 };
@@ -764,7 +809,11 @@ export const recordAssetProvenance = async ({
       reusedFrom,
       sha256,
       sizeBytes: stat.size,
-      media: metadata ? {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false} : null,
+      media: metadata
+        ? request.capability === 'image'
+          ? {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false}
+          : metadata
+        : null,
       recordedAt: new Date().toISOString(),
       request: {...request},
       compositionBinding: request.compositionBinding ?? null,

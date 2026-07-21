@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   formatQualityStatus,
+  buildQualityReviewScaffold,
   prepareQualityReport,
   recordQualityReview,
   recordQualityReviews,
@@ -23,13 +24,32 @@ const listFor = (name) =>
     .filter(Boolean);
 
 try {
-  if (!slug || !['prepare', 'status', 'record', 'record-batch'].includes(action)) {
+  if (!slug || !['prepare', 'status', 'scaffold', 'record', 'record-batch'].includes(action)) {
     throw new Error(
-      '用法：project:quality -- <slug> <prepare|status|record|record-batch> [--input=<reviews.json>] [--quiet] [--json]',
+      '用法：project:quality -- <slug> <prepare|status|scaffold|record|record-batch> [--input=<reviews.json>] [--output=<scaffold.json>] [--reviewer=<id>] [--quiet] [--json]',
     );
   }
   let status;
-  if (action === 'record') {
+  if (action === 'scaffold') {
+    const built = await buildQualityReviewScaffold({
+      slug,
+      reviewer: valueFor('--reviewer') ?? 'host-vision',
+      includePassed: args.includes('--all'),
+    });
+    status = built.status;
+    const output = valueFor('--output') ?? `projects/${slug}/quality-review-scaffold.json`;
+    const file = path.resolve(ROOT, output);
+    if (file !== ROOT && !file.startsWith(`${ROOT}${path.sep}`)) {
+      throw new Error(`scaffold 路径越过工作区：${output}`);
+    }
+    if (!args.includes('--force')) {
+      const exists = await fs.stat(file).then((stat) => stat.isFile()).catch(() => false);
+      if (exists) throw new Error(`scaffold 已存在：${output}；使用 --force 显式覆盖。`);
+    }
+    await fs.mkdir(path.dirname(file), {recursive: true});
+    await fs.writeFile(file, `${JSON.stringify(built.scaffold, null, 2)}\n`, 'utf8');
+    console.log(`✓ 质量审核脚手架：${path.relative(ROOT, file)} (${built.scaffold.reviews.length} reviews)`);
+  } else if (action === 'record') {
     status = await recordQualityReview({
           slug,
           assetId: valueFor('--asset'),
@@ -54,7 +74,9 @@ try {
   } else {
     status = await prepareQualityReport(slug, {write: action === 'prepare'});
   }
-  if (json) {
+  if (action === 'scaffold') {
+    // The scaffold path is the complete output for this action.
+  } else if (json) {
     console.log(
       JSON.stringify(
         {
@@ -75,7 +97,7 @@ try {
     console.log(formatQualityStatus(status));
     console.log(`  report: ${path.relative(ROOT, status.file)}`);
   }
-  if (!quiet && !json) {
+  if (action !== 'scaffold' && !quiet && !json) {
     const changedIds = status.changedIds ?? [];
     const entries = [...status.report.assets, ...status.report.composites];
     const visibleEntries = changedIds.length

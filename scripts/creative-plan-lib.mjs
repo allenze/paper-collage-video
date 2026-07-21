@@ -9,6 +9,24 @@ export const CREATIVE_PLAN_MODES = [
 
 export const PRODUCTION_PROFILES = ['draft', 'balanced', 'full-depth'];
 
+export const PRODUCTION_PROFILE_DEFINITIONS = {
+  draft: {
+    label: '草稿',
+    summary: '优先低成本迭代；大量复用背景和角色素材，画面层次较少。',
+    finalImpact: '较扁平的纸片运动，适合先验证故事、旁白和节奏。',
+  },
+  balanced: {
+    label: '均衡',
+    summary: '默认档位；关键场景独立分层，兼顾视差、姿态变化和成本。',
+    finalImpact: '主要镜头有清楚前中后景，角色变化适中。',
+  },
+  'full-depth': {
+    label: '完整纵深',
+    summary: '最高制作深度；增加环境层、角色姿态和组合证明工作。',
+    finalImpact: '最大化环境视差与角色姿态变化，制作时间和生成额度最高。',
+  },
+};
+
 export const deriveAssetBudget = (productionProfile, sceneCount) => {
   if (!PRODUCTION_PROFILES.includes(productionProfile)) {
     throw new Error(
@@ -41,6 +59,50 @@ export const deriveAssetBudget = (productionProfile, sceneCount) => {
       0,
     ),
   };
+};
+
+export const summarizeProductionProfiles = (sceneCount) =>
+  PRODUCTION_PROFILES.map((id) => ({
+    id,
+    ...PRODUCTION_PROFILE_DEFINITIONS[id],
+    assetBudget: deriveAssetBudget(id, sceneCount),
+  }));
+
+export const deriveDurationAuthority = (plan) =>
+  plan?.requested?.durationSeconds == null ? 'content-derived' : 'human-target';
+
+export const summarizeConceptDecision = (plan) => {
+  assertCreativePlanReady(plan, {slug: plan?.slug ?? null});
+  return {
+    productionProfile: plan.productionProfile,
+    durationSeconds: plan.resolved.durationSeconds,
+    sceneCount: plan.resolved.sceneCount,
+    durationAuthority: deriveDurationAuthority(plan),
+    assetBudget: plan.assetBudget,
+    profileOptions: summarizeProductionProfiles(plan.resolved.sceneCount),
+  };
+};
+
+export const assertConfirmedPlanDecision = (decision, plan) => {
+  if (!decision || typeof decision !== 'object' || Array.isArray(decision)) {
+    throw new Error(
+      '确认文件必须包含 planDecision，记录批准的 productionProfile、durationSeconds、sceneCount 和 durationAuthority。',
+    );
+  }
+  const expected = summarizeConceptDecision(plan);
+  for (const key of [
+    'productionProfile',
+    'durationSeconds',
+    'sceneCount',
+    'durationAuthority',
+  ]) {
+    if (decision[key] !== expected[key]) {
+      throw new Error(
+        `planDecision.${key} 必须与当前计划一致：expected ${expected[key]}, received ${decision[key] ?? 'missing'}。`,
+      );
+    }
+  }
+  return expected;
 };
 
 const isPositiveNumber = (value) =>

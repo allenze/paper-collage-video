@@ -60,12 +60,14 @@ commandCheck('ffmpeg', 'ffmpeg', ['-version']);
 commandCheck('ffprobe', 'ffprobe', ['-version']);
 
 const packageFile = path.join(ROOT, 'package.json');
+const workspaceMarkerFile = path.join(ROOT, '.paper-collage-video-workspace.json');
 const requiredWorkspaceScripts = [
   'project:new',
   'project:resume',
   'project:semantic-contracts',
   'project:composition-proof',
   'project:quality',
+  'project:audio-preflight',
   'project:preview',
   'project:render',
   'provider:attempt',
@@ -93,6 +95,26 @@ record(
   workspaceReady ? '工作区结构存在' : '工作区结构不完整',
   fs.existsSync(packageFile) ? workspaceDetails : '缺少 package.json',
 );
+
+if (fs.existsSync(workspaceMarkerFile) && fs.existsSync(packageFile)) {
+  try {
+    const marker = JSON.parse(fs.readFileSync(workspaceMarkerFile, 'utf8'));
+    const packageJson = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+    const matches = marker.pluginVersion === packageJson.version;
+    record(
+      'workspace-version',
+      matches ? 'ok' : 'error',
+      matches
+        ? `工作区版本一致：${packageJson.version}`
+        : `工作区版本漂移：marker ${marker.pluginVersion ?? '(missing)'} / package ${packageJson.version ?? '(missing)'}`,
+      matches
+        ? null
+        : '不要混用版本；用当前已安装插件重新 bootstrap 到新工作区，或显式迁移现有工作区。',
+    );
+  } catch (error) {
+    record('workspace-version', 'error', '工作区版本标记无效', error.message);
+  }
+}
 
 const remotionBinary = path.join(
   ROOT,

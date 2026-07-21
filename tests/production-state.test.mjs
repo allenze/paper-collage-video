@@ -9,6 +9,7 @@ import {
   mergeReviewDocument,
   PRODUCTION_STAGES,
   renderReviewSection,
+  resolveAssetsReadyMode,
   summarizeResumeState,
   transitionProduction,
   transitionRender,
@@ -159,6 +160,13 @@ test('resume summaries omit completed history and expose one handoff decision', 
     summarizeResumeState(state).control.nextCommand,
     'npm run project:assets-ready -- test-film',
   );
+});
+
+test('assets-ready advances once and becomes an idempotent preview recheck', () => {
+  assert.equal(resolveAssetsReadyMode('asset-production'), 'advance');
+  assert.equal(resolveAssetsReadyMode('preview'), 'recheck');
+  assert.equal(resolveAssetsReadyMode('human-review'), 'recheck');
+  assert.throws(() => resolveAssetsReadyMode('style-review'), /只能在/);
 });
 
 test('a successful final render completes local delivery without publication approval', () => {

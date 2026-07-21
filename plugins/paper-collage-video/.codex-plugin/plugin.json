@@ -1,7 +1,7 @@
 {
   "name": "paper-collage-video",
-  "version": "0.9.0",
-  "description": "Create editable paper-collage videos with approved rhythmic storyboards, semantic identity and mechanism contracts, layered keyframe motion, proof-time validation, dead-air continuity checks, and a self-contained Remotion workspace.",
+  "version": "0.10.0-dev.5",
+  "description": "Create editable paper-collage videos with explicit production profiles, approved rhythmic storyboards, timed narration, incremental proof rendering, audio preflight, and a self-contained Remotion workspace.",
   "author": {
     "name": "Paper Collage Video Contributors"
   },
@@ -9,8 +9,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "纸片分层视频制作",
-    "shortDescription": "用语义契约、分层关键帧和连续性检查制作纸片视频",
-    "longDescription": "初始化独立的 Remotion 工作区，用已批准的节奏故事板、人物/机构/说明图语义契约、真实生图尝试账本、分层关键帧、证明时刻、影音死区检查和三次默认人工确认，完成可恢复的纸片拼贴视频制作与本地交付。",
+    "shortDescription": "用明确制作档位、增量证据和音频预检制作纸片视频",
+    "longDescription": "初始化独立的 Remotion 工作区，用带数字预算的制作档位、已批准的节奏故事板、人物/机构/说明图语义契约、旁白时长约束、增量合成证据、响度预检和三次默认人工确认，完成可恢复的纸片拼贴视频制作与本地交付。",
     "developerName": "Paper Collage Video Contributors",
     "category": "Creativity",
     "capabilities": ["Create", "Render"],

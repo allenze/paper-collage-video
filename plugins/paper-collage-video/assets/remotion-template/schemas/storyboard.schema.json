@@ -6,7 +6,7 @@
   "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 1},
+    "schemaVersion": {"enum": [1, 2]},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"enum": ["pending", "ready"]},
     "arc": {"type": "string"},
@@ -75,6 +75,7 @@
                 "visual": {"type": "string", "minLength": 1},
                 "motion": {"type": "string", "minLength": 1},
                 "audioCue": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+                ,"proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
               },
               "additionalProperties": false
             }

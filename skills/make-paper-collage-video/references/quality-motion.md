@@ -6,7 +6,7 @@ Read this before style sampling, bulk images, v4 composition authoring, proof re
 
 `quality-report.json` v2 contains `assets` and `composites`. A passing file does not prove that a person is inside a boat or trees remain above water. Both scopes must pass.
 
-Run `project:quality <slug> prepare` after files exist. Inspect original-resolution assets in small same-type batches and record their required semantic checks. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
+Run `project:quality <slug> prepare` after files exist. Then generate a fillable review batch with `project:quality <slug> scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`. The scaffold lists required/pending checks and current evidence paths but never pre-populates `passedChecks`; inspect original-resolution assets in small same-type batches, make real decisions, and record the edited file. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
 
 Registered members add topology-sensitive asset checks: `silhouette-fidelity`, `negative-space-clean`, and `background-leak-free`. A `supported-subject` composite also requires `motion-isolation-clean`. Passing any of those checks requires `evidenceFiles` from the current proof bundle. `key-edge-clean` only detects matte/color contamination; hard 0/255 alpha can pass that check while still deleting a limb or carrying background pixels.
 
@@ -46,14 +46,14 @@ Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, c
 }
 ```
 
-After narration files and real v4 groups exist, run (the proof command synchronizes measured narration duration first):
+After narration files and real v4 groups exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
 npm run project:quality -- <slug> prepare
 ```
 
-Inspect full proof frames, relationship crops, and debug frames. Record composite reviews in the same atomic batch file, using `compositeId` instead of `assetId`:
+It also creates `composition-proof/evidence/` alpha masks, checkerboard isolates, tight crops, and motion-stress sheets for coupled assets introduced after style approval. Inspect full proof frames, relationship crops, debug frames, and these post-style asset sheets. Record composite reviews in the same atomic batch file, using `compositeId` instead of `assetId`:
 
 ```json
 {
@@ -102,6 +102,6 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 
 `project:assets-ready` owns narration synchronization, subtitle derivation, v4 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
 
-Tune `audio.narration.volume` from preview loudness rather than rewriting source audio. Reports enforce configured LUFS tolerance and true-peak headroom.
+`project:assets-ready` and both render commands first build an audio-only timeline mix and measure LUFS/true peak. If it fails, use the bounded `audio.narration.volume` recommendation, rerun the preflight, and keep the final artifact report authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 
 Reports also intersect detected silence with sampled low-motion ranges. Silence with meaningful animation and a static explanatory image with narration are valid; only their unapproved overlap fails. Read `timing-continuity.md` for thresholds and proof-backed quiet holds. Never add background music solely to hide a continuity failure.

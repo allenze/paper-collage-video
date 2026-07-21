@@ -80,6 +80,7 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
     blueprint: 'layered-reveal',
     patterns: ['supported-subject'],
     beatCount: 3,
+    evidenceBoundBeatCount: 0,
     proofCount: 3,
   });
 
@@ -98,6 +99,29 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   });
   assert.ok(issues.some(({code}) => code === 'storyboard-beat-time'));
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
+});
+
+test('v2 storyboard audio beats require an approved event-level proof', () => {
+  const storyboard = readyStoryboard();
+  storyboard.schemaVersion = 2;
+  storyboard.scenes[0].beats = storyboard.scenes[0].beats.map((beat) => ({
+    ...beat,
+    proofTimeId: beat.id === 'action' ? 'proof-action' : null,
+  }));
+  assert.deepEqual(
+    validateStoryboard(storyboard, {slug: 'rhythm-test', plan: resolvedPlan}),
+    [],
+  );
+
+  storyboard.scenes[0].beats[1].proofTimeId = null;
+  assert.ok(
+    validateStoryboard(storyboard, {slug: 'rhythm-test', plan: resolvedPlan})
+      .some(({code}) => code === 'storyboard-audio-proof-required'),
+  );
+
+  storyboard.scenes[0].beats[1].proofTimeId = 'unknown-proof';
+  const missing = validateStoryboard(storyboard, {slug: 'rhythm-test', plan: resolvedPlan});
+  assert.ok(missing.some(({code}) => code === 'storyboard-beat-proof-missing'));
 });
 
 test('storyboard duration and scene count cannot drift from the resolved plan', () => {

@@ -11,6 +11,8 @@ Read this after real narration exists, when authoring tails or an intentional qu
 
 `project:sync` measures every narration file. For an inferred duration, it also caps unexplained `tailSeconds` before subtitles and validation. The initial plan remains provenance, while `validation.timeline` is the real execution length.
 
+`project:plan --json` exposes this choice as `decision.durationAuthority`: `human-target` for an explicit duration and `content-derived` otherwise. Copy it into concept `planDecision`; do not describe an inferred estimate as a locked delivery target.
+
 ## Keep Tails Technical
 
 - Ordinary scene tail: at most 1.2 seconds.

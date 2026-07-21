@@ -1,7 +1,18 @@
 #!/usr/bin/env node
 import {spawn} from 'node:child_process';
 import path from 'node:path';
-import {ROOT} from './project-lib.mjs';
+import {
+  ROOT,
+  formatValidation,
+  loadProject,
+  validateProject,
+  writeValidationReport,
+} from './project-lib.mjs';
+import {assertQualityReady, formatQualityStatus} from './quality-lib.mjs';
+import {
+  loadProduction,
+  resolveAssetsReadyMode,
+} from './production-state.mjs';
 
 const [slug, ...args] = process.argv.slice(2);
 
@@ -23,9 +34,25 @@ try {
   if (!slug) {
     throw new Error('用法：project:assets-ready -- <slug>');
   }
+  const {state} = await loadProduction(slug);
+  const mode = resolveAssetsReadyMode(state.stage);
   await run('project-sync.mjs', [slug]);
   await run('project-subtitles.mjs', [slug]);
-  await run('project-advance.mjs', [slug, 'assets-ready', ...args]);
+  await run('project-audio-preflight.mjs', [slug, '--strict']);
+  if (mode === 'advance') {
+    await run('project-advance.mjs', [slug, 'assets-ready', ...args]);
+  } else {
+    const {project} = await loadProject(slug);
+    const validation = await validateProject(project);
+    await writeValidationReport(slug, validation);
+    console.log(formatValidation(validation));
+    if (!validation.passed) {
+      throw new Error('preview 修订后的素材与项目校验未通过。');
+    }
+    const quality = await assertQualityReady(slug);
+    console.log(formatQualityStatus(quality));
+    console.log(`✓ assets-ready 幂等复核完成；生产阶段保持 ${state.stage}，下一步重新运行 project:preview。`);
+  }
 } catch (error) {
   console.error(`project:assets-ready failed: ${error.message}`);
   process.exitCode = 1;

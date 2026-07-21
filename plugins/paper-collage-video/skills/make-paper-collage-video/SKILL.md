@@ -9,7 +9,7 @@ Build an editable video while keeping the human in charge of concept, style/voic
 
 ## Start With One Small State Read
 
-1. Treat the current directory as a workspace only when `package.json` exposes `project:new`, `project:resume`, `project:preview`, and `project:render`. Otherwise read [references/setup.md](references/setup.md), bootstrap a writable workspace, and run its doctor.
+1. Treat the current directory as a workspace only when `package.json` exposes `project:new`, `project:resume`, `project:preview`, and `project:render`. Otherwise read [references/setup.md](references/setup.md), bootstrap a writable workspace, and run its doctor. If this Skill was injected from a versioned plugin-cache path that no longer exists, stop and report a stale task snapshot. Do not scan for or silently select the highest cached version; start a new Codex task so the loader formally exposes the installed version.
 2. Inspect `git status --short` in Git workspaces and preserve unrelated changes.
 3. For an existing slug, run only:
 
@@ -38,7 +38,7 @@ Do not load every reference up front.
 
 - Use 1920×1080, 30 fps, a general Chinese-language audience, layered paper collage, and the configured fictional narrator unless the brief requires otherwise.
 - Preserve user-specified duration and scene count independently; infer only missing values.
-- Default to the `balanced` production profile. Offer `draft` for cheaper iteration and `full-depth` for maximum parallax. Treat the plan's generated-image budget as a ceiling unless the human approves a profile change.
+- Default to the `balanced` production profile. Treat the plan's generated-image budget as a ceiling unless the human approves a profile change. Whenever the human can revise the plan, show `draft`, `balanced`, and `full-depth` as direct structured choices with the current scene count's exact attempt ceilings and one-line final-film effects; do not hide them behind a generic free-text “modify” option.
 - Do not clone a real person, use unclear third-party rights, publish, upload, or send externally without separate authorization.
 - Ask only for missing information that materially changes the subject, factual position, rights boundary, delivery format, or material cost.
 
@@ -48,15 +48,15 @@ At `capability-review`, use the current host model only to prepare a provisional
 
 1. Read `providers.md`, `story-planning.md`, and `approval-gates.md`.
 2. Run `provider:status -- <slug> --compact-json` once and inspect actual callable host tools.
-3. Fill `brief.md`. Run `project:plan` with resolved duration, scenes, narration estimate, rationale, and `--profile=draft|balanced|full-depth`.
-4. Author one `storyboard.json` input with a whole-film arc, shared composition/motion language, and one scene record per planned scene. Every scene needs a named blueprint, at least three ordered beats, a `compositionPlan`, and at least three proof moments with visible assertions including a final state after `at=0.82`. Lock it with `project:storyboard`.
+3. Fill `brief.md`. Run `project:plan` with resolved duration, scenes, narration estimate, rationale, `--profile=draft|balanced|full-depth`, and `--json`. Use `decision.profileOptions` and `decision.durationAuthority` as the structured confirmation source instead of recalculating labels or budgets in prose.
+4. Author one schema-v2 `storyboard.json` input with a whole-film arc, shared composition/motion language, and one scene record per planned scene. Every scene needs a named blueprint, at least three ordered beats, a `compositionPlan`, and at least three proof moments with visible assertions including a final state after `at=0.82`. Every beat explicitly declares `proofTimeId` as a proof id or `null`; a beat with `audioCue` must name its event-level proof. Lock it with `project:storyboard`.
 5. Present one compact decision containing:
    - narration position, scene outline, facts, style, reusable asset plan, and each scene's blueprint/beat rhythm;
    - requested versus inferred duration/scenes;
    - production profile and generated-image budget;
    - proposed text/image/voice providers, model/voice identity, and material cost.
    - identity-, topology-, mechanism-, and diagram-critical risks that will require reusable semantic contracts before generation.
-6. Ask once to approve the concept, storyboard, budget, and all unresolved providers. On approval, write one selection JSON and run:
+6. Ask once to approve the concept, storyboard, budget, and all unresolved providers. If the human chooses to revise, present each bounded cost/output enum—especially production profile—as its own structured selector with its exact numeric effect. On approval, write one selection JSON containing `planDecision` copied from the selected plan decision plus provider selections, then run:
 
    ```bash
    npm run project:confirm-concept -- <slug> --input=<selection.json>
@@ -93,16 +93,16 @@ At `asset-production`:
 5. Create a schema-v3 request for every new image output and try `provider:reuse` before paid or slow generation. Before a host provider-generation/edit call, run `provider:attempt reserve`; pass its attempt id to `provider:record`. `provider:run` reserves automatically for command adapters. Close abandoned attempts explicitly; never erase the ledger.
 6. Stay within the approved attempt budget. Rejected, abandoned, and unused provider results still count when quota was consumed. Deterministic masks, crops, alpha extractions, and exact reuse do not consume another slot.
 7. Run `project:quality prepare`, inspect original-resolution files plus generated alpha/checkerboard/motion-stress/semantic-target evidence, and record asset reviews in batches with `evidenceFiles` for every evidence-required check. Do not pass a semantic check merely to unblock production. A hard-alpha `key-edge-clean` result proves only that no soft matte contamination was detected; it does not prove silhouette fidelity, identity distinctness, mechanism correctness, or subject completeness.
-8. Generate/import one narration file per scene so revisions remain local. Assemble `scene.composition` with local child transforms and authored `at=0..1` keyframes. Copy approved proof ids/times/assertions exactly. Map every storyboard beat to one `scene.cues[]` entry; bind critical visual/sound events to `proofTimeId`.
-9. Run `project:composition-proof`; it synchronizes real narration duration, replaces stale proof output, and renders relationship plus semantic-contract targets. Inspect real full frames, targeted crops, cross-scene comparisons, and debug frames. Run `project:quality prepare` again and record composite reviews using `compositeId`.
+8. Generate/import one narration file per scene so revisions remain local. Before each production voice call, add `timingBinding` to its request with the storyboard scene id and allowed minimum/maximum media duration; `provider:record` measures and rejects an unfit take before assembly. Assemble `scene.composition` with local child transforms and authored `at=0..1` keyframes. Copy approved proof ids/times/assertions exactly. Map every storyboard beat to one `scene.cues[]` entry; use the storyboard's approved proof id for critical visual/sound events.
+9. Run `project:composition-proof`; it synchronizes real narration duration, reuses fingerprint-current frames/targets, renders only changed relationship and semantic-contract evidence, and creates alpha/checkerboard/tight-crop/motion-stress evidence for post-style coupled assets. Then run `project:quality scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`, inspect every suggested evidence file, fill pass/fail decisions and notes, and record the edited scaffold with `record-batch`. Never treat the scaffold as an approval.
 10. Read `timing-continuity.md`, then seal the production set with one command:
 
    ```bash
    npm run project:assets-ready -- <slug>
    ```
 
-   It synchronizes narration, caps padding tails when duration was inferred, derives subtitles, validates v4 composition/cues/pre-render timing continuity, rejects stale proof fingerprints, enforces both asset and composite quality, and advances to preview. Explicit duration deficits block here; add real content or revise the approved target instead of padding. This stage cannot claim rendered audiovisual coverage because no artifact exists yet. Do not run separate sync/subtitles/validate commands first.
-11. Run `project:preview`. Its post-render report is the first authoritative silence/low-motion union check. Repair failures and continue autonomously until it reaches `human-review`.
+   It synchronizes narration, caps padding tails when duration was inferred, derives subtitles, runs an audio-only LUFS/true-peak preflight with a bounded gain recommendation, validates v4 composition/cues/pre-render timing continuity, rejects stale proof fingerprints, enforces both asset and composite quality, and advances to preview. In `preview` or `human-review`, the same command is an idempotent recheck and does not advance again. Explicit duration deficits block here; add real content or revise the approved target instead of padding. This stage cannot claim rendered audiovisual coverage because no artifact exists yet. Do not run separate sync/subtitles/validate commands first.
+11. Run `project:preview`. Its post-render report is the first authoritative silence/low-motion union check. The renderer reuses an unchanged artifact, or reuses the existing video stream and performs audio-only remuxing when only audio inputs/gain changed; any visual fingerprint change forces a full render. Repair failures and continue autonomously until it reaches `human-review`.
 
 If a confirmed provider becomes unavailable, preserve the stage and report the exact missing capability. Never invent artifacts or silently switch paid services.
 

@@ -15,9 +15,11 @@ Draft minimum coherent beats and estimate spoken duration before resolving the p
 
 ## Choose a Production Profile
 
-- `draft`: cheapest iteration; one background per scene, heavily reused character sheets, and depth only where essential.
-- `balanced` (default): backgrounds per scene, shared character sheets, and independent depth assets for a few hero locations.
-- `full-depth`: maximum parallax and pose variety; use only when the human accepts the larger asset/cost budget.
+| Profile | Final-film effect | Cost shape |
+|---|---|---|
+| `draft` | Flatter paper motion for testing story, narration, and rhythm | Heavy reuse; few environment layers and poses |
+| `balanced` (default) | Clear foreground/midground/background in hero scenes | Moderate independent layers and character variation |
+| `full-depth` | Maximum environment parallax and pose variety | Most environment layers, poses, evidence work, and generation attempts |
 
 `project:plan` derives a provider-generation attempt ceiling from the profile and scene count. Count the style sample, unique generated backgrounds, environment layers, character sheets, rejected results, and abandoned results when quota was consumed. Exact reuse and deterministic alpha extractions do not consume a new attempt.
 
@@ -29,7 +31,7 @@ npm run project:plan -- <slug> \
   --rationale="<story and pacing basis>"
 ```
 
-Show requested versus inferred values, profile, and image budget in the combined concept/provider decision. Change the profile only through concept revision or another explicit budget decision.
+Use `project:plan --json` as the decision source. It returns `decision.durationAuthority` plus all three `decision.profileOptions`, including exact scene-count-specific attempt ceilings and final-film effects. For an already resolved plan, `npm run project:plan -- <slug> --json` is read-only and re-displays the same options without needing the original write arguments. Show those options as direct structured choices in the combined concept/provider decision and again if the human selects “modify”; never require them to guess an enum in free text. Change the profile only through concept revision or another explicit budget decision. Copy the approved `productionProfile`, `durationSeconds`, `sceneCount`, and `durationAuthority` into `planDecision` for `project:confirm-concept`; the command rejects stale or mismatched confirmation data.
 
 ## Lock the Rhythmic Storyboard
 
@@ -48,7 +50,7 @@ The storyboard is not another human gate. It is part of the existing combined co
 - Choose one of the bounded blueprints: `layered-reveal`, `map-journey`, `archive-stack`, `character-procession`, `discovery-wipe`, `transformation-tableau`, `chapter-tableau`, or `quiet-lockup`.
 - Define at least three proof moments per scene: an establishing state, an action/peak state, and a `final` state at or after `0.82`. Every proof needs a stable id and visible relationship assertions; describe what the pixels must prove, not merely what occurs.
 - Keep proof moments outside the scene's fade-in/fade-out interval so every sampled frame clearly proves the intended composition.
-- If a beat names an `audioCue`, production must attach a real sound asset to its matching cue.
+- In schema v2, every beat declares `proofTimeId` as an approved proof id or `null`. If a beat names an `audioCue`, it must bind an event-level proof and production must attach a real sound asset to the matching cue using that same proof id.
 
 The sum of scene estimates must stay within 8% of the resolved duration. Scene count must match exactly.
 

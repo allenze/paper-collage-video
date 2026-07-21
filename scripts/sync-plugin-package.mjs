@@ -2,7 +2,8 @@
 import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
+import sharp from 'sharp';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -83,6 +84,8 @@ for (const entry of [
   'tsconfig.json',
   'schemas',
   'templates',
+  'scripts/asset-evidence-lib.mjs',
+  'scripts/audio-preflight-lib.mjs',
   'scripts/creative-plan-lib.mjs',
   'scripts/composition-lib.mjs',
   'scripts/process-character-sheet.mjs',
@@ -99,6 +102,7 @@ for (const entry of [
   'scripts/production-state.mjs',
   'scripts/project-advance.mjs',
   'scripts/project-assets-ready.mjs',
+  'scripts/project-audio-preflight.mjs',
   'scripts/project-checkpoint.mjs',
   'scripts/project-confirm-concept.mjs',
   'scripts/project-composition-proof.mjs',
@@ -119,6 +123,7 @@ for (const entry of [
   'scripts/project-subtitles.mjs',
   'scripts/project-validate.mjs',
   'scripts/quality-lib.mjs',
+  'scripts/render-cache-lib.mjs',
   'scripts/rasterize-assets.mjs',
   'scripts/remove_chroma_key.py',
   'scripts/split_sheet.py',
@@ -133,6 +138,7 @@ for (const entry of [
   'src/project.ts',
   'src/roleMotion.ts',
   'tests/provider-and-assets.test.mjs',
+  'tests/audio-render-cache.test.mjs',
   'tests/creative-plan.test.mjs',
   'tests/composition-v4.test.mjs',
   'tests/production-state.test.mjs',
@@ -181,6 +187,7 @@ const workspacePackage = {
     'project:review-sync': rootPackage.scripts['project:review-sync'],
     'project:advance': rootPackage.scripts['project:advance'],
     'project:assets-ready': rootPackage.scripts['project:assets-ready'],
+    'project:audio-preflight': rootPackage.scripts['project:audio-preflight'],
     'project:sync': rootPackage.scripts['project:sync'],
     'project:subtitles': rootPackage.scripts['project:subtitles'],
     'project:validate': rootPackage.scripts['project:validate'],
@@ -341,9 +348,9 @@ const project = {
       },
       subtitles: [{fromSeconds: 0, toSeconds: 1.15, text: '纸片分层视频'}],
       cues: [
-        {id: 'establish', beatId: 'establish', at: 0, durationSeconds: 0.35, targetId: 'scene', action: 'reveal', intensity: 0.7},
-        {id: 'subject-arrives', beatId: 'subject-arrives', at: 0.5, durationSeconds: 0.5, targetId: 'traveler', action: 'lift', intensity: 0.8},
-        {id: 'lockup', beatId: 'lockup', at: 0.9, durationSeconds: 0.25, targetId: 'traveler', action: 'settle', intensity: 0.55},
+        {id: 'establish', beatId: 'establish', proofTimeId: 'proof-establish', at: 0, durationSeconds: 0.35, targetId: 'scene', action: 'reveal', intensity: 0.7},
+        {id: 'subject-arrives', beatId: 'subject-arrives', proofTimeId: 'proof-action', at: 0.5, durationSeconds: 0.5, targetId: 'traveler', action: 'lift', intensity: 0.8},
+        {id: 'lockup', beatId: 'lockup', proofTimeId: 'proof-final', at: 0.9, durationSeconds: 0.25, targetId: 'traveler', action: 'settle', intensity: 0.55},
       ],
     },
   ],
@@ -355,7 +362,7 @@ await writeJson(
 
 const storyboard = {
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 1,
+  schemaVersion: 2,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',
@@ -374,9 +381,9 @@ const storyboard = {
       blueprint: 'layered-reveal',
       estimatedDurationSeconds: 1.2,
       beats: [
-        {id: 'establish', at: 0, purpose: '建立空间', visual: '纸面与背景出现', motion: '场景淡入', audioCue: null},
-        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', motion: '主体上提并轻微放大', audioCue: null},
-        {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', motion: '主体回落稳定', audioCue: null},
+        {id: 'establish', at: 0, purpose: '建立空间', visual: '纸面与背景出现', motion: '场景淡入', audioCue: null, proofTimeId: 'proof-establish'},
+        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', motion: '主体上提并轻微放大', audioCue: null, proofTimeId: 'proof-action'},
+        {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', motion: '主体回落稳定', audioCue: null, proofTimeId: 'proof-final'},
       ],
       proofTimes: [
         {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立']},
@@ -527,6 +534,137 @@ await writeJson(
     ),
     composites: [],
   },
+);
+
+const starterProofDirectory = path.join(
+  RUNTIME_ROOT,
+  'dist',
+  'starter-demo',
+  'composition-proof',
+);
+const starterProofFrameDirectory = path.join(starterProofDirectory, 'frames');
+await fs.mkdir(starterProofFrameDirectory, {recursive: true});
+const backgroundFile = path.join(
+  RUNTIME_ROOT,
+  'public',
+  'projects',
+  'starter-demo',
+  'assets',
+  'plates',
+  '01-bg.png',
+);
+const travelerFile = path.join(
+  RUNTIME_ROOT,
+  'public',
+  'projects',
+  'starter-demo',
+  'assets',
+  'characters',
+  'alpha',
+  '01-traveler.png',
+);
+const starterProofFiles = new Map();
+for (const proof of project.scenes[0].motion.proofTimes) {
+  const file = path.join(starterProofFrameDirectory, `${proof.id}.png`);
+  await sharp(backgroundFile)
+    .composite([{input: travelerFile}])
+    .png()
+    .toFile(file);
+  starterProofFiles.set(proof.id, path.relative(RUNTIME_ROOT, file));
+}
+
+const runtimeProjectLib = await import(
+  `${pathToFileURL(path.join(RUNTIME_ROOT, 'scripts', 'project-lib.mjs')).href}?sync=${Date.now()}`,
+);
+const runtimeQualityLib = await import(
+  `${pathToFileURL(path.join(RUNTIME_ROOT, 'scripts', 'quality-lib.mjs')).href}?sync=${Date.now()}`,
+);
+const {project: starterRuntimeProject} = await runtimeProjectLib.loadProject(
+  'starter-demo',
+);
+const starterTargets = await runtimeQualityLib.collectCompositeQualityTargets(
+  starterRuntimeProject,
+);
+const starterProofFramesForTarget = (target) =>
+  target.proofTimeIds.map((proofTimeId) => {
+    const proof = project.scenes[0].motion.proofTimes.find(
+      ({id}) => id === proofTimeId,
+    );
+    const file = starterProofFiles.get(proofTimeId);
+    return {
+      sceneId: target.sceneId,
+      proofTimeId,
+      absoluteFrame: Math.round(
+        proof.at *
+          (project.video.fps * project.plan.resolved.durationSeconds - 1),
+      ),
+      frameFingerprint: `bundled-${proofTimeId}`,
+      fullFrame: file,
+      crop: file,
+      debugFrame: file,
+      bounds: {
+        left: 0,
+        top: 0,
+        width: project.video.width,
+        height: project.video.height,
+      },
+    };
+  });
+await writeJson(path.join(starterProofDirectory, 'report.json'), {
+  schemaVersion: 2,
+  projectSlug: 'starter-demo',
+  generatedAt: at,
+  frames: project.scenes[0].motion.proofTimes.map((proof) => ({
+    sceneId: 'starter',
+    proofTimeId: proof.id,
+    absoluteFrame: Math.round(
+      proof.at * (project.video.fps * project.plan.resolved.durationSeconds - 1),
+    ),
+    fingerprint: `bundled-${proof.id}`,
+    file: starterProofFiles.get(proof.id),
+  })),
+  composites: starterTargets.map((target) => ({
+    compositeId: target.compositeId,
+    sceneId: target.sceneId,
+    pattern: target.pattern,
+    fingerprint: target.fingerprint,
+    proofFrames: starterProofFramesForTarget(target),
+  })),
+  assetEvidence: [],
+  cache: {
+    frames: {reused: 0, rendered: 3},
+    composites: {reused: 0, generated: starterTargets.length},
+    evidence: {reused: 0, generated: 0},
+  },
+});
+
+const starterPreparedQuality = await runtimeQualityLib.prepareQualityReport(
+  'starter-demo',
+  {write: false},
+);
+starterPreparedQuality.report.updatedAt = at;
+for (const composite of starterPreparedQuality.report.composites) {
+  composite.semanticChecks = Object.fromEntries(
+    composite.requiredChecks.map((check) => [check, 'passed']),
+  );
+  composite.reviewer = 'bundled-fixture';
+  composite.reviewedAt = at;
+  composite.note = 'Repository-owned technical fixture proof';
+  composite.evidenceFiles = await Promise.all(
+    [
+      ...new Set(
+        composite.proofFrames.flatMap(({fullFrame, crop}) => [fullFrame, crop]),
+      ),
+    ].map(async (file) => ({
+      file,
+      sha256: await hashFile(path.join(RUNTIME_ROOT, file)),
+    })),
+  );
+  composite.status = 'passed';
+}
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
+  starterPreparedQuality.report,
 );
 
 await writeJson(path.join(RUNTIME_ROOT, '.paper-collage-template.json'), {

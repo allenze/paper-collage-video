@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   assessCreativePlanTimeline,
+  assertConfirmedPlanDecision,
   buildCreativePlan,
   deriveAssetBudget,
   deriveCreativePlanMode,
+  deriveDurationAuthority,
+  summarizeConceptDecision,
+  summarizeProductionProfiles,
   validateCreativePlan,
 } from '../scripts/creative-plan-lib.mjs';
 
@@ -80,6 +84,39 @@ test('production profiles set explicit generated-image budgets', () => {
   assert.throws(
     () => make({productionProfile: 'unbounded'}),
     /productionProfile/,
+  );
+});
+
+test('concept decisions expose bounded profile choices with exact scene budgets', () => {
+  const plan = make({sceneCount: 2, productionProfile: 'full-depth'});
+  const decision = summarizeConceptDecision(plan);
+  assert.equal(decision.durationAuthority, 'content-derived');
+  assert.deepEqual(
+    decision.profileOptions.map(({id, assetBudget}) => [id, assetBudget.maxGeneratedImages]),
+    [
+      ['draft', 5],
+      ['balanced', 6],
+      ['full-depth', 9],
+    ],
+  );
+  assert.ok(
+    summarizeProductionProfiles(2).every(
+      ({summary, finalImpact}) => summary.length > 10 && finalImpact.length > 10,
+    ),
+  );
+  assert.doesNotThrow(() => assertConfirmedPlanDecision({
+    productionProfile: 'full-depth',
+    durationSeconds: 30,
+    sceneCount: 2,
+    durationAuthority: 'content-derived',
+  }, plan));
+  assert.throws(
+    () => assertConfirmedPlanDecision({...decision, productionProfile: 'balanced'}, plan),
+    /productionProfile 必须与当前计划一致/,
+  );
+  assert.equal(
+    deriveDurationAuthority(make({requestedDurationSeconds: 30})),
+    'human-target',
   );
 });
 

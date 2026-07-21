@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video-pipeline",
-  "version": "0.9.0",
+  "version": "0.10.0-dev.5",
   "description": "Configuration-driven paper-collage video pipeline and Codex plugin built with Remotion.",
   "private": true,
   "type": "module",
@@ -47,6 +47,7 @@
     "project:review-sync": "node scripts/project-review-sync.mjs",
     "project:advance": "node scripts/project-advance.mjs",
     "project:assets-ready": "node scripts/project-assets-ready.mjs",
+    "project:audio-preflight": "node scripts/project-audio-preflight.mjs",
     "project:sync": "node scripts/project-sync.mjs",
     "project:subtitles": "node scripts/project-subtitles.mjs",
     "project:validate": "node scripts/project-validate.mjs",

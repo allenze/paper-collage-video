@@ -8,7 +8,7 @@ Read this only when creating/changing project files or diagnosing validation/sta
 |---|---|
 | `brief.md` | Human intent, audience, facts, format, style, rights, prohibitions |
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
-| `storyboard.json` | Approved arc, beats, composition patterns, relationships, and proof assertions |
+| `storyboard.json` | Approved arc, schema-v2 beat-to-proof bindings, composition patterns, relationships, and proof assertions |
 | `project.json` | Resolved plan and v4 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
@@ -54,17 +54,17 @@ Derivation method is part of correctness. Complex silhouettes and negative space
 
 ## Proof and Cue Contract
 
-- Scene id, blueprint, `compositionPlan`, proof ids/times/assertions, and beat ids must match the approved storyboard.
+- Scene id, blueprint, `compositionPlan`, proof ids/times/assertions, and beat ids must match the approved storyboard. In schema v2, a beat-bound `proofTimeId` is also immutable evidence intent.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside fades.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.
 - `scene.cues` is the only visual/sound event source. Every storyboard beat has exactly one cue; cue drift is at most `0.035` normalized units.
 - Cue targets are `scene` or an existing composition node. Supported actions come from `schemas/composition.schema.json`, including `drop-impact` and `carve`.
-- Bind a critical cue to `proofTimeId`; the proof must fall inside its action window. If the approved beat names audio, the same cue owns the sound.
+- Bind a critical cue to `proofTimeId`; the proof must fall inside its action window. If the approved beat names audio, the storyboard must already name its event-level proof and the same cue owns both that proof id and the sound.
 - Use `hold` only for an approved quiet observation beat: target `scene`, set `intensity: 0`, bind a proof inside the window, and keep it within the runtime maximum. Never encode an unexplained wait as a long `tailSeconds`.
 
 ## Validation and Failure Routing
 
-Run `project:composition-proof` after assembling real groups. It replaces the previous proof directory, then renders authored proof frames, focused relationship crops, semantic-contract targets, cross-scene comparisons, debug copies, and the cue table through the production renderer. `project:assets-ready` rejects missing/stale proof fingerprints, open generation reservations, over-budget attempts, and pending/failed asset or composite quality.
+Run `project:composition-proof` after assembling real groups. It fingerprints scene frames and targets, reuses current evidence, renders only changed authored proof frames/crops/debug copies, and creates standard alpha/checkerboard/tight/motion-stress evidence for every coupled production asset. It never treats a cache entry as current without matching source/config fingerprints and existing evidence files. `project:assets-ready` rejects missing/stale proof fingerprints, open generation reservations, over-budget attempts, pending/failed asset or composite quality, and failed audio preflight.
 
 Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `style:proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
 
