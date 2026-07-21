@@ -18,6 +18,7 @@ import {
   prepareQualityReport,
   readQualityReportStatus,
 } from './quality-lib.mjs';
+import {analyzeRenderedContinuityArtifact} from './timeline-continuity-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -200,11 +201,36 @@ try {
         ).stderr,
       )
     : {integratedLufs: null, truePeakDbtp: null, loudnessRangeLu: null};
+  const continuityAnalysis = videoStream
+    ? await analyzeRenderedContinuityArtifact({
+        artifact,
+        durationSeconds,
+        hasAudio: Boolean(audioStream),
+        timeline: validation.timeline,
+        fps: project.video.fps,
+      })
+    : {
+        silentRanges: [],
+        lowMotionRanges: [],
+        approvedHoldRanges: [],
+        deadAirRanges: [],
+        warningRanges: [],
+        failingRanges: [],
+        perScene: [],
+        totalDeadAirSeconds: durationSeconds,
+        deadAirRatio: 1,
+        passed: false,
+        sampling: null,
+        thresholds: null,
+      };
   const isPreview = path.basename(artifact) === 'preview.mp4';
   const expectedScale = isPreview ? 0.5 : 1;
   const expectedWidth = Math.round(project.video.width * expectedScale);
   const expectedHeight = Math.round(project.video.height * expectedScale);
   const frameRate = parseFrameRate(videoStream?.r_frame_rate);
+  const tailBudgetIssues = (validation.issues ?? []).filter(
+    ({code}) => code === 'scene-tail-budget',
+  );
   const technicalChecks = [
     {
       id: 'video-stream',
@@ -244,6 +270,23 @@ try {
       passed: volume.maxDb === null || volume.maxDb <= -0.1,
       expected: '<= -0.1 dB',
       actual: volume.maxDb,
+    },
+    {
+      id: 'tail-budget',
+      passed: tailBudgetIssues.length === 0,
+      expected: 'all scene tails within technical or proof-backed hold budget',
+      actual:
+        tailBudgetIssues.length === 0
+          ? 'within budget'
+          : tailBudgetIssues.map(({location}) => location).join(', '),
+    },
+    {
+      id: 'audiovisual-coverage',
+      passed: continuityAnalysis.passed,
+      expected: 'no unapproved silent + low-motion interval >= 1.2s; total <= 8%',
+      actual: continuityAnalysis.passed
+        ? `${continuityAnalysis.totalDeadAirSeconds.toFixed(3)}s (${(continuityAnalysis.deadAirRatio * 100).toFixed(1)}%)`
+        : `${continuityAnalysis.failingRanges.length} failing range(s), ${continuityAnalysis.totalDeadAirSeconds.toFixed(3)}s total (${(continuityAnalysis.deadAirRatio * 100).toFixed(1)}%)`,
     },
   ];
   const mastering = project.audio?.mastering;
@@ -285,7 +328,7 @@ try {
     ? await readQualityReportStatus(slug)
     : await prepareQualityReport(slug);
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     project: {slug: project.slug, title: project.title},
     artifact: {
@@ -338,6 +381,7 @@ try {
         status,
       })),
     },
+    continuityAnalysis,
     technicalChecks,
     passed:
       validation.passed &&
@@ -353,6 +397,14 @@ try {
   for (const check of technicalChecks) {
     console.log(
       `${check.passed ? '✓' : '✗'} ${check.id}: ${check.actual} (expected ${check.expected})`,
+    );
+  }
+  for (const range of continuityAnalysis.perScene.filter(
+    ({durationSeconds: rangeDuration}) =>
+      rangeDuration >= continuityAnalysis.thresholds?.deadAirWarningSeconds,
+  )) {
+    console.log(
+      `  DEAD AIR ${range.sceneId}: ${range.startSeconds.toFixed(3)}s–${range.endSeconds.toFixed(3)}s (${range.durationSeconds.toFixed(3)}s)`,
     );
   }
   if (!report.passed) process.exitCode = 1;

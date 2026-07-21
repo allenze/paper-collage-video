@@ -304,12 +304,13 @@ const CueSounds = ({cues, durationInFrames}: {cues: ProjectCue[]; durationInFram
 );
 
 const cameraDefaults = (preset: NormalizedProjectScene['camera']['preset'], intensity: number) => {
+  const perceptibleIntensity = Math.max(0.6, intensity);
   switch (preset) {
-    case 'pull': return [{at: 0, x: -4, y: 0, zoom: 1.03}, {at: 1, x: 5, y: 0, zoom: 1.01}];
-    case 'pan-left': return [{at: 0, x: 10 * intensity, y: 0, zoom: 1.018}, {at: 1, x: -10 * intensity, y: 0, zoom: 1.022}];
-    case 'pan-right': return [{at: 0, x: -10 * intensity, y: 0, zoom: 1.018}, {at: 1, x: 10 * intensity, y: 0, zoom: 1.022}];
+    case 'pull': return [{at: 0, x: -10 * perceptibleIntensity, y: 0, zoom: 1.035}, {at: 1, x: 12 * perceptibleIntensity, y: 0, zoom: 1.01}];
+    case 'pan-left': return [{at: 0, x: 24 * perceptibleIntensity, y: 0, zoom: 1.018}, {at: 1, x: -24 * perceptibleIntensity, y: 0, zoom: 1.022}];
+    case 'pan-right': return [{at: 0, x: -24 * perceptibleIntensity, y: 0, zoom: 1.018}, {at: 1, x: 24 * perceptibleIntensity, y: 0, zoom: 1.022}];
     case 'static': return [{at: 0, x: 0, y: 0, zoom: 1.01}, {at: 1, x: 0, y: 0, zoom: 1.01}];
-    default: return [{at: 0, x: -6 * intensity, y: 0, zoom: 1.01}, {at: 1, x: 9 * intensity, y: 0, zoom: 1.026}];
+    default: return [{at: 0, x: -10 * perceptibleIntensity, y: 0, zoom: 1.01}, {at: 1, x: 18 * perceptibleIntensity, y: 0, zoom: 1.028}];
   }
 };
 

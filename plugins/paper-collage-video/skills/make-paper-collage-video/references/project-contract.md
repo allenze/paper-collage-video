@@ -60,6 +60,7 @@ Derivation method is part of correctness. Complex silhouettes and negative space
 - `scene.cues` is the only visual/sound event source. Every storyboard beat has exactly one cue; cue drift is at most `0.035` normalized units.
 - Cue targets are `scene` or an existing composition node. Supported actions come from `schemas/composition.schema.json`, including `drop-impact` and `carve`.
 - Bind a critical cue to `proofTimeId`; the proof must fall inside its action window. If the approved beat names audio, the same cue owns the sound.
+- Use `hold` only for an approved quiet observation beat: target `scene`, set `intensity: 0`, bind a proof inside the window, and keep it within the runtime maximum. Never encode an unexplained wait as a long `tailSeconds`.
 
 ## Validation and Failure Routing
 

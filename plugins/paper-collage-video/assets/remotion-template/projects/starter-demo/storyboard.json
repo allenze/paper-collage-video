@@ -22,7 +22,7 @@
       "narrativeRole": "开场与能力证明",
       "message": "纸拼贴镜头由有节奏的分层运动构成。",
       "blueprint": "layered-reveal",
-      "estimatedDurationSeconds": 2,
+      "estimatedDurationSeconds": 1.2,
       "beats": [
         {
           "id": "establish",

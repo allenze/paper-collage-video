@@ -11,7 +11,7 @@ Read this while resolving duration, scene count, or production profile. Duration
 | Scene count only | Requested scenes | Duration |
 | Both | Both values | Pacing and allocation only |
 
-Draft minimum coherent beats and estimate spoken duration before resolving the plan. For Chinese narration, roughly 3.5–4.5 Han characters/second is a planning aid. Reserve time for openings, subtitles, pauses, tails, and transition overlap. Ask only when two explicit constraints are materially incompatible.
+Draft minimum coherent beats and estimate spoken duration before resolving the plan. For Chinese narration, roughly 3.5–4.5 Han characters/second is a planning aid. Reserve time for openings, subtitles, bounded pauses, and transition overlap. Treat an inferred duration as a provisional estimate, never as a quota that must be filled with static tails. Ask only when two explicit constraints are materially incompatible.
 
 ## Choose a Production Profile
 
@@ -52,4 +52,4 @@ The storyboard is not another human gate. It is part of the existing combined co
 
 The sum of scene estimates must stay within 8% of the resolved duration. Scene count must match exactly.
 
-After real narration exists, `project:assets-ready` synchronizes exact media duration. Explicit user duration drift blocks validation; inferred duration drift remains a warning for review.
+After real narration exists, `project:assets-ready` synchronizes exact media duration. When duration was inferred, the measured narration plus bounded tails and transitions becomes the execution duration, even when it is shorter than the estimate. When duration was explicit, a content deficit blocks validation; add narration or meaningful visual beats, add an approved audio passage, or revise the target instead of padding. Read `timing-continuity.md` before authoring scene tails.

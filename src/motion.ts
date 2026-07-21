@@ -130,6 +130,8 @@ export const resolveCueState = ({
         result.x += Math.sin(cueProgress * Math.PI * 10) * envelope * 0.004;
         result.rotation += Math.sin(cueProgress * Math.PI * 8) * envelope * 1.2;
         break;
+      case 'hold':
+        break;
     }
   }
   return result;

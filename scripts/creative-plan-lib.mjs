@@ -1,3 +1,5 @@
+import {TIMING_CONTINUITY_THRESHOLDS} from './timeline-continuity-lib.mjs';
+
 export const CREATIVE_PLAN_MODES = [
   'none',
   'duration-only',
@@ -261,16 +263,29 @@ export const assessCreativePlanTimeline = (plan, timeline) => {
     });
   }
   const actualDuration = Number(timeline?.durationSeconds ?? 0);
-  const durationDrift = Math.abs(actualDuration - target.durationSeconds);
-  const tolerance = Math.max(2, target.durationSeconds * 0.1);
-  if (durationDrift > tolerance) {
-    const durationWasExplicit = plan.requested?.durationSeconds != null;
-    issues.push({
-      level: durationWasExplicit ? 'error' : 'warning',
-      code: 'plan-duration-drift',
-      message: `${durationWasExplicit ? '用户指定' : 'Skill 推导'}约 ${target.durationSeconds}s，时间线实际 ${actualDuration.toFixed(3)}s；偏差超过 ${tolerance.toFixed(1)}s。`,
-      location: 'plan.resolved.durationSeconds',
-    });
+  const durationWasExplicit = plan.requested?.durationSeconds != null;
+  if (durationWasExplicit) {
+    const tolerance = Math.max(
+      TIMING_CONTINUITY_THRESHOLDS.explicitDurationToleranceSeconds,
+      target.durationSeconds *
+        TIMING_CONTINUITY_THRESHOLDS.explicitDurationToleranceRatio,
+    );
+    const durationDrift = actualDuration - target.durationSeconds;
+    if (durationDrift < -tolerance) {
+      issues.push({
+        level: 'error',
+        code: 'duration-content-deficit',
+        message: `用户指定 ${target.durationSeconds}s，但实测内容时间线只有 ${actualDuration.toFixed(3)}s；缺少 ${Math.abs(durationDrift).toFixed(3)}s。请增加旁白或有效动作、缩短目标时长，不要用静止尾帧补足。`,
+        location: 'plan.resolved.durationSeconds',
+      });
+    } else if (durationDrift > tolerance) {
+      issues.push({
+        level: 'error',
+        code: 'plan-duration-drift',
+        message: `用户指定 ${target.durationSeconds}s，时间线实际 ${actualDuration.toFixed(3)}s；超出 ${tolerance.toFixed(1)}s 的交付容差。`,
+        location: 'plan.resolved.durationSeconds',
+      });
+    }
   }
   return issues;
 };

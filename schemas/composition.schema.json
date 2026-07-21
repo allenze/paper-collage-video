@@ -7,7 +7,7 @@
       "enum": ["free", "supported-subject", "registered-environment"]
     },
     "cueAction": {
-      "enum": ["reveal", "pulse", "stamp", "shake", "lift", "settle", "drop-impact", "carve"]
+      "enum": ["reveal", "pulse", "stamp", "shake", "lift", "settle", "drop-impact", "carve", "hold"]
     },
     "motionEase": {
       "enum": ["linear", "ease-in", "ease-out", "ease-in-out", "hold"]

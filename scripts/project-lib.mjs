@@ -18,6 +18,7 @@ import {
   CUE_ACTIONS,
   validateCompositionStructure,
 } from './composition-lib.mjs';
+import {assessTimelineContinuity} from './timeline-continuity-lib.mjs';
 import {
   readGenerationAttemptEvents,
   summarizeGenerationAttempts,
@@ -435,6 +436,11 @@ export const validateProject = async (project, options = {}) => {
 
   if (project.plan?.status === 'resolved' && timeline.scenes.length > 0) {
     for (const issue of assessCreativePlanTimeline(project.plan, timeline)) {
+      add(issue.level, issue.code, issue.message, issue.location);
+    }
+  }
+  if (timeline.scenes.length > 0) {
+    for (const issue of assessTimelineContinuity(project, timeline)) {
       add(issue.level, issue.code, issue.message, issue.location);
     }
   }

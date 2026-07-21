@@ -96,8 +96,12 @@ Map every approved beat to one cue. Target the group when the entire registered 
 
 The normal contact sheet and final report reuse the authored proof moments and cue event table. Inspect establish, action/peak, and final states for relationship readability, subtitle safety, and preserved consequences.
 
+Do not count imperceptible camera drift as story activity. Use `static` when stillness is intentional; non-static presets have a minimum visible movement floor. The rendered continuity report remains authoritative because authored motion can still disappear after compositing or encoding.
+
 ## Subtitles and Audio
 
 `project:assets-ready` owns narration synchronization, subtitle derivation, v4 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
 
 Tune `audio.narration.volume` from preview loudness rather than rewriting source audio. Reports enforce configured LUFS tolerance and true-peak headroom.
+
+Reports also intersect detected silence with sampled low-motion ranges. Silence with meaningful animation and a static explanatory image with narration are valid; only their unapproved overlap fails. Read `timing-continuity.md` for thresholds and proof-backed quiet holds. Never add background music solely to hide a continuity failure.

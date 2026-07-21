@@ -1,6 +1,6 @@
 ---
 name: make-paper-collage-video
-description: Initialize, create, resume, revise, or productize editable Remotion paper-collage videos with rhythmic storyboards, semantic identity/mechanism/diagram contracts, registered composition groups, layered keyframe motion, audiovisual cues, proof-time validation, budgeted providers, dual-scope quality review, and local final delivery. Use for paper-cutout, historical collage, layered illustration, parallax explainer, functional-object diagrams, recurring-character stories, or an interrupted project that has production.json.
+description: Initialize, create, resume, revise, or productize editable Remotion paper-collage videos with rhythmic storyboards, semantic identity/mechanism/diagram contracts, registered composition groups, layered keyframe motion, audiovisual cues, proof-time validation, dead-air continuity checks, budgeted providers, dual-scope quality review, and local final delivery. Use for paper-cutout, historical collage, layered illustration, parallax explainer, functional-object diagrams, recurring-character stories, or an interrupted project that has production.json.
 ---
 
 # Make Paper Collage Video
@@ -25,6 +25,7 @@ Build an editable video while keeping the human in charge of concept, style/voic
 - Workspace creation or doctor failure: [references/setup.md](references/setup.md)
 - Provider discovery, confirmation, change, or output recording: [references/providers.md](references/providers.md)
 - Duration, scenes, rhythmic storyboard, or production-profile planning: [references/story-planning.md](references/story-planning.md)
+- Narration resync, scene tails, intentional quiet holds, pacing, or dead-air failures: [references/timing-continuity.md](references/timing-continuity.md)
 - Concept/style/preview decisions, rights, or external action: [references/approval-gates.md](references/approval-gates.md)
 - Image review, depth, motion, subtitles, or delivery tuning: [references/quality-motion.md](references/quality-motion.md)
 - Recurring identities, functional mechanisms, topology-sensitive subjects, or explanatory diagrams: [references/semantic-contracts.md](references/semantic-contracts.md)
@@ -94,20 +95,20 @@ At `asset-production`:
 7. Run `project:quality prepare`, inspect original-resolution files plus generated alpha/checkerboard/motion-stress/semantic-target evidence, and record asset reviews in batches with `evidenceFiles` for every evidence-required check. Do not pass a semantic check merely to unblock production. A hard-alpha `key-edge-clean` result proves only that no soft matte contamination was detected; it does not prove silhouette fidelity, identity distinctness, mechanism correctness, or subject completeness.
 8. Generate/import one narration file per scene so revisions remain local. Assemble `scene.composition` with local child transforms and authored `at=0..1` keyframes. Copy approved proof ids/times/assertions exactly. Map every storyboard beat to one `scene.cues[]` entry; bind critical visual/sound events to `proofTimeId`.
 9. Run `project:composition-proof`; it synchronizes real narration duration, replaces stale proof output, and renders relationship plus semantic-contract targets. Inspect real full frames, targeted crops, cross-scene comparisons, and debug frames. Run `project:quality prepare` again and record composite reviews using `compositeId`.
-10. Seal the production set with one command:
+10. Read `timing-continuity.md`, then seal the production set with one command:
 
    ```bash
    npm run project:assets-ready -- <slug>
    ```
 
-   It synchronizes narration, derives subtitles, validates v4 composition and cues, rejects stale proof fingerprints, enforces both asset and composite quality, and advances to preview. Do not run separate sync/subtitles/validate commands first.
-11. Run `project:preview`. Continue autonomously until it reaches `human-review`.
+   It synchronizes narration, caps padding tails when duration was inferred, derives subtitles, validates v4 composition/cues/pre-render timing continuity, rejects stale proof fingerprints, enforces both asset and composite quality, and advances to preview. Explicit duration deficits block here; add real content or revise the approved target instead of padding. This stage cannot claim rendered audiovisual coverage because no artifact exists yet. Do not run separate sync/subtitles/validate commands first.
+11. Run `project:preview`. Its post-render report is the first authoritative silence/low-motion union check. Repair failures and continue autonomously until it reaches `human-review`.
 
 If a confirmed provider becomes unavailable, preserve the stage and report the exact missing capability. Never invent artifacts or silently switch paid services.
 
 ## Preview, Final, and Publication
 
-At `human-review`, show `preview.mp4`, `contact-sheet.jpg`, and `report.json`, separating technical results from creative judgment. Record revision feedback in `review.md` and `request-preview-revision`; after explicit approval run:
+At `human-review`, show `preview.mp4`, `contact-sheet.jpg`, and `report.json`, separating technical results from creative judgment. Confirm `continuityAnalysis.passed`; the report rejects unapproved intervals that are both silent and low-motion. Record revision feedback in `review.md` and `request-preview-revision`; after explicit approval run:
 
 ```bash
 npm run project:advance -- <slug> approve-preview --note="<explicit decision>"

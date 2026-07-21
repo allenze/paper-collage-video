@@ -120,7 +120,7 @@ test('input mode is derived independently for duration and scene count', () => {
   );
 });
 
-test('resolved plans enforce scene count and surface meaningful duration drift', () => {
+test('resolved plans enforce scene count without padding inferred duration', () => {
   const plan = make({durationSeconds: 30, sceneCount: 3});
   assert.deepEqual(
     assessCreativePlanTimeline(plan, {
@@ -134,7 +134,7 @@ test('resolved plans enforce scene count and surface meaningful duration drift',
     scenes: [{}, {}],
   });
   assert.equal(issues.find(({code}) => code === 'plan-scene-count').level, 'error');
-  assert.equal(issues.find(({code}) => code === 'plan-duration-drift').level, 'warning');
+  assert.equal(issues.some(({code}) => code === 'plan-duration-drift'), false);
 
   const explicitDuration = make({
     requestedDurationSeconds: 30,
@@ -147,6 +147,14 @@ test('resolved plans enforce scene count and surface meaningful duration drift',
   });
   assert.equal(
     explicitIssues.find(({code}) => code === 'plan-duration-drift').level,
+    'error',
+  );
+  const deficitIssues = assessCreativePlanTimeline(explicitDuration, {
+    durationSeconds: 24,
+    scenes: [{}, {}, {}],
+  });
+  assert.equal(
+    deficitIssues.find(({code}) => code === 'duration-content-deficit').level,
     'error',
   );
 });

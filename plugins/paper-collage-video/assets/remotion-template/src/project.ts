@@ -123,7 +123,8 @@ export type CueAction =
   | 'lift'
   | 'settle'
   | 'drop-impact'
-  | 'carve';
+  | 'carve'
+  | 'hold';
 
 export type ProjectCue = {
   id: string;

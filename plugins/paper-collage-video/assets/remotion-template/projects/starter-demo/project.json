@@ -17,11 +17,11 @@
       "maxGeneratedImages": 4
     },
     "requested": {
-      "durationSeconds": 2,
+      "durationSeconds": 1.2,
       "sceneCount": 1
     },
     "resolved": {
-      "durationSeconds": 2,
+      "durationSeconds": 1.2,
       "sceneCount": 1,
       "estimatedNarrationSeconds": 1,
       "rationale": "Bundled technical fixture",
@@ -69,7 +69,7 @@
       "id": "starter",
       "label": "纸片分层视频",
       "eyebrow": "STARTER",
-      "tailSeconds": 1,
+      "tailSeconds": 0.2,
       "motion": {
         "blueprint": "layered-reveal",
         "intensity": 0.7,
@@ -201,8 +201,8 @@
       "subtitles": [
         {
           "fromSeconds": 0,
-          "toSeconds": 1.8,
-          "text": "Paper Collage Video"
+          "toSeconds": 1.15,
+          "text": "纸片分层视频"
         }
       ],
       "cues": [
