@@ -45,6 +45,11 @@ try {
   if (!source || path.resolve(ROOT, source.file) !== input) throw new Error('sourceAssetId 必须指向 provider 已登记的 sheet input');
   const sourceBinding = source.stateSheetBinding ?? source.request?.stateSheetBinding;
   if (!sourceBinding || sourceBinding.poseFamilyId !== spec.poseFamilyId || sourceBinding.layout.columns !== spec.layout.columns || sourceBinding.layout.rows !== spec.layout.rows) throw new Error('state sheet spec 必须匹配 source asset 的 stateSheetBinding');
+  const sourceStates = sourceBinding.states?.map(({stateId, row, column}) => ({id: stateId, row, column})) ?? [];
+  if (JSON.stringify(sourceStates) !== JSON.stringify(spec.states)) throw new Error('state sheet spec 必须覆盖 source asset 的完整有序姿态族，不能只处理或替换单格');
+  const recoveryPolicy = sourceBinding.recoveryPolicy;
+  if (recoveryPolicy?.strategy !== 'preserve-sheet-context' || recoveryPolicy.localDeterministicFixFirst !== true || recoveryPolicy.isolatedCellGeneration !== 'forbidden' || recoveryPolicy.fallback !== 'full-sheet-regeneration') throw new Error('source state sheet 缺少 preserve-sheet-context 恢复策略');
+  const sourceRecovery = source.stateSheetRecoveryBinding ?? source.request?.stateSheetRecoveryBinding ?? null;
 
   await fs.mkdir(outputDirectory, {recursive: true});
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'paper-collage-state-sheet-'));
@@ -108,6 +113,7 @@ try {
     },
     stateBinding: {poseFamilyId: spec.poseFamilyId, stateId, registrationId: spec.registration.id, sourceMasterAssetId: spec.registration.sourceMasterAssetId},
     stateSheetBinding: null,
+    stateSheetRecoveryBinding: sourceRecovery,
     sourceSheetAssetId: spec.sourceAssetId,
     semanticBinding: source.semanticBinding ?? null,
     familyFingerprint,
@@ -115,20 +121,29 @@ try {
   const derivedIds = new Set(derived.map(({assetId}) => assetId));
   manifest.assets = [...manifest.assets.filter(({assetId}) => !derivedIds.has(assetId)), ...derived];
   await writeJson(manifestFile, manifest);
+  const providerImageCalls = ['host', 'command'].includes(source.adapter) ? 1 : 0;
+  const recoveryTargetCount = sourceRecovery?.targetStateIds?.length ?? derived.length;
   await writeJson(path.join(outputDirectory, `${spec.poseFamilyId}-state-sheet-report.json`), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectSlug: spec.projectSlug,
     poseFamilyId: spec.poseFamilyId,
     sourceAssetId: spec.sourceAssetId,
     sourceSha256,
     familyFingerprint,
-    providerImageCalls: 1,
+    providerImageCalls,
+    generationMode: sourceRecovery?.mode ?? 'initial-family-sheet',
+    recoverySourceSheetAssetId: sourceRecovery?.sourceSheetAssetId ?? null,
+    repairedStateIds: sourceRecovery?.targetStateIds ?? [],
+    preservedContextStateCount: sourceRecovery?.mode === 'masked-sheet-edit'
+      ? derived.length - recoveryTargetCount
+      : 0,
+    isolatedCellGenerationUsed: false,
     derivedStateCount: derived.length,
-    avoidedIndividualCalls: Math.max(0, derived.length - 1),
+    avoidedIndividualCalls: Math.max(0, (sourceRecovery ? recoveryTargetCount : derived.length) - providerImageCalls),
     members: derived.map(({assetId, file, sha256: hash, stateBinding}) => ({assetId, file, sha256: hash, stateBinding})),
     createdAt: recordedAt,
   });
-  console.log(`✓ 一次 sheet 生成派生 ${derived.length} 个注册状态，节省最多 ${Math.max(0, derived.length - 1)} 次逐图生成。`);
+  console.log(`✓ 完整 sheet 上下文派生 ${derived.length} 个注册状态；独立单格生成：0 次。`);
 } catch (error) {
   console.error(`assets:process-state-sheet failed: ${error.message}`);
   process.exitCode = 1;

@@ -50,6 +50,11 @@
         "scene:starter:node:background"
       ],
       "semanticBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "recoverySourceFile": null,
+      "recoverySourceSha256": null,
+      "recoveryEvidenceFiles": [],
       "semanticContractFingerprints": {},
       "sha256": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
       "fingerprint": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
@@ -102,6 +107,11 @@
         "scene:starter:node:traveler"
       ],
       "semanticBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "recoverySourceFile": null,
+      "recoverySourceSha256": null,
+      "recoveryEvidenceFiles": [],
       "semanticContractFingerprints": {},
       "sha256": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
       "fingerprint": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",

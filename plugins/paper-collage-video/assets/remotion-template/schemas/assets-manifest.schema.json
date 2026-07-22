@@ -42,6 +42,7 @@
           "compositionBinding": {"type": ["object", "null"]},
           "stateBinding": {"type": ["object", "null"]},
           "stateSheetBinding": {"type": ["object", "null"]},
+          "stateSheetRecoveryBinding": {"type": ["object", "null"]},
           "sourceSheetAssetId": {"type": ["string", "null"]},
           "semanticBinding": {"type": ["object", "null"]},
           "familyFingerprint": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}

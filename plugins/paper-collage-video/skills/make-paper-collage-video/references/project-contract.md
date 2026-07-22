@@ -43,7 +43,7 @@ Schema v5 is the only supported project contract. A scene has `composition.nodes
 
 `state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Continuous transform/cue motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
-When a family needs multiple generated states, create one registered state sheet where practical and run `assets:process-state-sheet`. Every cell keeps the same full canvas; trimming individual silhouettes would destroy registration and cause visible jumping. The derived records share a family fingerprint and do not count as additional provider calls. A failed cell may be regenerated alone only after the sheet review identifies that local defect.
+When a family needs multiple generated states, create one registered state sheet where practical and run `assets:process-state-sheet`. Every cell keeps the same full canvas; trimming individual silhouettes would destroy registration and cause visible jumping. The derived records share a family fingerprint and do not count as additional provider calls. A failed cell is first reprocessed locally. Provider repair must be a masked edit of the complete original sheet and quality proof must show untargeted cells remained unchanged. If that cannot be guaranteed, regenerate the complete sheet. Independent replacement-cell generation is invalid for a multi-state family.
 
 Use only these patterns:
 
@@ -75,4 +75,4 @@ Run `project:composition-proof` after assembling real groups. It fingerprints sc
 
 Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `style:proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
 
-Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, state-sheet processing, proof, attempt accounting, or report logic ad hoc. Only project schema v5, storyboard schema v3, and asset-request schema v4 are supported; older contracts are intentionally not migrated or executed.
+Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, state-sheet processing, proof, attempt accounting, or report logic ad hoc. Only project schema v5, storyboard schema v3, and asset-request schema v5 are supported; older contracts are intentionally not migrated or executed.

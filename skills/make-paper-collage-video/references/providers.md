@@ -18,14 +18,14 @@ Use `provider:select` only for an isolated change or fallback. A provider switch
 | `command` | User CLI/wrapper/private adapter | `provider:run` executes without a shell and records success |
 | `manual` | Authorized supplied or deterministic local asset | Copy/derive output, then `provider:record` |
 
-## Schema-v3 Image Requests and Reuse
+## Schema-v5 Image Requests and Reuse
 
-Every new image request uses schema v4 and requires both `compositionBinding` and `semanticBinding`. A free asset names its scene/node/role/canvas. A coupled asset also names the common registration and source master. Critical content binds a ready project semantic contract. Older request schemas are rejected rather than migrated.
+Every new image request uses schema v5 and requires both `compositionBinding` and `semanticBinding`. A free asset names its scene/node/role/canvas. A coupled asset also names the common registration and source master. Critical content binds a ready project semantic contract. Older request schemas are rejected rather than migrated.
 
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "projectSlug": "example",
   "assetId": "boat-front",
   "capability": "image",
@@ -52,7 +52,15 @@ For a coupled family:
 3. keep each derivative on the identical canvas and origin;
 4. record every output so manifest v3 computes one family fingerprint.
 
-Do not make independent text-to-image calls for registered members. For two or more poses/states of one identity, prefer one `stateSheetBinding` request with an explicit grid and `regenerate-failed-cell-only`, then run `assets:process-state-sheet`. This converts one provider image into registered local state files without trimming their shared cell canvas. The processor records each derivative and a family fingerprint; those local crops do not consume more generation attempts. Do not put unrelated identities in one sheet merely to reduce cost.
+Do not make independent text-to-image calls for registered members. For two or more poses/states of one identity, prefer one `stateSheetBinding` request with an explicit grid and the required `preserve-sheet-context` policy, then run `assets:process-state-sheet`. This converts one provider image into registered local state files without trimming their shared cell canvas. The processor records each derivative and a family fingerprint; those local crops do not consume more generation attempts. Do not put unrelated identities in one sheet merely to reduce cost.
+
+For recovery, follow this order:
+
+1. rerun local splitting/keying when no new pixels are needed;
+2. create a schema-v5 `masked-sheet-edit` request that names the complete recorded sheet as `stateSheetRecoveryBinding.sourceSheetAssetId`, uses the same id as `compositionBinding.derivation.parentAssetId`, includes it in `generationFamily.referenceAssetIds`, supplies a full-canvas `maskAssetId`, and names only the failed `targetStateIds`;
+3. if untargeted cells cannot remain unchanged, create a `full-sheet-regeneration` request whose target ids equal every member of the state sheet.
+
+The validator rejects a provider-generation/edit request for one `stateBinding` when its generation family contains multiple states. A masked edit also requires `identity-family-consistent`, `cell-separation`, `reference-conformant`, and `untargeted-cells-unchanged`; quality preparation compares untargeted source and result pixels. This is context-preserving regional repair, not isolated cell generation.
 
 Reuse requires the whole composition binding to match, so an unrelated water image cannot enter a registered river family merely because it looks similar.
 

@@ -88,8 +88,11 @@ For related states of one identity or prop, prefer one dense registered sheet
 (for example 2x2 or 3x2) when it can preserve identity and useful cell detail.
 Split, key, and register those cells locally. Do not combine unrelated identities
 merely to fill a grid, and do not accept smaller cells when they make silhouettes,
-text, or critical mechanisms unreadable. If one reviewed cell fails, regenerate
-or repair that cell rather than discarding the accepted family.
+text, or critical mechanisms unreadable. If one reviewed cell fails, reprocess it
+locally when possible. A provider repair must keep the complete original sheet as
+input and edit only a declared mask; accepted cells must remain unchanged. If the
+provider cannot preserve that context, regenerate the complete family sheet.
+Never splice an independently generated replacement into a multi-state family.
 
 Reports must distinguish one quota-consuming provider result from its
 deterministic local derivatives, retain source-family provenance, and state how
@@ -163,7 +166,10 @@ evidence boundary matter more than preserving a proposed field name.
 
 Prefer a reviewed master or character/prop state sheet over independent generation
 calls for every pose. Split and extract the states deterministically, retain their
-shared registration, and bind them to one identity generation family.
+shared registration, and bind them to one identity generation family. Recovery
+follows `local deterministic reprocessing -> masked edit with the full original
+sheet as context -> full-sheet regeneration`. Independent replacement-cell
+generation is not an accepted recovery path for a multi-state family.
 
 This reduces provider attempts and prevents identity, scale, line-weight, and
 background drift. Individual generation calls remain counted whenever the

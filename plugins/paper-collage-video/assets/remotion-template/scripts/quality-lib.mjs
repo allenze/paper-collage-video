@@ -40,6 +40,7 @@ export const ASSET_QUALITY_CHECKS = [
   'identity-family-consistent',
   'cross-scene-identity-continuity',
   'cell-separation',
+  'untargeted-cells-unchanged',
   'background-uniform',
   'edge-clean',
   'silhouette-fidelity',
@@ -111,6 +112,7 @@ const EVIDENCE_REQUIRED_CHECKS = new Set([
   'identity-distinct-within-frame',
   'identity-family-consistent',
   'cross-scene-identity-continuity',
+  'untargeted-cells-unchanged',
   'mechanism-complete',
   'load-path-readable',
   'physical-plausibility',
@@ -138,6 +140,71 @@ const assertWorkspaceFile = (file) => {
   return resolved;
 };
 
+export const inspectUntargetedSheetCells = async ({
+  currentFile,
+  sourceFile,
+  stateSheetBinding,
+  recoveryBinding,
+}) => {
+  if (recoveryBinding?.mode !== 'masked-sheet-edit') {
+    return {passed: true, sampledPixels: 0, changedPixels: 0, changedPixelRatio: 0, meanChannelDelta: 0};
+  }
+  try {
+    const [current, source] = await Promise.all([
+      sharp(currentFile).ensureAlpha().raw().toBuffer({resolveWithObject: true}),
+      sharp(sourceFile).ensureAlpha().raw().toBuffer({resolveWithObject: true}),
+    ]);
+    if (current.info.width !== source.info.width || current.info.height !== source.info.height || current.info.channels !== source.info.channels) {
+      return {
+        passed: false,
+        reason: 'dimensions-changed',
+        current: `${current.info.width}x${current.info.height}x${current.info.channels}`,
+        source: `${source.info.width}x${source.info.height}x${source.info.channels}`,
+      };
+    }
+    const width = current.info.width;
+    const height = current.info.height;
+    const channels = current.info.channels;
+    const columns = stateSheetBinding.layout.columns;
+    const rows = stateSheetBinding.layout.rows;
+    const targeted = new Set(recoveryBinding.targetStateIds);
+    const contextStates = stateSheetBinding.states.filter(({stateId}) => !targeted.has(stateId));
+    let sampledPixels = 0;
+    let changedPixels = 0;
+    let totalChannelDelta = 0;
+    for (const state of contextStates) {
+      const left = Math.round(state.column * width / columns);
+      const right = Math.round((state.column + 1) * width / columns);
+      const top = Math.round(state.row * height / rows);
+      const bottom = Math.round((state.row + 1) * height / rows);
+      for (let y = top; y < bottom; y += 1) {
+        for (let x = left; x < right; x += 1) {
+          const offset = (y * width + x) * channels;
+          let pixelChanged = false;
+          for (let channel = 0; channel < channels; channel += 1) {
+            const delta = Math.abs(current.data[offset + channel] - source.data[offset + channel]);
+            totalChannelDelta += delta;
+            if (delta > 3) pixelChanged = true;
+          }
+          sampledPixels += 1;
+          if (pixelChanged) changedPixels += 1;
+        }
+      }
+    }
+    const changedPixelRatio = sampledPixels === 0 ? 1 : changedPixels / sampledPixels;
+    const meanChannelDelta = sampledPixels === 0 ? 255 : totalChannelDelta / (sampledPixels * channels);
+    return {
+      passed: sampledPixels > 0 && changedPixelRatio <= 0.001 && meanChannelDelta <= 0.5,
+      sampledPixels,
+      changedPixels,
+      changedPixelRatio,
+      meanChannelDelta,
+    };
+  } catch (error) {
+    return {passed: false, reason: error.message};
+  }
+};
+
 const readManifest = async (project) => {
   const file = path.join(ROOT, 'projects', project.slug, 'assets-manifest.json');
   return (await fileExists(file)) ? readJson(file) : {schemaVersion: 3, projectSlug: project.slug, assets: []};
@@ -145,7 +212,19 @@ const readManifest = async (project) => {
 
 const collectQualityAssets = async (project, manifest, semanticContracts) => {
   const byFile = new Map();
-  const add = ({assetId, file, kind, source, requiredChecks, semanticBinding = null}) => {
+  const add = ({
+    assetId,
+    file,
+    kind,
+    source,
+    requiredChecks,
+    semanticBinding = null,
+    stateSheetBinding = null,
+    stateSheetRecoveryBinding = null,
+    recoverySourceFile = null,
+    recoverySourceSha256 = null,
+    recoveryEvidenceFiles = [],
+  }) => {
     const relativeFile = path.relative(ROOT, file);
     const existing = byFile.get(relativeFile);
     if (existing) {
@@ -154,6 +233,11 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       if (requiredChecks?.length) existing.requiredChecks = [...new Set([...(existing.requiredChecks ?? []), ...requiredChecks])];
       if (assetId) existing.assetId = assetId;
       if (semanticBinding) existing.semanticBinding = semanticBinding;
+      if (stateSheetBinding) existing.stateSheetBinding = stateSheetBinding;
+      if (stateSheetRecoveryBinding) existing.stateSheetRecoveryBinding = stateSheetRecoveryBinding;
+      if (recoverySourceFile) existing.recoverySourceFile = recoverySourceFile;
+      if (recoverySourceSha256) existing.recoverySourceSha256 = recoverySourceSha256;
+      if (recoveryEvidenceFiles.length) existing.recoveryEvidenceFiles = recoveryEvidenceFiles;
       return;
     }
     byFile.set(relativeFile, {
@@ -162,6 +246,11 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       kind,
       sources: [source],
       semanticBinding,
+      stateSheetBinding,
+      stateSheetRecoveryBinding,
+      recoverySourceFile,
+      recoverySourceSha256,
+      recoveryEvidenceFiles,
       ...(requiredChecks?.length ? {requiredChecks} : {}),
     });
   };
@@ -196,6 +285,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     }
   }
 
+  const recordsByAssetId = new Map((manifest.assets ?? []).map((record) => [record.assetId, record]));
   for (const record of manifest.assets ?? []) {
     if (record.capability !== 'image') continue;
     const semanticBinding = record.semanticBinding ?? record.request?.semanticBinding ?? null;
@@ -203,6 +293,14 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       .map((id) => semanticContracts.contracts.get(id))
       .filter(Boolean);
     const semanticChecks = requiredChecksForSemanticBinding(semanticBinding, boundContracts);
+    const stateSheetRecoveryBinding = record.stateSheetRecoveryBinding ?? record.request?.stateSheetRecoveryBinding ?? null;
+    const stateSheetBinding = record.stateSheetBinding ?? record.request?.stateSheetBinding ?? null;
+    const recoverySource = stateSheetRecoveryBinding
+      ? recordsByAssetId.get(stateSheetRecoveryBinding.sourceSheetAssetId) ?? null
+      : null;
+    const recoveryMask = stateSheetRecoveryBinding?.maskAssetId
+      ? recordsByAssetId.get(stateSheetRecoveryBinding.maskAssetId) ?? null
+      : null;
     add({
       assetId: record.assetId,
       file: assertWorkspaceFile(record.file),
@@ -210,6 +308,11 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       source: `manifest:${record.assetId}`,
       requiredChecks: [...new Set([...(record.request?.quality?.requiredChecks ?? []), ...semanticChecks])],
       semanticBinding,
+      stateSheetBinding,
+      stateSheetRecoveryBinding,
+      recoverySourceFile: recoverySource?.file ?? null,
+      recoverySourceSha256: recoverySource?.sha256 ?? null,
+      recoveryEvidenceFiles: [record.file, recoverySource?.file, recoveryMask?.file].filter(Boolean),
     });
   }
 
@@ -259,6 +362,22 @@ const inspectTechnicalQuality = async ({asset, project}) => {
         actual: present ? 'present' : 'absent',
       });
     }
+  }
+  if (asset.stateSheetRecoveryBinding?.mode === 'masked-sheet-edit') {
+    const comparison = asset.recoverySourceFile
+      ? await inspectUntargetedSheetCells({
+          currentFile: file,
+          sourceFile: assertWorkspaceFile(asset.recoverySourceFile),
+          stateSheetBinding: asset.stateSheetBinding,
+          recoveryBinding: asset.stateSheetRecoveryBinding,
+        })
+      : {passed: false, reason: 'source-sheet-missing'};
+    checks.push({
+      id: 'untargeted-cells-unchanged',
+      passed: comparison.passed,
+      expected: 'changedPixelRatio <= 0.001 and meanChannelDelta <= 0.5',
+      actual: comparison,
+    });
   }
   return {passed: checks.every(({passed}) => passed), checks};
 };
@@ -603,8 +722,15 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
     const requiredChecks = [...new Set(asset.requiredChecks?.length ? asset.requiredChecks : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image)];
     const unknownChecks = requiredChecks.filter((check) => !ASSET_QUALITY_CHECKS.includes(check));
     if (unknownChecks.length) throw new Error(`${asset.assetId} 含未知资产质量检查：${unknownChecks.join(', ')}`);
-    const fingerprint = asset.semanticBinding
-      ? hashCompositionValue({sha256, semanticBinding: asset.semanticBinding, semanticContractFingerprints: asset.semanticContractFingerprints})
+    const fingerprint = asset.semanticBinding || asset.stateSheetRecoveryBinding
+      ? hashCompositionValue({
+          sha256,
+          semanticBinding: asset.semanticBinding,
+          semanticContractFingerprints: asset.semanticContractFingerprints,
+          stateSheetBinding: asset.stateSheetBinding,
+          stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
+          recoverySourceSha256: asset.recoverySourceSha256,
+        })
       : sha256;
     const review = await preservedReview({previous: previousAssets.get(asset.assetId), fingerprint, requiredChecks});
     const technical = await inspectTechnicalQuality({asset, project});
@@ -792,7 +918,7 @@ export const createQualityReviewScaffold = ({
         passedChecks: [],
         failedChecks: [],
         evidenceFiles: assetId
-          ? evidenceForAsset(entry)
+          ? [...new Set([...evidenceForAsset(entry), ...(entry.recoveryEvidenceFiles ?? [])])]
           : evidenceForComposite(entry),
         note: '',
       };

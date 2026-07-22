@@ -47,8 +47,11 @@ provider workflow, templates, validation, or quality gates, read
   similarly dense sheet when the provider can produce it reliably; split and key
   it deterministically while preserving one canvas for every cell.
 - Do not batch unrelated identities merely to fill a grid. If one reviewed cell
-  fails, prefer a targeted cell repair over regenerating the whole accepted
-  family.
+  fails, first try deterministic local reprocessing. A quota-consuming targeted
+  repair must edit a mask inside the complete original sheet so every accepted
+  cell remains provider context and can be proven unchanged. If that is not
+  reliable, regenerate the complete sheet. Never generate a replacement cell in
+  isolation for a multi-state family.
 - Provenance and reports must distinguish provider calls from deterministic local
   derivatives and expose the calls actually avoided.
 

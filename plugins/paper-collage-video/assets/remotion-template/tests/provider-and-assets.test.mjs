@@ -204,7 +204,7 @@ test('command adapters write a local output and provenance records its hash', as
     );
     const recorded = await recordAssetProvenance({
       request: {
-        schemaVersion: 4,
+        schemaVersion: 5,
         projectSlug: slug,
         assetId: 'draft-script',
         capability: 'text',
@@ -238,7 +238,7 @@ test('voice outputs are measured and rejected before recording when scene timing
     ], {encoding: 'utf8'});
     assert.equal(generated.status, 0, generated.stderr);
     const base = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       projectSlug: 'voice-timing-test',
       assetId: 'scene-one-narration',
       capability: 'voice',
@@ -261,13 +261,13 @@ test('voice outputs are measured and rejected before recording when scene timing
   }
 });
 
-test('v4 image requests require complete composition and semantic bindings', () => {
+test('v5 image requests require complete composition and semantic bindings', () => {
   assert.throws(
-    () => validateAssetRequest({schemaVersion: 4, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
+    () => validateAssetRequest({schemaVersion: 5, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
     /compositionBinding/,
   );
   assert.doesNotThrow(() => validateAssetRequest({
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: 'binding-test',
     assetId: 'water',
     capability: 'image',

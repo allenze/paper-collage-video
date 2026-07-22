@@ -6,7 +6,8 @@ import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
-import {createRequestFingerprint, validateAssetRequest} from '../scripts/provider-lib.mjs';
+import {createRequestFingerprint, inspectStateSheetRecoveryMask, validateAssetRequest} from '../scripts/provider-lib.mjs';
+import {inspectUntargetedSheetCells} from '../scripts/quality-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
@@ -17,7 +18,7 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const sheetRequest = () => ({
-  schemaVersion: 4,
+  schemaVersion: 5,
   projectSlug: 'fixture-project',
   assetId: 'reader-state-sheet',
   capability: 'image',
@@ -44,7 +45,12 @@ const sheetRequest = () => ({
       {stateId: 'pointing', row: 1, column: 0},
       {stateId: 'book-down', row: 1, column: 1},
     ],
-    recoveryPolicy: 'regenerate-failed-cell-only',
+    recoveryPolicy: {
+      strategy: 'preserve-sheet-context',
+      localDeterministicFixFirst: true,
+      isolatedCellGeneration: 'forbidden',
+      fallback: 'full-sheet-regeneration',
+    },
   },
   semanticBinding: {
     riskClass: 'identity-critical',
@@ -69,6 +75,138 @@ test('a single provider request can contractually cover a registered pose sheet'
   const fingerprint = createRequestFingerprint({request, providerId: 'host-image', model: 'fixture'});
   const changedFingerprint = createRequestFingerprint({request: changed, providerId: 'host-image', model: 'fixture'});
   assert.notEqual(fingerprint, changedFingerprint);
+});
+
+test('multi-state provider requests reject isolated cells and require context-preserving recovery', () => {
+  const isolated = sheetRequest();
+  isolated.assetId = 'reader-pointing-repair';
+  delete isolated.stateSheetBinding;
+  isolated.stateBinding = {
+    poseFamilyId: 'reader-poses',
+    stateId: 'pointing',
+    registrationId: 'reader-registration',
+    sourceMasterAssetId: 'reader-master',
+  };
+  assert.throws(
+    () => validateAssetRequest(isolated),
+    /禁止独立单格 provider 生成/,
+  );
+
+  const masked = sheetRequest();
+  masked.assetId = 'reader-state-sheet-repair';
+  masked.compositionBinding.derivation = {
+    method: 'provider-edit',
+    parentAssetId: 'reader-state-sheet',
+  };
+  masked.semanticBinding.generationFamily.referenceAssetIds.push('reader-state-sheet');
+  masked.stateSheetRecoveryBinding = {
+    mode: 'masked-sheet-edit',
+    sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: ['pointing'],
+    maskAssetId: 'reader-pointing-mask',
+    maskPolarity: 'white-is-editable',
+  };
+  masked.quality = {
+    kind: 'character-sheet',
+    requiredChecks: [
+      'identity-family-consistent',
+      'cell-separation',
+      'reference-conformant',
+      'untargeted-cells-unchanged',
+    ],
+  };
+  assert.equal(validateAssetRequest(masked), masked);
+
+  const detached = structuredClone(masked);
+  detached.semanticBinding.generationFamily.referenceAssetIds = ['reader-master'];
+  assert.throws(
+    () => validateAssetRequest(detached),
+    /完整原状态表加入 generationFamily.referenceAssetIds/,
+  );
+
+  const allCellsMasked = structuredClone(masked);
+  allCellsMasked.stateSheetRecoveryBinding.targetStateIds = masked.stateSheetBinding.states.map(({stateId}) => stateId);
+  assert.throws(
+    () => validateAssetRequest(allCellsMasked),
+    /必须使用 full-sheet-regeneration/,
+  );
+
+  const fullSheet = structuredClone(masked);
+  fullSheet.compositionBinding.derivation.method = 'provider-generation';
+  fullSheet.stateSheetRecoveryBinding = {
+    mode: 'full-sheet-regeneration',
+    sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: fullSheet.stateSheetBinding.states.map(({stateId}) => stateId),
+  };
+  fullSheet.quality.requiredChecks = fullSheet.quality.requiredChecks.filter((check) => check !== 'untargeted-cells-unchanged');
+  assert.equal(validateAssetRequest(fullSheet), fullSheet);
+});
+
+test('masked sheet edits preserve every untargeted cell at pixel level', async () => {
+  const directory = path.join(ROOT, 'projects', `sheet-context-${process.pid}`);
+  const sourceFile = path.join(directory, 'source.png');
+  const repairedFile = path.join(directory, 'repaired.png');
+  const driftedFile = path.join(directory, 'drifted.png');
+  const sheetBinding = sheetRequest().stateSheetBinding;
+  sheetBinding.layout = {columns: 2, rows: 1};
+  sheetBinding.states = [
+    {stateId: 'reading', row: 0, column: 0},
+    {stateId: 'pointing', row: 0, column: 1},
+  ];
+  const recoveryBinding = {
+    mode: 'masked-sheet-edit',
+    sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: ['pointing'],
+    maskAssetId: 'reader-pointing-mask',
+    maskPolarity: 'white-is-editable',
+  };
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await sharp({create: {width: 200, height: 100, channels: 4, background: '#224466ff'}}).png().toFile(sourceFile);
+    await sharp(sourceFile).composite([
+      {input: Buffer.from('<svg width="100" height="100"><rect width="100" height="100" fill="#dd8844"/></svg>'), left: 100, top: 0},
+    ]).png().toFile(repairedFile);
+    const preserved = await inspectUntargetedSheetCells({currentFile: repairedFile, sourceFile, stateSheetBinding: sheetBinding, recoveryBinding});
+    assert.equal(preserved.passed, true);
+
+    await sharp(repairedFile).composite([
+      {input: Buffer.from('<svg width="100" height="100"><rect width="100" height="100" fill="#335577"/></svg>'), left: 0, top: 0},
+    ]).png().toFile(driftedFile);
+    const drifted = await inspectUntargetedSheetCells({currentFile: driftedFile, sourceFile, stateSheetBinding: sheetBinding, recoveryBinding});
+    assert.equal(drifted.passed, false);
+    assert.ok(drifted.changedPixelRatio > 0.9);
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('masked sheet recovery rejects masks that touch accepted cells', async () => {
+  const directory = path.join(ROOT, 'projects', `sheet-mask-${process.pid}`);
+  const validMask = path.join(directory, 'valid.png');
+  const broadMask = path.join(directory, 'broad.png');
+  const stateSheetBinding = sheetRequest().stateSheetBinding;
+  stateSheetBinding.layout = {columns: 2, rows: 1};
+  stateSheetBinding.states = [
+    {stateId: 'reading', row: 0, column: 0},
+    {stateId: 'pointing', row: 0, column: 1},
+  ];
+  const recoveryBinding = {
+    mode: 'masked-sheet-edit', sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: ['pointing'], maskAssetId: 'reader-pointing-mask', maskPolarity: 'white-is-editable',
+  };
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await sharp({create: {width: 200, height: 100, channels: 4, background: '#000000ff'}})
+      .composite([{input: Buffer.from('<svg width="100" height="100"><rect width="100" height="100" fill="#ffffff"/></svg>'), left: 100, top: 0}])
+      .png().toFile(validMask);
+    await sharp({create: {width: 200, height: 100, channels: 4, background: '#ffffffff'}}).png().toFile(broadMask);
+    assert.equal((await inspectStateSheetRecoveryMask({maskFile: validMask, stateSheetBinding, recoveryBinding})).passed, true);
+    const broad = await inspectStateSheetRecoveryMask({maskFile: broadMask, stateSheetBinding, recoveryBinding});
+    assert.equal(broad.passed, false);
+    assert.ok(broad.activeOutsideTarget > 0);
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
 });
 
 test('registered sheet processing preserves row-major cells and produces stable family fingerprints', () => {
@@ -129,7 +267,10 @@ test('state sheet processor turns one recorded provider image into registered lo
       poseFamilyId: 'reader-poses', registrationId: 'reader-registration', sourceMasterAssetId: 'reader-master',
       layout: {columns: 2, rows: 1},
       states: [{stateId: 'reading', row: 0, column: 0}, {stateId: 'pointing', row: 0, column: 1}],
-      recoveryPolicy: 'regenerate-failed-cell-only',
+      recoveryPolicy: {
+        strategy: 'preserve-sheet-context', localDeterministicFixFirst: true,
+        isolatedCellGeneration: 'forbidden', fallback: 'full-sheet-regeneration',
+      },
     };
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
       schemaVersion: 3,
@@ -153,6 +294,9 @@ test('state sheet processor turns one recorded provider image into registered lo
     assert.equal(processed.status, 0, processed.stderr);
     const report = JSON.parse(await fs.readFile(path.join(outputDirectory, 'reader-poses-state-sheet-report.json'), 'utf8'));
     assert.equal(report.providerImageCalls, 1);
+    assert.equal(report.schemaVersion, 2);
+    assert.equal(report.generationMode, 'initial-family-sheet');
+    assert.equal(report.isolatedCellGenerationUsed, false);
     assert.equal(report.derivedStateCount, 2);
     assert.equal(report.avoidedIndividualCalls, 1);
     const dimensions = await Promise.all(['reading', 'pointing'].map(async (stateId) => {

@@ -111,9 +111,9 @@ test('semantic contracts reject cloned coexisting identities and broken force pa
   );
 });
 
-test('schema-v4 image requests classify semantic risk independently from composition families', () => {
+test('schema-v5 image requests classify semantic risk independently from composition families', () => {
   const base = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: 'contract-test',
     assetId: 'cast-master',
     capability: 'image',
@@ -152,7 +152,7 @@ test('multi-contract images inherit checks and identity family rules from every 
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const requestFile = path.join(projectDirectory, 'requests', 'machine-cast.json');
   const request = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: slug,
     assetId: 'machine-cast',
     capability: 'image',
@@ -219,7 +219,7 @@ test('old image request schemas are rejected instead of bypassing semantic contr
     }, null, 2)}\n`);
     await assert.rejects(
       () => loadAssetRequest(path.relative(ROOT, requestFile)),
-      /schemaVersion 必须为 4/,
+      /schemaVersion 必须为 5/,
     );
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
@@ -232,7 +232,7 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
   const output = path.join(ROOT, 'public', 'projects', slug, 'wrong-size.png');
   const provider = {id: 'test-image', adapter: 'host', model: 'fixture'};
   const request = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: slug,
     assetId: 'diagram-card',
     capability: 'image',
@@ -355,7 +355,7 @@ test('manual attempt closure requires truthful quota semantics', async () => {
   const slug = `attempt-close-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: slug,
     assetId: 'asset',
     capability: 'image',
@@ -378,7 +378,7 @@ test('parallel reservations cannot oversubscribe the approved image budget', asy
   const slug = `attempt-race-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = (assetId) => ({
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: slug,
     assetId,
     capability: 'image',

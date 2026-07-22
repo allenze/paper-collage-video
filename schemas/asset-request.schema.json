@@ -6,7 +6,7 @@
   "required": ["schemaVersion", "projectSlug", "assetId", "capability", "output"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 4},
+    "schemaVersion": {"const": 5},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "assetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "capability": {"enum": ["text", "image", "voice"]},
@@ -108,8 +108,41 @@
             "additionalProperties": false
           }
         },
-        "recoveryPolicy": {"const": "regenerate-failed-cell-only"}
+        "recoveryPolicy": {
+          "type": "object",
+          "required": ["strategy", "localDeterministicFixFirst", "isolatedCellGeneration", "fallback"],
+          "properties": {
+            "strategy": {"const": "preserve-sheet-context"},
+            "localDeterministicFixFirst": {"const": true},
+            "isolatedCellGeneration": {"const": "forbidden"},
+            "fallback": {"const": "full-sheet-regeneration"}
+          },
+          "additionalProperties": false
+        }
       },
+      "additionalProperties": false
+    },
+    "stateSheetRecoveryBinding": {
+      "type": "object",
+      "required": ["mode", "sourceSheetAssetId", "targetStateIds"],
+      "properties": {
+        "mode": {"enum": ["masked-sheet-edit", "full-sheet-regeneration"]},
+        "sourceSheetAssetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "targetStateIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "maskAssetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "maskPolarity": {"const": "white-is-editable"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["mode"], "properties": {"mode": {"const": "masked-sheet-edit"}}},
+          "then": {"required": ["maskAssetId", "maskPolarity"]}
+        }
+      ],
       "additionalProperties": false
     },
     "semanticBinding": {
@@ -157,7 +190,7 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["no-text", "no-watermark", "no-people", "safe-area-clear", "style-consistent", "subject-complete", "identity-consistent", "identity-distinct-within-frame", "identity-family-consistent", "cross-scene-identity-continuity", "cell-separation", "background-uniform", "edge-clean", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "mechanism-complete", "load-path-readable", "physical-plausibility", "reference-conformant", "diagram-edge-clean", "small-text-legible", "no-procedural-noise-on-semantic-lines"]}
+          "items": {"enum": ["no-text", "no-watermark", "no-people", "safe-area-clear", "style-consistent", "subject-complete", "identity-consistent", "identity-distinct-within-frame", "identity-family-consistent", "cross-scene-identity-continuity", "cell-separation", "untargeted-cells-unchanged", "background-uniform", "edge-clean", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "mechanism-complete", "load-path-readable", "physical-plausibility", "reference-conformant", "diagram-edge-clean", "small-text-legible", "no-procedural-noise-on-semantic-lines"]}
         }
       },
       "additionalProperties": false
@@ -169,6 +202,7 @@
     {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["prompt", "compositionBinding"]}},
     {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["semanticBinding"]}},
     {"if": {"properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}, "then": {"oneOf": [{"required": ["stateBinding"]}, {"required": ["stateSheetBinding"]}]}},
+    {"if": {"required": ["stateSheetRecoveryBinding"]}, "then": {"required": ["stateSheetBinding", "quality", "compositionBinding"], "properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}},
     {"if": {"properties": {"capability": {"const": "voice"}}}, "then": {"required": ["text"]}},
     {"if": {"required": ["timingBinding"]}, "then": {"properties": {"capability": {"const": "voice"}}}}
   ]

@@ -6,7 +6,7 @@ Composition v5 adds a first-class limited-animation model for the small pose cha
 
 - `project.json` supports schema v5 only.
 - `storyboard.json` supports schema v3 only.
-- image requests support schema v4 only.
+- image requests support schema v5 only.
 - old files are not migrated or dual-parsed. Equivalent old outputs can be authored again with v5 primitives.
 
 ## State sequence
@@ -24,7 +24,15 @@ The renderer selects state layers internally. Authors must not create one asset 
 
 ## Cost-aware registered state sheets
 
-Multiple states of one identity should normally be generated in one dense sheet (2×2, 3×2, and similar layouts) through a single schema-v4 request with `stateSheetBinding`. The binding declares every state/cell and fixes recovery to `regenerate-failed-cell-only`.
+Multiple states of one identity should normally be generated in one dense sheet (2×2, 3×2, and similar layouts) through a single schema-v5 request with `stateSheetBinding`. The binding declares every state/cell and a `preserve-sheet-context` recovery policy. Multi-state families cannot use an independent provider request for one replacement state.
+
+Recovery is ordered and executable:
+
+1. rerun deterministic local splitting/keying when the defect is local processing;
+2. use `stateSheetRecoveryBinding.mode=masked-sheet-edit` with the complete recorded source sheet, a full-canvas mask, and only the failed state ids;
+3. if the provider cannot keep untargeted cells unchanged, use `full-sheet-regeneration` for every state in the family.
+
+Masked repair requests must bind the source sheet as both `derivation.parentAssetId` and a generation-family reference. Quality preparation compares every untargeted cell against the source pixels and fails when changed-pixel ratio or mean channel drift exceeds the contract. The repaired target still requires identity-family and reference-conformance review.
 
 `npm run assets:process-state-sheet -- <state-sheet.json>` then:
 

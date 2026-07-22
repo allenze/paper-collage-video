@@ -43,6 +43,7 @@ const IMAGE_QUALITY_CHECKS = [
   'identity-family-consistent',
   'cross-scene-identity-continuity',
   'cell-separation',
+  'untargeted-cells-unchanged',
   'background-uniform',
   'edge-clean',
   'silhouette-fidelity',
@@ -83,6 +84,7 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     compositionBinding: request.compositionBinding ?? null,
     stateBinding: request.stateBinding ?? null,
     stateSheetBinding: request.stateSheetBinding ?? null,
+    stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
     semanticBinding: request.semanticBinding ?? null,
     providerId,
   };
@@ -533,9 +535,63 @@ export const resolveWorkspacePath = (input, label = '路径') => {
   return resolved;
 };
 
+const CONTEXT_PRESERVING_RECOVERY_POLICY = {
+  strategy: 'preserve-sheet-context',
+  localDeterministicFixFirst: true,
+  isolatedCellGeneration: 'forbidden',
+  fallback: 'full-sheet-regeneration',
+};
+
+const sameMembers = (left, right) =>
+  Array.isArray(left) &&
+  Array.isArray(right) &&
+  JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+
+const validRecoveryPolicy = (policy) =>
+  isPlainObject(policy) &&
+  Object.entries(CONTEXT_PRESERVING_RECOVERY_POLICY)
+    .every(([key, value]) => policy[key] === value) &&
+  Object.keys(policy).length === Object.keys(CONTEXT_PRESERVING_RECOVERY_POLICY).length;
+
+export const inspectStateSheetRecoveryMask = async ({maskFile, stateSheetBinding, recoveryBinding}) => {
+  try {
+    const mask = await sharp(maskFile).ensureAlpha().raw().toBuffer({resolveWithObject: true});
+    const {width, height, channels} = mask.info;
+    const targeted = new Set(recoveryBinding.targetStateIds);
+    const targetCells = new Set(
+      stateSheetBinding.states
+        .filter(({stateId}) => targeted.has(stateId))
+        .map(({row, column}) => `${row}:${column}`),
+    );
+    let activePixels = 0;
+    let activeOutsideTarget = 0;
+    for (let y = 0; y < height; y += 1) {
+      const row = Math.min(stateSheetBinding.layout.rows - 1, Math.floor(y * stateSheetBinding.layout.rows / height));
+      for (let x = 0; x < width; x += 1) {
+        const column = Math.min(stateSheetBinding.layout.columns - 1, Math.floor(x * stateSheetBinding.layout.columns / width));
+        const offset = (y * width + x) * channels;
+        const luminance = (mask.data[offset] + mask.data[offset + 1] + mask.data[offset + 2]) / 3;
+        const alpha = mask.data[offset + channels - 1];
+        if (alpha <= 16 || luminance <= 127) continue;
+        activePixels += 1;
+        if (!targetCells.has(`${row}:${column}`)) activeOutsideTarget += 1;
+      }
+    }
+    return {
+      passed: activePixels > 0 && activeOutsideTarget === 0,
+      activePixels,
+      activeOutsideTarget,
+      width,
+      height,
+    };
+  } catch (error) {
+    return {passed: false, reason: error.message};
+  }
+};
+
 export const validateAssetRequest = (request) => {
   const errors = [];
-  if (request?.schemaVersion !== 4) errors.push('schemaVersion 必须为 4');
+  if (request?.schemaVersion !== 5) errors.push('schemaVersion 必须为 5');
   if (!SLUG_PATTERN.test(request?.projectSlug ?? '')) errors.push('projectSlug 格式无效');
   if (!SLUG_PATTERN.test(request?.assetId ?? '')) errors.push('assetId 格式无效');
   if (!PROVIDER_CAPABILITIES.includes(request?.capability)) errors.push('capability 必须是 text、image 或 voice');
@@ -546,7 +602,7 @@ export const validateAssetRequest = (request) => {
     errors.push('image request 缺少 compositionBinding');
   }
   if (request?.capability === 'image' && !isPlainObject(request.semanticBinding)) {
-    errors.push('schema-v4 image request 缺少 semanticBinding');
+    errors.push('schema-v5 image request 缺少 semanticBinding');
   }
   if (request?.capability === 'voice' && !request.text) errors.push('voice request 缺少 text');
   if (request?.timingBinding !== undefined) {
@@ -597,15 +653,26 @@ export const validateAssetRequest = (request) => {
     if (!['free', 'supported-subject', 'registered-environment', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
     if (!Number.isInteger(binding.canvas?.width) || binding.canvas.width < 1 || !Number.isInteger(binding.canvas?.height) || binding.canvas.height < 1) errors.push('compositionBinding.canvas 无效');
     if (!['provider-generation', 'provider-edit', 'alpha-extraction', 'crop', 'mask-application', 'manual-import'].includes(binding.derivation?.method)) errors.push('compositionBinding.derivation.method 无效');
+    if (binding.pattern !== 'state-sequence' && (request.stateBinding || request.stateSheetBinding || request.stateSheetRecoveryBinding)) errors.push('stateBinding/stateSheetBinding/stateSheetRecoveryBinding 只能用于 state-sequence');
     if (['supported-subject', 'registered-environment', 'state-sequence'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
     if (binding.pattern === 'state-sequence') {
       const state = request.stateBinding;
       const sheet = request.stateSheetBinding;
+      const recovery = request.stateSheetRecoveryBinding;
       if (Boolean(state) === Boolean(sheet)) errors.push('state-sequence 图像必须且只能声明 stateBinding 或 stateSheetBinding 之一');
       if (state && (!isPlainObject(state) || !state.poseFamilyId || !state.stateId || !state.registrationId || !state.sourceMasterAssetId)) errors.push('stateBinding 不完整');
-      if (state && (state.registrationId !== binding.registrationId || state.sourceMasterAssetId !== binding.sourceMasterAssetId)) errors.push('stateBinding 必须与 compositionBinding 使用同一注册族');
+      const generationFamily = request.semanticBinding?.generationFamily;
+      if (!isPlainObject(generationFamily)) errors.push('state-sequence 图像必须声明 semanticBinding.generationFamily');
+      if (state && generationFamily && (
+        generationFamily.familyId !== state.poseFamilyId ||
+        !generationFamily.memberIds?.includes(state.stateId)
+      )) errors.push('stateBinding 必须属于 semanticBinding.generationFamily');
+      if (state && generationFamily?.memberIds?.length > 1 && ['provider-generation', 'provider-edit'].includes(binding.derivation?.method)) {
+        errors.push('多状态姿态族禁止独立单格 provider 生成；请使用完整 stateSheetBinding 或带整表上下文的 stateSheetRecoveryBinding');
+      }
+      if (state && recovery) errors.push('独立 stateBinding 不得声明 stateSheetRecoveryBinding');
       if (sheet) {
-        if (!isPlainObject(sheet) || !sheet.poseFamilyId || !sheet.registrationId || !sheet.sourceMasterAssetId || !Number.isInteger(sheet.layout?.columns) || !Number.isInteger(sheet.layout?.rows) || !Array.isArray(sheet.states) || sheet.states.length < 2 || sheet.recoveryPolicy !== 'regenerate-failed-cell-only') errors.push('stateSheetBinding 不完整');
+        if (!isPlainObject(sheet) || !sheet.poseFamilyId || !sheet.registrationId || !sheet.sourceMasterAssetId || !Number.isInteger(sheet.layout?.columns) || !Number.isInteger(sheet.layout?.rows) || !Array.isArray(sheet.states) || sheet.states.length < 2 || !validRecoveryPolicy(sheet.recoveryPolicy)) errors.push('stateSheetBinding 必须声明完整的 preserve-sheet-context 恢复策略');
         if (sheet.registrationId !== binding.registrationId || sheet.sourceMasterAssetId !== binding.sourceMasterAssetId) errors.push('stateSheetBinding 必须与 compositionBinding 使用同一注册族');
         const cells = new Set();
         const stateIds = new Set();
@@ -615,11 +682,33 @@ export const validateAssetRequest = (request) => {
           stateIds.add(member.stateId);
           cells.add(cell);
         }
-        const generationFamily = request.semanticBinding?.generationFamily;
         if (generationFamily && (
           generationFamily.familyId !== sheet.poseFamilyId ||
-          JSON.stringify([...generationFamily.memberIds].sort()) !== JSON.stringify(sheet.states.map(({stateId}) => stateId).sort())
+          !sameMembers(generationFamily.memberIds, sheet.states.map(({stateId}) => stateId))
         )) errors.push('stateSheetBinding 必须与 semanticBinding.generationFamily 使用同一 family 和成员集合');
+        if (recovery) {
+          const allStateIds = sheet.states.map(({stateId}) => stateId);
+          const targetStateIds = recovery.targetStateIds ?? [];
+          if (!isPlainObject(recovery) || !['masked-sheet-edit', 'full-sheet-regeneration'].includes(recovery.mode) || !recovery.sourceSheetAssetId || !Array.isArray(recovery.targetStateIds) || recovery.targetStateIds.length === 0 || new Set(recovery.targetStateIds).size !== recovery.targetStateIds.length || recovery.targetStateIds.some((stateId) => !stateIds.has(stateId))) {
+            errors.push('stateSheetRecoveryBinding 模式、来源或目标状态无效');
+          }
+          if (binding.derivation?.parentAssetId !== recovery.sourceSheetAssetId) errors.push('恢复请求必须把完整原状态表声明为 derivation.parentAssetId');
+          if (!generationFamily?.referenceAssetIds?.includes(recovery.sourceSheetAssetId)) errors.push('恢复请求必须把完整原状态表加入 generationFamily.referenceAssetIds');
+          const recoveryChecks = request.quality?.requiredChecks ?? [];
+          for (const check of ['identity-family-consistent', 'cell-separation', 'reference-conformant']) {
+            if (!recoveryChecks.includes(check)) errors.push(`状态表恢复请求必须包含质量检查 ${check}`);
+          }
+          if (recovery.mode === 'masked-sheet-edit') {
+            if (!recovery.maskAssetId || recovery.maskPolarity !== 'white-is-editable' || binding.derivation?.method !== 'provider-edit') errors.push('masked-sheet-edit 必须声明 white-is-editable maskAssetId 并使用 provider-edit');
+            if (sameMembers(targetStateIds, allStateIds)) errors.push('所有格都需要重做时必须使用 full-sheet-regeneration');
+            if (!recoveryChecks.includes('untargeted-cells-unchanged')) errors.push('masked-sheet-edit 必须检查 untargeted-cells-unchanged');
+          }
+          if (recovery.mode === 'full-sheet-regeneration') {
+            if (binding.derivation?.method !== 'provider-generation') errors.push('full-sheet-regeneration 必须使用 provider-generation');
+            if (!sameMembers(targetStateIds, allStateIds)) errors.push('full-sheet-regeneration 必须覆盖姿态族的全部状态');
+            if (recovery.maskAssetId || recovery.maskPolarity) errors.push('full-sheet-regeneration 不得声明局部 mask');
+          }
+        }
       }
     }
   }
@@ -662,6 +751,38 @@ export const loadAssetRequest = async (requestInput) => {
   const file = resolveWorkspacePath(requestInput, 'request 路径');
   const request = validateAssetRequest(await readJson(file));
   await assertRequestSemanticContracts(request);
+  if (request.stateSheetRecoveryBinding) {
+    const manifestFile = path.join(ROOT, 'projects', request.projectSlug, 'assets-manifest.json');
+    if (!(await fileExists(manifestFile))) throw new Error('状态表恢复请求缺少 assets-manifest.json，无法证明完整原表上下文');
+    const manifest = await readJson(manifestFile);
+    const source = manifest.assets?.find(({assetId}) => assetId === request.stateSheetRecoveryBinding.sourceSheetAssetId);
+    const sourceBinding = source?.stateSheetBinding ?? source?.request?.stateSheetBinding ?? null;
+    if (
+      source?.capability !== 'image' ||
+      !sourceBinding ||
+      !validRecoveryPolicy(sourceBinding.recoveryPolicy) ||
+      sourceBinding.poseFamilyId !== request.stateSheetBinding.poseFamilyId ||
+      sourceBinding.registrationId !== request.stateSheetBinding.registrationId ||
+      sourceBinding.sourceMasterAssetId !== request.stateSheetBinding.sourceMasterAssetId ||
+      sourceBinding.layout?.columns !== request.stateSheetBinding.layout.columns ||
+      sourceBinding.layout?.rows !== request.stateSheetBinding.layout.rows ||
+      !sameMembers(sourceBinding.states?.map(({stateId}) => stateId) ?? [], request.stateSheetBinding.states.map(({stateId}) => stateId))
+    ) {
+      throw new Error('状态表恢复来源必须是已登记的同一完整姿态族状态表');
+    }
+    const sourceFile = resolveWorkspacePath(source.file, '状态表恢复来源');
+    if (!(await fileExists(sourceFile))) throw new Error('状态表恢复来源文件不存在');
+    if (source.assetId === request.assetId || sourceFile === resolveWorkspacePath(request.output, '状态表恢复输出')) throw new Error('状态表恢复必须写入新资产，不能覆盖用于一致性证明的完整原表');
+    if (request.stateSheetRecoveryBinding.mode === 'masked-sheet-edit') {
+      const mask = manifest.assets?.find(({assetId}) => assetId === request.stateSheetRecoveryBinding.maskAssetId);
+      const maskFile = mask?.file ? resolveWorkspacePath(mask.file, '状态表恢复遮罩') : null;
+      if (!maskFile || mask.capability !== 'image' || !(await fileExists(maskFile))) throw new Error('masked-sheet-edit 必须引用已登记且存在的完整画布遮罩');
+      const [sourceMetadata, maskMetadata] = await Promise.all([sharp(sourceFile).metadata(), sharp(maskFile).metadata()]);
+      if (!sourceMetadata.width || !sourceMetadata.height || sourceMetadata.width !== maskMetadata.width || sourceMetadata.height !== maskMetadata.height) throw new Error('状态表恢复遮罩必须与完整原表尺寸一致');
+      const maskInspection = await inspectStateSheetRecoveryMask({maskFile, stateSheetBinding: request.stateSheetBinding, recoveryBinding: request.stateSheetRecoveryBinding});
+      if (!maskInspection.passed) throw new Error(`状态表恢复遮罩越过目标格或为空：${JSON.stringify(maskInspection)}`);
+    }
+  }
   const output = resolveWorkspacePath(request.output, 'output 路径');
   return {file, request, output};
 };
@@ -838,6 +959,7 @@ export const recordAssetProvenance = async ({
       compositionBinding: request.compositionBinding ?? null,
       stateBinding: request.stateBinding ?? null,
       stateSheetBinding: request.stateSheetBinding ?? null,
+      stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
       semanticBinding: request.semanticBinding ?? null,
       familyFingerprint: null,
     };
