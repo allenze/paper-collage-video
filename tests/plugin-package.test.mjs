@@ -152,6 +152,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-subtitles.mjs',
     'scripts/creative-plan-lib.mjs',
     'scripts/composition-lib.mjs',
+    'scripts/motion-treatment-lib.mjs',
     'scripts/project-composition-proof.mjs',
     'scripts/project-semantic-contracts.mjs',
     'scripts/project-plan.mjs',
@@ -169,6 +170,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/generation-attempt.schema.json',
     'schemas/production-metrics.schema.json',
     'schemas/storyboard.schema.json',
+    'schemas/storyboard-authoring.schema.json',
     'schemas/providers.schema.json',
     'schemas/quality-report.schema.json',
     'templates/project/production.json',
@@ -203,7 +205,9 @@ test('packaged resolved plans can be inspected without rewriting them', () => {
   );
   assert.ok(
     output.decision.profileOptions.every(
-      ({assetBudget}) => Number.isInteger(assetBudget.maxGeneratedImages),
+      ({assetBudget, motionBudget}) =>
+        Number.isInteger(assetBudget.maxGeneratedImages) &&
+        Number.isInteger(motionBudget.maxPoseSheetCalls),
     ),
   );
 });

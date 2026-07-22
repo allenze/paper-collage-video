@@ -13,6 +13,8 @@ import {
   styleFingerprintForTarget,
   styleProofReportPath,
 } from './style-proof-lib.mjs';
+import {loadStoryboard} from './storyboard-lib.mjs';
+import {selectStyleProofTarget} from './motion-treatment-lib.mjs';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -93,12 +95,16 @@ const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
 try {
   assertSlug(slug);
   if (!Number.isFinite(durationSeconds) || durationSeconds < 3 || durationSeconds > 5) throw new Error('--duration 必须位于 3..5 秒。');
-  const {project} = await loadProject(slug);
-  const selected = project.scenes.find((scene) =>
-    collectCompositionGroups(scene.composition).some(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern)) ||
-    collectStateSequences(scene.composition).length > 0,
-  );
-  if (!selected) throw new Error('项目没有可用于真实运动样片的 state-sequence、supported-subject 或 registered-environment 组合。');
+  const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
+  const directingTarget = selectStyleProofTarget(storyboard);
+  if (!directingTarget) throw new Error('故事板没有可用于风格运动样片的导演 treatment。');
+  const selected = project.scenes.find(({id}) => id === directingTarget.sceneId);
+  if (!selected) throw new Error(`项目没有实现最高风险导演镜头 ${directingTarget.sceneId}。`);
+  const directingNode = directingTarget.targetId === 'scene-camera'
+    ? {kind: 'camera'}
+    : flattenCompositionNodes(selected.composition?.nodes)
+        .find(({node}) => node.id === directingTarget.targetId)?.node;
+  if (!directingNode) throw new Error(`最高风险导演目标不存在：${directingTarget.targetId}。`);
 
   const paths = projectPaths(slug);
   const proofDirectory = path.join(paths.distDirectory, 'style-proof');
@@ -189,7 +195,12 @@ try {
   for (const {node, evidenceId} of memberNodes.values()) {
     assetEvidence.push(await buildAssetEvidence({node, directory: evidenceDirectory, evidenceId}));
   }
-  const targets = (await collectCompositeQualityTargets(project)).filter(({sceneId, pattern}) => sceneId === selected.id && ['state-sequence', 'supported-subject', 'registered-environment'].includes(pattern));
+  const targets = (await collectCompositeQualityTargets(project)).filter(
+    ({sceneId, pattern, nodeId, memberNodeIds}) =>
+      sceneId === selected.id &&
+      ['state-sequence', 'supported-subject', 'registered-environment'].includes(pattern) &&
+      (nodeId === directingTarget.targetId || memberNodeIds.includes(directingTarget.targetId)),
+  );
   const composites = [];
   for (const target of targets) {
     const bounds = findTargetBounds({scene: selected, nodeId: target.nodeId, video: project.video});
@@ -226,14 +237,18 @@ try {
     ...stateSequences.map(({node}) => ({id: node.id, pattern: 'state-sequence', registrationId: node.registration.id, sourceMasterAssetId: node.registration.sourceMasterAssetId})),
   ];
   await writeJson(reportFile, {
-    schemaVersion: 3,
+    schemaVersion: 4,
     slug,
     generatedAt: new Date().toISOString(),
     sceneId: selected.id,
+    directingTreatmentId: directingTarget.treatmentId,
+    directingTargetId: directingTarget.targetId,
+    directingTargetKind: directingNode.kind,
+    directingFingerprint: directingTarget.directingFingerprint,
     output: path.relative(ROOT, output),
     contactSheet: path.relative(ROOT, contactSheet),
     proofProject: path.relative(ROOT, propsFile),
-    method: 'real v5 project composition, registered derivatives and state sequences, authored keyframes and cue runtime',
+    method: 'highest-risk v4 directing treatment rendered through real v5 project composition and authored motion',
     groups,
     composites,
     assetEvidence,

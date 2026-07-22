@@ -12,6 +12,7 @@ import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
   stateOutputName,
+  summarizeActualPoseSheets,
   validateStateSheetSpec,
 } from '../scripts/state-sheet-lib.mjs';
 
@@ -307,6 +308,19 @@ test('state sheet processor turns one recorded provider image into registered lo
     const manifest = JSON.parse(await fs.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'));
     assert.equal(manifest.assets.filter(({adapter}) => adapter === 'registered-sheet-cell').length, 2);
     assert.equal(new Set(manifest.assets.filter(({stateBinding}) => stateBinding).map(({familyFingerprint}) => familyFingerprint)).size, 1);
+    assert.deepEqual(summarizeActualPoseSheets(manifest), {
+      families: [{
+        poseFamilyId: 'reader-poses',
+        stateIds: ['pointing', 'reading'],
+        sourceAssetIds: ['reader-sheet'],
+        providerCalls: 1,
+        deterministicDerivatives: 2,
+        providerCallsAvoidedByBatching: 1,
+      }],
+      providerCalls: 1,
+      deterministicDerivatives: 2,
+      providerCallsAvoidedByBatching: 1,
+    });
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(publicDirectory, {recursive: true, force: true});

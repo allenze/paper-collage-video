@@ -275,17 +275,22 @@ export type PaperCollageProject = {
   slug: string;
   title: string;
   plan: {
-    schemaVersion: 1;
+    schemaVersion: 2;
     slug: string;
     status: 'pending' | 'resolved';
     inputMode: 'none' | 'duration-only' | 'scenes-only' | 'both';
-    productionProfile?: 'draft' | 'balanced' | 'full-depth';
-    assetBudget?: {
+    productionProfile: 'draft' | 'balanced' | 'full-depth';
+    assetBudget: {
       backgrounds: number;
       environmentLayers: number;
       characterSheets: number;
       styleSamples: number;
       maxGeneratedImages: number;
+    } | null;
+    motionBudget: {
+      maxPoseSheetCalls: number;
+      maxStatesPerSheet: number;
+      maxContinuousTargets: number;
     } | null;
     requested: {durationSeconds: number | null; sceneCount: number | null};
     resolved: null | {

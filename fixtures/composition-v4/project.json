@@ -3,12 +3,13 @@
   "slug": "composition-v5-fixture",
   "title": "Composition v5 Fixture",
   "plan": {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "slug": "composition-v5-fixture",
     "status": "resolved",
     "inputMode": "both",
     "productionProfile": "draft",
-    "assetBudget": {"backgrounds": 1, "environmentLayers": 2, "characterSheets": 1, "styleSamples": 0, "maxGeneratedImages": 4},
+    "assetBudget": {"backgrounds": 1, "environmentLayers": 1, "characterSheets": 1, "styleSamples": 1, "maxGeneratedImages": 4},
+    "motionBudget": {"maxPoseSheetCalls": 1, "maxStatesPerSheet": 4, "maxContinuousTargets": 2},
     "requested": {"durationSeconds": 2, "sceneCount": 1},
     "resolved": {"durationSeconds": 2, "sceneCount": 1, "estimatedNarrationSeconds": 1, "rationale": "Deterministic renderer fixture", "resolvedAt": "2026-01-01T00:00:00.000Z"},
     "updatedAt": "2026-01-01T00:00:00.000Z"

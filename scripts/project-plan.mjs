@@ -37,11 +37,12 @@ const printPlan = ({project, json}) => {
   console.log(`  目标幕数：${project.plan.resolved.sceneCount}`);
   console.log(`  制作档位：${project.plan.productionProfile}`);
   console.log(`  生图预算：最多 ${project.plan.assetBudget.maxGeneratedImages} 次计费尝试`);
+  console.log(`  动作预算：最多 ${project.plan.motionBudget.maxPoseSheetCalls} 张姿态母版 · 单张 ${project.plan.motionBudget.maxStatesPerSheet} 格 · ${project.plan.motionBudget.maxContinuousTargets} 个连续动效目标`);
   console.log('  可选制作档位：');
   for (const option of decision.profileOptions) {
     const selected = option.id === decision.productionProfile ? '（当前）' : '';
     console.log(
-      `    ${option.id}${selected}: 最多 ${option.assetBudget.maxGeneratedImages} 次 · ${option.finalImpact}`,
+      `    ${option.id}${selected}: 最多 ${option.assetBudget.maxGeneratedImages} 次生图 / ${option.motionBudget.maxPoseSheetCalls} 张姿态母版 · ${option.finalImpact}`,
     );
   }
   console.log(`  计算依据：${project.plan.resolved.rationale}`);

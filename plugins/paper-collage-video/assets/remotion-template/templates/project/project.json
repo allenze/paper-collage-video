@@ -4,7 +4,7 @@
   "slug": "{{slug}}",
   "title": "{{title}}",
   "plan": {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "slug": "{{slug}}",
     "status": "pending",
     "inputMode": "none",
@@ -15,6 +15,7 @@
     },
     "resolved": null,
     "assetBudget": null,
+    "motionBudget": null,
     "updatedAt": "{{createdAt}}"
   },
   "quality": {

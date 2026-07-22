@@ -12,19 +12,45 @@ export const PRODUCTION_PROFILES = ['draft', 'balanced', 'full-depth'];
 export const PRODUCTION_PROFILE_DEFINITIONS = {
   draft: {
     label: '草稿',
-    summary: '优先低成本迭代；大量复用背景和角色素材，画面层次较少。',
-    finalImpact: '较扁平的纸片运动，适合先验证故事、旁白和节奏。',
+    summary: '优先低成本迭代；保留必需动作，压缩增强姿态、环境层和环境呼吸目标。',
+    finalImpact: '关键动作仍可使用状态母版，次要动作更克制，适合先验证故事与节奏。',
   },
   balanced: {
     label: '均衡',
-    summary: '默认档位；关键场景独立分层，兼顾视差、姿态变化和成本。',
-    finalImpact: '主要镜头有清楚前中后景，角色变化适中。',
+    summary: '默认档位；关键场景独立分层，并为主要动作保留成组姿态母版。',
+    finalImpact: '主要镜头有前中后景、明确动作变化和适量图形强调。',
   },
   'full-depth': {
     label: '完整纵深',
-    summary: '最高制作深度；增加环境层、角色姿态和组合证明工作。',
-    finalImpact: '最大化环境视差与角色姿态变化，制作时间和生成额度最高。',
+    summary: '最高制作深度；增加环境层、动作家族、状态格数和组合证明工作。',
+    finalImpact: '最大化环境视差与角色动作细节，制作时间和生成额度最高。',
   },
+};
+
+export const deriveMotionBudget = (productionProfile, sceneCount) => {
+  if (!PRODUCTION_PROFILES.includes(productionProfile)) {
+    throw new Error(`productionProfile 必须是：${PRODUCTION_PROFILES.join(', ')}。`);
+  }
+  if (!Number.isInteger(sceneCount) || sceneCount < 1) {
+    throw new Error('sceneCount 必须是正整数。');
+  }
+  return {
+    maxPoseSheetCalls: {
+      draft: Math.max(1, Math.ceil(sceneCount / 4)),
+      balanced: Math.max(1, Math.ceil(sceneCount / 2)),
+      'full-depth': sceneCount,
+    }[productionProfile],
+    maxStatesPerSheet: {
+      draft: 4,
+      balanced: 4,
+      'full-depth': 6,
+    }[productionProfile],
+    maxContinuousTargets: {
+      draft: sceneCount * 2,
+      balanced: sceneCount * 4,
+      'full-depth': sceneCount * 6,
+    }[productionProfile],
+  };
 };
 
 export const deriveAssetBudget = (productionProfile, sceneCount) => {
@@ -41,11 +67,10 @@ export const deriveAssetBudget = (productionProfile, sceneCount) => {
     balanced: Math.min(4, Math.ceil((sceneCount * 2) / 3)),
     'full-depth': sceneCount * 2,
   }[productionProfile];
-  const characterSheets = {
-    draft: Math.max(1, Math.ceil(sceneCount / 5)),
-    balanced: Math.max(1, Math.ceil(sceneCount / 3)),
-    'full-depth': Math.max(1, Math.ceil((sceneCount * 2) / 3)),
-  }[productionProfile];
+  const characterSheets = deriveMotionBudget(
+    productionProfile,
+    sceneCount,
+  ).maxPoseSheetCalls;
   const budget = {
     backgrounds: sceneCount,
     environmentLayers,
@@ -66,6 +91,7 @@ export const summarizeProductionProfiles = (sceneCount) =>
     id,
     ...PRODUCTION_PROFILE_DEFINITIONS[id],
     assetBudget: deriveAssetBudget(id, sceneCount),
+    motionBudget: deriveMotionBudget(id, sceneCount),
   }));
 
 export const deriveDurationAuthority = (plan) =>
@@ -79,6 +105,7 @@ export const summarizeConceptDecision = (plan) => {
     sceneCount: plan.resolved.sceneCount,
     durationAuthority: deriveDurationAuthority(plan),
     assetBudget: plan.assetBudget,
+    motionBudget: plan.motionBudget,
     profileOptions: summarizeProductionProfiles(plan.resolved.sceneCount),
   };
 };
@@ -128,8 +155,8 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
     return [{code: 'plan-missing', message: '缺少创作规格计划。', location: 'plan'}];
   }
-  if (plan.schemaVersion !== 1) {
-    add('plan-schema-version', 'plan.schemaVersion 必须为 1。', 'plan.schemaVersion');
+  if (plan.schemaVersion !== 2) {
+    add('plan-schema-version', 'plan.schemaVersion 必须为 2。', 'plan.schemaVersion');
   }
   if (slug && plan.slug !== slug) {
     add('plan-slug', `plan.slug 必须为 ${slug}。`, 'plan.slug');
@@ -137,10 +164,7 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!['pending', 'resolved'].includes(plan.status)) {
     add('plan-status', 'plan.status 必须为 pending 或 resolved。', 'plan.status');
   }
-  if (
-    plan.productionProfile !== undefined &&
-    !PRODUCTION_PROFILES.includes(plan.productionProfile)
-  ) {
+  if (!PRODUCTION_PROFILES.includes(plan.productionProfile)) {
     add(
       'plan-production-profile',
       `plan.productionProfile 必须是 ${PRODUCTION_PROFILES.join(', ')}。`,
@@ -181,6 +205,9 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (plan.status === 'pending') {
     if (plan.resolved !== null) {
       add('plan-pending-resolution', 'pending 计划的 resolved 必须为 null。', 'plan.resolved');
+    }
+    if (plan.assetBudget !== null || plan.motionBudget !== null) {
+      add('plan-pending-budgets', 'pending 计划的 assetBudget 与 motionBudget 必须为 null。', 'plan');
     }
     return issues;
   }
@@ -223,7 +250,9 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!isDateTime(resolved.resolvedAt)) {
     add('plan-resolved-at', 'plan.resolved.resolvedAt 必须是有效时间。', 'plan.resolved.resolvedAt');
   }
-  if (plan.assetBudget !== undefined) {
+  if (!plan.assetBudget || typeof plan.assetBudget !== 'object') {
+    add('plan-asset-budget-required', 'resolved 计划必须包含 assetBudget。', 'plan.assetBudget');
+  } else {
     let expectedBudget = null;
     try {
       expectedBudget = deriveAssetBudget(
@@ -241,6 +270,29 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
         'plan-asset-budget',
         'plan.assetBudget 必须与 productionProfile 和幕数匹配。',
         'plan.assetBudget',
+      );
+    }
+  }
+  if (!plan.motionBudget || typeof plan.motionBudget !== 'object') {
+    add('plan-motion-budget-required', 'resolved 计划必须包含 motionBudget。', 'plan.motionBudget');
+  } else {
+    let expectedBudget = null;
+    try {
+      expectedBudget = deriveMotionBudget(
+        plan.productionProfile ?? 'balanced',
+        resolved.sceneCount,
+      );
+    } catch {
+      // The profile/scene issue is reported separately.
+    }
+    if (
+      expectedBudget &&
+      JSON.stringify(plan.motionBudget) !== JSON.stringify(expectedBudget)
+    ) {
+      add(
+        'plan-motion-budget',
+        'plan.motionBudget 必须与 productionProfile 和幕数匹配。',
+        'plan.motionBudget',
       );
     }
   }
@@ -291,7 +343,7 @@ export const buildCreativePlan = ({
     sceneCount: requestedSceneCount,
   };
   const plan = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     slug,
     status: 'resolved',
     inputMode: deriveCreativePlanMode(requested),
@@ -305,6 +357,7 @@ export const buildCreativePlan = ({
       resolvedAt: at,
     },
     assetBudget: deriveAssetBudget(productionProfile, sceneCount),
+    motionBudget: deriveMotionBudget(productionProfile, sceneCount),
     updatedAt: at,
   };
   assertCreativePlanReady(plan, {slug});

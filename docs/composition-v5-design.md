@@ -5,7 +5,7 @@ Composition v5 adds a first-class limited-animation model for the small pose cha
 ## Contract boundary
 
 - `project.json` supports schema v5 only.
-- `storyboard.json` supports schema v3 only.
+- `storyboard.json` supports schema v4 only; authors declare treatments and the compiler derives composition/state plans.
 - image requests support schema v5 only.
 - old files are not migrated or dual-parsed. Equivalent old outputs can be authored again with v5 primitives.
 
@@ -43,7 +43,7 @@ Masked repair requests must bind the source sheet as both `derivation.parentAsse
 5. records each state as a deterministic derivative with one family fingerprint;
 6. writes a report containing provider calls, derived states, and avoided individual calls.
 
-Preserving the full cell canvas is mandatory: trimming each silhouette independently destroys registration and creates visible jumps. Unrelated identities must not be packed together merely to fill the grid. If one cell fails review, only that cell may be regenerated; a good family must not be thrown away wholesale.
+Preserving the full cell canvas is mandatory: trimming each silhouette independently destroys registration and creates visible jumps. Unrelated identities must not be packed together merely to fill the grid. If one cell fails review, provider repair may target only that cell's mask but must receive the complete original sheet as context and prove accepted cells unchanged; otherwise regenerate the complete sheet. Never splice an independently generated replacement cell into the family.
 
 ## Dynamic graphics
 
@@ -60,4 +60,4 @@ v5 also exposes generic `text` and `shape` nodes. Cards, labels, questions, circ
 
 ## Authoring rule
 
-Use continuous transforms for movement of the same drawing. Use `state-sequence` when the drawing itself changes. Combine them when a registered pose change and a small bounce/translation happen together. Extend the reusable schema/runtime if neither model expresses the approved visual language; do not introduce project-specific renderer branches.
+Storyboard v4 classifies the visible change before production. Use continuous transforms for movement of the same drawing. Use `state-sequence` when the drawing itself changes. Combine it with `supported-subject`, `registered-environment`, editable graphics, or continuous motion when those relationships coexist. The compiler derives and fingerprints the v5 execution plan from orthogonal treatments. Extend the reusable schema/runtime if neither model expresses the approved visual language; do not introduce project-specific renderer branches.

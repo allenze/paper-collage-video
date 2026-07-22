@@ -10,6 +10,7 @@ import {
   readJson,
 } from './project-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
+import {selectStyleProofTarget} from './motion-treatment-lib.mjs';
 
 const COUPLED_PATTERNS = new Set(['state-sequence', 'supported-subject', 'registered-environment']);
 const REQUIRED_ASSET_EVIDENCE = ['alphaMask', 'checkerboard', 'tightCrop', 'motionStress'];
@@ -38,21 +39,32 @@ const assertReviewedEvidence = (entry, files, label) => {
 
 export const assertStyleProofReady = async (slug) => {
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
-  const required = (storyboard.scenes ?? []).some((scene) =>
-    (scene.compositionPlan?.patterns ?? []).some((pattern) => COUPLED_PATTERNS.has(pattern)) ||
-    (scene.compositionPlan?.stateSequences ?? []).length > 0,
-  );
-  if (!required) return {required: false, ready: true, report: null, composites: []};
+  const directingTarget = selectStyleProofTarget(storyboard);
+  if (!directingTarget) return {required: false, ready: true, report: null, composites: []};
 
-  const targets = (await collectCompositeQualityTargets(project)).filter(({pattern}) => COUPLED_PATTERNS.has(pattern));
-  if (targets.length === 0) throw new Error('故事板需要受证运动，但项目尚未实现 state-sequence、supported-subject 或 registered-environment 组合。');
+  const targets = (await collectCompositeQualityTargets(project)).filter(
+    ({sceneId, pattern, nodeId, memberNodeIds}) =>
+      sceneId === directingTarget.sceneId &&
+      COUPLED_PATTERNS.has(pattern) &&
+      (nodeId === directingTarget.targetId || memberNodeIds.includes(directingTarget.targetId)),
+  );
 
   const reportFile = styleProofReportPath(slug);
   if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
   const report = await readJson(reportFile);
-  if (report.schemaVersion !== 3 || !Array.isArray(report.composites) || report.composites.length === 0) {
+  if (report.schemaVersion !== 4 || !Array.isArray(report.composites)) {
     throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run style:proof。');
   }
+  if (
+    report.sceneId !== directingTarget.sceneId ||
+    report.directingTreatmentId !== directingTarget.treatmentId ||
+    report.directingTargetId !== directingTarget.targetId ||
+    report.directingFingerprint !== directingTarget.directingFingerprint
+  ) {
+    throw new Error('风格拓扑证明没有绑定当前最高风险导演 treatment；请重新运行 npm run style:proof。');
+  }
+  await assertEvidenceFile(report.output, 'output');
+  await assertEvidenceFile(report.contactSheet, 'contactSheet');
 
   const targetById = new Map(targets.map((target) => [target.compositeId, target]));
   const provenTargets = [];
@@ -76,7 +88,7 @@ export const assertStyleProofReady = async (slug) => {
     }
     provenTargets.push(target);
   }
-  if (provenTargets.length === 0) throw new Error('风格拓扑证明没有覆盖当前项目中的耦合组合。');
+  if (targets.length > 0 && provenTargets.length === 0) throw new Error('风格拓扑证明没有覆盖最高风险镜头中的耦合组合。');
 
   const quality = await prepareQualityReport(slug, {write: false});
   for (const target of provenTargets) {
@@ -110,5 +122,13 @@ export const assertStyleProofReady = async (slug) => {
       }
     }
   }
-  return {required: true, ready: true, report: reportFile, composites: provenTargets.map(({compositeId}) => compositeId)};
+  return {
+    required: true,
+    ready: true,
+    report: reportFile,
+    sceneId: directingTarget.sceneId,
+    treatmentId: directingTarget.treatmentId,
+    targetId: directingTarget.targetId,
+    composites: provenTargets.map(({compositeId}) => compositeId),
+  };
 };

@@ -9,8 +9,8 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `brief.md` | Human intent, audience, facts, format, style, rights, prohibitions |
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
 | `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
-| `storyboard.json` | Approved arc, schema-v3 beat/state-to-proof bindings, composition patterns, relationships, and proof assertions |
-| `project.json` | Resolved plan and v5 Remotion execution tree |
+| `storyboard.json` | Approved schema-v4 beat treatments plus compiler-owned plans, risk ranking, sheet plans, proof bindings, and directing fingerprints |
+| `project.json` | Creative Plan v2 budgets and v5 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
@@ -35,7 +35,7 @@ Never ask the human to edit machine JSON. Paths in `project.json` are relative t
 
 The combined confirmation is the normal path. Composition proof is machine evidence inside the existing style or asset stage, not a fourth human gate.
 
-When the approved storyboard uses `supported-subject` or `registered-environment`, `approve-style-voice` additionally requires a current schema-v3 `style-motion-proof.json`. The report fingerprint binds the representative group, member hashes, timing/proof inputs, and source family. Its full-resolution frames and per-member alpha/checkerboard/tight/motion-stress evidence must exist, and the participating asset/composite semantic checks must already be recorded. This is an executable precondition inside `style-review`, not another approval state.
+`approve-style-voice` requires a current schema-v4 `style-motion-proof.json` bound to the compiler-selected highest-risk scene, treatment id, and directing fingerprint. When that scene contains a coupled group, the report additionally binds member hashes, timing/proof inputs, and source family; its full-resolution frames and per-member alpha/checkerboard/tight/motion-stress evidence must exist, and participating asset/composite semantic checks must already be recorded. This is an executable precondition inside `style-review`, not another approval state.
 
 ## v5 Composition Tree
 
@@ -61,7 +61,9 @@ Derivation method is part of correctness. Complex silhouettes and negative space
 
 ## Proof and Cue Contract
 
-- Scene id, blueprint, `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. In schema v3, beat-bound and state-bound proof intent is immutable.
+- Storyboard authors own v4 `treatments`; they do not hand-author `compositionPlan`, `directing`, fingerprints, risk ranking, or pose-sheet grids. `project:storyboard` deterministically compiles those derived fields and rejects drift.
+- Scene id, blueprint, compiled `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. Beat-bound, treatment-bound, and state-bound proof intent is immutable.
+- A compiled continuous target must exist and have visible keyframe/idle motion; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside fades.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.
 - `scene.cues` is the only visual/sound event source. Every storyboard beat has exactly one cue; cue drift is at most `0.035` normalized units.
@@ -75,4 +77,4 @@ Run `project:composition-proof` after assembling real groups. It fingerprints sc
 
 Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `style:proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
 
-Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, state-sheet processing, proof, attempt accounting, or report logic ad hoc. Only project schema v5, storyboard schema v3, and asset-request schema v5 are supported; older contracts are intentionally not migrated or executed.
+Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, state-sheet processing, directing compilation, proof, attempt accounting, or report logic ad hoc. Only Creative Plan v2, project schema v5, storyboard schema v4, style-proof schema v4, and asset-request schema v5 are supported; older contracts are intentionally not migrated or executed.

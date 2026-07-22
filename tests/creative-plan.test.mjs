@@ -5,6 +5,7 @@ import {
   assertConfirmedPlanDecision,
   buildCreativePlan,
   deriveAssetBudget,
+  deriveMotionBudget,
   deriveCreativePlanMode,
   deriveDurationAuthority,
   summarizeConceptDecision,
@@ -26,14 +27,20 @@ const make = (overrides) =>
 
 test('creative planning supports all four partial-input modes', () => {
   const none = make({});
+  assert.equal(none.schemaVersion, 2);
   assert.equal(none.inputMode, 'none');
   assert.equal(none.productionProfile, 'balanced');
   assert.deepEqual(none.assetBudget, {
     backgrounds: 3,
     environmentLayers: 2,
-    characterSheets: 1,
+    characterSheets: 2,
     styleSamples: 1,
-    maxGeneratedImages: 7,
+    maxGeneratedImages: 8,
+  });
+  assert.deepEqual(none.motionBudget, {
+    maxPoseSheetCalls: 2,
+    maxStatesPerSheet: 4,
+    maxContinuousTargets: 12,
   });
   assert.deepEqual(none.requested, {durationSeconds: null, sceneCount: null});
 
@@ -75,8 +82,18 @@ test('production profiles set explicit generated-image budgets', () => {
     styleSamples: 1,
     maxGeneratedImages: 11,
   });
-  assert.equal(deriveAssetBudget('balanced', 6).maxGeneratedImages, 13);
-  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 23);
+  assert.equal(deriveAssetBudget('balanced', 6).maxGeneratedImages, 14);
+  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 25);
+  assert.deepEqual(deriveMotionBudget('draft', 6), {
+    maxPoseSheetCalls: 2,
+    maxStatesPerSheet: 4,
+    maxContinuousTargets: 12,
+  });
+  assert.deepEqual(deriveMotionBudget('full-depth', 6), {
+    maxPoseSheetCalls: 6,
+    maxStatesPerSheet: 6,
+    maxContinuousTargets: 36,
+  });
   assert.equal(
     make({productionProfile: 'full-depth'}).productionProfile,
     'full-depth',
@@ -98,6 +115,10 @@ test('concept decisions expose bounded profile choices with exact scene budgets'
       ['balanced', 6],
       ['full-depth', 9],
     ],
+  );
+  assert.deepEqual(
+    decision.profileOptions.map(({id, motionBudget}) => [id, motionBudget.maxPoseSheetCalls]),
+    [['draft', 1], ['balanced', 1], ['full-depth', 2]],
   );
   assert.ok(
     summarizeProductionProfiles(2).every(

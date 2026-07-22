@@ -17,11 +17,11 @@ Draft minimum coherent beats and estimate spoken duration before resolving the p
 
 | Profile | Final-film effect | Cost shape |
 |---|---|---|
-| `draft` | Flatter paper motion for testing story, narration, and rhythm | Heavy reuse; few environment layers and poses |
-| `balanced` (default) | Clear foreground/midground/background in hero scenes | Moderate independent layers and character variation |
-| `full-depth` | Maximum environment parallax and pose variety | Most environment layers, poses, evidence work, and generation attempts |
+| `draft` | Critical actions remain; ambient and enhancement motion is restrained | Few environment layers and pose sheets; up to four related states per sheet |
+| `balanced` (default) | Clear depth plus grouped hero-action changes | Moderate layers, pose sheets, graphics, and continuous targets |
+| `full-depth` | Maximum environment parallax and pose detail | More pose families, up to six states per sheet, and more evidence work |
 
-`project:plan` derives a provider-generation attempt ceiling from the profile and scene count. Count the style sample, unique generated backgrounds, environment layers, character sheets, rejected results, and abandoned results when quota was consumed. Exact reuse and deterministic alpha extractions do not consume a new attempt.
+`project:plan` derives both a provider-generation attempt ceiling and a motion budget from the profile and scene count. Count the style sample, unique generated backgrounds, environment layers, pose sheets, rejected results, and abandoned results when quota was consumed. Exact reuse, sheet splits, masks, and deterministic alpha extractions do not consume a new attempt.
 
 ```bash
 npm run project:plan -- <slug> \
@@ -31,7 +31,7 @@ npm run project:plan -- <slug> \
   --rationale="<story and pacing basis>"
 ```
 
-Use `project:plan --json` as the decision source. It returns `decision.durationAuthority` plus all three `decision.profileOptions`, including exact scene-count-specific attempt ceilings and final-film effects. For an already resolved plan, `npm run project:plan -- <slug> --json` is read-only and re-displays the same options without needing the original write arguments. Show those options as direct structured choices in the combined concept/provider decision and again if the human selects “modify”; never require them to guess an enum in free text. Change the profile only through concept revision or another explicit budget decision. Copy the approved `productionProfile`, `durationSeconds`, `sceneCount`, and `durationAuthority` into `planDecision` for `project:confirm-concept`; the command rejects stale or mismatched confirmation data.
+Use `project:plan --json` as the decision source. It returns `decision.durationAuthority` plus all three `decision.profileOptions`, including exact scene-count-specific image attempts, pose-sheet calls/capacity, continuous-target limits, and final-film effects. For an already resolved plan, `npm run project:plan -- <slug> --json` is read-only and re-displays the same options without needing the original write arguments. Show those options as direct structured choices in the combined concept/provider decision and again if the human selects “modify”; never require them to guess an enum in free text. Change the profile only through concept revision or another explicit budget decision. Copy the approved `productionProfile`, `durationSeconds`, `sceneCount`, and `durationAuthority` into `planDecision` for `project:confirm-concept`; the command rejects stale or mismatched confirmation data.
 
 ## Lock the Rhythmic Storyboard
 
@@ -45,12 +45,14 @@ The storyboard is not another human gate. It is part of the existing combined co
 
 - Give the whole film one explicit arc and one shared visual/motion language.
 - Give each planned scene a narrative role, single message, blueprint, estimated duration, and at least three ordered beats.
-- Add `compositionPlan.patterns`, named relationships, and `stateSequences` (an explicit empty array when none). Use `supported-subject` for persistent contact (`inside`, `on`, `held-by`, `worn-by`), `registered-environment` for a shared shoreline/horizon/tabletop/wall edge, and `free` only when no persistent contact or semantic boundary exists. Plan a state sequence whenever visible action is best expressed as discrete registered poses rather than transform motion.
+- Read `motion-directing.md`. Add one or more v4 `treatments` to every beat. Author the visible change, motion mechanism, composition relationship, optional graphic mechanism, risk, importance, necessity, proof binding, and rationale. Never hand-author `compositionPlan`, `directing`, or sheet grids; `project:storyboard` compiles them and rejects drift.
 - Use normalized beat time (`at=0..1`) so rhythm survives narration resync.
 - Choose one of the bounded blueprints: `layered-reveal`, `map-journey`, `archive-stack`, `character-procession`, `discovery-wipe`, `transformation-tableau`, `chapter-tableau`, or `quiet-lockup`.
 - Define at least three proof moments per scene: an establishing state, an action/peak state, and a `final` state at or after `0.82`. Every proof needs a stable id, visible relationship assertions, and a `stateAssertions` array. Cover every planned sequence state at least once so its schedule can be verified deterministically.
 - Keep proof moments outside the scene's fade-in/fade-out interval so every sampled frame clearly proves the intended composition.
-- In schema v3, every beat declares `proofTimeId` as an approved proof id or `null`. If a beat names an `audioCue`, it must bind an event-level proof and production must attach a real sound asset to the matching cue using that same proof id.
+- In schema v4, every beat and treatment declares `proofTimeId` as an approved proof id or `null`; treatment proof must match its beat. If a beat names an `audioCue`, it must bind an event-level proof and production must attach a real sound asset to the matching cue using that same proof id.
+
+The compiler protects required hero actions. If the selected profile cannot afford them, it rejects the storyboard instead of silently replacing a pose change with a cheap transform. Reduce enhancement motion first, raise the profile, or reduce story scope inside the existing concept decision.
 
 The sum of scene estimates must stay within 8% of the resolved duration. Scene count must match exactly.
 

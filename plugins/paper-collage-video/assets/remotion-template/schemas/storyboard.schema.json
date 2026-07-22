@@ -1,146 +1,299 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard.schema.json",
-  "title": "Paper Collage Storyboard",
+  "title": "Compiled Paper Collage Storyboard v4",
   "type": "object",
-  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "updatedAt"],
+  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "directingSummary", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 3},
+    "schemaVersion": {"const": 4},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
-    "status": {"enum": ["pending", "ready"]},
-    "arc": {"type": "string"},
+    "status": {"const": "ready"},
+    "arc": {"type": "string", "minLength": 1},
+    "style": {"$ref": "#/$defs/style"},
+    "scenes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/compiledScene"}},
+    "directingSummary": {"$ref": "#/$defs/directingSummary"},
+    "updatedAt": {"type": "string", "format": "date-time"}
+  },
+  "additionalProperties": false,
+  "$defs": {
     "style": {
       "type": "object",
       "required": ["visualThesis", "compositionRules", "motionLanguage", "layerStrategy"],
       "properties": {
-        "visualThesis": {"type": "string"},
-        "compositionRules": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "motionLanguage": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "layerStrategy": {"type": "string"}
+        "visualThesis": {"type": "string", "minLength": 1},
+        "compositionRules": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "motionLanguage": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "layerStrategy": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
     },
-    "scenes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["id", "title", "narrativeRole", "message", "blueprint", "estimatedDurationSeconds", "compositionPlan", "beats", "proofTimes"],
-        "properties": {
-          "id": {"type": "string", "minLength": 1},
-          "title": {"type": "string", "minLength": 1},
-          "narrativeRole": {"type": "string", "minLength": 1},
-          "message": {"type": "string", "minLength": 1},
-          "blueprint": {"enum": ["layered-reveal", "map-journey", "archive-stack", "character-procession", "discovery-wipe", "transformation-tableau", "chapter-tableau", "quiet-lockup"]},
-          "estimatedDurationSeconds": {"type": "number", "exclusiveMinimum": 0},
-          "compositionPlan": {
+    "relationshipIntent": {
+      "type": "object",
+      "required": ["id", "predicate", "object", "proof"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "predicate": {"enum": ["inside", "on", "held-by", "worn-by", "above-boundary", "below-boundary"]},
+        "object": {"type": "string", "minLength": 1},
+        "proof": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "treatment": {
+      "type": "object",
+      "required": ["id", "targetId", "importance", "necessity", "changeClass", "motion", "composition", "graphic", "semanticRisk", "proofTimeId", "rationale"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "targetId": {"type": "string", "minLength": 1},
+        "importance": {"enum": ["hero", "supporting", "ambient"]},
+        "necessity": {"enum": ["required", "enhancement"]},
+        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold"]},
+        "motion": {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["static", "continuous-transform", "state-sequence"]},
+            "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "reveal"]},
+            "poseFamilyId": {"type": "string", "minLength": 1},
+            "stateId": {"type": "string", "minLength": 1},
+            "visualChange": {"type": "string", "minLength": 1},
+            "playback": {"enum": ["once", "loop", "ping-pong"]},
+            "transition": {"enum": ["cut", "crossfade"]}
+          },
+          "additionalProperties": false
+        },
+        "composition": {
+          "type": "object",
+          "required": ["pattern"],
+          "properties": {
+            "pattern": {"enum": ["free", "supported-subject", "registered-environment"]},
+            "relationship": {"$ref": "#/$defs/relationshipIntent"}
+          },
+          "additionalProperties": false
+        },
+        "graphic": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["kind", "animation"],
+              "properties": {
+                "kind": {"enum": ["text", "shape"]},
+                "animation": {"enum": ["reveal", "pulse", "bounce", "draw", "stamp"]}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "semanticRisk": {"enum": ["decorative", "identity", "topology", "mechanism", "diagram"]},
+        "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "rationale": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "beat": {
+      "type": "object",
+      "required": ["id", "at", "purpose", "visual", "audioCue", "proofTimeId", "treatments"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "purpose": {"type": "string", "minLength": 1},
+        "visual": {"type": "string", "minLength": 1},
+        "audioCue": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "treatments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/treatment"}}
+      },
+      "additionalProperties": false
+    },
+    "proofTime": {
+      "type": "object",
+      "required": ["id", "at", "label", "kind", "assertions", "stateAssertions"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "label": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["establish", "action", "peak", "final"]},
+        "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "stateAssertions": {
+          "type": "array",
+          "items": {
             "type": "object",
-            "required": ["patterns", "relationships", "stateSequences"],
+            "required": ["nodeId", "stateId"],
             "properties": {
-              "patterns": {
-                "type": "array",
-                "minItems": 1,
-                "uniqueItems": true,
-                "items": {"enum": ["free", "supported-subject", "registered-environment"]}
-              },
-              "relationships": {
-                "type": "array",
-                "minItems": 1,
-                "items": {
-                  "type": "object",
-                  "required": ["id", "subject", "predicate", "object", "proof"],
-                  "properties": {
-                    "id": {"type": "string", "minLength": 1},
-                    "subject": {"type": "string", "minLength": 1},
-                    "predicate": {"enum": ["free", "inside", "on", "held-by", "worn-by", "above-boundary", "below-boundary"]},
-                    "object": {"type": "string", "minLength": 1},
-                    "proof": {"type": "string", "minLength": 1}
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "stateSequences": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": ["nodeId", "poseFamilyId", "states", "playback", "transition"],
-                  "properties": {
-                    "nodeId": {"type": "string", "minLength": 1},
-                    "poseFamilyId": {"type": "string", "minLength": 1},
-                    "states": {
-                      "type": "array",
-                      "minItems": 2,
-                      "items": {
-                        "type": "object",
-                        "required": ["id", "at", "visualChange"],
-                        "properties": {
-                          "id": {"type": "string", "minLength": 1},
-                          "at": {"type": "number", "minimum": 0, "maximum": 1},
-                          "visualChange": {"type": "string", "minLength": 1}
-                        },
-                        "additionalProperties": false
-                      }
-                    },
-                    "playback": {"enum": ["once", "loop", "ping-pong"]},
-                    "transition": {"enum": ["cut", "crossfade"]}
-                  },
-                  "additionalProperties": false
-                }
-              }
+              "nodeId": {"type": "string", "minLength": 1},
+              "stateId": {"type": "string", "minLength": 1}
             },
             "additionalProperties": false
-          },
-          "beats": {
-            "type": "array",
-            "minItems": 3,
-            "items": {
-              "type": "object",
-              "required": ["id", "at", "purpose", "visual", "motion", "audioCue"],
-              "properties": {
-                "id": {"type": "string", "minLength": 1},
-                "at": {"type": "number", "minimum": 0, "maximum": 1},
-                "purpose": {"type": "string", "minLength": 1},
-                "visual": {"type": "string", "minLength": 1},
-                "motion": {"type": "string", "minLength": 1},
-                "audioCue": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
-                ,"proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
-              },
-              "additionalProperties": false
-            }
-          },
-          "proofTimes": {
-            "type": "array",
-            "minItems": 3,
-            "items": {
-              "type": "object",
-              "required": ["id", "at", "label", "kind", "assertions"],
-              "properties": {
-                "id": {"type": "string", "minLength": 1},
-                "at": {"type": "number", "minimum": 0, "maximum": 1},
-                "label": {"type": "string", "minLength": 1},
-                "kind": {"enum": ["establish", "action", "peak", "final"]},
-                "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
-                "stateAssertions": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": ["nodeId", "stateId"],
-                    "properties": {
-                      "nodeId": {"type": "string", "minLength": 1},
-                      "stateId": {"type": "string", "minLength": 1}
-                    },
-                    "additionalProperties": false
-                  }
-                }
-              },
-              "additionalProperties": false
-            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "compiledScene": {
+      "type": "object",
+      "required": ["id", "title", "narrativeRole", "message", "blueprint", "estimatedDurationSeconds", "beats", "proofTimes", "compositionPlan", "directing"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "narrativeRole": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1},
+        "blueprint": {"enum": ["layered-reveal", "map-journey", "archive-stack", "character-procession", "discovery-wipe", "transformation-tableau", "chapter-tableau", "quiet-lockup"]},
+        "estimatedDurationSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "beats": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/beat"}},
+        "proofTimes": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/proofTime"}},
+        "compositionPlan": {"$ref": "#/$defs/compositionPlan"},
+        "directing": {"$ref": "#/$defs/sceneDirecting"}
+      },
+      "additionalProperties": false
+    },
+    "compositionPlan": {
+      "type": "object",
+      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "graphics"],
+      "properties": {
+        "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["free", "supported-subject", "registered-environment"]}},
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "subject", "predicate", "object", "proof"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "subject": {"type": "string", "minLength": 1},
+              "predicate": {"enum": ["inside", "on", "held-by", "worn-by", "above-boundary", "below-boundary"]},
+              "object": {"type": "string", "minLength": 1},
+              "proof": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
           }
         },
-        "additionalProperties": false
-      }
+        "stateSequences": {"type": "array", "items": {"$ref": "#/$defs/stateSequence"}},
+        "continuousMotions": {"type": "array", "items": {"$ref": "#/$defs/continuousMotion"}},
+        "graphics": {"type": "array", "items": {"$ref": "#/$defs/graphicPlan"}}
+      },
+      "additionalProperties": false
     },
-    "updatedAt": {"type": "string", "format": "date-time"}
-  },
-  "additionalProperties": false
+    "stateSequence": {
+      "type": "object",
+      "required": ["nodeId", "poseFamilyId", "states", "playback", "transition"],
+      "properties": {
+        "nodeId": {"type": "string", "minLength": 1},
+        "poseFamilyId": {"type": "string", "minLength": 1},
+        "states": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id", "at", "visualChange"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "at": {"type": "number", "minimum": 0, "maximum": 1},
+              "visualChange": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "playback": {"enum": ["once", "loop", "ping-pong"]},
+        "transition": {"enum": ["cut", "crossfade"]}
+      },
+      "additionalProperties": false
+    },
+    "continuousMotion": {
+      "type": "object",
+      "required": ["id", "nodeId", "preset", "at", "proofTimeId"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "nodeId": {"type": "string", "minLength": 1},
+        "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "reveal"]},
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "graphicPlan": {
+      "type": "object",
+      "required": ["id", "nodeId", "kind", "animation", "at", "proofTimeId"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "nodeId": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["text", "shape"]},
+        "animation": {"enum": ["reveal", "pulse", "bounce", "draw", "stamp"]},
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "sceneDirecting": {
+      "type": "object",
+      "required": ["fingerprint", "treatmentCount", "riskScore", "highestRiskTreatmentId"],
+      "properties": {
+        "fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "treatmentCount": {"type": "integer", "minimum": 1},
+        "riskScore": {"type": "integer", "minimum": 0},
+        "highestRiskTreatmentId": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "motionBudget": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["maxPoseSheetCalls", "maxStatesPerSheet", "maxContinuousTargets"],
+          "properties": {
+            "maxPoseSheetCalls": {"type": "integer", "minimum": 1},
+            "maxStatesPerSheet": {"type": "integer", "minimum": 2},
+            "maxContinuousTargets": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "directingSummary": {
+      "type": "object",
+      "required": ["profile", "requiredStateFamilies", "enhancementStateFamilies", "totalStateFamilies", "totalStates", "estimatedPoseSheetCalls", "maxStatesInFamily", "continuousTargets", "graphicTreatments", "coupledRelationships", "avoidedIsolatedStateCalls", "poseSheetPlans", "budget", "styleProofSceneId", "styleProofTreatmentId", "fingerprint"],
+      "properties": {
+        "profile": {"oneOf": [{"enum": ["draft", "balanced", "full-depth"]}, {"type": "null"}]},
+        "requiredStateFamilies": {"type": "integer", "minimum": 0},
+        "enhancementStateFamilies": {"type": "integer", "minimum": 0},
+        "totalStateFamilies": {"type": "integer", "minimum": 0},
+        "totalStates": {"type": "integer", "minimum": 0},
+        "estimatedPoseSheetCalls": {"type": "integer", "minimum": 0},
+        "maxStatesInFamily": {"type": "integer", "minimum": 0},
+        "continuousTargets": {"type": "integer", "minimum": 0},
+        "graphicTreatments": {"type": "integer", "minimum": 0},
+        "coupledRelationships": {"type": "integer", "minimum": 0},
+        "avoidedIsolatedStateCalls": {"type": "integer", "minimum": 0},
+        "poseSheetPlans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["targetId", "poseFamilyId", "necessity", "stateIds", "grid", "providerCalls", "repairPolicy"],
+            "properties": {
+              "targetId": {"type": "string", "minLength": 1},
+              "poseFamilyId": {"type": "string", "minLength": 1},
+              "necessity": {"enum": ["required", "enhancement"]},
+              "stateIds": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+              "grid": {
+                "type": "object",
+                "required": ["columns", "rows"],
+                "properties": {
+                  "columns": {"enum": [2, 3]},
+                  "rows": {"const": 2}
+                },
+                "additionalProperties": false
+              },
+              "providerCalls": {"const": 1},
+              "repairPolicy": {"const": "masked-edit-complete-sheet"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "budget": {"$ref": "#/$defs/motionBudget"},
+        "styleProofSceneId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "styleProofTreatmentId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      },
+      "additionalProperties": false
+    }
+  }
 }

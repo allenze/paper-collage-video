@@ -69,7 +69,7 @@ Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于
 
 正常制作一条新视频时，人参与三个内容节点：
 
-1. 口述主题后，一次确认概念、节奏故事板、时长/幕数、`draft|balanced|full-depth` 制作档位、素材预算和文本/生图/虚构语音 provider。
+1. 口述主题后，一次确认概念、Storyboard v4 导演节拍、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
 2. 确认一张风格样张、短试听和必要时的 3–5 秒动作证明。
 3. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
@@ -142,7 +142,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；`project:plan` 解析时长、幕数和图片预算，`project:storyboard` 再锁定逐幕蓝图、节拍和证明时刻。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v4 再把逐节拍导演 treatments 编译为组合计划、状态序列、图形目标、姿态母版网格、风险排名和证明指纹。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -153,8 +153,8 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | 命令 | 作用 |
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
-| `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位/图片预算 |
-| `npm run project:storyboard -- <slug> --input=<file>` | 锁定全片叙事弧、逐幕蓝图、节拍和证明时刻 |
+| `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
+| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v4 节拍 treatments、组合/状态计划、风险与证明时刻 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
 | `npm run project:resume -- <slug>` | 输出最小恢复状态、下一命令和未完成批次 |

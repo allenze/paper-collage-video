@@ -19,6 +19,8 @@ import {
   readQualityReportStatus,
 } from './quality-lib.mjs';
 import {analyzeRenderedContinuityArtifact} from './timeline-continuity-lib.mjs';
+import {loadStoryboard} from './storyboard-lib.mjs';
+import {summarizeActualPoseSheets} from './state-sheet-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -142,8 +144,12 @@ const createContactSheet = async ({video, output, samples, framesDirectory}) => 
 };
 
 try {
-  const {project} = await loadProject(slug);
+  const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
   const paths = projectPaths(slug);
+  const manifestFile = path.join(paths.projectDirectory, 'assets-manifest.json');
+  const poseSheetActuals = summarizeActualPoseSheets(
+    (await fileExists(manifestFile)) ? await readJson(manifestFile) : null,
+  );
   const requestedArtifact = artifactArgument?.slice('--artifact='.length);
   const finalArtifact = path.join(paths.distDirectory, 'final.mp4');
   const previewArtifact = path.join(paths.distDirectory, 'preview.mp4');
@@ -328,7 +334,7 @@ try {
     ? await readQualityReportStatus(slug)
     : await prepareQualityReport(slug);
   const report = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: new Date().toISOString(),
     project: {slug: project.slug, title: project.title},
     artifact: {
@@ -380,6 +386,19 @@ try {
         proofFrames,
         status,
       })),
+    },
+    directing: {
+      fingerprint: storyboard.directingSummary.fingerprint,
+      productionProfile: storyboard.directingSummary.profile,
+      styleProofSceneId: storyboard.directingSummary.styleProofSceneId,
+      styleProofTreatmentId: storyboard.directingSummary.styleProofTreatmentId,
+      poseSheetPlans: storyboard.directingSummary.poseSheetPlans,
+      plannedPoseSheetCalls: storyboard.directingSummary.estimatedPoseSheetCalls,
+      plannedAvoidedIsolatedStateCalls: storyboard.directingSummary.avoidedIsolatedStateCalls,
+      actualPoseSheets: poseSheetActuals.families,
+      actualPoseSheetProviderCalls: poseSheetActuals.providerCalls,
+      deterministicStateDerivatives: poseSheetActuals.deterministicDerivatives,
+      providerCallsAvoidedByBatching: poseSheetActuals.providerCallsAvoidedByBatching,
     },
     continuityAnalysis,
     technicalChecks,

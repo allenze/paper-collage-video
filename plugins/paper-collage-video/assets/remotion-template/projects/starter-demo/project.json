@@ -4,7 +4,7 @@
   "slug": "starter-demo",
   "title": "Paper Collage Starter",
   "plan": {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "slug": "starter-demo",
     "status": "resolved",
     "inputMode": "both",
@@ -15,6 +15,11 @@
       "characterSheets": 1,
       "styleSamples": 1,
       "maxGeneratedImages": 4
+    },
+    "motionBudget": {
+      "maxPoseSheetCalls": 1,
+      "maxStatesPerSheet": 4,
+      "maxContinuousTargets": 2
     },
     "requested": {
       "durationSeconds": 1.2,

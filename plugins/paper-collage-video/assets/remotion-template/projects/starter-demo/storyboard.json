@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -29,27 +29,82 @@
           "at": 0,
           "purpose": "建立空间",
           "visual": "纸面与背景出现",
-          "motion": "场景淡入",
           "audioCue": null,
-          "proofTimeId": "proof-establish"
+          "proofTimeId": "proof-establish",
+          "treatments": [
+            {
+              "id": "establish-scene",
+              "targetId": "background",
+              "importance": "supporting",
+              "necessity": "required",
+              "changeClass": "static-hold",
+              "motion": {
+                "kind": "static"
+              },
+              "composition": {
+                "pattern": "free"
+              },
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "proof-establish",
+              "rationale": "先建立稳定纸面空间。"
+            }
+          ]
         },
         {
           "id": "subject-arrives",
           "at": 0.5,
           "purpose": "交付主体",
           "visual": "人物纸片进入中心",
-          "motion": "主体上提并轻微放大",
           "audioCue": null,
-          "proofTimeId": "proof-action"
+          "proofTimeId": "proof-action",
+          "treatments": [
+            {
+              "id": "lift-traveler",
+              "targetId": "traveler",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "ambient-motion",
+              "motion": {
+                "kind": "continuous-transform",
+                "preset": "reveal"
+              },
+              "composition": {
+                "pattern": "free"
+              },
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "proof-action",
+              "rationale": "主体以连续位移进入画面，不改变肢体结构。"
+            }
+          ]
         },
         {
           "id": "lockup",
           "at": 0.9,
           "purpose": "稳定结论",
           "visual": "人物与标题形成锁定构图",
-          "motion": "主体回落稳定",
           "audioCue": null,
-          "proofTimeId": "proof-final"
+          "proofTimeId": "proof-final",
+          "treatments": [
+            {
+              "id": "hold-lockup",
+              "targetId": "traveler",
+              "importance": "supporting",
+              "necessity": "required",
+              "changeClass": "static-hold",
+              "motion": {
+                "kind": "static"
+              },
+              "composition": {
+                "pattern": "free"
+              },
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "proof-final",
+              "rationale": "结尾保持构图稳定。"
+            }
+          ]
         }
       ],
       "proofTimes": [
@@ -88,18 +143,48 @@
         "patterns": [
           "free"
         ],
+        "relationships": [],
         "stateSequences": [],
-        "relationships": [
+        "continuousMotions": [
           {
-            "id": "traveler-over-background",
-            "subject": "traveler",
-            "predicate": "free",
-            "object": "background",
-            "proof": "主体独立于背景运动且构图可读"
+            "id": "lift-traveler",
+            "nodeId": "traveler",
+            "preset": "reveal",
+            "at": 0.5,
+            "proofTimeId": "proof-action"
           }
-        ]
+        ],
+        "graphics": []
+      },
+      "directing": {
+        "fingerprint": "e456d2fabec450110d0b1b3e579d3bcc43abd150906758a36c61eb900392e811",
+        "treatmentCount": 3,
+        "riskScore": 13,
+        "highestRiskTreatmentId": "lift-traveler"
       }
     }
   ],
-  "updatedAt": "2026-01-01T00:00:00.000Z"
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "directingSummary": {
+    "profile": "draft",
+    "requiredStateFamilies": 0,
+    "enhancementStateFamilies": 0,
+    "totalStateFamilies": 0,
+    "totalStates": 0,
+    "estimatedPoseSheetCalls": 0,
+    "maxStatesInFamily": 0,
+    "continuousTargets": 1,
+    "graphicTreatments": 0,
+    "coupledRelationships": 0,
+    "avoidedIsolatedStateCalls": 0,
+    "poseSheetPlans": [],
+    "budget": {
+      "maxPoseSheetCalls": 1,
+      "maxStatesPerSheet": 4,
+      "maxContinuousTargets": 2
+    },
+    "styleProofSceneId": "starter",
+    "styleProofTreatmentId": "lift-traveler",
+    "fingerprint": "db6456ffad27914d75fdcd4be0c782e5fcf523f49261780869fa34b82de89aea"
+  }
 }

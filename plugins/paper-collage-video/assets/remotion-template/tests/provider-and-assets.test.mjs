@@ -41,17 +41,10 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
     message: `Narrative beat ${index + 1}`,
     blueprint: index === sceneCount - 1 ? 'quiet-lockup' : 'layered-reveal',
     estimatedDurationSeconds: durationSeconds / sceneCount,
-    compositionPlan: {
-      patterns: ['free'],
-      stateSequences: [],
-      relationships: [
-        {id: `s${index + 1}-free`, subject: 'subject', predicate: 'free', object: 'background', proof: 'Independent cutout remains readable'},
-      ],
-    },
     beats: [
-      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', motion: 'Scene reveal', audioCue: null, proofTimeId: null},
-      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', motion: 'Subject lift', audioCue: null, proofTimeId: `s${index + 1}-proof-action`},
-      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', motion: 'Settle all layers', audioCue: null, proofTimeId: `s${index + 1}-proof-final`},
+      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', audioCue: null, proofTimeId: null, treatments: [{id: `s${index + 1}-establish-hold`, targetId: 'stage', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: null, rationale: 'Hold a readable opening composition.'}]},
+      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', audioCue: null, proofTimeId: `s${index + 1}-proof-action`, treatments: [{id: `s${index + 1}-action-hold`, targetId: 'subject', importance: 'hero', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-action`, rationale: 'Keep the action target readable in this integration fixture.'}]},
+      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', audioCue: null, proofTimeId: `s${index + 1}-proof-final`, treatments: [{id: `s${index + 1}-settle-hold`, targetId: 'subject', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-final`, rationale: 'Settle the final composition.'}]},
     ],
     proofTimes: [
       {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable'], stateAssertions: []},
@@ -336,11 +329,16 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
+    assert.equal(project.plan.schemaVersion, 2);
+    assert.equal(project.plan.motionBudget, null);
     assert.equal(manifest.projectSlug, slug);
     assert.equal(manifest.schemaVersion, 3);
     assert.deepEqual(manifest.assets, []);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
+    const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
+    assert.equal(storyboardTemplate.schemaVersion, 4);
+    assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
     assert.ok(fs.existsSync(path.join(publicDirectory, 'assets', 'style', '.gitkeep')));
     assert.ok(

@@ -5,6 +5,7 @@ import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import sharp from 'sharp';
 import {createProductionMetrics} from './production-metrics-lib.mjs';
+import {compileStoryboardDirecting} from './motion-treatment-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -89,6 +90,7 @@ for (const entry of [
   'scripts/audio-preflight-lib.mjs',
   'scripts/creative-plan-lib.mjs',
   'scripts/composition-lib.mjs',
+  'scripts/motion-treatment-lib.mjs',
   'scripts/process-character-sheet.mjs',
   'scripts/process-state-sheet.mjs',
   'scripts/state-sheet-lib.mjs',
@@ -268,7 +270,7 @@ const project = {
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
-    schemaVersion: 1,
+    schemaVersion: 2,
     slug: 'starter-demo',
     status: 'resolved',
     inputMode: 'both',
@@ -279,6 +281,11 @@ const project = {
       characterSheets: 1,
       styleSamples: 1,
       maxGeneratedImages: 4,
+    },
+    motionBudget: {
+      maxPoseSheetCalls: 1,
+      maxStatesPerSheet: 4,
+      maxContinuousTargets: 2,
     },
     requested: {durationSeconds: 1.2, sceneCount: 1},
     resolved: {
@@ -377,9 +384,9 @@ await writeJson(
   project,
 );
 
-const storyboard = {
+const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 3,
+  schemaVersion: 4,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',
@@ -398,26 +405,19 @@ const storyboard = {
       blueprint: 'layered-reveal',
       estimatedDurationSeconds: 1.2,
       beats: [
-        {id: 'establish', at: 0, purpose: '建立空间', visual: '纸面与背景出现', motion: '场景淡入', audioCue: null, proofTimeId: 'proof-establish'},
-        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', motion: '主体上提并轻微放大', audioCue: null, proofTimeId: 'proof-action'},
-        {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', motion: '主体回落稳定', audioCue: null, proofTimeId: 'proof-final'},
+        {id: 'establish', at: 0, purpose: '建立空间', visual: '纸面与背景出现', audioCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
+        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', audioCue: null, proofTimeId: 'proof-action', treatments: [{id: 'lift-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'ambient-motion', motion: {kind: 'continuous-transform', preset: 'reveal'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体以连续位移进入画面，不改变肢体结构。'}]},
+        {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', audioCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
       ],
       proofTimes: [
         {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},
         {id: 'proof-action', at: 0.5, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央'], stateAssertions: []},
         {id: 'proof-final', at: 0.9, label: '标题与主体稳定', kind: 'final', assertions: ['主体与标题构图稳定'], stateAssertions: []},
       ],
-      compositionPlan: {
-        patterns: ['free'],
-        stateSequences: [],
-        relationships: [
-          {id: 'traveler-over-background', subject: 'traveler', predicate: 'free', object: 'background', proof: '主体独立于背景运动且构图可读'},
-        ],
-      },
     },
   ],
   updatedAt: '2026-01-01T00:00:00.000Z',
-};
+}, {plan: project.plan});
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'storyboard.json'),
   storyboard,

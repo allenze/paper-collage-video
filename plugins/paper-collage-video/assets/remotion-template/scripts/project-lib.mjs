@@ -14,6 +14,7 @@ import {
   STORY_BLUEPRINTS,
   validateStoryboard,
 } from './storyboard-lib.mjs';
+import {validateDirectingExecution} from './motion-treatment-lib.mjs';
 import {
   CUE_ACTIONS,
   validateCompositionStructure,
@@ -662,6 +663,10 @@ export const validateProject = async (project, options = {}) => {
           `${sceneLocation}.composition`,
         );
       }
+    }
+
+    for (const issue of validateDirectingExecution({scene, storyboardScene, location: sceneLocation})) {
+      add('error', issue.code, issue.message, issue.location);
     }
 
     for (const {node, parent} of compositionResult.assets) {

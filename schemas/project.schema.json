@@ -34,9 +34,9 @@
   "$defs": {
     "plan": {
       "type": "object",
-      "required": ["schemaVersion", "slug", "status", "inputMode", "requested", "resolved", "updatedAt"],
+      "required": ["schemaVersion", "slug", "status", "inputMode", "productionProfile", "assetBudget", "motionBudget", "requested", "resolved", "updatedAt"],
       "properties": {
-        "schemaVersion": {"const": 1},
+        "schemaVersion": {"const": 2},
         "slug": {"type": "string"},
         "status": {"enum": ["pending", "resolved"]},
         "inputMode": {"enum": ["none", "duration-only", "scenes-only", "both"]},
@@ -53,6 +53,21 @@
                 "characterSheets": {"type": "integer", "minimum": 0},
                 "styleSamples": {"type": "integer", "minimum": 0},
                 "maxGeneratedImages": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "motionBudget": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["maxPoseSheetCalls", "maxStatesPerSheet", "maxContinuousTargets"],
+              "properties": {
+                "maxPoseSheetCalls": {"type": "integer", "minimum": 1},
+                "maxStatesPerSheet": {"type": "integer", "minimum": 2},
+                "maxContinuousTargets": {"type": "integer", "minimum": 1}
               },
               "additionalProperties": false
             }

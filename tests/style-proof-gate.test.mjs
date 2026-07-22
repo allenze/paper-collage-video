@@ -124,10 +124,19 @@ const writeFixture = async (slug) => {
     }],
   };
   const storyboard = {
-    schemaVersion: 1,
+    schemaVersion: 4,
     slug,
     status: 'ready',
-    scenes: [{id: 'scene', compositionPlan: {patterns: ['supported-subject']}}],
+    directingSummary: {
+      styleProofSceneId: 'scene',
+      styleProofTreatmentId: 'subject-on-support',
+    },
+    scenes: [{
+      id: 'scene',
+      directing: {fingerprint: 'a'.repeat(64), riskScore: 46, highestRiskTreatmentId: 'subject-on-support', treatmentCount: 1},
+      beats: [{id: 'action', treatments: [{id: 'subject-on-support', targetId: 'subject'}]}],
+      compositionPlan: {patterns: ['supported-subject'], relationships: [], stateSequences: [], continuousMotions: [], graphics: []},
+    }],
   };
   const manifest = {
     schemaVersion: 3,
@@ -186,10 +195,15 @@ const writeProofEvidence = async ({slug, project, files}) => {
   await fs.writeFile(
     styleProofReportPath(slug),
     `${JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: 4,
       slug,
       sceneId: 'scene',
+      directingTreatmentId: 'subject-on-support',
+      directingTargetId: 'subject',
+      directingFingerprint: 'a'.repeat(64),
       generatedAt: new Date().toISOString(),
+      output: evidencePath,
+      contactSheet: evidencePath,
       composites: [{
         compositeId: target.compositeId,
         styleFingerprint: styleFingerprintForTarget(target),

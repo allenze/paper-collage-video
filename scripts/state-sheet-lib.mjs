@@ -45,3 +45,47 @@ export const createStateFamilyFingerprint = ({sourceSha256, spec, members}) =>
         .sort((left, right) => left.stateId.localeCompare(right.stateId)),
     }))
     .digest('hex');
+
+export const summarizeActualPoseSheets = (manifest) => {
+  const assets = manifest?.assets ?? [];
+  const assetsById = new Map(assets.map((asset) => [asset.assetId, asset]));
+  const families = new Map();
+  for (const asset of assets.filter(({stateBinding}) => Boolean(stateBinding))) {
+    const poseFamilyId = asset.stateBinding.poseFamilyId;
+    const family = families.get(poseFamilyId) ?? {
+      poseFamilyId,
+      stateIds: new Set(),
+      sourceAssetIds: new Set(),
+    };
+    family.stateIds.add(asset.stateBinding.stateId);
+    for (const sourceAssetId of [
+      asset.sourceSheetAssetId,
+      asset.stateSheetRecoveryBinding?.sourceSheetAssetId,
+      asset.request?.compositionBinding?.derivation?.parentAssetId,
+      asset.compositionBinding?.derivation?.parentAssetId,
+    ].filter(Boolean)) family.sourceAssetIds.add(sourceAssetId);
+    families.set(poseFamilyId, family);
+  }
+  const entries = [...families.values()].map((family) => {
+    const providerCalls = [...family.sourceAssetIds]
+      .map((assetId) => assetsById.get(assetId))
+      .filter((asset) => ['host', 'command'].includes(asset?.adapter) && !asset.reusedFrom)
+      .length;
+    return {
+      poseFamilyId: family.poseFamilyId,
+      stateIds: [...family.stateIds].sort(),
+      sourceAssetIds: [...family.sourceAssetIds].sort(),
+      providerCalls,
+      deterministicDerivatives: family.stateIds.size,
+      providerCallsAvoidedByBatching: providerCalls > 0
+        ? Math.max(0, family.stateIds.size - providerCalls)
+        : 0,
+    };
+  }).sort((left, right) => left.poseFamilyId.localeCompare(right.poseFamilyId));
+  return {
+    families: entries,
+    providerCalls: entries.reduce((sum, entry) => sum + entry.providerCalls, 0),
+    deterministicDerivatives: entries.reduce((sum, entry) => sum + entry.deterministicDerivatives, 0),
+    providerCallsAvoidedByBatching: entries.reduce((sum, entry) => sum + entry.providerCallsAvoidedByBatching, 0),
+  };
+};

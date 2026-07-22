@@ -1,6 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {
+  COMPOSITION_PATTERNS,
+  RELATIONSHIP_PREDICATES,
+  compileStoryboardDirecting,
+  validateCompiledDirecting,
+} from './motion-treatment-lib.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -18,16 +24,7 @@ export const STORY_BLUEPRINTS = [
 ];
 
 export const PROOF_KINDS = ['establish', 'action', 'peak', 'final'];
-export const COMPOSITION_PATTERNS = ['free', 'supported-subject', 'registered-environment'];
-export const RELATIONSHIP_PREDICATES = [
-  'free',
-  'inside',
-  'on',
-  'held-by',
-  'worn-by',
-  'above-boundary',
-  'below-boundary',
-];
+export {COMPOSITION_PATTERNS, RELATIONSHIP_PREDICATES, compileStoryboardDirecting};
 
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 const normalizedTime = (value) =>
@@ -41,8 +38,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 3) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 3。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 4) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 4。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -109,8 +106,8 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       ) {
         add('storyboard-composition-pattern', 'compositionPlan.patterns 必须使用受支持的组合模式。', `${location}.compositionPlan.patterns`);
       }
-      if (!Array.isArray(compositionPlan.relationships) || compositionPlan.relationships.length === 0) {
-        add('storyboard-composition-relationships', 'compositionPlan.relationships 至少需要一项。', `${location}.compositionPlan.relationships`);
+      if (!Array.isArray(compositionPlan.relationships)) {
+        add('storyboard-composition-relationships', 'compositionPlan.relationships 必须是数组。', `${location}.compositionPlan.relationships`);
       }
       const relationshipIds = new Set();
       for (const [relationshipIndex, relationship] of (compositionPlan.relationships ?? []).entries()) {
@@ -127,9 +124,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         }
         const requiredPattern = ['inside', 'on', 'held-by', 'worn-by'].includes(relationship.predicate)
           ? 'supported-subject'
-          : ['above-boundary', 'below-boundary'].includes(relationship.predicate)
-            ? 'registered-environment'
-            : 'free';
+          : 'registered-environment';
         if (!(compositionPlan.patterns ?? []).includes(requiredPattern)) {
           add('storyboard-relationship-pattern', `关系 ${relationship.id} 必须声明模式 ${requiredPattern}。`, `${location}.compositionPlan.patterns`);
         }
@@ -158,6 +153,12 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         }
         if (sequence.states?.[0]?.at !== 0) add('storyboard-sequence-start', '状态序列必须从 at=0 开始。', `${sequenceLocation}.states[0].at`);
       }
+      if (!Array.isArray(compositionPlan.continuousMotions)) {
+        add('storyboard-continuous-motions', 'compositionPlan.continuousMotions 必须是数组。', `${location}.compositionPlan.continuousMotions`);
+      }
+      if (!Array.isArray(compositionPlan.graphics)) {
+        add('storyboard-graphics', 'compositionPlan.graphics 必须是数组。', `${location}.compositionPlan.graphics`);
+      }
     }
     if (!Array.isArray(scene.beats) || scene.beats.length < 3) {
       add('storyboard-beats', '每个镜头至少需要 3 个节拍。', `${location}.beats`);
@@ -173,19 +174,22 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         add('storyboard-beat-time', '节拍 at 必须位于 0..1 且严格递增。', `${beatLocation}.at`);
       }
       previousBeat = beat.at;
-      for (const key of ['purpose', 'visual', 'motion']) {
+      for (const key of ['purpose', 'visual']) {
         if (!nonEmpty(beat[key])) add(`storyboard-beat-${key}`, `${key} 不能为空。`, `${beatLocation}.${key}`);
+      }
+      if (!Array.isArray(beat.treatments) || beat.treatments.length === 0) {
+        add('storyboard-beat-treatments', '每个节拍至少需要一个导演 treatment。', `${beatLocation}.treatments`);
       }
       if (beat.audioCue !== null && beat.audioCue !== undefined && !nonEmpty(beat.audioCue)) {
         add('storyboard-beat-audio', 'audioCue 必须为非空字符串或 null。', `${beatLocation}.audioCue`);
       }
-      if (storyboard.schemaVersion >= 2 && !Object.hasOwn(beat, 'proofTimeId')) {
-        add('storyboard-beat-proof-field', 'v2 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
+      if (!Object.hasOwn(beat, 'proofTimeId')) {
+        add('storyboard-beat-proof-field', 'v4 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
       }
       if (beat.proofTimeId !== null && beat.proofTimeId !== undefined && !nonEmpty(beat.proofTimeId)) {
         add('storyboard-beat-proof-id', 'proofTimeId 必须为非空字符串或 null。', `${beatLocation}.proofTimeId`);
       }
-      if (storyboard.schemaVersion >= 2 && beat.audioCue && !nonEmpty(beat.proofTimeId)) {
+      if (beat.audioCue && !nonEmpty(beat.proofTimeId)) {
         add('storyboard-audio-proof-required', '带 audioCue 的节拍必须绑定事件级 proofTimeId。', `${beatLocation}.proofTimeId`);
       }
       if (nonEmpty(beat.proofTimeId)) {
@@ -213,7 +217,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       if (!Array.isArray(proof.assertions) || proof.assertions.length === 0 || proof.assertions.some((item) => !nonEmpty(item))) {
         add('storyboard-proof-assertions', '证明时刻必须声明至少一项可见关系断言。', `${proofLocation}.assertions`);
       }
-      if (!Array.isArray(proof.stateAssertions)) add('storyboard-proof-state-assertions', 'v3 proofTime 必须显式声明 stateAssertions 数组。', `${proofLocation}.stateAssertions`);
+      if (!Array.isArray(proof.stateAssertions)) add('storyboard-proof-state-assertions', 'v4 proofTime 必须显式声明 stateAssertions 数组。', `${proofLocation}.stateAssertions`);
       if (proof.kind === 'final' && proof.at >= 0.82) hasFinal = true;
     }
     for (const sequence of compositionPlan?.stateSequences ?? []) {
@@ -248,6 +252,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       'scenes',
     );
   }
+  issues.push(...validateCompiledDirecting(storyboard, {plan}));
   return issues;
 };
 
@@ -276,15 +281,26 @@ export const summarizeStoryboard = (storyboard) => ({
   sceneCount: Array.isArray(storyboard?.scenes) ? storyboard.scenes.length : 0,
   scenes:
     storyboard?.status === 'ready'
-      ? storyboard.scenes.map(({id, title, narrativeRole, blueprint, compositionPlan, beats, proofTimes}) => ({
+      ? storyboard.scenes.map(({id, title, narrativeRole, blueprint, compositionPlan, directing, beats, proofTimes}) => ({
           id,
           title,
           narrativeRole,
           blueprint,
           patterns: compositionPlan.patterns,
+          treatmentCount: directing.treatmentCount,
+          riskScore: directing.riskScore,
           beatCount: beats.length,
           evidenceBoundBeatCount: beats.filter(({proofTimeId}) => Boolean(proofTimeId)).length,
           proofCount: proofTimes.length,
         }))
       : [],
+  directing: storyboard?.status === 'ready'
+    ? {
+        fingerprint: storyboard.directingSummary?.fingerprint ?? null,
+        styleProofSceneId: storyboard.directingSummary?.styleProofSceneId ?? null,
+        styleProofTreatmentId: storyboard.directingSummary?.styleProofTreatmentId ?? null,
+        estimatedPoseSheetCalls: storyboard.directingSummary?.estimatedPoseSheetCalls ?? 0,
+        avoidedIsolatedStateCalls: storyboard.directingSummary?.avoidedIsolatedStateCalls ?? 0,
+      }
+    : null,
 });

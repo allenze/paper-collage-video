@@ -4,6 +4,7 @@ import {resolveWorkspacePath} from './provider-lib.mjs';
 import {loadProject, writeJson} from './project-lib.mjs';
 import {loadProduction} from './production-state.mjs';
 import {
+  compileStoryboardDirecting,
   storyboardFileFor,
   summarizeStoryboard,
   validateStoryboard,
@@ -24,14 +25,15 @@ try {
   const supplied = JSON.parse(
     await fs.readFile(resolveWorkspacePath(input, 'storyboard 输入路径'), 'utf8'),
   );
-  const storyboard = {
+  const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 3,
+    schemaVersion: 4,
     slug,
     status: 'ready',
     updatedAt: new Date().toISOString(),
   };
+  const storyboard = compileStoryboardDirecting(authored, {plan: project.plan});
   const issues = validateStoryboard(storyboard, {slug, plan: project.plan});
   if (issues.length > 0) {
     throw new Error(issues.map(({location, message}) => `${location}: ${message}`).join('\n'));
@@ -40,8 +42,9 @@ try {
   const summary = summarizeStoryboard(storyboard);
   console.log(`✓ 故事板已锁定：${summary.sceneCount} 个镜头`);
   for (const scene of summary.scenes) {
-    console.log(`  ${scene.id}: ${scene.blueprint} · ${scene.beatCount} beats · ${scene.proofCount} proofs · ${scene.evidenceBoundBeatCount} evidence bindings`);
+    console.log(`  ${scene.id}: ${scene.blueprint} · ${scene.treatmentCount} treatments · risk ${scene.riskScore} · ${scene.proofCount} proofs`);
   }
+  console.log(`  motion budget: ${summary.directing.estimatedPoseSheetCalls} pose-sheet calls · ${summary.directing.avoidedIsolatedStateCalls} isolated calls avoided`);
 } catch (error) {
   console.error(`project:storyboard failed: ${error.message}`);
   process.exitCode = 1;

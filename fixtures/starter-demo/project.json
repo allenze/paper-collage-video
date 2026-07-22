@@ -4,10 +4,13 @@
   "slug": "starter-demo",
   "title": "Paper Collage Workspace",
   "plan": {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "slug": "starter-demo",
     "status": "pending",
     "inputMode": "none",
+    "productionProfile": "balanced",
+    "assetBudget": null,
+    "motionBudget": null,
     "requested": {
       "durationSeconds": null,
       "sceneCount": null
