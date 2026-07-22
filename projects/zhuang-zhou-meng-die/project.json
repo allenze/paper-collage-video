@@ -1,0 +1,2047 @@
+{
+  "$schema": "../../schemas/project.schema.json",
+  "schemaVersion": 7,
+  "slug": "zhuang-zhou-meng-die",
+  "title": "庄周梦蝶",
+  "plan": {
+    "schemaVersion": 2,
+    "slug": "zhuang-zhou-meng-die",
+    "status": "resolved",
+    "inputMode": "none",
+    "productionProfile": "balanced",
+    "requested": {
+      "durationSeconds": null,
+      "sceneCount": null
+    },
+    "resolved": {
+      "durationSeconds": 75,
+      "sceneCount": 5,
+      "estimatedNarrationSeconds": 54,
+      "rationale": "用户未指定时长与幕数；以《庄子·齐物论》的入梦、化蝶忘我、醒后辨问、物化余韵组织五幕。约210至235字中文旁白预计54秒，余量用于开场、动作停顿与四个不透明纸张转场。",
+      "resolvedAt": "2026-07-22T12:16:05.276Z"
+    },
+    "assetBudget": {
+      "backgrounds": 5,
+      "environmentLayers": 4,
+      "characterSheets": 3,
+      "styleSamples": 1,
+      "maxGeneratedImages": 13
+    },
+    "motionBudget": {
+      "maxPoseSheetCalls": 3,
+      "maxStatesPerSheet": 4,
+      "maxContinuousTargets": 20
+    },
+    "updatedAt": "2026-07-22T12:16:05.276Z"
+  },
+  "quality": {
+    "minimumAssetScale": 1
+  },
+  "video": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30
+  },
+  "theme": {
+    "canvas": "#E8E1CF",
+    "sceneBackground": "#D8D2C3",
+    "accent": "#B8923C",
+    "ink": "#24343B",
+    "subtitle": "#F7F1E4",
+    "subtitleBackground": "rgba(27, 42, 47, .78)",
+    "paperEdge": "#F3EBD8",
+    "foreground": "#4E6468",
+    "texture": "textures/paper-grain.png",
+    "fontFamily": "STKaiti, Kaiti SC, serif"
+  },
+  "voice": {
+    "mode": "fictional",
+    "provider": "doubao",
+    "voiceId": "ruyayichen",
+    "profile": "elegant-cultural-storyteller",
+    "displayName": "儒雅逸辰",
+    "settings": {
+      "speedRatio": 0.94,
+      "pitch": -1,
+      "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；吐字清楚，留有思考余韵，不过度庄严或玄虚"
+    }
+  },
+  "audio": {
+    "narration": {
+      "volume": 2.054
+    },
+    "music": null,
+    "mastering": {
+      "targetLufs": -16,
+      "toleranceLufs": 3,
+      "truePeakDbtp": -1
+    }
+  },
+  "scenes": [
+    {
+      "id": "scene-01",
+      "label": "月夜入梦",
+      "eyebrow": "庄周梦蝶",
+      "tailSeconds": 1.2,
+      "appearance": {
+        "background": "#D8D2C3",
+        "paperTexture": {
+          "visible": true,
+          "opacity": 0.24,
+          "blendMode": "multiply"
+        },
+        "chapter": {
+          "visible": true,
+          "variant": "paper-tab"
+        },
+        "subtitles": {
+          "variant": "boxed"
+        }
+      },
+      "motion": {
+        "blueprint": "layered-reveal",
+        "intensity": 0.75,
+        "seed": 2401,
+        "proofTimes": [
+          {
+            "id": "s1-proof-establish",
+            "at": 0.1,
+            "label": "庄周安睡",
+            "kind": "establish",
+            "assertions": [
+              "庄周身份清晰且完整",
+              "庄周稳定躺在卧榻上",
+              "月轮、窗棂和竹影建立现实空间"
+            ],
+            "stateAssertions": []
+          },
+          {
+            "id": "s1-proof-dream",
+            "at": 0.5,
+            "label": "梦意渐起",
+            "kind": "action",
+            "assertions": [
+              "推镜仍保持庄周与卧榻接触",
+              "墨雾与竹影只作克制漂移"
+            ],
+            "stateAssertions": []
+          },
+          {
+            "id": "s1-proof-final",
+            "at": 0.82,
+            "label": "蝶影浮现",
+            "kind": "final",
+            "assertions": [
+              "金蓝蝶影完整可辨",
+              "蝶影位于梦境上方且不遮挡庄周面部",
+              "转场前构图稳定"
+            ],
+            "stateAssertions": []
+          }
+        ]
+      },
+      "composition": {
+        "coordinateSpace": {
+          "width": 1920,
+          "height": 1080
+        },
+        "nodes": [
+          {
+            "id": "sleeping-tableau",
+            "kind": "group",
+            "pattern": "supported-subject",
+            "z": 0,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "opacity": 1
+                },
+                {
+                  "at": 1,
+                  "opacity": 1
+                }
+              ]
+            },
+            "registration": {
+              "id": "reality-room-registration",
+              "sourceMasterAssetId": "reality-room-master",
+              "canvas": {
+                "width": 1920,
+                "height": 1080
+              },
+              "origin": "top-left"
+            },
+            "support": {
+              "subjectId": "zhuang-sleeping",
+              "contactAnchor": {
+                "x": 0.42,
+                "y": 0.69
+              },
+              "contactZone": [
+                [
+                  0.16,
+                  0.57
+                ],
+                [
+                  0.67,
+                  0.57
+                ],
+                [
+                  0.67,
+                  0.84
+                ],
+                [
+                  0.16,
+                  0.84
+                ]
+              ],
+              "occlusionZone": [
+                [
+                  0.13,
+                  0.72
+                ],
+                [
+                  0.7,
+                  0.72
+                ],
+                [
+                  0.7,
+                  0.87
+                ],
+                [
+                  0.13,
+                  0.87
+                ]
+              ],
+              "layering": "subject-front"
+            },
+            "children": [
+              {
+                "id": "sleeping-couch",
+                "kind": "asset",
+                "assetRole": "environment",
+                "slot": "support-rear",
+                "src": "projects/zhuang-zhou-meng-die/assets/registered/reality-room-support-rear.png",
+                "z": 0,
+                "registrationId": "reality-room-registration",
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "opacity": 1
+                    },
+                    {
+                      "at": 1,
+                      "opacity": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "zhuang-sleeping",
+                "kind": "asset",
+                "assetRole": "character",
+                "slot": "subject",
+                "src": "projects/zhuang-zhou-meng-die/assets/registered/zhuang-sleeping-registered.png",
+                "z": 1,
+                "registrationId": "reality-room-registration",
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "opacity": 1
+                    },
+                    {
+                      "at": 1,
+                      "opacity": 1
+                    }
+                  ],
+                  "idle": {
+                    "preset": "breathe",
+                    "intensity": 0.18,
+                    "cycleSeconds": 3.8
+                  }
+                }
+              },
+              {
+                "id": "sleeping-couch-front",
+                "kind": "asset",
+                "assetRole": "environment",
+                "slot": "support-front",
+                "src": "projects/zhuang-zhou-meng-die/assets/registered/reality-room-support-front.png",
+                "z": 2,
+                "registrationId": "reality-room-registration",
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "opacity": 1
+                    },
+                    {
+                      "at": 1,
+                      "opacity": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "ink-mist",
+            "kind": "shape",
+            "shape": "ellipse",
+            "style": {
+              "fill": "rgba(56,79,83,.16)",
+              "stroke": "rgba(0,0,0,0)",
+              "strokeWidth": 0,
+              "radius": 0
+            },
+            "z": 2,
+            "transform": {
+              "x": 0.72,
+              "y": 0.3,
+              "width": 0.34,
+              "height": 0.22,
+              "anchorX": 0.5,
+              "anchorY": 0.5
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": -0.02,
+                  "opacity": 0.12
+                },
+                {
+                  "at": 1,
+                  "x": 0.02,
+                  "opacity": 0.28,
+                  "ease": "ease-in-out"
+                }
+              ],
+              "idle": {
+                "preset": "drift",
+                "intensity": 0.25,
+                "cycleSeconds": 4.2
+              }
+            }
+          },
+          {
+            "id": "butterfly-shadow",
+            "kind": "asset",
+            "assetRole": "decorative",
+            "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-open.png",
+            "z": 3,
+            "visibility": {
+              "initial": "hidden"
+            },
+            "transform": {
+              "x": 0.72,
+              "y": 0.3,
+              "width": 0.13,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "opacity": 0.42
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "y": 0.02
+                },
+                {
+                  "at": 1,
+                  "y": -0.01,
+                  "ease": "ease-out"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "camera": {
+        "preset": "push",
+        "intensity": 0.45
+      },
+      "narration": {
+        "src": "projects/zhuang-zhou-meng-die/audio/narration/scene-01.mp3",
+        "startSeconds": 0.35,
+        "durationSeconds": 12.144,
+        "text": "战国时，庄周在静夜里安然睡去。月光落在窗纸与竹影上，一枚淡淡的蝶影从梦意中浮起。"
+      },
+      "subtitles": [
+        {
+          "fromSeconds": 0.36666666666666664,
+          "toSeconds": 5.033333333333333,
+          "text": "战国时，庄周在静夜里安然睡去。"
+        },
+        {
+          "fromSeconds": 5.1,
+          "toSeconds": 12.533333333333333,
+          "text": "月光落在窗纸与竹影上，一枚淡淡的蝶影从梦意中浮起。"
+        }
+      ],
+      "events": [
+        {
+          "id": "s1-event-establish",
+          "beatId": "s1-establish-sleep",
+          "at": 0.06,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 0.8
+          },
+          "proofTimeId": "s1-proof-establish"
+        },
+        {
+          "id": "s1-event-dream",
+          "beatId": "s1-breath-into-dream",
+          "at": 0.42,
+          "targetId": "ink-mist",
+          "visual": {
+            "kind": "emphasis",
+            "action": "lift",
+            "durationSeconds": 1.3,
+            "intensity": 0.35
+          },
+          "proofTimeId": "s1-proof-dream"
+        },
+        {
+          "id": "s1-event-butterfly",
+          "beatId": "s1-butterfly-omen",
+          "at": 0.78,
+          "targetId": "butterfly-shadow",
+          "visual": {
+            "kind": "visibility",
+            "action": "show",
+            "transition": "fade-scale",
+            "durationSeconds": 0.6
+          },
+          "proofTimeId": "s1-proof-final"
+        }
+      ]
+    },
+    {
+      "id": "scene-02",
+      "label": "翩然化蝶",
+      "eyebrow": "庄周梦蝶",
+      "tailSeconds": 1.2,
+      "appearance": {
+        "background": "#D8D2C3",
+        "paperTexture": {
+          "visible": true,
+          "opacity": 0.22,
+          "blendMode": "multiply"
+        },
+        "chapter": {
+          "visible": true,
+          "variant": "paper-tab"
+        },
+        "subtitles": {
+          "variant": "boxed"
+        }
+      },
+      "motion": {
+        "blueprint": "transformation-tableau",
+        "intensity": 0.9,
+        "seed": 2402,
+        "proofTimes": [
+          {
+            "id": "s2-proof-folded",
+            "at": 0.15,
+            "label": "收翅节拍",
+            "kind": "establish",
+            "assertions": [
+              "收翅切图轮廓完整",
+              "传统宣纸蝴蝶身份稳定"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-folded"
+              }
+            ]
+          },
+          {
+            "id": "s2-proof-open",
+            "at": 0.33,
+            "label": "展翅节拍",
+            "kind": "action",
+            "assertions": [
+              "展开双翅的切图清晰",
+              "飞行位移与切图循环同时成立"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-open"
+              }
+            ]
+          },
+          {
+            "id": "s2-proof-up",
+            "at": 0.65,
+            "label": "上举节拍",
+            "kind": "peak",
+            "assertions": [
+              "双翅上举形成明确振翅峰值",
+              "翅缘和触角没有跳位"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-up"
+              }
+            ]
+          },
+          {
+            "id": "s2-proof-final",
+            "at": 0.825,
+            "label": "平展节拍",
+            "kind": "final",
+            "assertions": [
+              "平展切图属于持续循环而非长时间静止",
+              "画面留白仍足以承接下一幕"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "hover-level"
+              }
+            ]
+          }
+        ]
+      },
+      "composition": {
+        "coordinateSpace": {
+          "width": 1920,
+          "height": 1080
+        },
+        "nodes": [
+          {
+            "id": "dream-flight-background",
+            "kind": "asset",
+            "assetRole": "background",
+            "src": "projects/zhuang-zhou-meng-die/assets/plates/dream-flight.png",
+            "z": 0,
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": -0.006
+                },
+                {
+                  "at": 1,
+                  "x": 0.006,
+                  "ease": "ease-in-out"
+                }
+              ]
+            }
+          },
+          {
+            "id": "dream-butterfly",
+            "kind": "state-sequence",
+            "assetRole": "character",
+            "poseFamilyId": "butterfly-flight-states",
+            "registration": {
+              "id": "butterfly-flight-registration",
+              "sourceMasterAssetId": "butterfly-flight-master",
+              "canvas": {
+                "width": 1024,
+                "height": 1024
+              },
+              "origin": "top-left"
+            },
+            "states": [
+              {
+                "id": "wings-folded",
+                "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-folded.png",
+                "at": 0
+              },
+              {
+                "id": "wings-open",
+                "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-open.png",
+                "at": 0.25
+              },
+              {
+                "id": "wings-up",
+                "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-up.png",
+                "at": 0.5
+              },
+              {
+                "id": "hover-level",
+                "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-hover-level.png",
+                "at": 0.75
+              }
+            ],
+            "playback": {
+              "mode": "loop",
+              "cycles": 7
+            },
+            "transition": {
+              "type": "cut",
+              "durationSeconds": 0
+            },
+            "z": 2,
+            "transform": {
+              "x": 0.52,
+              "y": 0.48,
+              "width": 0.32,
+              "anchorX": 0.5,
+              "anchorY": 0.5
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "x": -0.08,
+                  "y": 0.03
+                },
+                {
+                  "at": 0.5,
+                  "x": 0,
+                  "y": -0.04,
+                  "ease": "ease-in-out"
+                },
+                {
+                  "at": 1,
+                  "x": 0.08,
+                  "y": 0,
+                  "ease": "ease-in-out"
+                }
+              ],
+              "idle": {
+                "preset": "float",
+                "intensity": 0.2,
+                "cycleSeconds": 2.8
+              }
+            }
+          },
+          {
+            "id": "flight-arc",
+            "kind": "shape",
+            "shape": "ellipse",
+            "style": {
+              "fill": "rgba(0,0,0,0)",
+              "stroke": "rgba(58,82,83,.22)",
+              "strokeWidth": 5,
+              "radius": 0
+            },
+            "z": 1,
+            "transform": {
+              "x": 0.52,
+              "y": 0.53,
+              "width": 0.52,
+              "height": 0.28,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "rotation": -9
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "opacity": 0.1
+                },
+                {
+                  "at": 1,
+                  "opacity": 0.35,
+                  "ease": "ease-out"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "camera": {
+        "preset": "pan-right",
+        "intensity": 0.42
+      },
+      "narration": {
+        "src": "projects/zhuang-zhou-meng-die/audio/narration/scene-02.mp3",
+        "startSeconds": 0.55,
+        "durationSeconds": 13.608,
+        "text": "梦中，他化作一只蝴蝶，翩然飞舞，轻快自在。它只知道眼前的风与花，竟不知自己原是庄周。"
+      },
+      "subtitles": [
+        {
+          "fromSeconds": 0.5666666666666667,
+          "toSeconds": 7.366666666666666,
+          "text": "梦中，他化作一只蝴蝶，翩然飞舞，轻快自在。"
+        },
+        {
+          "fromSeconds": 7.433333333333334,
+          "toSeconds": 14.2,
+          "text": "它只知道眼前的风与花，竟不知自己原是庄周。"
+        }
+      ],
+      "events": [
+        {
+          "id": "s2-event-folded",
+          "beatId": "s2-butterfly-folded",
+          "at": 0,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 2.2
+          },
+          "proofTimeId": "s2-proof-folded"
+        },
+        {
+          "id": "s2-event-open",
+          "beatId": "s2-wings-open",
+          "at": 0.25,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 1.4
+          },
+          "proofTimeId": "s2-proof-open"
+        },
+        {
+          "id": "s2-event-up",
+          "beatId": "s2-wings-up",
+          "at": 0.5,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 2.3
+          },
+          "proofTimeId": "s2-proof-up"
+        },
+        {
+          "id": "s2-event-hover",
+          "beatId": "s2-hover-level",
+          "at": 0.75,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 1.2
+          },
+          "proofTimeId": "s2-proof-final"
+        }
+      ]
+    },
+    {
+      "id": "scene-03",
+      "label": "梦中忘我",
+      "eyebrow": "庄周梦蝶",
+      "tailSeconds": 1.2,
+      "appearance": {
+        "background": "#D8D2C3",
+        "paperTexture": {
+          "visible": true,
+          "opacity": 0.22,
+          "blendMode": "multiply"
+        },
+        "chapter": {
+          "visible": true,
+          "variant": "paper-tab"
+        },
+        "subtitles": {
+          "variant": "boxed"
+        }
+      },
+      "motion": {
+        "blueprint": "map-journey",
+        "intensity": 0.85,
+        "seed": 2403,
+        "proofTimes": [
+          {
+            "id": "s3-proof-folded-flight",
+            "at": 0.13,
+            "label": "收翅飞行",
+            "kind": "establish",
+            "assertions": [
+              "飞行中的收翅状态完整可辨",
+              "蝴蝶位于所有花层之上"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-folded"
+              }
+            ]
+          },
+          {
+            "id": "s3-proof-open-flight",
+            "at": 0.25,
+            "label": "展翅飞行",
+            "kind": "action",
+            "assertions": [
+              "展开翅态与位移同步",
+              "翅膀未被花瓣遮挡"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-open"
+              }
+            ]
+          },
+          {
+            "id": "s3-proof-up-flight",
+            "at": 0.381,
+            "label": "上举飞行",
+            "kind": "action",
+            "assertions": [
+              "上举翅态保持身份一致",
+              "注册中心没有跳动"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-up"
+              }
+            ]
+          },
+          {
+            "id": "s3-proof-level-flight",
+            "at": 0.55,
+            "label": "落花前平展",
+            "kind": "peak",
+            "assertions": [
+              "平展翅态在落花前可见",
+              "主体轮廓始终位于花层上方"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "hover-level"
+              }
+            ]
+          },
+          {
+            "id": "s3-proof-settle",
+            "at": 0.62,
+            "label": "落花定格",
+            "kind": "peak",
+            "assertions": [
+              "蝴蝶足部与花面形成可信接触",
+              "落花后固定为收翅切图且不再循环"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-folded"
+              }
+            ]
+          },
+          {
+            "id": "s3-proof-final",
+            "at": 0.91,
+            "label": "梦中忘我",
+            "kind": "final",
+            "assertions": [
+              "蝴蝶仍稳定停在花上",
+              "结尾主体没有被花瓣遮挡"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-folded"
+              }
+            ]
+          }
+        ]
+      },
+      "composition": {
+        "coordinateSpace": {
+          "width": 1920,
+          "height": 1080
+        },
+        "nodes": [
+          {
+            "id": "flower-landing-rig",
+            "kind": "group",
+            "pattern": "supported-subject",
+            "z": 0,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "opacity": 1
+                },
+                {
+                  "at": 1,
+                  "opacity": 1
+                }
+              ]
+            },
+            "registration": {
+              "id": "flower-journey-registration",
+              "sourceMasterAssetId": "flower-journey-master",
+              "canvas": {
+                "width": 1920,
+                "height": 1080
+              },
+              "origin": "top-left"
+            },
+            "support": {
+              "subjectId": "dream-butterfly",
+              "contactAnchor": {
+                "x": 0.7,
+                "y": 0.66
+              },
+              "contactZone": [
+                [
+                  0.58,
+                  0.57
+                ],
+                [
+                  0.82,
+                  0.57
+                ],
+                [
+                  0.85,
+                  0.76
+                ],
+                [
+                  0.55,
+                  0.76
+                ]
+              ],
+              "occlusionZone": [
+                [
+                  0.56,
+                  0.65
+                ],
+                [
+                  0.86,
+                  0.65
+                ],
+                [
+                  0.86,
+                  0.78
+                ],
+                [
+                  0.56,
+                  0.78
+                ]
+              ],
+              "detachProofTimeIds": [
+                "s3-proof-folded-flight",
+                "s3-proof-open-flight",
+                "s3-proof-up-flight",
+                "s3-proof-level-flight"
+              ],
+              "layering": "subject-front"
+            },
+            "children": [
+              {
+                "id": "paper-flower",
+                "kind": "asset",
+                "assetRole": "environment",
+                "slot": "support-rear",
+                "src": "projects/zhuang-zhou-meng-die/assets/registered/flower-journey-support-rear.png",
+                "z": 0,
+                "registrationId": "flower-journey-registration",
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "opacity": 1
+                    },
+                    {
+                      "at": 1,
+                      "opacity": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "dream-butterfly",
+                "kind": "state-sequence",
+                "assetRole": "character",
+                "slot": "subject",
+                "poseFamilyId": "butterfly-flight-states",
+                "registration": {
+                  "id": "flower-journey-registration",
+                  "sourceMasterAssetId": "flower-journey-master",
+                  "canvas": {
+                    "width": 1920,
+                    "height": 1080
+                  },
+                  "origin": "top-left"
+                },
+                "states": [
+                  {
+                    "id": "wings-folded",
+                    "src": "projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-wings-folded.png",
+                    "at": 0
+                  },
+                  {
+                    "id": "wings-open",
+                    "src": "projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-wings-open.png",
+                    "at": 0.18
+                  },
+                  {
+                    "id": "wings-up",
+                    "src": "projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-wings-up.png",
+                    "at": 0.36
+                  },
+                  {
+                    "id": "hover-level",
+                    "src": "projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-hover-level.png",
+                    "at": 0.54
+                  }
+                ],
+                "playback": {
+                  "mode": "loop",
+                  "cycles": 5,
+                  "activeUntil": 0.56,
+                  "holdStateId": "wings-folded"
+                },
+                "transition": {
+                  "type": "cut",
+                  "durationSeconds": 0
+                },
+                "z": 2,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": -0.32,
+                      "y": -0.2
+                    },
+                    {
+                      "at": 0.56,
+                      "x": 0,
+                      "y": 0,
+                      "ease": "ease-in-out"
+                    },
+                    {
+                      "at": 1,
+                      "x": 0,
+                      "y": 0,
+                      "ease": "ease-out"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "paper-flower-front",
+                "kind": "asset",
+                "assetRole": "environment",
+                "slot": "support-front",
+                "src": "projects/zhuang-zhou-meng-die/assets/registered/flower-journey-support-front.png",
+                "z": 3,
+                "registrationId": "flower-journey-registration",
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "opacity": 1
+                    },
+                    {
+                      "at": 1,
+                      "opacity": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "foreground-petals",
+                "kind": "shape",
+                "shape": "ellipse",
+                "style": {
+                  "fill": "rgba(178,146,60,.24)",
+                  "stroke": "rgba(0,0,0,0)",
+                  "strokeWidth": 0,
+                  "radius": 0
+                },
+                "z": -15,
+                "transform": {
+                  "x": 0.28,
+                  "y": 0.26,
+                  "width": 0.07,
+                  "height": 0.035,
+                  "anchorX": 0.5,
+                  "anchorY": 0.5,
+                  "rotation": -20
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "x": -0.04,
+                      "y": -0.04,
+                      "rotation": -20
+                    },
+                    {
+                      "at": 1,
+                      "x": 0.08,
+                      "y": 0.12,
+                      "rotation": 35,
+                      "ease": "ease-in-out"
+                    }
+                  ],
+                  "idle": {
+                    "preset": "drift",
+                    "intensity": 0.3,
+                    "cycleSeconds": 3.4
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "camera": {
+        "preset": "pull",
+        "intensity": 0.35
+      },
+      "narration": {
+        "src": "projects/zhuang-zhou-meng-die/audio/narration/scene-03.mp3",
+        "startSeconds": 0.45,
+        "durationSeconds": 12.192,
+        "text": "蝴蝶穿过花间，随风而行，又轻轻落在纸花之上。梦里的欢欣如此真切，庄周的姓名与身份都被忘却。"
+      },
+      "subtitles": [
+        {
+          "fromSeconds": 0.4666666666666667,
+          "toSeconds": 6.4,
+          "text": "蝴蝶穿过花间，随风而行，又轻轻落在纸花之上。"
+        },
+        {
+          "fromSeconds": 6.466666666666667,
+          "toSeconds": 12.666666666666666,
+          "text": "梦里的欢欣如此真切，庄周的姓名与身份都被忘却。"
+        }
+      ],
+      "events": [
+        {
+          "id": "s3-event-folded-flight",
+          "beatId": "s3-glide-through-flowers",
+          "at": 0,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 2.2
+          },
+          "proofTimeId": "s3-proof-folded-flight"
+        },
+        {
+          "id": "s3-event-open-flight",
+          "beatId": "s3-flight-open",
+          "at": 0.18,
+          "targetId": "dream-butterfly",
+          "visual": {
+            "kind": "emphasis",
+            "action": "lift",
+            "durationSeconds": 1.2,
+            "intensity": 0.18
+          },
+          "proofTimeId": "s3-proof-open-flight"
+        },
+        {
+          "id": "s3-event-up-flight",
+          "beatId": "s3-flight-up",
+          "at": 0.36,
+          "targetId": "dream-butterfly",
+          "visual": {
+            "kind": "emphasis",
+            "action": "lift",
+            "durationSeconds": 0.6,
+            "intensity": 0.16
+          },
+          "proofTimeId": "s3-proof-up-flight"
+        },
+        {
+          "id": "s3-event-level-flight",
+          "beatId": "s3-flight-level",
+          "at": 0.54,
+          "targetId": "dream-butterfly",
+          "visual": {
+            "kind": "emphasis",
+            "action": "settle",
+            "durationSeconds": 0.4,
+            "intensity": 0.12
+          },
+          "proofTimeId": "s3-proof-level-flight"
+        },
+        {
+          "id": "s3-event-settle",
+          "beatId": "s3-settle-on-flower",
+          "at": 0.56,
+          "targetId": "dream-butterfly",
+          "visual": {
+            "kind": "emphasis",
+            "action": "settle",
+            "durationSeconds": 1.1,
+            "intensity": 0.35
+          },
+          "proofTimeId": "s3-proof-settle"
+        },
+        {
+          "id": "s3-event-forget",
+          "beatId": "s3-forget-zhuang",
+          "at": 0.86,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 0.9
+          },
+          "proofTimeId": "s3-proof-final"
+        }
+      ]
+    },
+    {
+      "id": "scene-04",
+      "label": "醒后辨问",
+      "eyebrow": "庄周梦蝶",
+      "tailSeconds": 0.55,
+      "appearance": {
+        "background": "#D8D2C3",
+        "paperTexture": {
+          "visible": true,
+          "opacity": 0.24,
+          "blendMode": "multiply"
+        },
+        "chapter": {
+          "visible": true,
+          "variant": "paper-tab"
+        },
+        "subtitles": {
+          "variant": "boxed"
+        }
+      },
+      "motion": {
+        "blueprint": "discovery-wipe",
+        "intensity": 0.72,
+        "seed": 2404,
+        "proofTimes": [
+          {
+            "id": "s4-proof-reclining",
+            "at": 0.12,
+            "label": "初醒",
+            "kind": "establish",
+            "assertions": [
+              "庄周身份与第一幕一致",
+              "睁眼状态和卧榻空间可辨"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "zhuang-awake",
+                "stateId": "reclining-awake"
+              }
+            ]
+          },
+          {
+            "id": "s4-proof-sitting",
+            "at": 0.52,
+            "label": "坐起看手",
+            "kind": "action",
+            "assertions": [
+              "庄周坐起姿态完整",
+              "双手与衣袖没有错误融合",
+              "蝶影只作短暂梦境余痕"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "zhuang-awake",
+                "stateId": "sitting-hands"
+              }
+            ]
+          },
+          {
+            "id": "s4-proof-final",
+            "at": 0.9,
+            "label": "庄蝶之问",
+            "kind": "final",
+            "assertions": [
+              "庄周沉思姿态完整稳定",
+              "问号为可编辑图形并清晰可读",
+              "蝶影与庄周分处月轮两侧而非写实同框"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "zhuang-awake",
+                "stateId": "seated-questioning"
+              }
+            ]
+          }
+        ]
+      },
+      "composition": {
+        "coordinateSpace": {
+          "width": 1920,
+          "height": 1080
+        },
+        "nodes": [
+          {
+            "id": "reality-room-background",
+            "kind": "asset",
+            "assetRole": "background",
+            "src": "projects/zhuang-zhou-meng-die/assets/plates/reality-room-empty.png",
+            "z": 0,
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "opacity": 1
+                },
+                {
+                  "at": 1,
+                  "opacity": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "zhuang-awake",
+            "kind": "state-sequence",
+            "assetRole": "character",
+            "poseFamilyId": "zhuang-awakening-states",
+            "registration": {
+              "id": "zhuang-awakening-registration",
+              "sourceMasterAssetId": "zhuang-awakening-master",
+              "canvas": {
+                "width": 1024,
+                "height": 1024
+              },
+              "origin": "top-left"
+            },
+            "states": [
+              {
+                "id": "reclining-awake",
+                "src": "projects/zhuang-zhou-meng-die/assets/characters/zhuang-awakening-states-reclining-awake.png",
+                "at": 0
+              },
+              {
+                "id": "sitting-hands",
+                "src": "projects/zhuang-zhou-meng-die/assets/characters/zhuang-awakening-states-sitting-hands.png",
+                "at": 0.46
+              },
+              {
+                "id": "seated-questioning",
+                "src": "projects/zhuang-zhou-meng-die/assets/characters/zhuang-awakening-states-seated-questioning.png",
+                "at": 0.82
+              }
+            ],
+            "playback": {
+              "mode": "once",
+              "cycles": 1
+            },
+            "transition": {
+              "type": "crossfade",
+              "durationSeconds": 0.16
+            },
+            "z": 2,
+            "transform": {
+              "x": 0.43,
+              "y": 0.62,
+              "width": 0.48,
+              "anchorX": 0.5,
+              "anchorY": 0.5
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "opacity": 1
+                },
+                {
+                  "at": 1,
+                  "opacity": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "dream-residue",
+            "kind": "asset",
+            "assetRole": "decorative",
+            "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-hover-level.png",
+            "z": 1,
+            "transform": {
+              "x": 0.73,
+              "y": 0.28,
+              "width": 0.12,
+              "anchorX": 0.5,
+              "anchorY": 0.5,
+              "opacity": 0.18
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "opacity": 0.28
+                },
+                {
+                  "at": 0.7,
+                  "opacity": 0.08,
+                  "ease": "ease-out"
+                },
+                {
+                  "at": 1,
+                  "opacity": 0
+                }
+              ]
+            }
+          },
+          {
+            "id": "question-mark",
+            "kind": "text",
+            "text": "？",
+            "style": {
+              "color": "#24343B",
+              "fontSize": 118,
+              "fontWeight": 600,
+              "lineHeight": 1,
+              "align": "center",
+              "fontFamily": "STKaiti, Kaiti SC, serif"
+            },
+            "z": 3,
+            "transform": {
+              "x": 0.73,
+              "y": 0.28,
+              "width": 0.12,
+              "height": 0.18,
+              "anchorX": 0.5,
+              "anchorY": 0.5
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "y": 0.04,
+                  "opacity": 0
+                },
+                {
+                  "at": 0.82,
+                  "y": 0.02,
+                  "opacity": 0,
+                  "ease": "hold"
+                },
+                {
+                  "at": 0.9,
+                  "y": 0,
+                  "opacity": 1,
+                  "ease": "ease-out"
+                },
+                {
+                  "at": 1,
+                  "y": -0.01,
+                  "opacity": 1
+                }
+              ],
+              "idle": {
+                "preset": "float",
+                "intensity": 0.12,
+                "cycleSeconds": 3.2
+              }
+            }
+          }
+        ]
+      },
+      "camera": {
+        "preset": "static",
+        "intensity": 0
+      },
+      "narration": {
+        "src": "projects/zhuang-zhou-meng-die/audio/narration/scene-04.mp3",
+        "startSeconds": 0.65,
+        "durationSeconds": 15.144,
+        "text": "忽然，他醒来了，分明仍是庄周。可那场梦太清楚，他低头看着双手，不禁疑惑：究竟是庄周梦成了蝴蝶，还是蝴蝶正梦见庄周？"
+      },
+      "subtitles": [
+        {
+          "fromSeconds": 0.6666666666666666,
+          "toSeconds": 4.566666666666666,
+          "text": "忽然，他醒来了，分明仍是庄周。"
+        },
+        {
+          "fromSeconds": 4.633333333333334,
+          "toSeconds": 6.666666666666667,
+          "text": "可那场梦太清楚，"
+        },
+        {
+          "fromSeconds": 6.733333333333333,
+          "toSeconds": 8.766666666666667,
+          "text": "他低头看着双手，"
+        },
+        {
+          "fromSeconds": 8.833333333333334,
+          "toSeconds": 10.166666666666666,
+          "text": "不禁疑惑："
+        },
+        {
+          "fromSeconds": 10.233333333333333,
+          "toSeconds": 12.966666666666667,
+          "text": "究竟是庄周梦成了蝴蝶，"
+        },
+        {
+          "fromSeconds": 13.033333333333333,
+          "toSeconds": 15.833333333333334,
+          "text": "还是蝴蝶正梦见庄周？"
+        }
+      ],
+      "events": [
+        {
+          "id": "s4-event-reclining",
+          "beatId": "s4-reclining-awake",
+          "at": 0,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 2.1
+          },
+          "proofTimeId": "s4-proof-reclining"
+        },
+        {
+          "id": "s4-event-sitting",
+          "beatId": "s4-sit-up",
+          "at": 0.46,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 1.2
+          },
+          "proofTimeId": "s4-proof-sitting"
+        },
+        {
+          "id": "s4-event-question",
+          "beatId": "s4-questioning",
+          "at": 0.82,
+          "targetId": "question-mark",
+          "visual": {
+            "kind": "emphasis",
+            "action": "settle",
+            "durationSeconds": 1.4,
+            "intensity": 0.28
+          },
+          "proofTimeId": "s4-proof-final"
+        }
+      ]
+    },
+    {
+      "id": "scene-05",
+      "label": "物化余韵",
+      "eyebrow": "庄周梦蝶",
+      "tailSeconds": 0.658,
+      "appearance": {
+        "background": "#D8D2C3",
+        "paperTexture": {
+          "visible": true,
+          "opacity": 0.24,
+          "blendMode": "multiply"
+        },
+        "chapter": {
+          "visible": true,
+          "variant": "paper-tab"
+        },
+        "subtitles": {
+          "variant": "hidden"
+        }
+      },
+      "motion": {
+        "blueprint": "quiet-lockup",
+        "intensity": 0.7,
+        "seed": 2417,
+        "proofTimes": [
+          {
+            "id": "s5-proof-establish",
+            "at": 0.13,
+            "label": "庄蝶与提问同现",
+            "kind": "establish",
+            "assertions": [
+              "提问文字从第五幕开场即清晰可读",
+              "庄周与蝴蝶各自完整可辨"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-folded"
+              }
+            ]
+          },
+          {
+            "id": "s5-proof-circle",
+            "at": 0.285,
+            "label": "墨圆呼吸与展翅",
+            "kind": "action",
+            "assertions": [
+              "墨圆持续呼吸但不遮断主体",
+              "蝴蝶展开双翅并保持传统宣纸风格"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-open"
+              }
+            ]
+          },
+          {
+            "id": "s5-proof-question",
+            "at": 0.57,
+            "label": "开放之问持续可读",
+            "kind": "peak",
+            "assertions": [
+              "提问文字持续准确可读",
+              "蝴蝶上举翅态属于循环动画"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "wings-up"
+              }
+            ]
+          },
+          {
+            "id": "s5-proof-final",
+            "at": 0.845,
+            "label": "物化余韵",
+            "kind": "final",
+            "assertions": [
+              "最终构图稳定完整且没有长时间圆圈独显",
+              "开放问题没有被替换成单一教训"
+            ],
+            "stateAssertions": [
+              {
+                "nodeId": "dream-butterfly",
+                "stateId": "hover-level"
+              }
+            ]
+          }
+        ]
+      },
+      "composition": {
+        "coordinateSpace": {
+          "width": 1920,
+          "height": 1080
+        },
+        "nodes": [
+          {
+            "id": "final-lockup",
+            "kind": "group",
+            "pattern": "free",
+            "z": 1,
+            "coordinateSpace": {
+              "width": 1920,
+              "height": 1080
+            },
+            "transform": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1,
+              "anchorX": 0,
+              "anchorY": 0
+            },
+            "motion": {
+              "keyframes": [
+                {
+                  "at": 0,
+                  "opacity": 1
+                },
+                {
+                  "at": 1,
+                  "opacity": 1
+                }
+              ]
+            },
+            "children": [
+              {
+                "id": "zhuang-style-background-clean",
+                "kind": "asset",
+                "assetRole": "background",
+                "src": "projects/zhuang-zhou-meng-die/assets/style/zhuang-style-background-clean.png",
+                "z": 0,
+                "transform": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1,
+                  "height": 1,
+                  "anchorX": 0,
+                  "anchorY": 0
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "opacity": 1
+                    },
+                    {
+                      "at": 1,
+                      "opacity": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "dream-butterfly",
+                "kind": "state-sequence",
+                "assetRole": "character",
+                "poseFamilyId": "butterfly-flight-states",
+                "registration": {
+                  "id": "butterfly-flight-registration",
+                  "sourceMasterAssetId": "butterfly-flight-master",
+                  "canvas": {
+                    "width": 1024,
+                    "height": 1024
+                  },
+                  "origin": "top-left"
+                },
+                "states": [
+                  {
+                    "id": "wings-folded",
+                    "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-folded.png",
+                    "at": 0
+                  },
+                  {
+                    "id": "wings-open",
+                    "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-open.png",
+                    "at": 0.25
+                  },
+                  {
+                    "id": "wings-up",
+                    "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-up.png",
+                    "at": 0.5
+                  },
+                  {
+                    "id": "hover-level",
+                    "src": "projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-hover-level.png",
+                    "at": 0.75
+                  }
+                ],
+                "playback": {
+                  "mode": "loop",
+                  "cycles": 8
+                },
+                "transition": {
+                  "type": "cut",
+                  "durationSeconds": 0
+                },
+                "z": 1,
+                "transform": {
+                  "x": 0.82,
+                  "y": 0.49,
+                  "width": 0.27,
+                  "anchorX": 0.5,
+                  "anchorY": 0.5
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "y": 0
+                    },
+                    {
+                      "at": 1,
+                      "y": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "transformation-circle",
+                "kind": "shape",
+                "shape": "ellipse",
+                "style": {
+                  "fill": "rgba(0,0,0,0)",
+                  "stroke": "rgba(36,52,59,.64)",
+                  "strokeWidth": 8,
+                  "radius": 0
+                },
+                "z": 2,
+                "transform": {
+                  "x": 0.5,
+                  "y": 0.46,
+                  "width": 0.36,
+                  "height": 0.58,
+                  "anchorX": 0.5,
+                  "anchorY": 0.5
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "opacity": 0.62
+                    },
+                    {
+                      "at": 1,
+                      "opacity": 0.62
+                    }
+                  ],
+                  "idle": {
+                    "preset": "breathe",
+                    "intensity": 0.22,
+                    "cycleSeconds": 2.8
+                  }
+                }
+              },
+              {
+                "id": "open-question-text",
+                "kind": "text",
+                "text": "是庄周梦蝶，\n还是蝶梦庄周？",
+                "style": {
+                  "color": "#24343B",
+                  "fontSize": 54,
+                  "fontWeight": 600,
+                  "lineHeight": 1.35,
+                  "align": "center",
+                  "letterSpacing": 2,
+                  "fontFamily": "STKaiti, Kaiti SC, serif"
+                },
+                "z": 3,
+                "transform": {
+                  "x": 0.5,
+                  "y": 0.48,
+                  "width": 0.42,
+                  "height": 0.24,
+                  "anchorX": 0.5,
+                  "anchorY": 0.5
+                },
+                "motion": {
+                  "keyframes": [
+                    {
+                      "at": 0,
+                      "y": 0,
+                      "opacity": 1
+                    },
+                    {
+                      "at": 0.08,
+                      "y": -0.006,
+                      "opacity": 1,
+                      "ease": "ease-out"
+                    },
+                    {
+                      "at": 1,
+                      "y": 0,
+                      "opacity": 1,
+                      "ease": "ease-in-out"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "camera": {
+        "preset": "static",
+        "intensity": 0
+      },
+      "narration": {
+        "src": "projects/zhuang-zhou-meng-die/audio/narration/scene-05.mp3",
+        "startSeconds": 0.55,
+        "durationSeconds": 12.792,
+        "text": "庄周与蝴蝶，哪一个是梦，哪一个是醒？《庄子》没有给出单一答案，只留下物我流转、彼此变化的开阔余韵。"
+      },
+      "subtitles": [
+        {
+          "fromSeconds": 0.5666666666666667,
+          "toSeconds": 5.166666666666667,
+          "text": "庄周与蝴蝶，哪一个是梦，哪一个是醒？"
+        },
+        {
+          "fromSeconds": 5.233333333333333,
+          "toSeconds": 8.433333333333334,
+          "text": "《庄子》没有给出单一答案，"
+        },
+        {
+          "fromSeconds": 8.5,
+          "toSeconds": 10.533333333333333,
+          "text": "只留下物我流转、"
+        },
+        {
+          "fromSeconds": 10.6,
+          "toSeconds": 13.366666666666667,
+          "text": "彼此变化的开阔余韵。"
+        }
+      ],
+      "events": [
+        {
+          "id": "s5-event-establish",
+          "beatId": "s5-zhuang-butterfly-tableau",
+          "at": 0,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 2
+          },
+          "proofTimeId": "s5-proof-establish"
+        },
+        {
+          "id": "s5-event-question",
+          "beatId": "s5-zhuang-butterfly-tableau",
+          "at": 0,
+          "targetId": "open-question-text",
+          "visual": {
+            "kind": "emphasis",
+            "action": "settle",
+            "durationSeconds": 2,
+            "intensity": 0.16
+          },
+          "proofTimeId": "s5-proof-establish"
+        },
+        {
+          "id": "s5-event-circle",
+          "beatId": "s5-ink-circle-draw",
+          "at": 0.25,
+          "targetId": "transformation-circle",
+          "visual": {
+            "kind": "emphasis",
+            "action": "pulse",
+            "durationSeconds": 1.2,
+            "intensity": 0.18
+          },
+          "proofTimeId": "s5-proof-circle"
+        },
+        {
+          "id": "s5-event-wings-up",
+          "beatId": "s5-butterfly-wings-up",
+          "at": 0.5,
+          "targetId": "dream-butterfly",
+          "visual": {
+            "kind": "emphasis",
+            "action": "lift",
+            "durationSeconds": 1.2,
+            "intensity": 0.14
+          },
+          "proofTimeId": "s5-proof-question"
+        },
+        {
+          "id": "s5-event-final",
+          "beatId": "s5-quiet-hold",
+          "at": 0.75,
+          "targetId": "scene",
+          "visual": {
+            "kind": "hold",
+            "durationSeconds": 1.5
+          },
+          "proofTimeId": "s5-proof-final"
+        }
+      ]
+    }
+  ],
+  "sceneTransitions": [
+    {
+      "id": "scene-01-to-scene-02",
+      "fromSceneId": "scene-01",
+      "toSceneId": "scene-02",
+      "intent": "focus-reveal",
+      "rationale": "月轮后的蝶影成为新主体，纸面虹膜收拢后再展开，可把注意力从安睡的庄周集中到梦中蝴蝶。",
+      "type": "paper-iris",
+      "durationSeconds": 0.55
+    },
+    {
+      "id": "scene-02-to-scene-03",
+      "fromSceneId": "scene-02",
+      "toSceneId": "scene-03",
+      "intent": "continuity",
+      "rationale": "蝴蝶的飞行动作和视线方向持续进入花间，纸片平移保持同一梦境中的运动连续性。",
+      "type": "paper-slide",
+      "durationSeconds": 0.45,
+      "direction": "right-to-left"
+    },
+    {
+      "id": "scene-03-to-scene-04",
+      "fromSceneId": "scene-03",
+      "toSceneId": "scene-04",
+      "intent": "chapter-reset",
+      "rationale": "从忘我的蝴蝶视角骤然返回卧榻现实，需要完全不透明的纸页合拢与开启来划清梦醒章节。",
+      "type": "paper-shutters",
+      "durationSeconds": 0.65
+    },
+    {
+      "id": "scene-04-to-scene-05",
+      "fromSceneId": "scene-04",
+      "toSceneId": "scene-05",
+      "intent": "focus-reveal",
+      "rationale": "庄周的疑问成为最终主题，纸面虹膜将人物场景收束为庄周、蝴蝶与墨圆的哲思图式。",
+      "type": "paper-iris",
+      "durationSeconds": 0.55
+    }
+  ]
+}

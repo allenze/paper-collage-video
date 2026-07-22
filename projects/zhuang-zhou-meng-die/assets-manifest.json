@@ -1,0 +1,2146 @@
+{
+  "$schema": "../../schemas/assets-manifest.schema.json",
+  "schemaVersion": 3,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assets": [
+    {
+      "assetId": "style-voice-audition",
+      "capability": "voice",
+      "file": "public/projects/zhuang-zhou-meng-die/audio/style-audition.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "69b2ba83dc1e5e01854d59ddaaea6468481edb590f7bed1e7b1ca68cd4a9600a",
+      "reusedFrom": null,
+      "sha256": "bbf5be54320ee61dfdd736dbd7af2c5823ed1b0f1cea3fc75284105f9d427070",
+      "sizeBytes": 54765,
+      "media": {
+        "durationSeconds": 6.84,
+        "codec": "mp3",
+        "sampleRate": 24000,
+        "channels": 1
+      },
+      "recordedAt": "2026-07-22T12:32:59.887Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "style-voice-audition",
+        "capability": "voice",
+        "output": "public/projects/zhuang-zhou-meng-die/audio/style-audition.mp3",
+        "text": "庄周梦为蝴蝶，翩然飞舞，竟不知自己原是庄周。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；吐字清楚，句尾留一点思考余韵，不过度庄严或玄虚"
+        }
+      },
+      "compositionBinding": null,
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "zhuang-style-background-clean",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/style/zhuang-style-background-clean.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": null,
+      "attemptId": "img-a0de8f70-4a10-4a60-a5d2-9fbb8be792d8",
+      "requestFingerprint": "3e405059966bf8eeac281e1216b5e4cee7414bbd3d7cf49d56d6725693885a7b",
+      "reusedFrom": "attempt:img-a0de8f70-4a10-4a60-a5d2-9fbb8be792d8",
+      "sha256": "efbc162a8e576c68091490181598a7b59e8c17c77eff9089d71b528d6e33d23e",
+      "sizeBytes": 4121633,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-22T12:59:57.516Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "zhuang-style-background-clean",
+        "capability": "image",
+        "output": "public/projects/zhuang-zhou-meng-die/assets/style/zhuang-style-background-clean.png",
+        "prompt": "Edit the approved style master: remove only the right-side butterfly and reconstruct the xuan-paper background; preserve Zhuang Zhou and the rest of the composition exactly.",
+        "compositionBinding": {
+          "sceneId": "scene-05",
+          "nodeId": "zhuang-style-background-clean",
+          "pattern": "free",
+          "outputRole": "style-background-plate",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "provider-edit",
+            "parentAssetId": "zhuang-butterfly-style-master"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "zhuang-background-topology"
+          ]
+        },
+        "quality": {
+          "kind": "style-sample",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "style-consistent",
+            "subject-complete",
+            "edge-clean",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-05",
+        "nodeId": "zhuang-style-background-clean",
+        "pattern": "free",
+        "outputRole": "style-background-plate",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "provider-edit",
+          "parentAssetId": "zhuang-butterfly-style-master"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "zhuang-background-topology"
+        ]
+      },
+      "familyFingerprint": "3fc08b2808fcfaf16032f041739c8c3dc158789606126356820d351623759413"
+    },
+    {
+      "assetId": "butterfly-flight-sheet-v3",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/source/butterfly-flight-sheet-v3.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "6480c9427bec0723456097661e6cc6ca4220520e8c81efafa0ee1d8edba270ba",
+      "reusedFrom": null,
+      "sha256": "f497a1b92ecb907c3cb139ea37d5b6dd2d057e20d62a36c21e24f97507c184ab",
+      "sizeBytes": 3978524,
+      "media": {
+        "width": 2048,
+        "height": 2048,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-22T13:04:19.882Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "butterfly-flight-sheet-v3",
+        "capability": "image",
+        "output": "public/projects/zhuang-zhou-meng-die/assets/characters/source/butterfly-flight-sheet-v3.png",
+        "prompt": "Regenerate the complete 2x2 registered traditional xuan-paper butterfly family on a perfectly flat uniform #ff00ff key background. Preserve one identity, one body anchor and four requested wing states; no checkerboard, texture, shadow, divider or labels in the background.",
+        "compositionBinding": {
+          "sceneId": "scene-05",
+          "nodeId": "dream-butterfly",
+          "pattern": "state-sequence",
+          "registrationId": "butterfly-flight-registration",
+          "sourceMasterAssetId": "butterfly-flight-master",
+          "outputRole": "registered-state-sheet",
+          "canvas": {
+            "width": 2048,
+            "height": 2048
+          },
+          "derivation": {
+            "method": "provider-generation",
+            "parentAssetId": "butterfly-flight-sheet-v2"
+          }
+        },
+        "stateSheetBinding": {
+          "poseFamilyId": "butterfly-flight-states",
+          "registrationId": "butterfly-flight-registration",
+          "sourceMasterAssetId": "butterfly-flight-master",
+          "layout": {
+            "columns": 2,
+            "rows": 2
+          },
+          "states": [
+            {
+              "stateId": "wings-folded",
+              "row": 0,
+              "column": 0
+            },
+            {
+              "stateId": "wings-open",
+              "row": 0,
+              "column": 1
+            },
+            {
+              "stateId": "wings-up",
+              "row": 1,
+              "column": 0
+            },
+            {
+              "stateId": "hover-level",
+              "row": 1,
+              "column": 1
+            }
+          ],
+          "recoveryPolicy": {
+            "strategy": "preserve-sheet-context",
+            "localDeterministicFixFirst": true,
+            "isolatedCellGeneration": "forbidden",
+            "fallback": "full-sheet-regeneration"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "butterfly-flight-family-topology"
+          ],
+          "generationFamily": {
+            "familyId": "butterfly-flight-states",
+            "memberIds": [
+              "wings-folded",
+              "wings-open",
+              "wings-up",
+              "hover-level"
+            ],
+            "referenceAssetIds": []
+          }
+        },
+        "quality": {
+          "kind": "character-sheet",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "subject-complete",
+            "identity-family-consistent",
+            "cell-separation",
+            "background-uniform",
+            "style-consistent",
+            "edge-clean",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "reference-conformant"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-05",
+        "nodeId": "dream-butterfly",
+        "pattern": "state-sequence",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master",
+        "outputRole": "registered-state-sheet",
+        "canvas": {
+          "width": 2048,
+          "height": 2048
+        },
+        "derivation": {
+          "method": "provider-generation",
+          "parentAssetId": "butterfly-flight-sheet-v2"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master",
+        "layout": {
+          "columns": 2,
+          "rows": 2
+        },
+        "states": [
+          {
+            "stateId": "wings-folded",
+            "row": 0,
+            "column": 0
+          },
+          {
+            "stateId": "wings-open",
+            "row": 0,
+            "column": 1
+          },
+          {
+            "stateId": "wings-up",
+            "row": 1,
+            "column": 0
+          },
+          {
+            "stateId": "hover-level",
+            "row": 1,
+            "column": 1
+          }
+        ],
+        "recoveryPolicy": {
+          "strategy": "preserve-sheet-context",
+          "localDeterministicFixFirst": true,
+          "isolatedCellGeneration": "forbidden",
+          "fallback": "full-sheet-regeneration"
+        }
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": []
+        }
+      },
+      "familyFingerprint": "3d4752d4255e3f1eafd7a11937dfe4b81dee503b3efd2b3b2e47e290aaaf6b4b"
+    },
+    {
+      "assetId": "reality-room-empty",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/plates/reality-room-empty.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": "exec-a8cc2205-4286-4acf-a483-6aae707b10e3",
+      "attemptId": "img-035cffd3-b971-4f02-a9e9-591de5f74fca",
+      "requestFingerprint": "bc488fc2a0a8c48e0a3ee5e42941f56c255ca8467d93d2b6acde4d4d4925f892",
+      "reusedFrom": null,
+      "sha256": "81b4467434bcc3668592b05cc4f15e93fb21a9981373ad41ab16e42952f6dbf1",
+      "sizeBytes": 4960088,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-22T13:34:16.114Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "reality-room-empty",
+        "capability": "image",
+        "output": "public/projects/zhuang-zhou-meng-die/assets/plates/reality-room-empty.png",
+        "prompt": "Use case: illustration-story background plate. Create a 1920x1080 empty ancient Chinese night chamber for 《庄周梦蝶》 in the exact approved handcrafted xuan-paper collage language: moon-white handmade paper, visible fibers, torn layered edges, restrained dark-teal and warm-umber ink wash, shallow paper shadows, calm pre-Qin atmosphere. Show a low wooden sleeping couch spanning the lower-left to center, a round moon visible through a simple paper lattice window in the upper-right, and sparse bamboo shadows on the wall. The couch must be completely empty and unobstructed so a separate registered Zhuang Zhou character layer can lie on it later. Preserve generous quiet space above the couch, keep the bottom 18 percent visually calm for subtitles, and keep the composition readable at 16:9. No person, human silhouette, butterfly, insect, animal, text, Chinese character, punctuation, seal, watermark, logo, modern object, ornate palace decoration, photorealism, glossy 3D rendering, frame or border.",
+        "compositionBinding": {
+          "sceneId": "scene-01",
+          "nodeId": "sleeping-couch",
+          "pattern": "supported-subject",
+          "registrationId": "reality-room-registration",
+          "sourceMasterAssetId": "reality-room-master",
+          "outputRole": "environment-plate",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "provider-generation",
+            "parentAssetId": "zhuang-style-background-clean"
+          }
+        },
+        "stateSheetBinding": null,
+        "semanticBinding": {
+          "riskClass": "decorative",
+          "contractIds": []
+        },
+        "quality": {
+          "kind": "environment",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "safe-area-clear",
+            "style-consistent",
+            "background-leak-free",
+            "reference-conformant"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "sleeping-couch",
+        "pattern": "supported-subject",
+        "registrationId": "reality-room-registration",
+        "sourceMasterAssetId": "reality-room-master",
+        "outputRole": "environment-plate",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "provider-generation",
+          "parentAssetId": "zhuang-style-background-clean"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": "1ec8bd83f5321bd374d705cfcde410d47cdca3f646f3096a1ff4b6e7cef70256"
+    },
+    {
+      "assetId": "dream-flight",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/plates/dream-flight.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": "exec-d6e3372a-8ff6-4dce-b5ba-255b7a63fbd7",
+      "attemptId": "img-2e13f0b5-dea7-4c93-b909-6ab1c9d77bb7",
+      "requestFingerprint": "262ab2aa889030d77adf21af0f4c2c710b8711e8a708ef1a8946509f46070be1",
+      "reusedFrom": null,
+      "sha256": "10363968ab536a726369b390000465ee85072545150e15c43db2c186894a6cb8",
+      "sizeBytes": 3993003,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-22T13:36:51.559Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "dream-flight",
+        "capability": "image",
+        "output": "public/projects/zhuang-zhou-meng-die/assets/plates/dream-flight.png",
+        "prompt": "Use case: illustration-story background plate. Create a 1920x1080 poetic dream-flight environment for 《庄周梦蝶》 in the exact approved handcrafted xuan-paper collage language: layered moon-white handmade paper, visible fibers, torn deckled edges, restrained dark-teal ink clouds, faint warm-umber accents, sparse mineral-blue paper fragments, shallow tactile shadows, quiet Song-Yuan ink-painting sensibility. Form a gentle open flight corridor from lower-left toward upper-right using only abstract paper clouds, soft ink mist and two or three distant torn-paper flower silhouettes. Keep the central 30 to 72 percent broad, pale and uncluttered for a separately animated butterfly; keep the bottom 18 percent calm for subtitles. No butterfly, insect, person, human silhouette, animal, literal trail, arrow, circle, text, Chinese character, punctuation, seal, watermark, logo, modern object, photorealism, glossy 3D rendering, frame or border.",
+        "compositionBinding": {
+          "sceneId": "scene-02",
+          "nodeId": "dream-flight-background",
+          "pattern": "free",
+          "outputRole": "environment-plate",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "provider-generation",
+            "parentAssetId": "zhuang-style-background-clean"
+          }
+        },
+        "stateSheetBinding": null,
+        "semanticBinding": {
+          "riskClass": "decorative",
+          "contractIds": []
+        },
+        "quality": {
+          "kind": "environment",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "safe-area-clear",
+            "style-consistent",
+            "background-leak-free",
+            "reference-conformant"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-02",
+        "nodeId": "dream-flight-background",
+        "pattern": "free",
+        "outputRole": "environment-plate",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "provider-generation",
+          "parentAssetId": "zhuang-style-background-clean"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": "1cdf6f3b400d21105e4ac7c7610e138ce0e34babd79bcba15feb53ff8c69c644"
+    },
+    {
+      "assetId": "dream-flower-journey",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/plates/dream-flower-journey.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": "exec-40f6229b-4ce4-4734-8022-5c8f59b6925b",
+      "attemptId": "img-747c73aa-a133-4827-aa15-9eb3afbcd8b5",
+      "requestFingerprint": "5911886385d052da07a8b8e637aef5564d47ebc2e51a12a38354f8597b0f0c11",
+      "reusedFrom": null,
+      "sha256": "5a14f5477acb49d4dcc11a9916b99f0739359ddf185a75f6e0fee44a369725c1",
+      "sizeBytes": 3861065,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-22T13:38:47.288Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "dream-flower-journey",
+        "capability": "image",
+        "output": "public/projects/zhuang-zhou-meng-die/assets/plates/dream-flower-journey.png",
+        "prompt": "Use case: illustration-story background and support plate. Create a 1920x1080 flower-journey dreamscape for 《庄周梦蝶》 in the exact approved handcrafted xuan-paper collage language: moon-white handmade paper with visible fibers, torn layered edges, restrained dark-teal and warm-umber ink wash, muted mineral-blue accents, shallow paper shadows, poetic Song-Yuan restraint. Place one large complete layered paper flower with a broad, nearly horizontal landing surface at the lower-right around x 68 percent and y 66 percent; add sparse stems and a few distant flower silhouettes along the lower third, leaving the upper and central flight path pale and open. The landing flower must remain fully visible and able to support a separately animated butterfly without covering its wings or antennae. Keep the bottom 18 percent calm for subtitles. No butterfly, insect, person, human silhouette, animal, text, Chinese character, punctuation, seal, watermark, logo, modern object, photorealism, glossy 3D rendering, frame or border.",
+        "compositionBinding": {
+          "sceneId": "scene-03",
+          "nodeId": "paper-flower",
+          "pattern": "supported-subject",
+          "registrationId": "flower-journey-registration",
+          "sourceMasterAssetId": "flower-journey-master",
+          "outputRole": "environment-support-plate",
+          "canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "derivation": {
+            "method": "provider-generation",
+            "parentAssetId": "zhuang-style-background-clean"
+          }
+        },
+        "stateSheetBinding": null,
+        "semanticBinding": {
+          "riskClass": "decorative",
+          "contractIds": []
+        },
+        "quality": {
+          "kind": "environment",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "safe-area-clear",
+            "style-consistent",
+            "background-leak-free",
+            "reference-conformant"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-03",
+        "nodeId": "paper-flower",
+        "pattern": "supported-subject",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master",
+        "outputRole": "environment-support-plate",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "provider-generation",
+          "parentAssetId": "zhuang-style-background-clean"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": "f53bbef7389fba6176ca60b8c1e3739db4fc743683509bf2f36cdc32d58739c2"
+    },
+    {
+      "assetId": "zhuang-awakening-sheet",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/source/zhuang-awakening-sheet.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": "exec-6180eaef-a043-41e8-86e4-002347aa6fa0",
+      "attemptId": "img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+      "requestFingerprint": "daca7b7067112a3a6469b5b8b8e86ecb758a22cf117e8b4cf5f3afa96f29edae",
+      "reusedFrom": null,
+      "sha256": "dd0fec13f1f90119e9f9be158d23d2d1cf725c5623057070503f24c62d267ad9",
+      "sizeBytes": 4581038,
+      "media": {
+        "width": 2048,
+        "height": 2048,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-22T13:40:41.974Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "zhuang-awakening-sheet",
+        "capability": "image",
+        "output": "public/projects/zhuang-zhou-meng-die/assets/characters/source/zhuang-awakening-sheet.png",
+        "prompt": "Use case: registered character action sheet. Using the approved Zhuang Zhou scholar on the left side of the reference image as the sole identity and style reference, create one complete 2048x2048 2x2 registered state sheet on a perfectly flat, uniform pure #ff00ff chroma-key background. Every cell is exactly 1024x1024 with no gutters, dividers, labels, shadows, texture or gradients in the magenta background. Preserve exactly the same middle-aged ancient Chinese scholar identity, simple dark cloth cap, calm facial features, dark-teal pre-Qin cross-collar robe, warm-umber inner layer, proportions, left-facing three-quarter orientation, handmade xuan-paper fibers, torn paper edges and restrained shallow paper shadow. Keep the figure centered on the same body anchor and entirely inside every cell with ample margin. Top-left: sleeping peacefully in a low reclined pose suitable for lying on a couch, eyes closed, both sleeves and hands complete. Top-right: reclining awake, eyes open, upper torso slightly raised. Bottom-left: sitting up and looking down at both open hands, hands and sleeves clearly separated. Bottom-right: seated upright in quiet questioning thought, gaze lifted slightly, one restrained reflective hand gesture. Only pose and eye state may change; face, cap, robe, palette, scale and identity must not change. No couch, furniture, moon, window, bamboo, butterfly, insect, other person, props, text, Chinese character, punctuation, seal, watermark, logo, checkerboard, transparent-looking pattern, extra limbs, fused fingers, missing hands, cropped cap, photorealism, cartoon style, glossy 3D rendering, frame or border.",
+        "compositionBinding": {
+          "sceneId": "scene-04",
+          "nodeId": "zhuang-awake",
+          "pattern": "state-sequence",
+          "registrationId": "zhuang-awakening-registration",
+          "sourceMasterAssetId": "zhuang-awakening-master",
+          "outputRole": "registered-state-sheet",
+          "canvas": {
+            "width": 2048,
+            "height": 2048
+          },
+          "derivation": {
+            "method": "provider-generation",
+            "parentAssetId": "zhuang-style-background-clean"
+          }
+        },
+        "stateSheetBinding": {
+          "poseFamilyId": "zhuang-awakening-states",
+          "registrationId": "zhuang-awakening-registration",
+          "sourceMasterAssetId": "zhuang-awakening-master",
+          "layout": {
+            "columns": 2,
+            "rows": 2
+          },
+          "states": [
+            {
+              "stateId": "sleeping",
+              "row": 0,
+              "column": 0
+            },
+            {
+              "stateId": "reclining-awake",
+              "row": 0,
+              "column": 1
+            },
+            {
+              "stateId": "sitting-hands",
+              "row": 1,
+              "column": 0
+            },
+            {
+              "stateId": "seated-questioning",
+              "row": 1,
+              "column": 1
+            }
+          ],
+          "recoveryPolicy": {
+            "strategy": "preserve-sheet-context",
+            "localDeterministicFixFirst": true,
+            "isolatedCellGeneration": "forbidden",
+            "fallback": "full-sheet-regeneration"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "zhuang-awakening-identity"
+          ],
+          "generationFamily": {
+            "familyId": "zhuang-awakening-states",
+            "memberIds": [
+              "sleeping",
+              "reclining-awake",
+              "sitting-hands",
+              "seated-questioning"
+            ],
+            "referenceAssetIds": [
+              "zhuang-style-background-clean"
+            ]
+          }
+        },
+        "quality": {
+          "kind": "character-sheet",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "subject-complete",
+            "identity-family-consistent",
+            "cell-separation",
+            "background-uniform",
+            "style-consistent",
+            "edge-clean",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "reference-conformant"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "scene-04",
+        "nodeId": "zhuang-awake",
+        "pattern": "state-sequence",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master",
+        "outputRole": "registered-state-sheet",
+        "canvas": {
+          "width": 2048,
+          "height": 2048
+        },
+        "derivation": {
+          "method": "provider-generation",
+          "parentAssetId": "zhuang-style-background-clean"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": {
+        "poseFamilyId": "zhuang-awakening-states",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master",
+        "layout": {
+          "columns": 2,
+          "rows": 2
+        },
+        "states": [
+          {
+            "stateId": "sleeping",
+            "row": 0,
+            "column": 0
+          },
+          {
+            "stateId": "reclining-awake",
+            "row": 0,
+            "column": 1
+          },
+          {
+            "stateId": "sitting-hands",
+            "row": 1,
+            "column": 0
+          },
+          {
+            "stateId": "seated-questioning",
+            "row": 1,
+            "column": 1
+          }
+        ],
+        "recoveryPolicy": {
+          "strategy": "preserve-sheet-context",
+          "localDeterministicFixFirst": true,
+          "isolatedCellGeneration": "forbidden",
+          "fallback": "full-sheet-regeneration"
+        }
+      },
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "zhuang-awakening-identity"
+        ],
+        "generationFamily": {
+          "familyId": "zhuang-awakening-states",
+          "memberIds": [
+            "sleeping",
+            "reclining-awake",
+            "sitting-hands",
+            "seated-questioning"
+          ],
+          "referenceAssetIds": [
+            "zhuang-style-background-clean"
+          ]
+        }
+      },
+      "familyFingerprint": "a77b3b8c5f112c72607a9115536062ea319f99bccddd8a013c6228ed01c03eb7"
+    },
+    {
+      "assetId": "voice-scene-01",
+      "capability": "voice",
+      "file": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-01.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "0ccde4ce-9e37-472f-9274-09acb0bfa168",
+      "attemptId": null,
+      "requestFingerprint": "631da7caf45776266eca69c9fffd8b064793e7899c4109c94983f01e1d0f7a88",
+      "reusedFrom": null,
+      "sha256": "7a0b378b19e3f4cf720672a1704fc4be7ea53fd26af0b87d7d8eb4ce0bb4aa6e",
+      "sizeBytes": 97197,
+      "media": {
+        "durationSeconds": 12.144,
+        "codec": "mp3",
+        "sampleRate": 24000,
+        "channels": 1
+      },
+      "recordedAt": "2026-07-22T14:00:30.252Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "voice-scene-01",
+        "capability": "voice",
+        "output": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-01.mp3",
+        "text": "战国时，庄周在静夜里安然睡去。月光落在窗纸与竹影上，一枚淡淡的蝶影从梦意中浮起。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；吐字清楚，句尾留一点思考余韵，不过度庄严或玄虚"
+        },
+        "timingBinding": {
+          "sceneId": "scene-01",
+          "maxDurationSeconds": 13.2
+        }
+      },
+      "compositionBinding": null,
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "voice-scene-02",
+      "capability": "voice",
+      "file": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-02.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "bd7b2955-33a2-48d5-b06b-b9831142c067",
+      "attemptId": null,
+      "requestFingerprint": "d1a6a5e6f7bafc0e99e6744710bbc72165ab7e797c79e3e4022149b4adeb0240",
+      "reusedFrom": null,
+      "sha256": "2cc72566721814d02376ef4c37d47e809fbc222312e4389f88d2a23cbdf5f535",
+      "sizeBytes": 108909,
+      "media": {
+        "durationSeconds": 13.608,
+        "codec": "mp3",
+        "sampleRate": 24000,
+        "channels": 1
+      },
+      "recordedAt": "2026-07-22T14:00:30.462Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "voice-scene-02",
+        "capability": "voice",
+        "output": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-02.mp3",
+        "text": "梦中，他化作一只蝴蝶，翩然飞舞，轻快自在。它只知道眼前的风与花，竟不知自己原是庄周。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；梦境段稍轻盈，吐字清楚，句尾留一点思考余韵"
+        },
+        "timingBinding": {
+          "sceneId": "scene-02",
+          "maxDurationSeconds": 15.2
+        }
+      },
+      "compositionBinding": null,
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "voice-scene-03",
+      "capability": "voice",
+      "file": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-03.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "e14e9464-b614-4573-a6df-1ff85b9fd085",
+      "attemptId": null,
+      "requestFingerprint": "9976b2ea455af1042a8ea9570a987c5582fba792679323ed8362618fbd5fb0ff",
+      "reusedFrom": null,
+      "sha256": "af69ae8759f462bdf5cec0f3f3ec8734cf81120b9a4bf23789e80aa0527970ea",
+      "sizeBytes": 97581,
+      "media": {
+        "durationSeconds": 12.192,
+        "codec": "mp3",
+        "sampleRate": 24000,
+        "channels": 1
+      },
+      "recordedAt": "2026-07-22T14:00:30.596Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "voice-scene-03",
+        "capability": "voice",
+        "output": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-03.mp3",
+        "text": "蝴蝶穿过花间，随风而行，又轻轻落在纸花之上。梦里的欢欣如此真切，庄周的姓名与身份都被忘却。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；语气舒展而不拖沓，吐字清楚，句尾留一点思考余韵"
+        },
+        "timingBinding": {
+          "sceneId": "scene-03",
+          "maxDurationSeconds": 14.2
+        }
+      },
+      "compositionBinding": null,
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "voice-scene-04",
+      "capability": "voice",
+      "file": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-04.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "81df4e8a-9216-4a80-91af-ffa7236f1ffa",
+      "attemptId": null,
+      "requestFingerprint": "97e67dad968a98be08560f50d654e291bf682c554c93ee9efff73a88b241f4a9",
+      "reusedFrom": null,
+      "sha256": "63cef004df68ab65f973ea73c6e5c5b1ca4eba85d7e1fa785609f6dee4d04553",
+      "sizeBytes": 121197,
+      "media": {
+        "durationSeconds": 15.144,
+        "codec": "mp3",
+        "sampleRate": 24000,
+        "channels": 1
+      },
+      "recordedAt": "2026-07-22T14:00:30.715Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "voice-scene-04",
+        "capability": "voice",
+        "output": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-04.mp3",
+        "text": "忽然，他醒来了，分明仍是庄周。可那场梦太清楚，他低头看着双手，不禁疑惑：究竟是庄周梦成了蝴蝶，还是蝴蝶正梦见庄周？",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；醒来后略带真切疑惑，问句自然，吐字清楚，不故作玄虚"
+        },
+        "timingBinding": {
+          "sceneId": "scene-04",
+          "maxDurationSeconds": 15.2
+        }
+      },
+      "compositionBinding": null,
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "voice-scene-05",
+      "capability": "voice",
+      "file": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-05.mp3",
+      "provider": "chatcut-doubao",
+      "adapter": "host",
+      "tool": "mcp__chatcut__submit_voice",
+      "model": "seed-tts-2.0",
+      "externalId": "a238f6a3-e71e-4af3-bf6b-dca0b4a592b3",
+      "attemptId": null,
+      "requestFingerprint": "c04980981e32c295f9d7e4d77cd939737e39142279ae85f540f452ca66109cfa",
+      "reusedFrom": null,
+      "sha256": "4d08859c44ad8f3276f8930288a4d8be45628c1c04b96facac2c5b88cfac9160",
+      "sizeBytes": 102381,
+      "media": {
+        "durationSeconds": 12.792,
+        "codec": "mp3",
+        "sampleRate": 24000,
+        "channels": 1
+      },
+      "recordedAt": "2026-07-22T14:00:30.827Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 5,
+        "projectSlug": "zhuang-zhou-meng-die",
+        "assetId": "voice-scene-05",
+        "capability": "voice",
+        "output": "public/projects/zhuang-zhou-meng-die/audio/narration/scene-05.mp3",
+        "text": "庄周与蝴蝶，哪一个是梦，哪一个是醒？《庄子》没有给出单一答案，只留下物我流转、彼此变化的开阔余韵。",
+        "voiceId": "ruyayichen",
+        "model": "seed-tts-2.0",
+        "settings": {
+          "speedRatio": 0.94,
+          "pitch": -1,
+          "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；结尾开放、克制，吐字清楚，最后留出思考余韵"
+        },
+        "timingBinding": {
+          "sceneId": "scene-05",
+          "maxDurationSeconds": 13.2
+        }
+      },
+      "compositionBinding": null,
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": null,
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "butterfly-flight-states-wings-folded",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-folded.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell",
+      "tool": "process-state-sheet",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "4aea3f21b0e0e5640604e26fbbecf00af7f79134817a7de2129f95b9e8f9c529",
+      "reusedFrom": "butterfly-flight-sheet-v3",
+      "sha256": "fc190491fcee9b88c861abec60e63e2a153ee9ce912c70b11712a5d4a3f98b5d",
+      "sizeBytes": 580360,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T14:16:19.993Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-05",
+        "nodeId": "dream-butterfly",
+        "pattern": "state-sequence",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "butterfly-flight-sheet-v3"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-folded",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "sourceSheetAssetId": "butterfly-flight-sheet-v3",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+    },
+    {
+      "assetId": "butterfly-flight-states-wings-open",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-open.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell",
+      "tool": "process-state-sheet",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "82a04f976cb182abf89fad2b96bd61c6db194932e771ce184a87d85fa18ad052",
+      "reusedFrom": "butterfly-flight-sheet-v3",
+      "sha256": "7043c035617b387da73febb280ed968cac76093da1a6d134726eec989d77ede8",
+      "sizeBytes": 983114,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T14:16:19.993Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-05",
+        "nodeId": "dream-butterfly",
+        "pattern": "state-sequence",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "butterfly-flight-sheet-v3"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-open",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "sourceSheetAssetId": "butterfly-flight-sheet-v3",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+    },
+    {
+      "assetId": "butterfly-flight-states-wings-up",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-up.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell",
+      "tool": "process-state-sheet",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "5f52415b22dffee3f39febad088e5acf182521a83c87a0452cca454fcc737368",
+      "reusedFrom": "butterfly-flight-sheet-v3",
+      "sha256": "954428a36080aeff1ce9a2d687a57ad8d706d54b241ca2d01e2434b37110ebf9",
+      "sizeBytes": 902397,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T14:16:19.993Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-05",
+        "nodeId": "dream-butterfly",
+        "pattern": "state-sequence",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "butterfly-flight-sheet-v3"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-up",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "sourceSheetAssetId": "butterfly-flight-sheet-v3",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+    },
+    {
+      "assetId": "butterfly-flight-states-hover-level",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-hover-level.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell",
+      "tool": "process-state-sheet",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "91c204a7cd30e75d95117c9913f6bf76526ef250a90b35f8b86b1b075af84822",
+      "reusedFrom": "butterfly-flight-sheet-v3",
+      "sha256": "ae155152bb882572f5e05ce65a86014b9c9a029852a8fa4075e420d856bff30f",
+      "sizeBytes": 961415,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T14:16:19.993Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-05",
+        "nodeId": "dream-butterfly",
+        "pattern": "state-sequence",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "butterfly-flight-sheet-v3"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "hover-level",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "sourceSheetAssetId": "butterfly-flight-sheet-v3",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+    },
+    {
+      "assetId": "zhuang-awakening-states-sleeping",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/zhuang-awakening-states-sleeping.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell+local-decontamination",
+      "tool": "process-state-sheet + projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+      "requestFingerprint": "41e4422978dd0e44b360b5392dc852b43a77b1d0068ea5f2bc2ce0c49172d148",
+      "reusedFrom": "zhuang-awakening-sheet",
+      "sha256": "226cd2459716efd0c7b727be6a37074db811147981f5be5e897b14aecd18123b",
+      "sizeBytes": 793038,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-04",
+        "nodeId": "zhuang-awake",
+        "pattern": "state-sequence",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "zhuang-awakening-sheet"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "zhuang-awakening-states",
+        "stateId": "sleeping",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "zhuang-awakening-sheet",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "zhuang-awakening-identity"
+        ],
+        "generationFamily": {
+          "familyId": "zhuang-awakening-states",
+          "memberIds": [
+            "sleeping",
+            "reclining-awake",
+            "sitting-hands",
+            "seated-questioning"
+          ],
+          "referenceAssetIds": [
+            "zhuang-style-background-clean"
+          ]
+        }
+      },
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+    },
+    {
+      "assetId": "zhuang-awakening-states-reclining-awake",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/zhuang-awakening-states-reclining-awake.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell+local-decontamination",
+      "tool": "process-state-sheet + projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+      "requestFingerprint": "a376a989837facb3c4facd8eef80bd1ea9eb7c8feefc605b7423b2b5c856245a",
+      "reusedFrom": "zhuang-awakening-sheet",
+      "sha256": "7dcda54a302b9874447d11bf1afceccd2f0a5c18d2bf997f5b9fcfe4bb95647e",
+      "sizeBytes": 899624,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-04",
+        "nodeId": "zhuang-awake",
+        "pattern": "state-sequence",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "zhuang-awakening-sheet"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "zhuang-awakening-states",
+        "stateId": "reclining-awake",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "zhuang-awakening-sheet",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "zhuang-awakening-identity"
+        ],
+        "generationFamily": {
+          "familyId": "zhuang-awakening-states",
+          "memberIds": [
+            "sleeping",
+            "reclining-awake",
+            "sitting-hands",
+            "seated-questioning"
+          ],
+          "referenceAssetIds": [
+            "zhuang-style-background-clean"
+          ]
+        }
+      },
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+    },
+    {
+      "assetId": "zhuang-awakening-states-sitting-hands",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/zhuang-awakening-states-sitting-hands.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell+local-decontamination",
+      "tool": "process-state-sheet + projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+      "requestFingerprint": "cb5c60e840c832fab8f27bff41754b19540e1e001af1863b13d9397be48778d5",
+      "reusedFrom": "zhuang-awakening-sheet",
+      "sha256": "7af43fde0e4cdf9897eb24090e602985f442cf550111de65a0fda836fbfdcc51",
+      "sizeBytes": 949149,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-04",
+        "nodeId": "zhuang-awake",
+        "pattern": "state-sequence",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "zhuang-awakening-sheet"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "zhuang-awakening-states",
+        "stateId": "sitting-hands",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "zhuang-awakening-sheet",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "zhuang-awakening-identity"
+        ],
+        "generationFamily": {
+          "familyId": "zhuang-awakening-states",
+          "memberIds": [
+            "sleeping",
+            "reclining-awake",
+            "sitting-hands",
+            "seated-questioning"
+          ],
+          "referenceAssetIds": [
+            "zhuang-style-background-clean"
+          ]
+        }
+      },
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+    },
+    {
+      "assetId": "zhuang-awakening-states-seated-questioning",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/zhuang-awakening-states-seated-questioning.png",
+      "provider": "local-derivation",
+      "adapter": "registered-sheet-cell+local-decontamination",
+      "tool": "process-state-sheet + projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+      "requestFingerprint": "f05910e34896a5975f0281fbfa928ecc263ca113bccf868a7c16c1673b545ecb",
+      "reusedFrom": "zhuang-awakening-sheet",
+      "sha256": "a96c1bbcbba8f2fae4de2b966ed46552fa89f18cf373686348d11613c8661548",
+      "sizeBytes": 992739,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-04",
+        "nodeId": "zhuang-awake",
+        "pattern": "state-sequence",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "zhuang-awakening-sheet"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "zhuang-awakening-states",
+        "stateId": "seated-questioning",
+        "registrationId": "zhuang-awakening-registration",
+        "sourceMasterAssetId": "zhuang-awakening-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "zhuang-awakening-sheet",
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "zhuang-awakening-identity"
+        ],
+        "generationFamily": {
+          "familyId": "zhuang-awakening-states",
+          "memberIds": [
+            "sleeping",
+            "reclining-awake",
+            "sitting-hands",
+            "seated-questioning"
+          ],
+          "referenceAssetIds": [
+            "zhuang-style-background-clean"
+          ]
+        }
+      },
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+    },
+    {
+      "assetId": "reality-room-support-rear",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/reality-room-support-rear.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-035cffd3-b971-4f02-a9e9-591de5f74fca",
+      "requestFingerprint": "3a81846586cacecb9d857de129ed6dc0c436dd1c90f6e7dfa7e4e46a5ce2814a",
+      "reusedFrom": "reality-room-empty",
+      "sha256": "be27631c36575d7115c3edc719b8dbed93aec74a417173776137324aaaf8a263",
+      "sizeBytes": 4939301,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "sleeping-tableau",
+        "pattern": "supported-subject",
+        "registrationId": "reality-room-registration",
+        "sourceMasterAssetId": "reality-room-master",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "reality-room-empty"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "zhuang-sleeping-registered",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/zhuang-sleeping-registered.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+      "requestFingerprint": "e35126e5d14fe221cc9ee774aa963e860080873a1ddb3459572f3319433d3cf9",
+      "reusedFrom": "zhuang-awakening-states-sleeping",
+      "sha256": "eb9fc667adaa948dc0393556a67856f8bfa54fff0187e9437cb2054e296a8977",
+      "sizeBytes": 660022,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "zhuang-sleeping",
+        "pattern": "supported-subject",
+        "registrationId": "reality-room-registration",
+        "sourceMasterAssetId": "reality-room-master",
+        "outputRole": "subject",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "zhuang-awakening-states-sleeping"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "zhuang-awakening-identity"
+        ],
+        "generationFamily": {
+          "familyId": "zhuang-awakening-states",
+          "memberIds": [
+            "sleeping",
+            "reclining-awake",
+            "sitting-hands",
+            "seated-questioning"
+          ],
+          "referenceAssetIds": [
+            "zhuang-style-background-clean"
+          ]
+        }
+      },
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "reality-room-support-front",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/reality-room-support-front.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-035cffd3-b971-4f02-a9e9-591de5f74fca",
+      "requestFingerprint": "d3e3b1f284e59942b35a391d59219735afd5f2e3a122fc5c4bc7447dea2b19cc",
+      "reusedFrom": "reality-room-empty",
+      "sha256": "34dc1ba9070a5929ede10f210dd1a19db9c47e30af0f261ba9745a7c1afc75c8",
+      "sizeBytes": 759379,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-01",
+        "nodeId": "sleeping-tableau",
+        "pattern": "supported-subject",
+        "registrationId": "reality-room-registration",
+        "sourceMasterAssetId": "reality-room-master",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "reality-room-empty"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "flower-journey-support-rear",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/flower-journey-support-rear.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-747c73aa-a133-4827-aa15-9eb3afbcd8b5",
+      "requestFingerprint": "9aa994f330ef9b07eb845d418ce52d2fbc9e2d6be23770e53e8cd11c3a608ffb",
+      "reusedFrom": "dream-flower-journey",
+      "sha256": "11ce290eb8eddd2a728c942044a2bee37c9b5b77ad68a6528457a2cfa1f61be3",
+      "sizeBytes": 4061109,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-03",
+        "nodeId": "flower-landing-rig",
+        "pattern": "supported-subject",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "dream-flower-journey"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": null
+    },
+    {
+      "assetId": "butterfly-flower-wings-open",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-wings-open.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "a27f8c3cf7334c84414c28d65d1b783188cee2997a68b8c10d01236f585a6296",
+      "reusedFrom": "butterfly-flight-states-wings-open",
+      "sha256": "b5c09e05c702dbe824953d58afd351ea5f7f8eb5f894105c54b82c13ec1a5861",
+      "sizeBytes": 205657,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-03",
+        "nodeId": "dream-butterfly",
+        "pattern": "supported-subject",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "butterfly-flight-states-wings-open"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-open",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "5dcbbd07db769cf15ef6f690c4092ac46c20093b4efd4345a080212968636695"
+    },
+    {
+      "assetId": "butterfly-flower-wings-folded",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-wings-folded.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "5c1700f43e0e0e14fcd842ed7a7e8c07e681db1d9b91991de982c4e536ffab32",
+      "reusedFrom": "butterfly-flight-states-wings-folded",
+      "sha256": "9d0675163dc10238305d8018eea15a11a61d995bf688348d8aa9c4d186e53286",
+      "sizeBytes": 69141,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-03",
+        "nodeId": "dream-butterfly",
+        "pattern": "supported-subject",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "butterfly-flight-states-wings-folded"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-folded",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "2de40cfde581eb9eaf84ad029957605706f8eaa3844519e50b5c651be24b0469"
+    },
+    {
+      "assetId": "butterfly-flower-wings-up",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-wings-up.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "c8ff7adcc5f46f0c14e31794d8f72d96a8da2fd42e9a5f69a276e17732eca160",
+      "reusedFrom": "butterfly-flight-states-wings-up",
+      "sha256": "828bc20a6fc5c6c79fd02b57fb427eb8309beca7968dfaca9d4576fd7b66ee79",
+      "sizeBytes": 169270,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-03",
+        "nodeId": "dream-butterfly",
+        "pattern": "supported-subject",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "butterfly-flight-states-wings-up"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-up",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "c3c51287272e1e46d8f8c1220dadfefbffcd3fd8d60c4bf2fe443a86e98e9eff"
+    },
+    {
+      "assetId": "butterfly-flower-hover-level",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/butterfly-flower-hover-level.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "requestFingerprint": "6a7caed4cebabe6e80e5c02bf51ccfc77146602e012734c8110bd0b5f1746a34",
+      "reusedFrom": "butterfly-flight-states-hover-level",
+      "sha256": "62bc7f15eb55bf62b77d13d64de8dfaf13c6f92814c41b538b8c5956cba3b1e3",
+      "sizeBytes": 196518,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-03",
+        "nodeId": "dream-butterfly",
+        "pattern": "supported-subject",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master",
+        "outputRole": "registered-state",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "butterfly-flight-states-hover-level"
+        }
+      },
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "hover-level",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master"
+      },
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": {
+        "mode": "full-sheet-regeneration",
+        "sourceSheetAssetId": "butterfly-flight-sheet-v2",
+        "targetStateIds": [
+          "wings-folded",
+          "wings-open",
+          "wings-up",
+          "hover-level"
+        ]
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "butterfly-flight-family-topology"
+        ],
+        "generationFamily": {
+          "familyId": "butterfly-flight-states",
+          "memberIds": [
+            "wings-folded",
+            "wings-open",
+            "wings-up",
+            "hover-level"
+          ],
+          "referenceAssetIds": [
+            "zhuang-butterfly-style-master",
+            "butterfly-flight-sheet-v2"
+          ]
+        }
+      },
+      "familyFingerprint": "61ba344cd4829168989b3fb5d8f06ad6301b698afc27fc5a7e53a59d70fba814"
+    },
+    {
+      "assetId": "flower-journey-support-front",
+      "capability": "image",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/registered/flower-journey-support-front.png",
+      "provider": "local-derivation",
+      "adapter": "registered-composite",
+      "tool": "projects/zhuang-zhou-meng-die/build-registered-support.mjs",
+      "model": null,
+      "externalId": null,
+      "attemptId": "img-747c73aa-a133-4827-aa15-9eb3afbcd8b5",
+      "requestFingerprint": "ef06a3ffdfb8ece765b5426f6416de173fec1907d64d3639b17e187550934a70",
+      "reusedFrom": "dream-flower-journey",
+      "sha256": "b1a12a2bf275697acf171084b4630e9bb738ebdb8e1626746644f98bdfcc294b",
+      "sizeBytes": 936621,
+      "media": {
+        "width": 1920,
+        "height": 1080,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-22T15:59:29.037Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "scene-03",
+        "nodeId": "flower-landing-rig",
+        "pattern": "supported-subject",
+        "registrationId": "flower-journey-registration",
+        "sourceMasterAssetId": "flower-journey-master",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1920,
+          "height": 1080
+        },
+        "derivation": {
+          "method": "mask-application",
+          "parentAssetId": "dream-flower-journey"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "decorative",
+        "contractIds": []
+      },
+      "familyFingerprint": null
+    }
+  ]
+}

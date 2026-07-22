@@ -40,9 +40,14 @@ const phaseFor = (id: string, seed: number) => {
   return (value >>> 0) / 0xffffffff * Math.PI * 2;
 };
 
-const slotOrder = (node: CompositionNode) => {
+const slotOrder = (node: CompositionNode, layering: 'between-supports' | 'subject-front' = 'between-supports') => {
   if (node.kind !== 'asset' && node.kind !== 'state-sequence') return node.z;
-  const fixed = {
+  const fixed = layering === 'subject-front' ? {
+    'support-rear': -30,
+    'contact-shadow': -20,
+    'support-front': -10,
+    subject: 0,
+  } : {
     'support-rear': -30,
     'contact-shadow': -20,
     subject: -10,
@@ -172,7 +177,7 @@ const AssetView = ({
   paperEdge: string;
 }) => {
   const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed});
-  const cutout = ['character', 'prop'].includes(node.assetRole) || node.slot?.startsWith('support');
+  const cutout = ['character', 'prop'].includes(node.assetRole);
   return (
     <div
       data-composition-node={node.id}
@@ -381,7 +386,7 @@ const GroupView = ({
       }}
     >
       {[...node.children]
-        .sort((left, right) => slotOrder(left) - slotOrder(right))
+        .sort((left, right) => slotOrder(left, node.support?.layering) - slotOrder(right, node.support?.layering))
         .map((child) => (
           <CompositionNodeView
             key={child.id}
@@ -394,7 +399,7 @@ const GroupView = ({
             events={events}
             durationSeconds={durationSeconds}
             seed={seed}
-            renderZ={node.pattern === 'supported-subject' ? slotOrder(child) : child.z}
+            renderZ={node.pattern === 'supported-subject' ? slotOrder(child, node.support?.layering) : child.z}
             paperEdge={paperEdge}
           />
         ))}
@@ -448,17 +453,17 @@ const Subtitle = ({cues, theme, appearance}: {cues: NormalizedSubtitleCue[]; the
   );
 };
 
-const ChapterLabel = ({eyebrow, label, theme}: Pick<NormalizedProjectScene, 'eyebrow' | 'label'> & {theme: ProjectTheme}) => {
+const ChapterLabel = ({eyebrow, label, theme, variant = 'plain'}: Pick<NormalizedProjectScene, 'eyebrow' | 'label'> & {theme: ProjectTheme; variant?: 'plain' | 'paper-tab'}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const scale = Math.min(width / 1920, height / 1080);
   const enter = spring({frame, fps, config: {damping: 20, stiffness: 90}});
   const opacity = interpolate(frame, [0, Math.round(0.4 * fps), Math.round(3 * fps), Math.round(3.93 * fps)], [0, 1, 1, 0], clamp);
   return (
-    <div style={{position: 'absolute', zIndex: 70, top: 72 * scale, left: 92 * scale, opacity, transform: `translateX(${(1 - enter) * -42}px)`, color: theme.ink, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif')}}>
-      <div style={{fontSize: 22 * scale, letterSpacing: 8 * scale, color: theme.accent}}>{eyebrow}</div>
-      <div style={{marginTop: 10 * scale, fontSize: 51 * scale, fontWeight: 700, letterSpacing: 7 * scale}}>{label}</div>
-      <div style={{width: 270 * scale * enter, height: 4 * scale, marginTop: 13 * scale, background: `linear-gradient(90deg, ${theme.accent}, transparent)`}} />
+    <div style={{position: 'absolute', zIndex: 70, top: 62 * scale, left: 76 * scale, opacity, transform: `translateX(${(1 - enter) * -42}px) rotate(-0.6deg)`, color: theme.ink, padding: variant === 'paper-tab' ? `${18 * scale}px ${28 * scale}px ${20 * scale}px` : 0, background: variant === 'paper-tab' ? 'rgba(247,241,228,.94)' : undefined, border: variant === 'paper-tab' ? `2px solid ${theme.paperEdge}` : undefined, boxShadow: variant === 'paper-tab' ? '0 8px 22px rgba(28,22,15,.24), 0 2px 0 rgba(255,255,255,.65) inset' : undefined, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif')}}>
+      <div style={{fontSize: 24 * scale, fontWeight: 700, letterSpacing: 7 * scale, color: variant === 'paper-tab' ? '#7A5B18' : theme.accent, textShadow: variant === 'paper-tab' ? '0 1px 0 rgba(255,255,255,.8)' : undefined}}>{eyebrow}</div>
+      <div style={{marginTop: 8 * scale, fontSize: 56 * scale, fontWeight: 800, letterSpacing: 6 * scale, textShadow: variant === 'paper-tab' ? '0 1px 0 rgba(255,255,255,.8)' : undefined}}>{label}</div>
+      <div style={{width: 290 * scale * enter, height: 5 * scale, marginTop: 12 * scale, background: `linear-gradient(90deg, ${theme.accent}, transparent)`}} />
     </div>
   );
 };
@@ -509,7 +514,7 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme}: {scene: Nor
         </AbsoluteFill>
         {paperTexture.visible ? <AbsoluteFill style={{opacity: paperTexture.opacity, mixBlendMode: paperTexture.blendMode, backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}
       </AbsoluteFill>
-      {scene.appearance?.chapter?.visible === false ? null : <ChapterLabel eyebrow={scene.eyebrow} label={scene.label} theme={theme} />}
+      {scene.appearance?.chapter?.visible === false ? null : <ChapterLabel eyebrow={scene.eyebrow} label={scene.label} theme={theme} variant={scene.appearance?.chapter?.variant} />}
       <Subtitle cues={scene.subtitles} theme={theme} appearance={scene.appearance?.subtitles} />
       <Sequence from={scene.narrationStartFrame} layout="none"><Audio src={staticFile(scene.narration.src)} volume={narrationVolume} /></Sequence>
       <EventSounds events={scene.events} durationInFrames={scene.durationInFrames} />

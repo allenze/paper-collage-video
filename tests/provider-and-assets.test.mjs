@@ -72,11 +72,25 @@ const writeAndLockStoryboard = async ({slug, projectDirectory, sceneCount, durat
 };
 
 test('preview rendering caps concurrency at available CPU capacity', () => {
-  assert.equal(resolveRenderConcurrency(16), 8);
-  assert.equal(resolveRenderConcurrency(8), 8);
-  assert.equal(resolveRenderConcurrency(4), 4);
-  assert.equal(resolveRenderConcurrency(1), 1);
-  assert.equal(resolveRenderConcurrency(0), 1);
+  assert.equal(resolveRenderConcurrency(16, 8, undefined), 8);
+  assert.equal(resolveRenderConcurrency(8, 8, undefined), 8);
+  assert.equal(resolveRenderConcurrency(4, 8, undefined), 4);
+  assert.equal(resolveRenderConcurrency(1, 8, undefined), 1);
+  assert.equal(resolveRenderConcurrency(0, 8, undefined), 1);
+});
+
+test('preview rendering accepts a bounded explicit concurrency override', () => {
+  assert.equal(resolveRenderConcurrency(16, 8, '1'), 1);
+  assert.equal(resolveRenderConcurrency(16, 8, '4'), 4);
+  assert.equal(resolveRenderConcurrency(16, 8, '12'), 8);
+  assert.throws(
+    () => resolveRenderConcurrency(16, 8, '0'),
+    /positive integer/,
+  );
+  assert.throws(
+    () => resolveRenderConcurrency(16, 8, 'many'),
+    /positive integer/,
+  );
 });
 
 test('generated-image budgets exclude deterministic derivatives and manual SVG assets', () => {

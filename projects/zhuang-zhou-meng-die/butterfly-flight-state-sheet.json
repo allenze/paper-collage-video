@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "sceneId": "scene-05",
+  "nodeId": "dream-butterfly",
+  "poseFamilyId": "butterfly-flight-states",
+  "sourceAssetId": "butterfly-flight-sheet-v3",
+  "input": "public/projects/zhuang-zhou-meng-die/assets/characters/source/butterfly-flight-sheet-v3.png",
+  "outputDirectory": "public/projects/zhuang-zhou-meng-die/assets/characters",
+  "registration": {"id": "butterfly-flight-registration", "sourceMasterAssetId": "butterfly-flight-master"},
+  "layout": {"columns": 2, "rows": 2},
+  "states": [
+    {"id": "wings-folded", "row": 0, "column": 0},
+    {"id": "wings-open", "row": 0, "column": 1},
+    {"id": "wings-up", "row": 1, "column": 0},
+    {"id": "hover-level", "row": 1, "column": 1}
+  ],
+  "keying": {"keyColor": "#ff00ff", "matteErode": 2}
+}

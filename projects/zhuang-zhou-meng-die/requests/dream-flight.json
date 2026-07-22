@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "dream-flight",
+  "capability": "image",
+  "output": "public/projects/zhuang-zhou-meng-die/assets/plates/dream-flight.png",
+  "prompt": "Use case: illustration-story background plate. Create a 1920x1080 poetic dream-flight environment for 《庄周梦蝶》 in the exact approved handcrafted xuan-paper collage language: layered moon-white handmade paper, visible fibers, torn deckled edges, restrained dark-teal ink clouds, faint warm-umber accents, sparse mineral-blue paper fragments, shallow tactile shadows, quiet Song-Yuan ink-painting sensibility. Form a gentle open flight corridor from lower-left toward upper-right using only abstract paper clouds, soft ink mist and two or three distant torn-paper flower silhouettes. Keep the central 30 to 72 percent broad, pale and uncluttered for a separately animated butterfly; keep the bottom 18 percent calm for subtitles. No butterfly, insect, person, human silhouette, animal, literal trail, arrow, circle, text, Chinese character, punctuation, seal, watermark, logo, modern object, photorealism, glossy 3D rendering, frame or border.",
+  "compositionBinding": {
+    "sceneId": "scene-02",
+    "nodeId": "dream-flight-background",
+    "pattern": "free",
+    "outputRole": "environment-plate",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "provider-generation", "parentAssetId": "zhuang-style-background-clean"}
+  },
+  "stateSheetBinding": null,
+  "semanticBinding": {"riskClass": "decorative", "contractIds": []},
+  "quality": {"kind": "environment", "requiredChecks": ["no-text", "no-watermark", "safe-area-clear", "style-consistent", "background-leak-free", "reference-conformant"]}
+}

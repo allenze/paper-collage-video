@@ -65,6 +65,8 @@ npm run project:assets-ready -- <slug>
 
 该命令依次同步真实旁白时长、生成/导入字幕时间、执行音频-only LUFS/真峰预检、核对故事板蓝图/v7 组合/状态序列/关键帧/事件/意图场景交接、核验组合证明指纹、执行资产与组合双质量门并推进到 `preview`。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 渲染半尺寸预览、技术报告、证明时刻联系表和转场联系表；报告列出转场意图/类型、硬切比例和边界采样。视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流并重新混音/封装，任何视觉指纹变化都强制完整渲染。
 
+渲染并发默认按可用 CPU 自动决定并封顶为 8。若完整 Chrome 在多页并发时无响应，可用 `PAPER_COLLAGE_RENDER_CONCURRENCY=1 npm run project:preview -- <slug>`（最终渲染同理）走正式的单路重试路径；该设置只控制同时打开的渲染页数，不改变帧率、画质或成片内容。
+
 ## 4. 预览、修改与正式交付
 
 人查看预览并批准或用自然语言提出修改。修改会回到 `asset-production`，只重做受影响的批次和 hash 失效素材。

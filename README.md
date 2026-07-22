@@ -187,6 +187,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run check` | TypeScript 类型检查 |
 
 `project:preview` 和 `project:render` 都遵循 fail-fast：素材或配置存在错误时不会开始昂贵渲染；警告会写入报告但不阻塞。
+默认渲染并发会按可用 CPU 自动决定（最多 8 路）；若完整 Chrome 或受限环境在多页并发下不稳定，可设置正整数 `PAPER_COLLAGE_RENDER_CONCURRENCY=1`，用同一条命令以单路并发重试。
 
 新项目仍受严格门控：概念/预算/provider 的组合决定未记录时不能生成样张，风格/虚构音色未确认时不能批量生产，预览未获人工批准时不能渲染正式成片。完整动作表见 [docs/workflow.md](docs/workflow.md)。
 

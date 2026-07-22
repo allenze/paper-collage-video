@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "dream-flower-journey",
+  "capability": "image",
+  "output": "public/projects/zhuang-zhou-meng-die/assets/plates/dream-flower-journey.png",
+  "prompt": "Use case: illustration-story background and support plate. Create a 1920x1080 flower-journey dreamscape for 《庄周梦蝶》 in the exact approved handcrafted xuan-paper collage language: moon-white handmade paper with visible fibers, torn layered edges, restrained dark-teal and warm-umber ink wash, muted mineral-blue accents, shallow paper shadows, poetic Song-Yuan restraint. Place one large complete layered paper flower with a broad, nearly horizontal landing surface at the lower-right around x 68 percent and y 66 percent; add sparse stems and a few distant flower silhouettes along the lower third, leaving the upper and central flight path pale and open. The landing flower must remain fully visible and able to support a separately animated butterfly without covering its wings or antennae. Keep the bottom 18 percent calm for subtitles. No butterfly, insect, person, human silhouette, animal, text, Chinese character, punctuation, seal, watermark, logo, modern object, photorealism, glossy 3D rendering, frame or border.",
+  "compositionBinding": {
+    "sceneId": "scene-03",
+    "nodeId": "paper-flower",
+    "pattern": "supported-subject",
+    "registrationId": "flower-journey-registration",
+    "sourceMasterAssetId": "flower-journey-master",
+    "outputRole": "environment-support-plate",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "provider-generation", "parentAssetId": "zhuang-style-background-clean"}
+  },
+  "stateSheetBinding": null,
+  "semanticBinding": {"riskClass": "decorative", "contractIds": []},
+  "quality": {"kind": "environment", "requiredChecks": ["no-text", "no-watermark", "safe-area-clear", "style-consistent", "background-leak-free", "reference-conformant"]}
+}

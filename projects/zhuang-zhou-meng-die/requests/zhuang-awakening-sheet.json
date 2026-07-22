@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "zhuang-awakening-sheet",
+  "capability": "image",
+  "output": "public/projects/zhuang-zhou-meng-die/assets/characters/source/zhuang-awakening-sheet.png",
+  "prompt": "Use case: registered character action sheet. Using the approved Zhuang Zhou scholar on the left side of the reference image as the sole identity and style reference, create one complete 2048x2048 2x2 registered state sheet on a perfectly flat, uniform pure #ff00ff chroma-key background. Every cell is exactly 1024x1024 with no gutters, dividers, labels, shadows, texture or gradients in the magenta background. Preserve exactly the same middle-aged ancient Chinese scholar identity, simple dark cloth cap, calm facial features, dark-teal pre-Qin cross-collar robe, warm-umber inner layer, proportions, left-facing three-quarter orientation, handmade xuan-paper fibers, torn paper edges and restrained shallow paper shadow. Keep the figure centered on the same body anchor and entirely inside every cell with ample margin. Top-left: sleeping peacefully in a low reclined pose suitable for lying on a couch, eyes closed, both sleeves and hands complete. Top-right: reclining awake, eyes open, upper torso slightly raised. Bottom-left: sitting up and looking down at both open hands, hands and sleeves clearly separated. Bottom-right: seated upright in quiet questioning thought, gaze lifted slightly, one restrained reflective hand gesture. Only pose and eye state may change; face, cap, robe, palette, scale and identity must not change. No couch, furniture, moon, window, bamboo, butterfly, insect, other person, props, text, Chinese character, punctuation, seal, watermark, logo, checkerboard, transparent-looking pattern, extra limbs, fused fingers, missing hands, cropped cap, photorealism, cartoon style, glossy 3D rendering, frame or border.",
+  "compositionBinding": {
+    "sceneId": "scene-04",
+    "nodeId": "zhuang-awake",
+    "pattern": "state-sequence",
+    "registrationId": "zhuang-awakening-registration",
+    "sourceMasterAssetId": "zhuang-awakening-master",
+    "outputRole": "registered-state-sheet",
+    "canvas": {"width": 2048, "height": 2048},
+    "derivation": {"method": "provider-generation", "parentAssetId": "zhuang-style-background-clean"}
+  },
+  "stateSheetBinding": {
+    "poseFamilyId": "zhuang-awakening-states",
+    "registrationId": "zhuang-awakening-registration",
+    "sourceMasterAssetId": "zhuang-awakening-master",
+    "layout": {"columns": 2, "rows": 2},
+    "states": [
+      {"stateId": "sleeping", "row": 0, "column": 0},
+      {"stateId": "reclining-awake", "row": 0, "column": 1},
+      {"stateId": "sitting-hands", "row": 1, "column": 0},
+      {"stateId": "seated-questioning", "row": 1, "column": 1}
+    ],
+    "recoveryPolicy": {"strategy": "preserve-sheet-context", "localDeterministicFixFirst": true, "isolatedCellGeneration": "forbidden", "fallback": "full-sheet-regeneration"}
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": ["zhuang-awakening-identity"],
+    "generationFamily": {"familyId": "zhuang-awakening-states", "memberIds": ["sleeping", "reclining-awake", "sitting-hands", "seated-questioning"], "referenceAssetIds": ["zhuang-style-background-clean"]}
+  },
+  "quality": {"kind": "character-sheet", "requiredChecks": ["no-text", "no-watermark", "subject-complete", "identity-family-consistent", "cell-separation", "background-uniform", "style-consistent", "edge-clean", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "reference-conformant"]}
+}

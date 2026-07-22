@@ -284,7 +284,10 @@
         "chapter": {
           "type": "object",
           "required": ["visible"],
-          "properties": {"visible": {"type": "boolean"}},
+          "properties": {
+            "visible": {"type": "boolean"},
+            "variant": {"enum": ["plain", "paper-tab"]}
+          },
           "additionalProperties": false
         },
         "subtitles": {

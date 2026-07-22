@@ -40,7 +40,17 @@ export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const resolveRenderConcurrency = (
   parallelism = availableParallelism(),
   maximum = 8,
-) => Math.max(1, Math.min(maximum, Math.floor(parallelism)));
+  requested = process.env.PAPER_COLLAGE_RENDER_CONCURRENCY,
+) => {
+  if (requested !== undefined && requested !== '') {
+    const parsed = Number(requested);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('PAPER_COLLAGE_RENDER_CONCURRENCY must be a positive integer.');
+    }
+    return Math.min(maximum, parsed);
+  }
+  return Math.max(1, Math.min(maximum, Math.floor(parallelism)));
+};
 
 export const countProviderGeneratedImages = (assets = []) =>
   assets.filter((asset) => {
@@ -540,6 +550,10 @@ export const validateProject = async (project, options = {}) => {
       scene.appearance.paperTexture.opacity > 1 ||
       !['normal', 'multiply', 'screen', 'overlay'].includes(scene.appearance.paperTexture.blendMode)
     )) add('error', 'scene-appearance-texture', 'appearance.paperTexture 无效。', `${sceneLocation}.appearance.paperTexture`);
+    if (scene.appearance?.chapter && (
+      typeof scene.appearance.chapter.visible !== 'boolean' ||
+      (scene.appearance.chapter.variant !== undefined && !['plain', 'paper-tab'].includes(scene.appearance.chapter.variant))
+    )) add('error', 'scene-appearance-chapter', 'appearance.chapter 无效。', `${sceneLocation}.appearance.chapter`);
     if (scene.appearance?.subtitles && !['boxed', 'plain', 'hidden'].includes(scene.appearance.subtitles.variant)) add('error', 'scene-appearance-subtitles', 'appearance.subtitles.variant 无效。', `${sceneLocation}.appearance.subtitles.variant`);
 
     const narrationLocation = `${sceneLocation}.narration`;

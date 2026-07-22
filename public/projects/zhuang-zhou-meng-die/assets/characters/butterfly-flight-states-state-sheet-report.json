@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "poseFamilyId": "butterfly-flight-states",
+  "sourceAssetId": "butterfly-flight-sheet-v3",
+  "sourceSha256": "f497a1b92ecb907c3cb139ea37d5b6dd2d057e20d62a36c21e24f97507c184ab",
+  "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253",
+  "providerImageCalls": 1,
+  "generationMode": "full-sheet-regeneration",
+  "recoverySourceSheetAssetId": "butterfly-flight-sheet-v2",
+  "repairedStateIds": [
+    "wings-folded",
+    "wings-open",
+    "wings-up",
+    "hover-level"
+  ],
+  "preservedContextStateCount": 0,
+  "isolatedCellGenerationUsed": false,
+  "derivedStateCount": 4,
+  "avoidedIndividualCalls": 3,
+  "members": [
+    {
+      "assetId": "butterfly-flight-states-wings-folded",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-folded.png",
+      "sha256": "fc190491fcee9b88c861abec60e63e2a153ee9ce912c70b11712a5d4a3f98b5d",
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-folded",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      }
+    },
+    {
+      "assetId": "butterfly-flight-states-wings-open",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-open.png",
+      "sha256": "7043c035617b387da73febb280ed968cac76093da1a6d134726eec989d77ede8",
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-open",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      }
+    },
+    {
+      "assetId": "butterfly-flight-states-wings-up",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-wings-up.png",
+      "sha256": "954428a36080aeff1ce9a2d687a57ad8d706d54b241ca2d01e2434b37110ebf9",
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "wings-up",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      }
+    },
+    {
+      "assetId": "butterfly-flight-states-hover-level",
+      "file": "public/projects/zhuang-zhou-meng-die/assets/characters/butterfly-flight-states-hover-level.png",
+      "sha256": "ae155152bb882572f5e05ce65a86014b9c9a029852a8fa4075e420d856bff30f",
+      "stateBinding": {
+        "poseFamilyId": "butterfly-flight-states",
+        "stateId": "hover-level",
+        "registrationId": "butterfly-flight-registration",
+        "sourceMasterAssetId": "butterfly-flight-master"
+      }
+    }
+  ],
+  "createdAt": "2026-07-22T14:16:19.993Z"
+}

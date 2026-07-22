@@ -82,6 +82,7 @@ for (const entry of [
   'package-lock.json',
   'providers.local.example.json',
   'providers.json',
+  'remotion.config.ts',
   'requirements.txt',
   'tsconfig.json',
   'schemas',

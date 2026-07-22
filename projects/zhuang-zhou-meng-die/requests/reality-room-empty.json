@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "reality-room-empty",
+  "capability": "image",
+  "output": "public/projects/zhuang-zhou-meng-die/assets/plates/reality-room-empty.png",
+  "prompt": "Use case: illustration-story background plate. Create a 1920x1080 empty ancient Chinese night chamber for 《庄周梦蝶》 in the exact approved handcrafted xuan-paper collage language: moon-white handmade paper, visible fibers, torn layered edges, restrained dark-teal and warm-umber ink wash, shallow paper shadows, calm pre-Qin atmosphere. Show a low wooden sleeping couch spanning the lower-left to center, a round moon visible through a simple paper lattice window in the upper-right, and sparse bamboo shadows on the wall. The couch must be completely empty and unobstructed so a separate registered Zhuang Zhou character layer can lie on it later. Preserve generous quiet space above the couch, keep the bottom 18 percent visually calm for subtitles, and keep the composition readable at 16:9. No person, human silhouette, butterfly, insect, animal, text, Chinese character, punctuation, seal, watermark, logo, modern object, ornate palace decoration, photorealism, glossy 3D rendering, frame or border.",
+  "compositionBinding": {
+    "sceneId": "scene-01",
+    "nodeId": "sleeping-couch",
+    "pattern": "supported-subject",
+    "registrationId": "reality-room-registration",
+    "sourceMasterAssetId": "reality-room-master",
+    "outputRole": "environment-plate",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "provider-generation", "parentAssetId": "zhuang-style-background-clean"}
+  },
+  "stateSheetBinding": null,
+  "semanticBinding": {"riskClass": "decorative", "contractIds": []},
+  "quality": {"kind": "environment", "requiredChecks": ["no-text", "no-watermark", "safe-area-clear", "style-consistent", "background-leak-free", "reference-conformant"]}
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "zhuang-style-background-clean",
+  "capability": "image",
+  "output": "public/projects/zhuang-zhou-meng-die/assets/style/zhuang-style-background-clean.png",
+  "prompt": "Edit the approved style master: remove only the right-side butterfly and reconstruct the xuan-paper background; preserve Zhuang Zhou and the rest of the composition exactly.",
+  "compositionBinding": {
+    "sceneId": "scene-05",
+    "nodeId": "zhuang-style-background-clean",
+    "pattern": "free",
+    "outputRole": "style-background-plate",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "provider-edit", "parentAssetId": "zhuang-butterfly-style-master"}
+  },
+  "semanticBinding": {"riskClass": "topology-critical", "contractIds": ["zhuang-background-topology"]},
+  "quality": {"kind": "style-sample", "requiredChecks": ["no-text", "no-watermark", "style-consistent", "subject-complete", "edge-clean", "silhouette-fidelity", "negative-space-clean", "background-leak-free"]}
+}

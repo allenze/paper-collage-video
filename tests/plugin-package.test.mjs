@@ -149,6 +149,7 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(starterMetrics.summary.aiReview.durationMs, 0);
 
   for (const relative of [
+    'remotion.config.ts',
     'scripts/production-state.mjs',
     'scripts/asset-evidence-lib.mjs',
     'scripts/audio-preflight-lib.mjs',

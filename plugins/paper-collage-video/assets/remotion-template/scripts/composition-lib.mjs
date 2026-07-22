@@ -201,6 +201,14 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       }
       if (!['once', 'loop', 'ping-pong'].includes(node.playback?.mode) || !(Number.isInteger(node.playback?.cycles) && node.playback.cycles > 0)) add('error', 'composition-sequence-playback', 'state-sequence playback 必须声明有效 mode 与正整数 cycles。', `${nodeLocation}.playback`);
       if (node.playback?.mode === 'once' && node.playback.cycles !== 1) add('error', 'composition-sequence-once-cycles', 'once playback 的 cycles 必须为 1。', `${nodeLocation}.playback.cycles`);
+      const segmented = node.playback?.activeUntil !== undefined || node.playback?.holdStateId !== undefined;
+      if (segmented && !(
+        finite(node.playback?.activeUntil) &&
+        node.playback.activeUntil > 0 &&
+        node.playback.activeUntil < 1 &&
+        nonEmpty(node.playback?.holdStateId)
+      )) add('error', 'composition-sequence-segmented-playback', '分段状态序列必须同时声明 0..1 之间的 activeUntil 与 holdStateId。', `${nodeLocation}.playback`);
+      if (segmented && !node.states.some(({id}) => id === node.playback.holdStateId)) add('error', 'composition-sequence-hold-state', `定格状态 ${node.playback?.holdStateId ?? 'none'} 不存在。`, `${nodeLocation}.playback.holdStateId`);
       if (!['cut', 'crossfade'].includes(node.transition?.type) || !(finite(node.transition?.durationSeconds) && node.transition.durationSeconds >= 0)) add('error', 'composition-sequence-transition', 'state-sequence transition 无效。', `${nodeLocation}.transition`);
       if (node.transition?.type === 'cut' && node.transition.durationSeconds !== 0) add('error', 'composition-sequence-cut-duration', 'cut 的 durationSeconds 必须为 0。', `${nodeLocation}.transition.durationSeconds`);
       if (node.transition?.type === 'crossfade' && !(node.transition.durationSeconds > 0)) add('error', 'composition-sequence-crossfade-duration', 'crossfade 的 durationSeconds 必须大于 0。', `${nodeLocation}.transition.durationSeconds`);
@@ -235,6 +243,7 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       if (!node.support) add('error', 'composition-support', 'supported-subject 必须声明 support。', `${nodeLocation}.support`);
       const subject = slots.get('subject');
       if (subject && node.support?.subjectId !== subject.id) add('error', 'composition-support-subject', 'support.subjectId 必须指向 subject slot。', `${nodeLocation}.support.subjectId`);
+      if (node.support?.layering !== undefined && !['between-supports', 'subject-front'].includes(node.support.layering)) add('error', 'composition-support-layering', 'support.layering 必须是 between-supports 或 subject-front。', `${nodeLocation}.support.layering`);
       for (const child of (node.children ?? []).filter((item) => ['asset', 'state-sequence'].includes(item.kind))) {
         const registrationId = child.kind === 'asset' ? child.registrationId : child.registration?.id;
         if (registrationId !== node.registration?.id) add('error', 'composition-registration-member', `耦合成员 ${child.id} 必须共享 registrationId。`, `${nodeLocation}.children`);

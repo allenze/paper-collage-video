@@ -1,15 +1,21 @@
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
 
-export const resolveSequencePhase = ({progress, mode, cycles}) => {
-  const scaled = clamp01(progress) * cycles;
-  if (mode === 'once') return clamp01(progress);
-  if (progress >= 1) return mode === 'ping-pong' ? 0 : 1;
+export const resolveSequencePhase = ({progress, mode, cycles, activeUntil}) => {
+  const activeProgress = activeUntil === undefined
+    ? clamp01(progress)
+    : clamp01(progress / activeUntil);
+  const scaled = activeProgress * cycles;
+  if (mode === 'once') return activeProgress;
+  if (activeProgress >= 1) return mode === 'ping-pong' ? 0 : 1;
   const cycle = scaled - Math.floor(scaled);
   if (mode === 'loop') return cycle;
   return cycle <= 0.5 ? cycle * 2 : (1 - cycle) * 2;
 };
 
 export const resolveSequenceState = ({node, progress}) => {
+  if (node.playback.activeUntil !== undefined && progress >= node.playback.activeUntil) {
+    return node.states.find(({id}) => id === node.playback.holdStateId) ?? null;
+  }
   const phase = resolveSequencePhase({...node.playback, progress});
   const states = [...(node.states ?? [])].sort((left, right) => left.at - right.at);
   let active = states[0] ?? null;

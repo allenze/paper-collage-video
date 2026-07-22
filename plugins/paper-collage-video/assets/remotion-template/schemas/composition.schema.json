@@ -135,7 +135,13 @@
       "required": ["mode", "cycles"],
       "properties": {
         "mode": {"enum": ["once", "loop", "ping-pong"]},
-        "cycles": {"type": "integer", "minimum": 1}
+        "cycles": {"type": "integer", "minimum": 1},
+        "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "holdStateId": {"type": "string", "minLength": 1}
+      },
+      "dependentRequired": {
+        "activeUntil": ["holdStateId"],
+        "holdStateId": ["activeUntil"]
       },
       "additionalProperties": false
     },
@@ -251,6 +257,7 @@
       "required": ["subjectId", "contactAnchor", "contactZone", "occlusionZone"],
       "properties": {
         "subjectId": {"type": "string", "minLength": 1},
+        "layering": {"enum": ["between-supports", "subject-front"]},
         "contactAnchor": {
           "type": "object",
           "required": ["x", "y"],

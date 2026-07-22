@@ -1,0 +1,11 @@
+{
+  "imageModel": "gpt-image via Codex built-in image generation",
+  "assets": [
+    {
+      "assetId": "zhuang-butterfly-style-master",
+      "request": "requests/style-master.json",
+      "purpose": "scene-05 style approval master plate",
+      "status": "ready"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "zhuang-butterfly-style-master",
+  "capability": "image",
+  "output": "public/projects/zhuang-zhou-meng-die/assets/style/zhuang-butterfly-style-master.png",
+  "prompt": "Use case: illustration-story\nAsset type: 1920×1080 Remotion paper-collage style approval master plate\nPrimary request: Create a restrained, poetic Chinese xuan-paper collage tableau for 《庄周梦蝶》. It must show two separate symbolic paper subjects: Zhuang Zhou on the left and one complete butterfly on the right, with a broad clean circular negative-space zone between them for later code-rendered graphics and text.\nScene/backdrop: moon-white handmade xuan paper, subtle visible fibers, torn layered edges, faint dark teal ink wash and sparse mist, understated moonlit atmosphere.\nSubject: left side, a single seated profile silhouette of an ancient Chinese scholar in a loose pre-Qin cross-collar robe and simple cloth cap, calm posture, complete head profile, torso, wide sleeves and both hands; right side, a single elegant butterfly made from gold and mineral-blue paper, complete body, two antennae, two full symmetrical wing pairs with continuous edges.\nStyle/medium: handcrafted cut-paper collage with restrained Song-Yuan ink-painting sensibility, tactile paper fibers, shallow layered shadow, elegant negative space, not photorealistic, not cartoonish.\nComposition/framing: cinematic 16:9; scholar occupies roughly the left 15–34%, butterfly the right 70–86%; keep the central 36–66% clean and quiet; keep the bottom 18% visually calm for subtitle safety.\nLighting/mood: soft moonlit paper shadows, contemplative, quiet, open-ended.\nColor palette: moon white, dark teal, muted warm umber, restrained mineral blue and antique gold only on the butterfly.\nConstraints: keep Zhuang Zhou and butterfly visibly separate; preserve all named silhouette parts and internal negative spaces; no connecting ribbon or literal morph; no extra people, animals, insects, props, flowers, buildings, sun, modern objects, logos or brands.\nAvoid: absolutely no text, letters, Chinese characters, punctuation, seals, stamps, diagrams, circles, arrows, watermark, signature, border, frame, grotesque human-butterfly hybrid, extra limbs, extra wings, missing antennae, broken paper edges across the central negative space.",
+  "compositionBinding": {
+    "sceneId": "scene-05",
+    "nodeId": "zhuang-butterfly-style-master",
+    "pattern": "free",
+    "outputRole": "style-master-plate",
+    "canvas": {"width": 1920, "height": 1080},
+    "derivation": {"method": "provider-generation"}
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": ["final-lockup-silhouette-topology"]
+  },
+  "quality": {
+    "kind": "style-sample",
+    "requiredChecks": [
+      "no-text",
+      "no-watermark",
+      "safe-area-clear",
+      "style-consistent",
+      "subject-complete",
+      "edge-clean",
+      "silhouette-fidelity",
+      "negative-space-clean",
+      "background-leak-free"
+    ]
+  }
+}

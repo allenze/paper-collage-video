@@ -76,6 +76,9 @@ const validate = (node, proofTimes = [{id: 'establish', at: 0.08}, {id: 'action'
 
 test('v5 supported subjects require contact, front occlusion and one carrier motion', () => {
   assert.deepEqual(validate(supportedGroup()).issues, []);
+  const subjectFront = supportedGroup();
+  subjectFront.support.layering = 'subject-front';
+  assert.deepEqual(validate(subjectFront).issues, []);
   const missingFront = supportedGroup();
   missingFront.children = missingFront.children.filter(({slot}) => slot !== 'support-front');
   assert.ok(validate(missingFront).issues.some(({code}) => code === 'composition-support-slot'));
@@ -160,6 +163,40 @@ test('v5 state sequences resolve discrete poses and require proof coverage', () 
   const wrong = structuredClone(proofTimes);
   wrong[1].stateAssertions[0].stateId = 'pointing';
   assert.ok(validate(node, wrong).issues.some(({code}) => code === 'composition-sequence-proof-mismatch'));
+});
+
+test('v5 state sequences can loop during motion and hold a registered contact state', () => {
+  const node = {
+    id: 'butterfly',
+    kind: 'state-sequence',
+    assetRole: 'character',
+    poseFamilyId: 'butterfly-flight',
+    registration: {id: 'butterfly-registration', sourceMasterAssetId: 'butterfly-sheet', canvas: {width: 100, height: 100}, origin: 'top-left'},
+    states: [
+      {id: 'folded', src: 'folded.png', at: 0},
+      {id: 'open', src: 'open.png', at: 0.25},
+      {id: 'up', src: 'up.png', at: 0.5},
+      {id: 'level', src: 'level.png', at: 0.75},
+    ],
+    playback: {mode: 'loop', cycles: 4, activeUntil: 0.6, holdStateId: 'folded'},
+    transition: {type: 'cut', durationSeconds: 0},
+    z: 1,
+    transform: fullTransform(),
+    motion: still(),
+  };
+  assert.equal(resolveSequenceState({node, progress: 0.2}).id, 'open');
+  assert.equal(resolveSequenceState({node, progress: 0.7}).id, 'folded');
+  const proofTimes = [
+    {id: 'folded-flight', at: 0.01, stateAssertions: [{nodeId: 'butterfly', stateId: 'folded'}]},
+    {id: 'open-flight', at: 0.05, stateAssertions: [{nodeId: 'butterfly', stateId: 'open'}]},
+    {id: 'up-flight', at: 0.09, stateAssertions: [{nodeId: 'butterfly', stateId: 'up'}]},
+    {id: 'level-flight', at: 0.13, stateAssertions: [{nodeId: 'butterfly', stateId: 'level'}]},
+    {id: 'landed', at: 0.8, stateAssertions: [{nodeId: 'butterfly', stateId: 'folded'}]},
+  ];
+  assert.deepEqual(validate(node, proofTimes).issues, []);
+  const unknownHold = structuredClone(node);
+  unknownHold.playback.holdStateId = 'missing';
+  assert.ok(validate(unknownHold, proofTimes).issues.some(({code}) => code === 'composition-sequence-hold-state'));
 });
 
 test('v5 text and shape nodes keep explanatory UI editable', () => {

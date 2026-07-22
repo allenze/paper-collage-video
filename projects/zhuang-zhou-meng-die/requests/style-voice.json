@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "style-voice-audition",
+  "capability": "voice",
+  "output": "public/projects/zhuang-zhou-meng-die/audio/style-audition.mp3",
+  "text": "庄周梦为蝴蝶，翩然飞舞，竟不知自己原是庄周。",
+  "voiceId": "ruyayichen",
+  "model": "seed-tts-2.0",
+  "settings": {
+    "speedRatio": 0.94,
+    "pitch": -1,
+    "performancePrompt": "沉静、儒雅、略带诗性，像在月夜讲述中国古典哲思故事；吐字清楚，句尾留一点思考余韵，不过度庄严或玄虚"
+  }
+}

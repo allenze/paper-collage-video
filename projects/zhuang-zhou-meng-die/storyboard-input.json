@@ -1,0 +1,589 @@
+{
+  "$schema": "../../schemas/storyboard-authoring.schema.json",
+  "schemaVersion": 6,
+  "slug": "zhuang-zhou-meng-die",
+  "status": "ready",
+  "arc": "从庄周在月夜入梦，到梦中化蝶、欣然忘我，再骤然醒来追问庄周与蝴蝶的界限，最后以开放的物化意象收束，让观众停留在梦醒、自我与万物流转的哲思中。",
+  "style": {
+    "visualThesis": "宋元水墨意境与手撕宣纸拼贴相融：现实以黛青、月白和克制留白稳定构图，梦境以金蓝蝶翅、墨晕和纤维纸层展开轻盈纵深，人蝶边界通过同源纸片形态与圆形墨迹逐渐互换。",
+    "compositionRules": [
+      "主体始终避开画面下方字幕安全区，关键人蝶剪影保持完整可辨。",
+      "现实场景用窗棂、卧榻和月轮建立稳定横竖结构；梦境用花枝、云纸和弧线飞迹打破结构。",
+      "庄周与蝴蝶不在同一镜头中做写实变身，而以不透明纸张遮罩、同源轮廓和注册状态表达视角转换。",
+      "最终提问以可编辑文字和圆形墨迹呈现，不把哲学概念烘焙进背景图。"
+    ],
+    "motionLanguage": [
+      "现实段落以缓慢推镜、纸纤维呼吸和静止停顿为主。",
+      "梦境段落以成组蝶翅状态、轻微漂移和前中后景视差表现自由。",
+      "梦醒边界使用完全不透明的纸张章节转场，禁止语义场景透明交叉溶解。",
+      "每个主要动作遵循建立、变化、落定的三段节奏，结尾保留克制静止。"
+    ],
+    "layerStrategy": "每幕拆分纸纹远景、墨晕中景、角色或蝴蝶注册主体、花枝或窗棂前景及可编辑图形；卧榻与庄周保持同源接触关系，蝴蝶落花使用支持主体关系，所有派生层维持统一画布与原点。"
+  },
+  "scenes": [
+    {
+      "id": "scene-01",
+      "title": "月夜入梦",
+      "narrativeRole": "建立现实与梦的入口",
+      "message": "庄周在静夜睡去，梦的征兆从现实纸层中悄然浮现。",
+      "blueprint": "layered-reveal",
+      "estimatedDurationSeconds": 14,
+      "beats": [
+        {
+          "id": "s1-establish-sleep",
+          "at": 0.06,
+          "purpose": "建立人物、卧榻与月夜空间",
+          "visual": "庄周安睡在宣纸卧榻上，窗外月轮与竹影分层显现",
+          "audioCue": null,
+          "proofTimeId": "s1-proof-establish",
+          "treatments": [
+            {
+              "id": "s1-zhuang-on-couch",
+              "targetId": "zhuang-sleeping",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "contact-change",
+              "motion": {"kind": "static"},
+              "composition": {
+                "pattern": "supported-subject",
+                "relationship": {
+                  "id": "zhuang-on-couch",
+                  "predicate": "on",
+                  "object": "sleeping-couch",
+                  "proof": "庄周身体与卧榻接触完整，四肢和衣袍没有被床沿错误切断"
+                }
+              },
+              "graphic": null,
+              "semanticRisk": "identity",
+              "proofTimeId": "s1-proof-establish",
+              "rationale": "先用稳定接触关系确认庄周身份和现实空间，避免人物像漂浮纸片。"
+            }
+          ]
+        },
+        {
+          "id": "s1-breath-into-dream",
+          "at": 0.42,
+          "purpose": "让现实空间缓慢滑向梦境",
+          "visual": "镜头轻推，窗边墨雾与竹影像呼吸般漂移",
+          "audioCue": null,
+          "proofTimeId": "s1-proof-dream",
+          "treatments": [
+            {
+              "id": "s1-camera-push",
+              "targetId": "scene-camera",
+              "importance": "supporting",
+              "necessity": "enhancement",
+              "changeClass": "camera-change",
+              "motion": {"kind": "continuous-transform", "preset": "camera"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "s1-proof-dream",
+              "rationale": "缓慢推镜把注意力从卧榻带向窗外，不增加额外角色姿态。"
+            },
+            {
+              "id": "s1-ink-mist-drift",
+              "targetId": "ink-mist",
+              "importance": "ambient",
+              "necessity": "enhancement",
+              "changeClass": "ambient-motion",
+              "motion": {"kind": "continuous-transform", "preset": "drift"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "s1-proof-dream",
+              "rationale": "用轻微墨雾漂移提示梦意，而不让安睡人物做无意义动作。"
+            }
+          ]
+        },
+        {
+          "id": "s1-butterfly-omen",
+          "at": 0.78,
+          "purpose": "显露梦蝶征兆并落定转场前构图",
+          "visual": "一枚金蓝蝶影从月轮纸层后浮起，停在庄周梦境上方",
+          "audioCue": null,
+          "proofTimeId": "s1-proof-final",
+          "treatments": [
+            {
+              "id": "s1-show-butterfly-shadow",
+              "targetId": "butterfly-shadow",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "visibility-change",
+              "motion": {"kind": "visibility-transition", "action": "show", "transition": "fade-scale", "durationSeconds": 0.6},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s1-proof-final",
+              "rationale": "蝶影作为持续可见事件进入，明确连接下一幕，而不是用两张重叠图模拟出现。"
+            }
+          ]
+        }
+      ],
+      "proofTimes": [
+        {"id": "s1-proof-establish", "at": 0.1, "label": "庄周安睡", "kind": "establish", "assertions": ["庄周身份清晰且完整", "庄周稳定躺在卧榻上", "月轮、窗棂和竹影建立现实空间"], "stateAssertions": []},
+        {"id": "s1-proof-dream", "at": 0.5, "label": "梦意渐起", "kind": "action", "assertions": ["推镜仍保持庄周与卧榻接触", "墨雾与竹影只作克制漂移"], "stateAssertions": []},
+        {"id": "s1-proof-final", "at": 0.82, "label": "蝶影浮现", "kind": "final", "assertions": ["金蓝蝶影完整可辨", "蝶影位于梦境上方且不遮挡庄周面部", "转场前构图稳定"], "stateAssertions": []}
+      ]
+    },
+    {
+      "id": "scene-02",
+      "title": "翩然化蝶",
+      "narrativeRole": "完成梦中身份转换",
+      "message": "梦里的庄周成为蝴蝶，轻快飞舞，欣然自得。",
+      "blueprint": "transformation-tableau",
+      "estimatedDurationSeconds": 16,
+      "beats": [
+        {
+          "id": "s2-butterfly-folded",
+          "at": 0,
+          "purpose": "从纸茧般轮廓中建立同一只蝴蝶",
+          "visual": "月白纸层打开，金蓝蝴蝶收翅停在画面中心",
+          "audioCue": null,
+          "proofTimeId": "s2-proof-folded",
+          "treatments": [
+            {
+              "id": "s2-state-folded",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "butterfly-flight-states", "stateId": "wings-folded", "visualChange": "蝴蝶收拢双翅，身体与触角完整居中", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s2-proof-folded",
+              "rationale": "从同一姿态表读取收翅状态，建立可复用的蝴蝶拓扑。"
+            }
+          ]
+        },
+        {
+          "id": "s2-wings-open",
+          "at": 0.4,
+          "purpose": "让蝴蝶展开双翅进入飞行",
+          "visual": "蝴蝶展开金蓝双翅，前景花瓣纸片向两侧退开",
+          "audioCue": null,
+          "proofTimeId": "s2-proof-open",
+          "treatments": [
+            {
+              "id": "s2-state-open",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "butterfly-flight-states", "stateId": "wings-open", "visualChange": "双翅对称展开，翅缘和触角无缺损", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s2-proof-open",
+              "rationale": "真实翅态变化必须来自注册状态，不能用缩放代替展开。"
+            },
+            {
+              "id": "s2-flight-camera",
+              "targetId": "scene-camera",
+              "importance": "supporting",
+              "necessity": "enhancement",
+              "changeClass": "camera-change",
+              "motion": {"kind": "continuous-transform", "preset": "camera"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "s2-proof-open",
+              "rationale": "镜头随蝴蝶轻移，放大梦境自由感而不增加新姿态。"
+            }
+          ]
+        },
+        {
+          "id": "s2-wings-up",
+          "at": 0.7,
+          "purpose": "形成飞行节奏峰值",
+          "visual": "蝴蝶振翅向上掠过撕纸云层，尾部留下一道淡墨弧线",
+          "audioCue": null,
+          "proofTimeId": "s2-proof-up",
+          "treatments": [
+            {
+              "id": "s2-state-up",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "butterfly-flight-states", "stateId": "wings-up", "visualChange": "双翅上举形成振翅峰值，身体方向保持一致", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s2-proof-up",
+              "rationale": "用第三个注册翅态形成动作峰值，维持同一只蝴蝶的身份。"
+            }
+          ]
+        },
+        {
+          "id": "s2-hover-level",
+          "at": 0.88,
+          "purpose": "在自由飞行后形成轻盈停顿",
+          "visual": "蝴蝶双翅平展悬停在开阔留白中，纸云缓慢退远",
+          "audioCue": null,
+          "proofTimeId": "s2-proof-final",
+          "treatments": [
+            {
+              "id": "s2-state-hover",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "butterfly-flight-states", "stateId": "hover-level", "visualChange": "双翅平展并保持完整，形成悬停终态", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s2-proof-final",
+              "rationale": "第四个状态把飞行动作落定，并作为下一幕连续飞行的衔接。"
+            }
+          ]
+        }
+      ],
+      "proofTimes": [
+        {"id": "s2-proof-folded", "at": 0.12, "label": "收翅初现", "kind": "establish", "assertions": ["蝴蝶身体、触角与双翅完整", "金蓝纸纹与后续状态一致"], "stateAssertions": [{"nodeId": "dream-butterfly", "stateId": "wings-folded"}]},
+        {"id": "s2-proof-open", "at": 0.46, "label": "展开双翅", "kind": "action", "assertions": ["双翅展开而没有镜像错位", "主体与纸云层次清晰"], "stateAssertions": [{"nodeId": "dream-butterfly", "stateId": "wings-open"}]},
+        {"id": "s2-proof-up", "at": 0.74, "label": "振翅峰值", "kind": "peak", "assertions": ["双翅上举状态保持同一身份", "淡墨飞行弧线不遮挡主体"], "stateAssertions": [{"nodeId": "dream-butterfly", "stateId": "wings-up"}]},
+        {"id": "s2-proof-final", "at": 0.91, "label": "悬停落定", "kind": "final", "assertions": ["蝴蝶平展悬停且轮廓完整", "画面留白足以承接下一幕"], "stateAssertions": [{"nodeId": "dream-butterfly", "stateId": "hover-level"}]}
+      ]
+    },
+    {
+      "id": "scene-03",
+      "title": "梦中忘我",
+      "narrativeRole": "深化蝴蝶视角与欣然自得",
+      "message": "蝴蝶只知随风穿花，不再知道自己原是庄周。",
+      "blueprint": "map-journey",
+      "estimatedDurationSeconds": 15,
+      "beats": [
+        {
+          "id": "s3-glide-through-flowers",
+          "at": 0,
+          "purpose": "延续飞行并进入花间路径",
+          "visual": "蝴蝶展开双翅掠过层层花枝，淡墨路径从左向右展开",
+          "audioCue": null,
+          "proofTimeId": "s3-proof-glide",
+          "treatments": [
+            {
+              "id": "s3-state-glide",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "butterfly-flight-states", "stateId": "wings-open", "visualChange": "复用双翅展开状态进入花间滑翔", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s3-proof-glide",
+              "rationale": "复用已注册的展开状态延续同一只蝴蝶，避免独立生成新身份。"
+            },
+            {
+              "id": "s3-petals-drift",
+              "targetId": "foreground-petals",
+              "importance": "ambient",
+              "necessity": "enhancement",
+              "changeClass": "ambient-motion",
+              "motion": {"kind": "continuous-transform", "preset": "drift"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "s3-proof-glide",
+              "rationale": "前景花瓣漂移提供视差，让飞行路径可感而不抢主体。"
+            }
+          ]
+        },
+        {
+          "id": "s3-settle-on-flower",
+          "at": 0.56,
+          "purpose": "让蝴蝶从飞行转为停驻",
+          "visual": "蝴蝶收拢双翅，稳稳停在一朵宣纸花上",
+          "audioCue": null,
+          "proofTimeId": "s3-proof-settle",
+          "treatments": [
+            {
+              "id": "s3-state-folded",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "butterfly-flight-states", "stateId": "wings-folded", "visualChange": "复用收翅状态准备落在花面", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s3-proof-settle",
+              "rationale": "停驻动作仍来自同一姿态表，保持翅膀和触角连续。"
+            },
+            {
+              "id": "s3-butterfly-on-flower",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "contact-change",
+              "motion": {"kind": "static"},
+              "composition": {
+                "pattern": "supported-subject",
+                "relationship": {
+                  "id": "butterfly-on-paper-flower",
+                  "predicate": "on",
+                  "object": "paper-flower",
+                  "proof": "蝴蝶足部与花面接触，翅膀、触角和花瓣边缘均未被粗糙遮罩破坏"
+                }
+              },
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s3-proof-settle",
+              "rationale": "落花是本片最高拓扑风险关系，需要同源主画面与完整接触证明。"
+            }
+          ]
+        },
+        {
+          "id": "s3-forget-zhuang",
+          "at": 0.86,
+          "purpose": "表现梦中只知蝴蝶、不知庄周",
+          "visual": "花间留白扩大，远处庄周的墨字痕迹散成纸屑，只剩停驻的蝴蝶",
+          "audioCue": null,
+          "proofTimeId": "s3-proof-final",
+          "treatments": [
+            {
+              "id": "s3-hold-butterfly-on-flower",
+              "targetId": "dream-butterfly",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "contact-change",
+              "motion": {"kind": "static"},
+              "composition": {
+                "pattern": "supported-subject",
+                "relationship": {
+                  "id": "butterfly-on-paper-flower",
+                  "predicate": "on",
+                  "object": "paper-flower",
+                  "proof": "蝴蝶足部与花面接触，翅膀、触角和花瓣边缘均未被粗糙遮罩破坏"
+                }
+              },
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "s3-proof-final",
+              "rationale": "稳定保持蝴蝶落花关系，让旁白中的忘我具有清晰视觉落点。"
+            }
+          ]
+        }
+      ],
+      "proofTimes": [
+        {"id": "s3-proof-glide", "at": 0.13, "label": "花间滑翔", "kind": "establish", "assertions": ["蝴蝶展开状态与上一幕一致", "花枝前中后景没有遮断翅膀"], "stateAssertions": [{"nodeId": "dream-butterfly", "stateId": "wings-open"}]},
+        {"id": "s3-proof-settle", "at": 0.62, "label": "落在花上", "kind": "peak", "assertions": ["蝴蝶足部与花面形成可信接触", "蝴蝶轮廓、触角与花瓣内部空隙完整"], "stateAssertions": [{"nodeId": "dream-butterfly", "stateId": "wings-folded"}]},
+        {"id": "s3-proof-final", "at": 0.91, "label": "梦中忘我", "kind": "final", "assertions": ["蝴蝶仍稳定停在花上", "庄周文字痕迹已退去但主体没有消失", "结尾构图清晰克制"], "stateAssertions": [{"nodeId": "dream-butterfly", "stateId": "wings-folded"}]}
+      ]
+    },
+    {
+      "id": "scene-04",
+      "title": "醒后辨问",
+      "narrativeRole": "从梦境返回现实并提出核心疑问",
+      "message": "庄周忽然醒来，不知是自己梦见蝴蝶，还是蝴蝶梦见自己。",
+      "blueprint": "discovery-wipe",
+      "estimatedDurationSeconds": 16,
+      "beats": [
+        {
+          "id": "s4-reclining-awake",
+          "at": 0,
+          "purpose": "在现实空间中建立初醒姿态",
+          "visual": "纸张章节打开，庄周在卧榻上睁眼，窗外月色未变",
+          "audioCue": null,
+          "proofTimeId": "s4-proof-reclining",
+          "treatments": [
+            {
+              "id": "s4-state-reclining",
+              "targetId": "zhuang-awake",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "zhuang-awakening-states", "stateId": "reclining-awake", "visualChange": "庄周仍倚卧榻上但双眼睁开，衣冠与身份保持一致", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "identity",
+              "proofTimeId": "s4-proof-reclining",
+              "rationale": "初醒需要真实姿态变化，不能只把睡姿整体旋转或缩放。"
+            }
+          ]
+        },
+        {
+          "id": "s4-sit-up",
+          "at": 0.46,
+          "purpose": "让庄周确认自己已经醒来",
+          "visual": "庄周坐起，低头看向自己的双手，蝶影从袖口掠过又消散",
+          "audioCue": null,
+          "proofTimeId": "s4-proof-sitting",
+          "treatments": [
+            {
+              "id": "s4-state-sitting",
+              "targetId": "zhuang-awake",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "zhuang-awakening-states", "stateId": "sitting-hands", "visualChange": "庄周坐起并低头看手，面貌、发冠和衣纹连续", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "identity",
+              "proofTimeId": "s4-proof-sitting",
+              "rationale": "用第二个注册姿态明确从梦中返回身体的动作。"
+            }
+          ]
+        },
+        {
+          "id": "s4-questioning",
+          "at": 0.82,
+          "purpose": "提出庄周与蝴蝶之辨",
+          "visual": "庄周抬眼沉思，金蓝蝶影与一个手绘问号在月轮两侧轻轻浮动",
+          "audioCue": null,
+          "proofTimeId": "s4-proof-final",
+          "treatments": [
+            {
+              "id": "s4-state-questioning",
+              "targetId": "zhuang-awake",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "pose-change",
+              "motion": {"kind": "state-sequence", "poseFamilyId": "zhuang-awakening-states", "stateId": "seated-questioning", "visualChange": "庄周端坐抬眼，手势收束为沉思姿态", "playback": "once", "transition": "crossfade"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "identity",
+              "proofTimeId": "s4-proof-final",
+              "rationale": "第三个注册姿态把身体动作落定到哲思状态。"
+            },
+            {
+              "id": "s4-question-mark",
+              "targetId": "question-mark",
+              "importance": "supporting",
+              "necessity": "enhancement",
+              "changeClass": "graphic-emphasis",
+              "motion": {"kind": "continuous-transform", "preset": "float"},
+              "composition": {"pattern": "free"},
+              "graphic": {"kind": "text", "animation": "draw"},
+              "semanticRisk": "diagram",
+              "proofTimeId": "s4-proof-final",
+              "rationale": "用可编辑问号承载开放疑问，不把文字烘焙进人物图。"
+            }
+          ]
+        }
+      ],
+      "proofTimes": [
+        {"id": "s4-proof-reclining", "at": 0.12, "label": "初醒", "kind": "establish", "assertions": ["庄周身份与第一幕一致", "睁眼状态和卧榻空间可辨"], "stateAssertions": [{"nodeId": "zhuang-awake", "stateId": "reclining-awake"}]},
+        {"id": "s4-proof-sitting", "at": 0.52, "label": "坐起看手", "kind": "action", "assertions": ["庄周坐起姿态完整", "双手与衣袖没有错误融合", "蝶影只作短暂梦境余痕"], "stateAssertions": [{"nodeId": "zhuang-awake", "stateId": "sitting-hands"}]},
+        {"id": "s4-proof-final", "at": 0.9, "label": "庄蝶之问", "kind": "final", "assertions": ["庄周沉思姿态完整稳定", "问号为可编辑图形并清晰可读", "蝶影与庄周分处月轮两侧而非写实同框"], "stateAssertions": [{"nodeId": "zhuang-awake", "stateId": "seated-questioning"}]}
+      ]
+    },
+    {
+      "id": "scene-05",
+      "title": "物化余韵",
+      "narrativeRole": "开放式收束哲学意涵",
+      "message": "庄周与蝴蝶固然有分别，梦与醒、自我与万物也在流转变化。",
+      "blueprint": "quiet-lockup",
+      "estimatedDurationSeconds": 14,
+      "beats": [
+        {
+          "id": "s5-zhuang-butterfly-tableau",
+          "at": 0.06,
+          "purpose": "建立庄周与蝴蝶相对而非混同的构图",
+          "visual": "庄周剪影位于左侧，蝴蝶位于右侧，中间留出一圈淡墨圆形",
+          "audioCue": null,
+          "proofTimeId": "s5-proof-establish",
+          "treatments": [
+            {
+              "id": "s5-hold-dual-form",
+              "targetId": "zhuang-butterfly-tableau",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "static-hold",
+              "motion": {"kind": "static"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "diagram",
+              "proofTimeId": "s5-proof-establish",
+              "rationale": "先保留庄周与蝴蝶的分别，避免把物化误画成字面上的混合怪物。"
+            }
+          ]
+        },
+        {
+          "id": "s5-ink-circle-draw",
+          "at": 0.38,
+          "purpose": "以流动圆形连接梦醒和彼此视角",
+          "visual": "淡墨圆形由庄周一侧绕向蝴蝶，纸纤维在圆周上缓慢流动",
+          "audioCue": null,
+          "proofTimeId": "s5-proof-circle",
+          "treatments": [
+            {
+              "id": "s5-draw-transformation-circle",
+              "targetId": "transformation-circle",
+              "importance": "supporting",
+              "necessity": "required",
+              "changeClass": "graphic-emphasis",
+              "motion": {"kind": "continuous-transform", "preset": "pulse"},
+              "composition": {"pattern": "free"},
+              "graphic": {"kind": "shape", "animation": "draw"},
+              "semanticRisk": "diagram",
+              "proofTimeId": "s5-proof-circle",
+              "rationale": "可编辑圆形只表达流转关系，不宣称庄周和蝴蝶没有任何分别。"
+            }
+          ]
+        },
+        {
+          "id": "s5-open-question-text",
+          "at": 0.68,
+          "purpose": "把核心疑问留给观众",
+          "visual": "圆形中央写出“是庄周梦蝶，还是蝶梦庄周？”并轻轻盖印",
+          "audioCue": null,
+          "proofTimeId": "s5-proof-question",
+          "treatments": [
+            {
+              "id": "s5-stamp-open-question",
+              "targetId": "open-question-text",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "graphic-emphasis",
+              "motion": {"kind": "continuous-transform", "preset": "settle"},
+              "composition": {"pattern": "free"},
+              "graphic": {"kind": "text", "animation": "stamp"},
+              "semanticRisk": "diagram",
+              "proofTimeId": "s5-proof-question",
+              "rationale": "核心疑问保持可编辑和可校对，避免生成图中文字错误。"
+            }
+          ]
+        },
+        {
+          "id": "s5-quiet-hold",
+          "at": 0.88,
+          "purpose": "以静止留白结束而不给出唯一答案",
+          "visual": "庄周、蝴蝶、墨圆与提问共同稳定在月白纸面上，细小纸屑停止漂动",
+          "audioCue": null,
+          "proofTimeId": "s5-proof-final",
+          "treatments": [
+            {
+              "id": "s5-final-static-hold",
+              "targetId": "final-lockup",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "static-hold",
+              "motion": {"kind": "static"},
+              "composition": {"pattern": "free"},
+              "graphic": null,
+              "semanticRisk": "diagram",
+              "proofTimeId": "s5-proof-final",
+              "rationale": "结尾让开放问题停留在稳定构图中，不用额外动作稀释余韵。"
+            }
+          ]
+        }
+      ],
+      "proofTimes": [
+        {"id": "s5-proof-establish", "at": 0.1, "label": "庄蝶相对", "kind": "establish", "assertions": ["庄周与蝴蝶各自完整可辨", "两者相对而不发生错误融合", "中央留白足够容纳图形"], "stateAssertions": []},
+        {"id": "s5-proof-circle", "at": 0.46, "label": "墨圆流转", "kind": "action", "assertions": ["墨圆连接两侧但不遮断主体", "图形为可编辑形状", "流转隐喻不等同于字面变身"], "stateAssertions": []},
+        {"id": "s5-proof-question", "at": 0.74, "label": "开放之问", "kind": "peak", "assertions": ["提问文字准确可读", "文字为可编辑节点", "庄周与蝴蝶仍保持分别"], "stateAssertions": []},
+        {"id": "s5-proof-final", "at": 0.92, "label": "物化余韵", "kind": "final", "assertions": ["最终构图稳定完整", "没有把开放问题替换成单一教训", "画面留白与字幕安全区无冲突"], "stateAssertions": []}
+      ]
+    }
+  ],
+  "sceneTransitions": [
+    {"id": "scene-01-to-scene-02", "fromSceneId": "scene-01", "toSceneId": "scene-02", "intent": "focus-reveal", "rationale": "月轮后的蝶影成为新主体，纸面虹膜收拢后再展开，可把注意力从安睡的庄周集中到梦中蝴蝶。"},
+    {"id": "scene-02-to-scene-03", "fromSceneId": "scene-02", "toSceneId": "scene-03", "intent": "continuity", "rationale": "蝴蝶的飞行动作和视线方向持续进入花间，纸片平移保持同一梦境中的运动连续性。"},
+    {"id": "scene-03-to-scene-04", "fromSceneId": "scene-03", "toSceneId": "scene-04", "intent": "chapter-reset", "rationale": "从忘我的蝴蝶视角骤然返回卧榻现实，需要完全不透明的纸页合拢与开启来划清梦醒章节。"},
+    {"id": "scene-04-to-scene-05", "fromSceneId": "scene-04", "toSceneId": "scene-05", "intent": "focus-reveal", "rationale": "庄周的疑问成为最终主题，纸面虹膜将人物场景收束为庄周、蝴蝶与墨圆的哲思图式。"}
+  ],
+  "updatedAt": "2026-07-22T12:20:00.000Z"
+}

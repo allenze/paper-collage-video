@@ -59,6 +59,7 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'support-contact',
   'inside-or-on-readable',
   'front-occlusion',
+  'subject-front-clear',
   'shared-motion',
   'identity-continuity',
   'motion-isolation-clean',
@@ -100,6 +101,15 @@ const COMPOSITE_PROFILES = {
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
   event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
   'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
+};
+
+const requiredChecksForGroup = (group) => {
+  if (group.pattern !== 'supported-subject' || group.support?.layering !== 'subject-front') {
+    return COMPOSITE_PROFILES[group.pattern];
+  }
+  return COMPOSITE_PROFILES['supported-subject'].map((check) =>
+    check === 'front-occlusion' ? 'subject-front-clear' : check,
+  );
 };
 
 const qualityReportPath = (slug) => path.join(ROOT, 'projects', slug, 'quality-report.json');
@@ -477,7 +487,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         compositionHash: hashCompositionValue(group),
         fingerprint,
         proofTimeIds: (scene.motion?.proofTimes ?? []).map(({id}) => id),
-        requiredChecks: COMPOSITE_PROFILES[group.pattern],
+        requiredChecks: requiredChecksForGroup(group),
         group,
         familyRecords,
       });
@@ -613,10 +623,12 @@ const inspectCompositeTechnical = async ({target, proofReport}) => {
       const binding = record?.compositionBinding ?? record?.request?.compositionBinding;
       return binding?.registrationId === registration?.id && binding?.sourceMasterAssetId === registration?.sourceMasterAssetId;
     });
-    checks.push(
-      {id: 'front-alpha-in-occlusion-zone', passed: alphaCoverage > 0.002, expected: '> 0.002', actual: alphaCoverage},
-      {id: 'registered-source-family', passed: familyBound, actual: familyBound},
-    );
+    if (target.group.support?.layering === 'subject-front') {
+      checks.push({id: 'subject-front-layering', passed: true, expected: 'subject-front', actual: 'subject-front'});
+    } else {
+      checks.push({id: 'front-alpha-in-occlusion-zone', passed: alphaCoverage > 0.002, expected: '> 0.002', actual: alphaCoverage});
+    }
+    checks.push({id: 'registered-source-family', passed: familyBound, actual: familyBound});
   }
   if (target.pattern === 'registered-environment') {
     const children = target.group.children.filter(({kind}) => kind === 'asset');

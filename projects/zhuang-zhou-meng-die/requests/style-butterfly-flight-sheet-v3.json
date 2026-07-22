@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 5,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "assetId": "butterfly-flight-sheet-v3",
+  "capability": "image",
+  "output": "public/projects/zhuang-zhou-meng-die/assets/characters/source/butterfly-flight-sheet-v3.png",
+  "prompt": "Regenerate the complete 2x2 registered traditional xuan-paper butterfly family on a perfectly flat uniform #ff00ff key background. Preserve one identity, one body anchor and four requested wing states; no checkerboard, texture, shadow, divider or labels in the background.",
+  "compositionBinding": {
+    "sceneId": "scene-05",
+    "nodeId": "dream-butterfly",
+    "pattern": "state-sequence",
+    "registrationId": "butterfly-flight-registration",
+    "sourceMasterAssetId": "butterfly-flight-master",
+    "outputRole": "registered-state-sheet",
+    "canvas": {"width": 2048, "height": 2048},
+    "derivation": {"method": "provider-generation", "parentAssetId": "butterfly-flight-sheet-v2"}
+  },
+  "stateSheetBinding": {
+    "poseFamilyId": "butterfly-flight-states",
+    "registrationId": "butterfly-flight-registration",
+    "sourceMasterAssetId": "butterfly-flight-master",
+    "layout": {"columns": 2, "rows": 2},
+    "states": [
+      {"stateId": "wings-folded", "row": 0, "column": 0},
+      {"stateId": "wings-open", "row": 0, "column": 1},
+      {"stateId": "wings-up", "row": 1, "column": 0},
+      {"stateId": "hover-level", "row": 1, "column": 1}
+    ],
+    "recoveryPolicy": {"strategy": "preserve-sheet-context", "localDeterministicFixFirst": true, "isolatedCellGeneration": "forbidden", "fallback": "full-sheet-regeneration"}
+  },
+  "stateSheetRecoveryBinding": {"mode": "full-sheet-regeneration", "sourceSheetAssetId": "butterfly-flight-sheet-v2", "targetStateIds": ["wings-folded", "wings-open", "wings-up", "hover-level"]},
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": ["butterfly-flight-family-topology"],
+    "generationFamily": {"familyId": "butterfly-flight-states", "memberIds": ["wings-folded", "wings-open", "wings-up", "hover-level"], "referenceAssetIds": ["zhuang-butterfly-style-master", "butterfly-flight-sheet-v2"]}
+  },
+  "quality": {"kind": "character-sheet", "requiredChecks": ["no-text", "no-watermark", "subject-complete", "identity-family-consistent", "cell-separation", "background-uniform", "style-consistent", "edge-clean", "silhouette-fidelity", "negative-space-clean", "background-leak-free", "reference-conformant"]}
+}

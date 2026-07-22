@@ -88,7 +88,12 @@ export type CompositionStateSequenceNode = {
   poseFamilyId: string;
   registration: CompositionRegistration;
   states: SequenceState[];
-  playback: {mode: 'once' | 'loop' | 'ping-pong'; cycles: number};
+  playback: {
+    mode: 'once' | 'loop' | 'ping-pong';
+    cycles: number;
+    activeUntil?: number;
+    holdStateId?: string;
+  };
   transition: {type: 'cut' | 'crossfade'; durationSeconds: number};
   z: number;
   slot?: string;
@@ -151,6 +156,7 @@ export type CompositionGroupNode = {
   registration?: CompositionRegistration;
   support?: {
     subjectId: string;
+    layering?: 'between-supports' | 'subject-front';
     contactAnchor: {x: number; y: number};
     contactZone: Array<[number, number]>;
     occlusionZone: Array<[number, number]>;
@@ -294,7 +300,10 @@ export type SceneAppearance = {
     opacity: number;
     blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
   };
-  chapter?: {visible: boolean};
+  chapter?: {
+    visible: boolean;
+    variant?: 'plain' | 'paper-tab';
+  };
   subtitles?: {
     variant: 'boxed' | 'plain' | 'hidden';
     color?: string;

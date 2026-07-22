@@ -1,0 +1,1765 @@
+{
+  "$schema": "../../schemas/production-metrics.schema.json",
+  "schemaVersion": 1,
+  "projectSlug": "zhuang-zhou-meng-die",
+  "createdAt": "2026-07-22T12:14:43.322Z",
+  "collectionStartedAt": "2026-07-22T12:14:43.322Z",
+  "updatedAt": "2026-07-22T16:22:56.107Z",
+  "measurementNotes": {
+    "commandWallClock": "Measures the wrapped local command from process start to exit.",
+    "reviewSessionWindow": "Measures from quality scaffold completion to successful batch recording; it includes model/tool orchestration and pauses, not provider-only inference time.",
+    "providerAttemptWindow": "Measures from generation-attempt reservation to closure; it includes provider work and surrounding orchestration.",
+    "tokenTelemetry": "Unavailable unless the host or provider reports it; this file does not estimate token usage.",
+    "categoryOverlap": "Category durations are independently unioned and may overlap; measuredUnionMs de-duplicates all overlaps."
+  },
+  "segments": [
+    {
+      "id": "metric-f58cc6fe-51b9-46ba-9602-a1746b5809ce",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:33:22.521Z",
+      "endedAt": "2026-07-22T12:33:28.595Z",
+      "durationMs": 6074,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-2de9b9ff-f7b0-4b74-84fd-923ef1bca8a9",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:33:40.224Z",
+      "endedAt": "2026-07-22T12:33:43.062Z",
+      "durationMs": 2838,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-45377329-5111-4db6-bdae-e1c20fdcf95d",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:35:27.859Z",
+      "endedAt": "2026-07-22T12:35:34.107Z",
+      "durationMs": 6248,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-4866d02a-b29c-457c-ae79-fd13eb108616",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:35:50.920Z",
+      "endedAt": "2026-07-22T12:35:57.906Z",
+      "durationMs": 6986,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-9c86b961-3867-4e15-8b6a-6f3092bedd11",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:36:37.512Z",
+      "endedAt": "2026-07-22T12:36:39.831Z",
+      "durationMs": 2319,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-c5fa6e49-bd09-48e0-abe1-ffe60de71be8",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:38:54.007Z",
+      "endedAt": "2026-07-22T12:39:10.465Z",
+      "durationMs": 16458,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-a94ae271-d1bb-4bd6-b9ad-fcb716e3bfc7",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:41:48.331Z",
+      "endedAt": "2026-07-22T12:41:48.420Z",
+      "durationMs": 89,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-bd5f67ab-3b1c-4976-86f6-613c2a3f6330",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:41:48.615Z",
+      "endedAt": "2026-07-22T12:41:48.710Z",
+      "durationMs": 95,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "scaffold",
+          "--output=projects/zhuang-zhou-meng-die/quality-review-scaffold.json",
+          "--reviewer=host-vision"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-ffd8b03f-88a8-4864-a7b5-f3f7214cd096",
+      "category": "ai-review",
+      "operation": "quality-review",
+      "source": "paper-collage-video",
+      "status": "abandoned",
+      "measurement": "review-session-window",
+      "startedAt": "2026-07-22T12:41:48.705Z",
+      "endedAt": "2026-07-22T13:12:53.656Z",
+      "durationMs": 1864951,
+      "metadata": {
+        "reviewer": "host-vision",
+        "reviewCount": 7,
+        "scaffold": "projects/zhuang-zhou-meng-die/quality-review-scaffold.json",
+        "closeReason": "superseded"
+      }
+    },
+    {
+      "id": "metric-78dbefb5-5d07-4764-927b-35c2e7acadd6",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T12:42:33.043Z",
+      "endedAt": "2026-07-22T12:42:33.227Z",
+      "durationMs": 184,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-d04cb34d-daed-4051-a9ec-ff20900e8371",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T13:07:05.951Z",
+      "endedAt": "2026-07-22T13:07:22.041Z",
+      "durationMs": 16090,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-b73eaa41-55d9-489a-8ca7-4af56534d298",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T13:09:49.245Z",
+      "endedAt": "2026-07-22T13:10:03.501Z",
+      "durationMs": 14256,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--duration=4"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-ee6fba03-a34b-4eb0-baf1-52294683cc97",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T13:12:11.246Z",
+      "endedAt": "2026-07-22T13:12:11.416Z",
+      "durationMs": 170,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-20c6bcab-8ed4-4aa2-9386-865ccd446f8c",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T13:12:11.572Z",
+      "endedAt": "2026-07-22T13:12:11.736Z",
+      "durationMs": 164,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "scaffold",
+          "--output=projects/zhuang-zhou-meng-die/quality-review-scaffold.json",
+          "--reviewer=host-vision"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-34c327c3-c6c7-4b00-94d3-27be8ad9f768",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T13:12:53.483Z",
+      "endedAt": "2026-07-22T13:12:53.664Z",
+      "durationMs": 181,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "scaffold",
+          "--output=projects/zhuang-zhou-meng-die/quality-review-scaffold.json",
+          "--reviewer=host-vision",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-79031603-f419-48f2-a1c1-8f8bb0276585",
+      "category": "ai-review",
+      "operation": "quality-review",
+      "source": "paper-collage-video",
+      "status": "abandoned",
+      "measurement": "review-session-window",
+      "startedAt": "2026-07-22T13:12:53.656Z",
+      "endedAt": "2026-07-22T15:08:42.365Z",
+      "durationMs": 6948709,
+      "metadata": {
+        "reviewer": "host-vision",
+        "reviewCount": 16,
+        "scaffold": "projects/zhuang-zhou-meng-die/quality-review-scaffold.json",
+        "closeReason": "superseded"
+      }
+    },
+    {
+      "id": "metric-cc1d535e-63d8-4c8e-ab79-77876e01688d",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:04:26.001Z",
+      "endedAt": "2026-07-22T14:04:26.510Z",
+      "durationMs": 509,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-85bf51b8-99d8-48bf-9d66-6defc32421f2",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:14:16.514Z",
+      "endedAt": "2026-07-22T14:14:17.018Z",
+      "durationMs": 504,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-ae3979d7-5a93-46a4-818f-6fa2f6403f0e",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:16:21.111Z",
+      "endedAt": "2026-07-22T14:16:21.638Z",
+      "durationMs": 527,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-2b5df282-17e1-41c1-96ae-cb347dc2d443",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:17:07.439Z",
+      "endedAt": "2026-07-22T14:18:02.736Z",
+      "durationMs": 55297,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-9f683779-4391-4929-8725-f0fb2939c7cb",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:20:17.076Z",
+      "endedAt": "2026-07-22T14:20:17.569Z",
+      "durationMs": 493,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-3224aaa6-b411-4df5-82ac-c1229e7de3af",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:20:46.707Z",
+      "endedAt": "2026-07-22T14:21:07.634Z",
+      "durationMs": 20927,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-14e6e210-62ba-4e1e-883d-872365dac2b7",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:25:16.135Z",
+      "endedAt": "2026-07-22T14:25:16.683Z",
+      "durationMs": 548,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-e8ddf417-f6ef-47d2-8319-c9679e420d9b",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:25:50.866Z",
+      "endedAt": "2026-07-22T14:26:21.763Z",
+      "durationMs": 30897,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-9cb318e9-a5d3-4a65-9582-ed54b4e9f0f8",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:28:15.953Z",
+      "endedAt": "2026-07-22T14:28:16.471Z",
+      "durationMs": 518,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-392917de-c066-4136-8f65-0dfa13ec8238",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:28:51.732Z",
+      "endedAt": "2026-07-22T14:29:15.353Z",
+      "durationMs": 23621,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-4a735891-2205-4e16-b805-2fa2ce0c9f95",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:31:22.815Z",
+      "endedAt": "2026-07-22T14:31:23.298Z",
+      "durationMs": 483,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-ea46a6d7-ed66-44fe-b95c-21f04b4bdb1d",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:32:05.415Z",
+      "endedAt": "2026-07-22T14:32:26.834Z",
+      "durationMs": 21419,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-6a948cf1-a1f5-446d-a836-054d566471bf",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:35:27.008Z",
+      "endedAt": "2026-07-22T14:35:27.498Z",
+      "durationMs": 490,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-f7d1a28d-0575-41f1-8225-bc77a7fe8f70",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:35:58.401Z",
+      "endedAt": "2026-07-22T14:36:19.439Z",
+      "durationMs": 21038,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-8a29dade-9d55-42ee-a71b-c80e5c4fff4a",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:38:05.376Z",
+      "endedAt": "2026-07-22T14:38:05.973Z",
+      "durationMs": 597,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-28378cdf-444b-45e7-8b25-71ca1867fa91",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:38:30.851Z",
+      "endedAt": "2026-07-22T14:38:51.882Z",
+      "durationMs": 21031,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-a8e7b5d8-4f31-4042-8724-f7251effab37",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:42:09.489Z",
+      "endedAt": "2026-07-22T14:42:10.348Z",
+      "durationMs": 859,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-f12ba72a-ceff-4b17-9a1c-67b3998ccc30",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:42:59.270Z",
+      "endedAt": "2026-07-22T14:43:53.361Z",
+      "durationMs": 54091,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-bc36559b-8137-4fa9-9756-fdd9858a2d40",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:46:18.685Z",
+      "endedAt": "2026-07-22T14:46:19.169Z",
+      "durationMs": 484,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-98b82fa5-a065-4fa1-a7f1-3be803f78ccd",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:47:06.298Z",
+      "endedAt": "2026-07-22T14:47:27.965Z",
+      "durationMs": 21667,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-77814e1c-122b-4abf-ac54-d775c91f58d8",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:50:04.921Z",
+      "endedAt": "2026-07-22T14:50:05.517Z",
+      "durationMs": 596,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-2c23b311-aa9c-457c-bb47-7b5c341e205d",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:50:53.911Z",
+      "endedAt": "2026-07-22T14:51:14.703Z",
+      "durationMs": 20792,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-c5a0ee35-7df8-476e-9931-98c77ddb3381",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:53:12.372Z",
+      "endedAt": "2026-07-22T14:53:12.839Z",
+      "durationMs": 467,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-03c7eb16-4409-4773-8c39-57e43bf67b88",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:54:03.147Z",
+      "endedAt": "2026-07-22T14:54:16.786Z",
+      "durationMs": 13639,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-b0f67bae-388c-4ce7-84f2-f19862254757",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T14:58:46.502Z",
+      "endedAt": "2026-07-22T14:58:47.033Z",
+      "durationMs": 531,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-3d8220fd-c8d7-47d5-98b5-1b364cdf2384",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:00:02.937Z",
+      "endedAt": "2026-07-22T15:00:25.160Z",
+      "durationMs": 22223,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-d0982349-ac13-47e2-8f21-8b0668cfed56",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:03:06.569Z",
+      "endedAt": "2026-07-22T15:03:07.020Z",
+      "durationMs": 451,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-53c4b15e-ee26-43d8-b04b-02e2d9e8b9a1",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:05:12.901Z",
+      "endedAt": "2026-07-22T15:05:13.450Z",
+      "durationMs": 549,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-91fddf53-1d54-475f-b681-6e4f18ca3a90",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:05:13.663Z",
+      "endedAt": "2026-07-22T15:05:14.175Z",
+      "durationMs": 512,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-01d63376-5579-430f-85ee-92cee7919600",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:06:31.111Z",
+      "endedAt": "2026-07-22T15:06:31.597Z",
+      "durationMs": 486,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-7915afda-3d46-4072-8b05-fecaccf119ab",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:06:31.797Z",
+      "endedAt": "2026-07-22T15:06:32.218Z",
+      "durationMs": 421,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-4b6e44a1-05be-4290-ae51-e7c8be18cf41",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:07:23.499Z",
+      "endedAt": "2026-07-22T15:07:36.209Z",
+      "durationMs": 12710,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-081dec8f-1d03-41f2-ad2f-9a8b9cf6c994",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:08:41.394Z",
+      "endedAt": "2026-07-22T15:08:41.783Z",
+      "durationMs": 389,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-4fc75aea-8ab0-4db1-a65d-4c961ec203c0",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:08:41.970Z",
+      "endedAt": "2026-07-22T15:08:42.377Z",
+      "durationMs": 407,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "scaffold",
+          "--reviewer=host-vision",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-d9b08d94-199a-4e59-a538-1d3438871d02",
+      "category": "ai-review",
+      "operation": "quality-review",
+      "source": "paper-collage-video",
+      "status": "abandoned",
+      "measurement": "review-session-window",
+      "startedAt": "2026-07-22T15:08:42.365Z",
+      "endedAt": "2026-07-22T15:12:55.709Z",
+      "durationMs": 253344,
+      "metadata": {
+        "reviewer": "host-vision",
+        "reviewCount": 50,
+        "scaffold": "projects/zhuang-zhou-meng-die/quality-review-scaffold.json",
+        "closeReason": "superseded"
+      }
+    },
+    {
+      "id": "metric-6ca480d3-4f07-454a-bc8f-62eb08112fe4",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:12:54.090Z",
+      "endedAt": "2026-07-22T15:12:54.541Z",
+      "durationMs": 451,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-c638cc83-c041-46af-ac4c-ee2048fe948c",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:12:54.714Z",
+      "endedAt": "2026-07-22T15:12:55.095Z",
+      "durationMs": 381,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-7ab063bf-14ab-4fea-a92c-554b652ea237",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:12:55.269Z",
+      "endedAt": "2026-07-22T15:12:55.719Z",
+      "durationMs": 450,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "scaffold",
+          "--reviewer=host-vision",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-f759c320-6aff-454d-af22-534b634772dd",
+      "category": "ai-review",
+      "operation": "quality-review",
+      "source": "paper-collage-video",
+      "status": "completed",
+      "measurement": "review-session-window",
+      "startedAt": "2026-07-22T15:12:55.709Z",
+      "endedAt": "2026-07-22T15:22:23.607Z",
+      "durationMs": 567898,
+      "metadata": {
+        "reviewer": "host-vision",
+        "reviewCount": 48,
+        "scaffold": "projects/zhuang-zhou-meng-die/quality-review-scaffold.json",
+        "reviewers": [
+          "host-vision"
+        ],
+        "recordedReviewCount": 48,
+        "input": "projects/zhuang-zhou-meng-die/quality-reviews.json"
+      }
+    },
+    {
+      "id": "metric-3f0399cc-3667-40ed-8fe7-36efb9a9d1a7",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:20:42.090Z",
+      "endedAt": "2026-07-22T15:20:42.489Z",
+      "durationMs": 399,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "record-batch",
+          "--input=projects/zhuang-zhou-meng-die/quality-reviews.json"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-9971155b-4678-4e79-9103-659d34739dd3",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:22:21.425Z",
+      "endedAt": "2026-07-22T15:22:23.629Z",
+      "durationMs": 2204,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "record-batch",
+          "--input=projects/zhuang-zhou-meng-die/quality-reviews.json"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-e152bdb6-e3b1-4945-a401-7151b93b95a7",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:22:23.837Z",
+      "endedAt": "2026-07-22T15:22:26.195Z",
+      "durationMs": 2358,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "status"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-24266ac6-238e-43bf-b956-30fe8ee84519",
+      "category": "deterministic-check",
+      "operation": "audio-preflight",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:24:14.116Z",
+      "endedAt": "2026-07-22T15:24:16.768Z",
+      "durationMs": 2652,
+      "metadata": {
+        "script": "scripts/project-audio-preflight.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--strict"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-b46d163f-eb8d-434e-8585-baad1da6eda4",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:26:13.096Z",
+      "endedAt": "2026-07-22T15:26:13.638Z",
+      "durationMs": 542,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-4efabf17-7578-4172-a04a-68e17fc49958",
+      "category": "deterministic-check",
+      "operation": "audio-preflight",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:26:13.814Z",
+      "endedAt": "2026-07-22T15:26:16.560Z",
+      "durationMs": 2746,
+      "metadata": {
+        "script": "scripts/project-audio-preflight.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "--strict"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-071fbf53-0c31-4cb2-90c6-522dc0479c6d",
+      "category": "deterministic-check",
+      "operation": "assets-ready",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:26:16.786Z",
+      "endedAt": "2026-07-22T15:26:22.948Z",
+      "durationMs": 6162,
+      "metadata": {
+        "script": "scripts/project-assets-ready.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-4e027fae-99e3-406c-82e3-3ac835278bc9",
+      "category": "video-render",
+      "operation": "preview-render",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:28:56.011Z",
+      "endedAt": "2026-07-22T15:31:27.956Z",
+      "durationMs": 151945,
+      "metadata": {
+        "script": "scripts/project-render.mjs",
+        "arguments": [
+          "preview",
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-9abbd756-e64c-44ff-bc78-903e99e91faa",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T15:59:44.642Z",
+      "endedAt": "2026-07-22T15:59:45.054Z",
+      "durationMs": 412,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-6ecbf41b-8aa7-48dd-acba-abfad0b420a1",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:00:14.837Z",
+      "endedAt": "2026-07-22T16:00:15.284Z",
+      "durationMs": 447,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-776c020e-e938-402a-bbaf-922d910f9277",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:00:49.819Z",
+      "endedAt": "2026-07-22T16:00:50.215Z",
+      "durationMs": 396,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-21608ffd-e591-4d67-8137-a32d97b032bd",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:01:17.508Z",
+      "endedAt": "2026-07-22T16:01:43.220Z",
+      "durationMs": 25712,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-ca3577cd-23e0-4874-9f30-38cf53ffc28e",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:01:57.985Z",
+      "endedAt": "2026-07-22T16:02:52.817Z",
+      "durationMs": 54832,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-065c257d-35f3-497a-a344-79a63db6d3dd",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:04:37.578Z",
+      "endedAt": "2026-07-22T16:05:37.194Z",
+      "durationMs": 59616,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-c9bbb5a5-6d7f-484a-9ba1-162d2a6f520b",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:05:50.395Z",
+      "endedAt": "2026-07-22T16:05:52.358Z",
+      "durationMs": 1963,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "prepare"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-663bcf00-4e92-4dfd-a812-5affb577b76a",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:05:52.549Z",
+      "endedAt": "2026-07-22T16:05:52.999Z",
+      "durationMs": 450,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "scaffold",
+          "--output=projects/zhuang-zhou-meng-die/quality-review-revision.json",
+          "--reviewer=host-vision"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-35d6b571-ae62-471d-83a6-49a1b5130089",
+      "category": "ai-review",
+      "operation": "quality-review",
+      "source": "paper-collage-video",
+      "status": "completed",
+      "measurement": "review-session-window",
+      "startedAt": "2026-07-22T16:05:52.991Z",
+      "endedAt": "2026-07-22T16:09:59.333Z",
+      "durationMs": 246342,
+      "metadata": {
+        "reviewer": "host-vision",
+        "reviewCount": 47,
+        "scaffold": "projects/zhuang-zhou-meng-die/quality-review-revision.json",
+        "reviewers": [
+          "host-vision"
+        ],
+        "recordedReviewCount": 47,
+        "input": "projects/zhuang-zhou-meng-die/quality-reviews-revision.json"
+      }
+    },
+    {
+      "id": "metric-36771a7e-a4b0-4224-b5ac-d8ac473ab9c1",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:09:56.167Z",
+      "endedAt": "2026-07-22T16:09:59.347Z",
+      "durationMs": 3180,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die",
+          "record-batch",
+          "--input=projects/zhuang-zhou-meng-die/quality-reviews-revision.json",
+          "--quiet"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-f2052126-1a6f-4810-a727-f3cce941694d",
+      "category": "deterministic-check",
+      "operation": "assets-ready",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:10:03.895Z",
+      "endedAt": "2026-07-22T16:10:11.196Z",
+      "durationMs": 7301,
+      "metadata": {
+        "script": "scripts/project-assets-ready.mjs",
+        "arguments": [
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-97bfc4d8-8dd5-4cc6-a5a0-e012754983e2",
+      "category": "video-render",
+      "operation": "preview-render",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:10:41.943Z",
+      "endedAt": "2026-07-22T16:10:52.039Z",
+      "durationMs": 10096,
+      "metadata": {
+        "script": "scripts/project-render.mjs",
+        "arguments": [
+          "preview",
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-c9344698-175c-4b93-a429-79e64f2c8a92",
+      "category": "video-render",
+      "operation": "preview-render",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:12:13.120Z",
+      "endedAt": "2026-07-22T16:14:42.561Z",
+      "durationMs": 149441,
+      "metadata": {
+        "script": "scripts/project-render.mjs",
+        "arguments": [
+          "preview",
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-214ce3d0-012e-4d2c-821f-29cd95a09875",
+      "category": "video-render",
+      "operation": "final-render",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-22T16:19:37.389Z",
+      "endedAt": "2026-07-22T16:22:56.107Z",
+      "durationMs": 198718,
+      "metadata": {
+        "script": "scripts/project-render.mjs",
+        "arguments": [
+          "render",
+          "zhuang-zhou-meng-die"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "generation:img-82843d05-5b49-4a13-bfb1-aebbbf7ac5a5",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T12:28:36.546Z",
+      "endedAt": "2026-07-22T12:31:36.315Z",
+      "durationMs": 179769,
+      "metadata": {
+        "attemptId": "img-82843d05-5b49-4a13-bfb1-aebbbf7ac5a5",
+        "assetId": "zhuang-butterfly-style-master",
+        "provider": "gpt-image",
+        "model": null,
+        "attemptStatus": "succeeded",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-a0de8f70-4a10-4a60-a5d2-9fbb8be792d8",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T12:58:44.168Z",
+      "endedAt": "2026-07-22T12:58:44.298Z",
+      "durationMs": 130,
+      "metadata": {
+        "attemptId": "img-a0de8f70-4a10-4a60-a5d2-9fbb8be792d8",
+        "assetId": "zhuang-style-background-clean",
+        "provider": "gpt-image",
+        "model": "gpt-image-built-in",
+        "attemptStatus": "succeeded",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-d3a55f19-d8ad-40fd-a407-f0c54d0cb142",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T13:00:20.301Z",
+      "endedAt": "2026-07-22T13:00:20.427Z",
+      "durationMs": 126,
+      "metadata": {
+        "attemptId": "img-d3a55f19-d8ad-40fd-a407-f0c54d0cb142",
+        "assetId": "butterfly-flight-sheet-v2",
+        "provider": "gpt-image",
+        "model": "gpt-image-built-in",
+        "attemptStatus": "rejected",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-5a78d046-bee0-43bf-9120-296015a2d962",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T13:02:10.162Z",
+      "endedAt": "2026-07-22T13:04:19.893Z",
+      "durationMs": 129731,
+      "metadata": {
+        "attemptId": "img-5a78d046-bee0-43bf-9120-296015a2d962",
+        "assetId": "butterfly-flight-sheet-v3",
+        "provider": "gpt-image",
+        "model": "gpt-image-built-in",
+        "attemptStatus": "succeeded",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-035cffd3-b971-4f02-a9e9-591de5f74fca",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T13:32:30.806Z",
+      "endedAt": "2026-07-22T13:34:16.124Z",
+      "durationMs": 105318,
+      "metadata": {
+        "attemptId": "img-035cffd3-b971-4f02-a9e9-591de5f74fca",
+        "assetId": "reality-room-empty",
+        "provider": "gpt-image",
+        "model": null,
+        "attemptStatus": "succeeded",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-2e13f0b5-dea7-4c93-b909-6ab1c9d77bb7",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T13:34:39.251Z",
+      "endedAt": "2026-07-22T13:36:51.605Z",
+      "durationMs": 132354,
+      "metadata": {
+        "attemptId": "img-2e13f0b5-dea7-4c93-b909-6ab1c9d77bb7",
+        "assetId": "dream-flight",
+        "provider": "gpt-image",
+        "model": "gpt-image-built-in",
+        "attemptStatus": "succeeded",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-747c73aa-a133-4827-aa15-9eb3afbcd8b5",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T13:37:02.338Z",
+      "endedAt": "2026-07-22T13:38:47.298Z",
+      "durationMs": 104960,
+      "metadata": {
+        "attemptId": "img-747c73aa-a133-4827-aa15-9eb3afbcd8b5",
+        "assetId": "dream-flower-journey",
+        "provider": "gpt-image",
+        "model": "gpt-image-built-in",
+        "attemptStatus": "succeeded",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T13:38:58.319Z",
+      "endedAt": "2026-07-22T13:40:41.985Z",
+      "durationMs": 103666,
+      "metadata": {
+        "attemptId": "img-f284bc6c-1ead-4afe-bfa9-e1af41cd0ed7",
+        "assetId": "zhuang-awakening-sheet",
+        "provider": "gpt-image",
+        "model": "gpt-image-built-in",
+        "attemptStatus": "succeeded",
+        "quotaConsumed": true
+      }
+    },
+    {
+      "id": "generation:img-d8cdf6b8-f9b5-4e28-a10c-2d41b95f48d5",
+      "category": "ai-generation",
+      "operation": "provider-image-generation",
+      "source": "generation-attempts",
+      "status": "completed",
+      "measurement": "provider-attempt-window",
+      "startedAt": "2026-07-22T13:41:29.261Z",
+      "endedAt": "2026-07-22T13:42:05.453Z",
+      "durationMs": 36192,
+      "metadata": {
+        "attemptId": "img-d8cdf6b8-f9b5-4e28-a10c-2d41b95f48d5",
+        "assetId": "zhuang-awakening-sheet",
+        "provider": "gpt-image",
+        "model": "gpt-image-built-in",
+        "attemptStatus": "abandoned",
+        "quotaConsumed": false
+      }
+    }
+  ],
+  "summary": {
+    "observation": {
+      "startedAt": "2026-07-22T12:14:43.322Z",
+      "endedAt": "2026-07-22T16:22:56.107Z",
+      "durationMs": 14892785
+    },
+    "coverage": {
+      "status": "full",
+      "collectionStartedAt": "2026-07-22T12:14:43.322Z"
+    },
+    "measuredUnionMs": 10777932,
+    "measuredPercentOfObservation": 72.37,
+    "unattributedMs": 4114853,
+    "unattributedPercentOfObservation": 27.63,
+    "byCategory": {
+      "ai-generation": {
+        "durationMs": 792246,
+        "percentOfObservation": 5.32,
+        "segmentCount": 9,
+        "activeSegmentCount": 0
+      },
+      "ai-review": {
+        "durationMs": 9881244,
+        "percentOfObservation": 66.35,
+        "segmentCount": 5,
+        "activeSegmentCount": 0
+      },
+      "human-review": {
+        "durationMs": 0,
+        "percentOfObservation": 0,
+        "segmentCount": 0,
+        "activeSegmentCount": 0
+      },
+      "deterministic-check": {
+        "durationMs": 43155,
+        "percentOfObservation": 0.29,
+        "segmentCount": 42,
+        "activeSegmentCount": 0
+      },
+      "evidence-render": {
+        "durationMs": 551824,
+        "percentOfObservation": 3.71,
+        "segmentCount": 26,
+        "activeSegmentCount": 0
+      },
+      "video-render": {
+        "durationMs": 510200,
+        "percentOfObservation": 3.43,
+        "segmentCount": 4,
+        "activeSegmentCount": 0
+      }
+    },
+    "aiReview": {
+      "durationMs": 9881244,
+      "percentOfObservation": 66.35,
+      "segmentCount": 5,
+      "activeSegmentCount": 0
+    }
+  }
+}
