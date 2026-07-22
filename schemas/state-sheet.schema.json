@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.paper-collage.dev/state-sheet.schema.json",
+  "title": "Registered State Sheet Processing Contract",
+  "type": "object",
+  "required": ["schemaVersion", "projectSlug", "sceneId", "nodeId", "poseFamilyId", "sourceAssetId", "input", "outputDirectory", "registration", "layout", "states", "keying"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "sceneId": {"type": "string", "minLength": 1},
+    "nodeId": {"type": "string", "minLength": 1},
+    "poseFamilyId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "sourceAssetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "input": {"type": "string", "minLength": 1},
+    "outputDirectory": {"type": "string", "minLength": 1},
+    "registration": {
+      "type": "object",
+      "required": ["id", "sourceMasterAssetId"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "sourceMasterAssetId": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "required": ["columns", "rows"],
+      "properties": {
+        "columns": {"type": "integer", "minimum": 1},
+        "rows": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "states": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["id", "row", "column"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+          "row": {"type": "integer", "minimum": 0},
+          "column": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": false
+      }
+    },
+    "keying": {
+      "type": "object",
+      "required": ["keyColor", "matteErode"],
+      "properties": {
+        "keyColor": {"type": "string", "minLength": 1},
+        "matteErode": {"type": "integer", "minimum": 0, "maximum": 8}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

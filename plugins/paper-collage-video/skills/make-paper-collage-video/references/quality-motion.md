@@ -1,6 +1,6 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v4 composition authoring, proof review, or delivery tuning.
+Read this before style sampling, bulk images, v5 composition authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
@@ -48,7 +48,7 @@ Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, c
 }
 ```
 
-After narration files and real v4 groups exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
+After narration files and real v5 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
@@ -85,6 +85,7 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
 
 - `supported-subject`: support contact, readable inside/on relation, visible front occlusion, shared carrier motion, identity continuity, and clean subject isolation under relative motion.
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
+- `state-sequence`: state order correct, pose registration stable, identity consistent, transition clean, every state bound to a current proof frame.
 - bound cue: visual event visible, sound event bound when required, proof time bound, final state preserved.
 - semantic contract: every requested check is visible in its exact target shots; cross-scene checks compare all bound scenes rather than one attractive frame.
 
@@ -102,7 +103,7 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v4 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
+`project:assets-ready` owns narration synchronization, subtitle derivation, v5 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
 
 `project:assets-ready` and both render commands first build an audio-only timeline mix and measure LUFS/true peak. If it fails, use the bounded `audio.narration.volume` recommendation, rerun the preflight, and keep the final artifact report authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 

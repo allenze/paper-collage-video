@@ -112,7 +112,7 @@ test('packaged runtime is lightweight and independent from production projects',
   const starterMetrics = readJson(
     path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
   );
-  assert.equal(starterProject.schemaVersion, 4);
+  assert.equal(starterProject.schemaVersion, 5);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
   assert.equal(starterProject.scenes[0].cues.length, 3);

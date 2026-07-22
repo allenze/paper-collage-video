@@ -90,6 +90,9 @@ for (const entry of [
   'scripts/creative-plan-lib.mjs',
   'scripts/composition-lib.mjs',
   'scripts/process-character-sheet.mjs',
+  'scripts/process-state-sheet.mjs',
+  'scripts/state-sheet-lib.mjs',
+  'scripts/state-sequence-lib.mjs',
   'scripts/python-runtime.mjs',
   'scripts/provider-lib.mjs',
   'scripts/generation-attempt-lib.mjs',
@@ -141,11 +144,13 @@ for (const entry of [
   'src/index.ts',
   'src/project.ts',
   'src/roleMotion.ts',
+  'src/stateSequence.ts',
   'tests/provider-and-assets.test.mjs',
   'tests/production-metrics.test.mjs',
   'tests/audio-render-cache.test.mjs',
   'tests/creative-plan.test.mjs',
   'tests/composition-v4.test.mjs',
+  'tests/state-sequence-v5.test.mjs',
   'tests/production-state.test.mjs',
   'tests/quality-motion-runtime.test.mjs',
   'tests/storyboard-motion.test.mjs',
@@ -172,6 +177,7 @@ const workspacePackage = {
   scripts: {
     'assets:rasterize': rootPackage.scripts['assets:rasterize'],
     'assets:process-sheet': rootPackage.scripts['assets:process-sheet'],
+    'assets:process-state-sheet': rootPackage.scripts['assets:process-state-sheet'],
     'provider:status': rootPackage.scripts['provider:status'],
     'provider:select': rootPackage.scripts['provider:select'],
     'provider:run': rootPackage.scripts['provider:run'],
@@ -211,6 +217,11 @@ const workspacePackage = {
   },
 };
 await writeJson(path.join(RUNTIME_ROOT, 'package.json'), workspacePackage);
+
+const pluginManifestFile = path.join(PLUGIN_ROOT, '.codex-plugin', 'plugin.json');
+const pluginManifest = JSON.parse(await fs.readFile(pluginManifestFile, 'utf8'));
+pluginManifest.version = rootPackage.version;
+await writeJson(pluginManifestFile, pluginManifest);
 
 const lock = JSON.parse(
   await fs.readFile(path.join(RUNTIME_ROOT, 'package-lock.json'), 'utf8'),
@@ -253,7 +264,7 @@ await fs.writeFile(path.join(RUNTIME_ROOT, 'src', 'Root.tsx'), rootSource, 'utf8
 
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 4,
+  schemaVersion: 5,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
@@ -309,9 +320,9 @@ const project = {
         intensity: 0.7,
         seed: 17,
         proofTimes: [
-          {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立']},
-          {id: 'proof-action', at: 0.5, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央']},
-          {id: 'proof-final', at: 0.9, label: '标题与主体稳定', kind: 'final', assertions: ['主体与标题构图稳定']},
+          {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},
+          {id: 'proof-action', at: 0.5, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央'], stateAssertions: []},
+          {id: 'proof-final', at: 0.9, label: '标题与主体稳定', kind: 'final', assertions: ['主体与标题构图稳定'], stateAssertions: []},
         ],
       },
       composition: {
@@ -368,7 +379,7 @@ await writeJson(
 
 const storyboard = {
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 2,
+  schemaVersion: 3,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',
@@ -392,12 +403,13 @@ const storyboard = {
         {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', motion: '主体回落稳定', audioCue: null, proofTimeId: 'proof-final'},
       ],
       proofTimes: [
-        {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立']},
-        {id: 'proof-action', at: 0.5, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央']},
-        {id: 'proof-final', at: 0.9, label: '标题与主体稳定', kind: 'final', assertions: ['主体与标题构图稳定']},
+        {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},
+        {id: 'proof-action', at: 0.5, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央'], stateAssertions: []},
+        {id: 'proof-final', at: 0.9, label: '标题与主体稳定', kind: 'final', assertions: ['主体与标题构图稳定'], stateAssertions: []},
       ],
       compositionPlan: {
         patterns: ['free'],
+        stateSequences: [],
         relationships: [
           {id: 'traveler-over-background', subject: 'traveler', predicate: 'free', object: 'background', proof: '主体独立于背景运动且构图可读'},
         ],

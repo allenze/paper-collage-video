@@ -80,8 +80,8 @@ export const loadProject = async (slug) => {
   assertSlug(slug);
   const paths = projectPaths(slug);
   const project = await readJson(paths.projectFile);
-  if (project.schemaVersion !== 4) {
-    throw new Error('project.json 必须使用 schemaVersion 4；旧项目不会自动迁移。');
+  if (project.schemaVersion !== 5) {
+    throw new Error('project.json 必须使用 schemaVersion 5；旧项目不会自动迁移。');
   }
   return {paths, project};
 };
@@ -334,8 +334,8 @@ export const validateProject = async (project, options = {}) => {
   const add = (level, code, message, location) =>
     issues.push(makeIssue(level, code, message, location));
 
-  if (project.schemaVersion !== 4) {
-    add('error', 'schema-version', 'schemaVersion 必须为 4。', 'schemaVersion');
+  if (project.schemaVersion !== 5) {
+    add('error', 'schema-version', 'schemaVersion 必须为 5。', 'schemaVersion');
   }
   if (!SLUG_PATTERN.test(project.slug ?? '')) {
     add('error', 'slug', 'slug 格式无效。', 'slug');
@@ -353,13 +353,13 @@ export const validateProject = async (project, options = {}) => {
     add('error', 'video-fps', 'fps 必须为正数。', 'video.fps');
   }
   if (project.plan === undefined) {
-    add('error', 'plan-required', 'v4 项目必须包含 plan。', 'plan');
+    add('error', 'plan-required', 'v5 项目必须包含 plan。', 'plan');
   }
   if (!project.voice || typeof project.voice !== 'object') {
-    add('error', 'voice-required', 'v4 项目必须包含 voice。', 'voice');
+    add('error', 'voice-required', 'v5 项目必须包含 voice。', 'voice');
   }
   if (project.audio?.sfx !== undefined) {
-    add('error', 'unsupported-audio-sfx', 'v4 不支持 audio.sfx；请用逐节拍 cue.sound。', 'audio.sfx');
+    add('error', 'unsupported-audio-sfx', 'v5 不支持 audio.sfx；请用逐节拍 cue.sound。', 'audio.sfx');
   }
   if (!isPositiveNumber(project.quality?.minimumAssetScale)) {
     add(
@@ -395,7 +395,7 @@ export const validateProject = async (project, options = {}) => {
     add(
       'error',
       'audio-mastering-required',
-      'audio.mastering 是 v4 项目的必填交付规格。',
+      'audio.mastering 是 v5 项目的必填交付规格。',
       'audio.mastering',
     );
   }
@@ -522,7 +522,8 @@ export const validateProject = async (project, options = {}) => {
               proof.at !== approved.at ||
               proof.label !== approved.label ||
               proof.kind !== approved.kind ||
-              JSON.stringify(proof.assertions) !== JSON.stringify(approved.assertions)
+              JSON.stringify(proof.assertions) !== JSON.stringify(approved.assertions) ||
+              JSON.stringify(proof.stateAssertions ?? []) !== JSON.stringify(approved.stateAssertions ?? [])
             );
           }));
       if (proofDrift) {
@@ -551,6 +552,14 @@ export const validateProject = async (project, options = {}) => {
     if (!Number.isFinite(scene.tailSeconds) || scene.tailSeconds < 0) {
       add('error', 'scene-tail', 'tailSeconds 必须是非负秒数。', `${sceneLocation}.tailSeconds`);
     }
+    if (scene.appearance?.paperTexture && (
+      typeof scene.appearance.paperTexture.visible !== 'boolean' ||
+      !Number.isFinite(scene.appearance.paperTexture.opacity) ||
+      scene.appearance.paperTexture.opacity < 0 ||
+      scene.appearance.paperTexture.opacity > 1 ||
+      !['normal', 'multiply', 'screen', 'overlay'].includes(scene.appearance.paperTexture.blendMode)
+    )) add('error', 'scene-appearance-texture', 'appearance.paperTexture 无效。', `${sceneLocation}.appearance.paperTexture`);
+    if (scene.appearance?.subtitles && !['boxed', 'plain', 'hidden'].includes(scene.appearance.subtitles.variant)) add('error', 'scene-appearance-subtitles', 'appearance.subtitles.variant 无效。', `${sceneLocation}.appearance.subtitles.variant`);
 
     const narrationLocation = `${sceneLocation}.narration`;
     if (!Number.isFinite(scene.narration?.startSeconds) || scene.narration.startSeconds < 0) {
@@ -606,8 +615,43 @@ export const validateProject = async (project, options = {}) => {
     const actualPatterns = new Set(
       compositionResult.groups.map(({node}) => node.pattern),
     );
-    if (compositionResult.assets.some(({parent}) => parent === null)) {
+    if (compositionResult.freeNodes.length > 0) {
       actualPatterns.add('free');
+    }
+
+    const actualSequences = new Map(compositionResult.sequences.map(({node}) => [node.id, node]));
+    for (const planned of storyboardScene?.compositionPlan?.stateSequences ?? []) {
+      const actual = actualSequences.get(planned.nodeId);
+      if (!actual) {
+        add('error', 'composition-sequence-drift', `故事板要求状态序列 ${planned.nodeId}，项目镜头没有实现。`, `${sceneLocation}.composition`);
+        continue;
+      }
+      if (
+        actual.poseFamilyId !== planned.poseFamilyId ||
+        actual.playback.mode !== planned.playback ||
+        actual.transition.type !== planned.transition ||
+        JSON.stringify(actual.states.map(({id, at}) => ({id, at}))) !== JSON.stringify(planned.states.map(({id, at}) => ({id, at})))
+      ) add('error', 'composition-sequence-drift', `状态序列 ${planned.nodeId} 与故事板计划不一致。`, `${sceneLocation}.composition`);
+    }
+
+    for (const {node, parent} of compositionResult.sequences) {
+      const nodeLocation = `${sceneLocation}.composition.nodes#${node.id}`;
+      for (const state of node.states) {
+        try {
+          const assetFile = resolvePublicFile(state.src);
+          if (!(await fileExists(assetFile))) {
+            add('error', 'composition-sequence-state-missing', `缺少状态素材：${state.src}`, `${nodeLocation}.states#${state.id}.src`);
+            continue;
+          }
+          const inspection = await memoize(characterInspectionCache, assetFile, () => inspectCharacterPng(assetFile));
+          assets.push({kind: node.assetRole, src: state.src, sceneId: scene.id, nodeId: node.id, stateId: state.id, parentId: parent?.id ?? null, registrationId: node.registration.id, ...inspection});
+          if (!inspection.hasAlpha || inspection.transparentPixels === 0) add('error', 'composition-sequence-state-alpha', '状态素材必须包含有效透明区域。', `${nodeLocation}.states#${state.id}.src`);
+          const {width, height} = node.registration.canvas;
+          if (inspection.width !== width || inspection.height !== height) add('error', 'composition-sequence-state-dimensions', `状态必须与注册画布 ${width}x${height} 完全一致，当前为 ${inspection.width}x${inspection.height}。`, `${nodeLocation}.states#${state.id}.src`);
+        } catch (error) {
+          add('error', 'composition-sequence-state-inspect', error.message, `${nodeLocation}.states#${state.id}.src`);
+        }
+      }
     }
     for (const pattern of storyboardScene?.compositionPlan?.patterns ?? []) {
       if (!actualPatterns.has(pattern)) {
@@ -724,7 +768,7 @@ export const validateProject = async (project, options = {}) => {
       add('error', 'scene-cues-required', '每个镜头必须包含与故事节拍对应的 cues。', `${sceneLocation}.cues`);
     }
     if (scene.audioEvents !== undefined) {
-      add('error', 'unsupported-audio-events', 'v4 只允许 scene.cues 作为视听事件源。', `${sceneLocation}.audioEvents`);
+      add('error', 'unsupported-audio-events', 'v5 只允许 scene.cues 作为视听事件源。', `${sceneLocation}.audioEvents`);
     }
     const cueIds = new Set();
     const cueBeatIds = new Set();

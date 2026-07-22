@@ -151,7 +151,7 @@ test('quality scaffold exposes pending checks and current proof evidence without
   assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
 });
 
-test('v4 scene transitions use one seconds-based timing protocol', () => {
+test('v5 scene transitions use one seconds-based timing protocol', () => {
   const timeline = deriveTimeline({
     video: {fps: 30},
     scenes: [
@@ -181,7 +181,7 @@ test('v4 scene transitions use one seconds-based timing protocol', () => {
   assert.equal(timeline.durationInFrames, 160);
 });
 
-test('pre-v4 projects are rejected instead of migrated', async () => {
+test('pre-v5 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -195,14 +195,14 @@ test('pre-v4 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-        code === 'schema-version' && message.includes('必须为 4'),
+          code === 'schema-version' && message.includes('必须为 5'),
     ),
   );
 });
 
-test('v4 projects require an explicit bounded narration gain', async () => {
+test('v5 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -317,7 +317,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
       path.join(projectDirectory, 'project.json'),
       `${JSON.stringify(
         {
-          schemaVersion: 4,
+          schemaVersion: 5,
           slug,
           title: 'Quality Gate',
           quality: {minimumAssetScale: 1},
@@ -479,7 +479,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
         .toFile(file);
     }
     const project = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},

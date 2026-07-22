@@ -1,19 +1,27 @@
 {
   "name": "paper-collage-video",
-  "version": "0.10.0-dev.6",
-  "description": "Create editable paper-collage videos with explicit production profiles, approved rhythmic storyboards, timed narration, incremental proof rendering, audio preflight, and a self-contained Remotion workspace.",
+  "version": "0.11.0-dev.1",
+  "description": "Create editable paper-collage and hand-drawn explainer videos with registered limited-animation states, cost-aware pose sheets, rhythmic storyboards, proof rendering, and a self-contained Remotion workspace.",
   "author": {
     "name": "Paper Collage Video Contributors"
   },
-  "keywords": ["remotion", "video", "paper-collage", "animation"],
+  "keywords": [
+    "remotion",
+    "video",
+    "paper-collage",
+    "animation"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "纸片分层视频制作",
-    "shortDescription": "用明确制作档位、增量证据和音频预检制作纸片视频",
-    "longDescription": "初始化独立的 Remotion 工作区，用带数字预算的制作档位、已批准的节奏故事板、人物/机构/说明图语义契约、旁白时长约束、增量合成证据、响度预检和三次默认人工确认，完成可恢复的纸片拼贴视频制作与本地交付。",
+    "shortDescription": "用注册状态动画、批量姿态表和增量证据制作纸片视频",
+    "longDescription": "初始化独立的 Remotion 工作区，用带数字预算的制作档位、注册式有限动画、一次生成多状态的姿态表、可编辑文字/形状节点、已批准的节奏故事板、语义契约、增量合成证据和音频预检，完成可恢复的纸片拼贴与手绘解释视频制作。",
     "developerName": "Paper Collage Video Contributors",
     "category": "Creativity",
-    "capabilities": ["Create", "Render"],
+    "capabilities": [
+      "Create",
+      "Render"
+    ],
     "defaultPrompt": [
       "用 $make-paper-collage-video 做一条约 30 秒的纸片分层视频。",
       "用 $make-paper-collage-video 做一个四幕的儿童历史故事，时长由你安排。",

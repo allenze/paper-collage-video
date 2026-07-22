@@ -39,6 +39,19 @@ provider workflow, templates, validation, or quality gates, read
   final video that earlier systems produced. If an old production must be revised,
   rebuild it as a new project under the latest contract.
 
+## Cost-Efficiency Policy
+
+- Preserve the approved quality bar while minimizing paid/provider calls, render
+  work, and avoidable regeneration.
+- Batch related states from one identity or prop into a registered 2x2, 3x2, or
+  similarly dense sheet when the provider can produce it reliably; split and key
+  it deterministically while preserving one canvas for every cell.
+- Do not batch unrelated identities merely to fill a grid. If one reviewed cell
+  fails, prefer a targeted cell repair over regenerating the whole accepted
+  family.
+- Provenance and reports must distinguish provider calls from deterministic local
+  derivatives and expose the calls actually avoided.
+
 ## Verification Policy
 
 - Test the latest contract and representative output capabilities. Do not retain

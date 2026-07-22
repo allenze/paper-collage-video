@@ -27,7 +27,7 @@ try {
   const storyboard = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 2,
+    schemaVersion: 3,
     slug,
     status: 'ready',
     updatedAt: new Date().toISOString(),

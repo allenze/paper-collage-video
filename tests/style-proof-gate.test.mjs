@@ -79,7 +79,7 @@ const writeFixture = async (slug) => {
     motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
   });
   const project = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     slug,
     quality: {minimumAssetScale: 1},
     video: {width: 100, height: 100, fps: 30},

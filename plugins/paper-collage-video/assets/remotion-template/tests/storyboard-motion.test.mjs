@@ -8,7 +8,7 @@ import {
 import {proofOverlapsTransition} from '../scripts/project-lib.mjs';
 
 const readyStoryboard = () => ({
-  schemaVersion: 1,
+  schemaVersion: 3,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
@@ -28,19 +28,20 @@ const readyStoryboard = () => ({
       estimatedDurationSeconds: 6,
       compositionPlan: {
         patterns: ['supported-subject'],
+        stateSequences: [],
         relationships: [
           {id: 'subject-on-stage', subject: 'subject', predicate: 'on', object: 'stage', proof: 'The subject visibly contacts the stage'},
         ],
       },
       beats: [
-        {id: 'establish', at: 0, purpose: 'place', visual: 'Empty paper world', motion: 'Reveal the scene', audioCue: null},
-        {id: 'action', at: 0.48, purpose: 'act', visual: 'Subject rises', motion: 'Lift the subject', audioCue: 'paper lift'},
-        {id: 'settle', at: 0.9, purpose: 'resolve', visual: 'Composition locks', motion: 'Settle the subject', audioCue: null},
+        {id: 'establish', at: 0, purpose: 'place', visual: 'Empty paper world', motion: 'Reveal the scene', audioCue: null, proofTimeId: null},
+        {id: 'action', at: 0.48, purpose: 'act', visual: 'Subject rises', motion: 'Lift the subject', audioCue: 'paper lift', proofTimeId: 'proof-action'},
+        {id: 'settle', at: 0.9, purpose: 'resolve', visual: 'Composition locks', motion: 'Settle the subject', audioCue: null, proofTimeId: null},
       ],
       proofTimes: [
-        {id: 'proof-establish', at: 0.08, label: 'World established', kind: 'establish', assertions: ['The stage is readable']},
-        {id: 'proof-action', at: 0.5, label: 'Action peaks', kind: 'peak', assertions: ['The subject contacts the stage']},
-        {id: 'proof-final', at: 0.9, label: 'Composition resolves', kind: 'final', assertions: ['The final relationship is stable']},
+        {id: 'proof-establish', at: 0.08, label: 'World established', kind: 'establish', assertions: ['The stage is readable'], stateAssertions: []},
+        {id: 'proof-action', at: 0.5, label: 'Action peaks', kind: 'peak', assertions: ['The subject contacts the stage'], stateAssertions: []},
+        {id: 'proof-final', at: 0.9, label: 'Composition resolves', kind: 'final', assertions: ['The final relationship is stable'], stateAssertions: []},
       ],
     },
   ],
@@ -80,7 +81,7 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
     blueprint: 'layered-reveal',
     patterns: ['supported-subject'],
     beatCount: 3,
-    evidenceBoundBeatCount: 0,
+    evidenceBoundBeatCount: 1,
     proofCount: 3,
   });
 
@@ -92,6 +93,7 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
     label: 'Too early',
     kind: 'final',
     assertions: ['Too early'],
+    stateAssertions: [],
   };
   const issues = validateStoryboard(invalid, {
     slug: 'rhythm-test',
@@ -101,9 +103,9 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v2 storyboard audio beats require an approved event-level proof', () => {
+test('v3 storyboard audio beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
-  storyboard.schemaVersion = 2;
+  storyboard.schemaVersion = 3;
   storyboard.scenes[0].beats = storyboard.scenes[0].beats.map((beat) => ({
     ...beat,
     proofTimeId: beat.id === 'action' ? 'proof-action' : null,

@@ -20,12 +20,12 @@ Use `provider:select` only for an isolated change or fallback. A provider switch
 
 ## Schema-v3 Image Requests and Reuse
 
-Every new image request uses schema v3 and requires both `compositionBinding` and `semanticBinding`. A free asset names its scene/node/role/canvas. A coupled asset also names the common registration and source master. Critical content binds a ready project semantic contract. Schema v2 remains readable only for projects created before the generation-attempt ledger.
+Every new image request uses schema v4 and requires both `compositionBinding` and `semanticBinding`. A free asset names its scene/node/role/canvas. A coupled asset also names the common registration and source master. Critical content binds a ready project semantic contract. Older request schemas are rejected rather than migrated.
 
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "projectSlug": "example",
   "assetId": "boat-front",
   "capability": "image",
@@ -52,7 +52,9 @@ For a coupled family:
 3. keep each derivative on the identical canvas and origin;
 4. record every output so manifest v3 computes one family fingerprint.
 
-Do not make independent text-to-image calls for registered members. Reuse requires the whole composition binding to match, so an unrelated water image cannot enter a registered river family merely because it looks similar.
+Do not make independent text-to-image calls for registered members. For two or more poses/states of one identity, prefer one `stateSheetBinding` request with an explicit grid and `regenerate-failed-cell-only`, then run `assets:process-state-sheet`. This converts one provider image into registered local state files without trimming their shared cell canvas. The processor records each derivative and a family fingerprint; those local crops do not consume more generation attempts. Do not put unrelated identities in one sheet merely to reduce cost.
+
+Reuse requires the whole composition binding to match, so an unrelated water image cannot enter a registered river family merely because it looks similar.
 
 ```bash
 npm run provider:reuse -- --request=projects/<slug>/requests/<asset>.json

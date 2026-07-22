@@ -3,7 +3,7 @@ import {createReadStream} from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
-  collectCompositionAssets,
+  collectCompositionVisualSources,
   collectCompositionGroups,
   hashCompositionValue,
 } from './composition-lib.mjs';
@@ -49,7 +49,7 @@ export const createVisualFingerprint = async (project, mode) => {
   const sources = [project.theme.texture, project.theme.fontFile];
   for (const scene of project.scenes ?? []) {
     sources.push(
-      ...collectCompositionAssets(scene.composition).map(({node}) => node.src),
+      ...collectCompositionVisualSources(scene.composition),
     );
     for (const {node} of collectCompositionGroups(scene.composition)) {
       for (const boundary of node.boundaries ?? []) {
@@ -75,7 +75,7 @@ export const createSceneProofFingerprint = async ({
 }) => {
   const sources = [project.theme.texture, project.theme.fontFile];
   sources.push(
-    ...collectCompositionAssets(scene.composition).map(({node}) => node.src),
+    ...collectCompositionVisualSources(scene.composition),
   );
   for (const {node} of collectCompositionGroups(scene.composition)) {
     for (const boundary of node.boundaries ?? []) {

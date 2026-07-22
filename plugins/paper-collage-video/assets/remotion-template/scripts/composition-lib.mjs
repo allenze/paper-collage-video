@@ -2,6 +2,11 @@ import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {
+  collectSequenceProofCoverage,
+  resolveSequencePhase,
+  resolveSequenceState,
+} from './state-sequence-lib.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -43,6 +48,14 @@ export const collectCompositionGroups = (composition) =>
 
 export const collectCompositionAssets = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'asset');
+
+export const collectStateSequences = (composition) =>
+  flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'state-sequence');
+
+export const collectCompositionVisualSources = (composition) => [
+  ...collectCompositionAssets(composition).map(({node}) => node.src),
+  ...collectStateSequences(composition).flatMap(({node}) => node.states.map(({src}) => src)),
+];
 
 export const pointInPolygon = ([x, y], polygon = []) => {
   let inside = false;
@@ -118,7 +131,7 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
   const add = (level, code, message, issueLocation) => issues.push({level, code, message, location: issueLocation});
   if (!composition || typeof composition !== 'object') {
     add('error', 'composition-required', '每个镜头必须声明 composition。', location);
-    return {issues, nodeIds: new Set(), groups: [], assets: []};
+    return {issues, nodeIds: new Set(), groups: [], assets: [], sequences: [], freeNodes: []};
   }
   if (
     composition.coordinateSpace?.width !== video?.width ||
@@ -129,14 +142,16 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
   if (!Array.isArray(composition.nodes) || composition.nodes.length === 0) add('error', 'composition-nodes', 'composition.nodes 至少需要一个节点。', `${location}.nodes`);
 
   const flat = flattenCompositionNodes(composition.nodes);
+  const freeNodes = flat.filter(({node, parent}) => parent === null && node.kind !== 'group');
   const nodeIds = new Set();
   const groups = [];
   const assets = [];
+  const sequences = [];
   for (const {node, parent} of flat) {
     const nodeLocation = `${location}.nodes#${node?.id ?? 'missing'}`;
     if (!nonEmpty(node?.id) || nodeIds.has(node.id)) add('error', 'composition-node-id', '组合节点 id 缺失或重复。', `${nodeLocation}.id`);
     nodeIds.add(node?.id);
-    if (!['asset', 'group'].includes(node?.kind)) {
+    if (!['asset', 'state-sequence', 'text', 'shape', 'group'].includes(node?.kind)) {
       add('error', 'composition-node-kind', `未知组合节点 kind：${node?.kind}`, `${nodeLocation}.kind`);
       continue;
     }
@@ -156,13 +171,60 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       continue;
     }
 
+    if (node.kind === 'state-sequence') {
+      sequences.push({node, parent});
+      if (!['character', 'prop', 'decorative'].includes(node.assetRole)) add('error', 'composition-sequence-role', `未知 state-sequence assetRole：${node.assetRole}`, `${nodeLocation}.assetRole`);
+      if (!nonEmpty(node.poseFamilyId)) add('error', 'composition-pose-family', 'state-sequence 必须声明 poseFamilyId。', `${nodeLocation}.poseFamilyId`);
+      if (!node.registration || !nonEmpty(node.registration.id) || !nonEmpty(node.registration.sourceMasterAssetId)) add('error', 'composition-sequence-registration', 'state-sequence 必须声明可追溯的 registration。', `${nodeLocation}.registration`);
+      if (!(finite(node.registration?.canvas?.width) && node.registration.canvas.width > 0 && finite(node.registration?.canvas?.height) && node.registration.canvas.height > 0)) add('error', 'composition-sequence-canvas', 'state-sequence registration.canvas 必须是有效画布。', `${nodeLocation}.registration.canvas`);
+      if (!Array.isArray(node.states) || node.states.length < 2) {
+        add('error', 'composition-sequence-states', 'state-sequence 至少需要两个状态。', `${nodeLocation}.states`);
+      } else {
+        const stateIds = new Set();
+        let previousAt = -1;
+        for (const [index, state] of node.states.entries()) {
+          const stateLocation = `${nodeLocation}.states[${index}]`;
+          if (!nonEmpty(state.id) || stateIds.has(state.id)) add('error', 'composition-sequence-state-id', '状态 id 缺失或重复。', `${stateLocation}.id`);
+          stateIds.add(state.id);
+          if (!nonEmpty(state.src)) add('error', 'composition-sequence-state-src', '状态必须声明 src。', `${stateLocation}.src`);
+          if (!finite(state.at) || state.at < 0 || state.at > 1 || state.at <= previousAt) add('error', 'composition-sequence-state-at', '状态 at 必须位于 0..1 且严格递增。', `${stateLocation}.at`);
+          previousAt = state.at;
+        }
+        if (node.states[0]?.at !== 0) add('error', 'composition-sequence-start', '状态序列必须从 at=0 开始。', `${nodeLocation}.states[0].at`);
+        const coverage = collectSequenceProofCoverage({node, proofTimes});
+        for (const state of node.states) {
+          if (!coverage.has(state.id)) add('error', 'composition-sequence-proof-coverage', `状态 ${state.id} 缺少 proofTime.stateAssertions 证明。`, `${nodeLocation}.states`);
+        }
+      }
+      if (!['once', 'loop', 'ping-pong'].includes(node.playback?.mode) || !(Number.isInteger(node.playback?.cycles) && node.playback.cycles > 0)) add('error', 'composition-sequence-playback', 'state-sequence playback 必须声明有效 mode 与正整数 cycles。', `${nodeLocation}.playback`);
+      if (node.playback?.mode === 'once' && node.playback.cycles !== 1) add('error', 'composition-sequence-once-cycles', 'once playback 的 cycles 必须为 1。', `${nodeLocation}.playback.cycles`);
+      if (!['cut', 'crossfade'].includes(node.transition?.type) || !(finite(node.transition?.durationSeconds) && node.transition.durationSeconds >= 0)) add('error', 'composition-sequence-transition', 'state-sequence transition 无效。', `${nodeLocation}.transition`);
+      if (node.transition?.type === 'cut' && node.transition.durationSeconds !== 0) add('error', 'composition-sequence-cut-duration', 'cut 的 durationSeconds 必须为 0。', `${nodeLocation}.transition.durationSeconds`);
+      if (node.transition?.type === 'crossfade' && !(node.transition.durationSeconds > 0)) add('error', 'composition-sequence-crossfade-duration', 'crossfade 的 durationSeconds 必须大于 0。', `${nodeLocation}.transition.durationSeconds`);
+      if (node.clip && parent?.pattern !== 'registered-environment') add('error', 'composition-clip-parent', '只有 registered-environment 子节点可以声明 clip。', `${nodeLocation}.clip`);
+      continue;
+    }
+
+    if (node.kind === 'text') {
+      if (typeof node.text !== 'string') add('error', 'composition-text-value', 'text 节点必须声明字符串内容。', `${nodeLocation}.text`);
+      if (!(finite(node.style?.fontSize) && node.style.fontSize > 0 && finite(node.style?.lineHeight) && node.style.lineHeight > 0)) add('error', 'composition-text-style', 'text 节点必须声明有效字号与行高。', `${nodeLocation}.style`);
+      if (!finite(node.transform?.height) || node.transform.height <= 0) add('error', 'composition-text-height', 'text 节点必须声明 transform.height。', `${nodeLocation}.transform.height`);
+      continue;
+    }
+
+    if (node.kind === 'shape') {
+      if (!['rectangle', 'ellipse', 'line'].includes(node.shape)) add('error', 'composition-shape-kind', `未知 shape：${node.shape}`, `${nodeLocation}.shape`);
+      if (!finite(node.transform?.height) || node.transform.height <= 0) add('error', 'composition-shape-height', 'shape 节点必须声明 transform.height。', `${nodeLocation}.transform.height`);
+      continue;
+    }
+
     groups.push({node, parent});
     if (!COMPOSITION_PATTERNS.includes(node.pattern)) add('error', 'composition-pattern', `未知组合模式：${node.pattern}`, `${nodeLocation}.pattern`);
     if (!(finite(node.coordinateSpace?.width) && node.coordinateSpace.width > 0 && finite(node.coordinateSpace?.height) && node.coordinateSpace.height > 0)) add('error', 'composition-group-space', 'group.coordinateSpace 必须是有效画布。', `${nodeLocation}.coordinateSpace`);
     if (!Array.isArray(node.children) || node.children.length === 0) add('error', 'composition-group-children', 'group 至少需要一个 child。', `${nodeLocation}.children`);
 
     if (node.pattern === 'supported-subject') {
-      const slots = new Map((node.children ?? []).filter((child) => child.kind === 'asset').map((child) => [child.slot, child]));
+      const slots = new Map((node.children ?? []).filter((child) => ['asset', 'state-sequence'].includes(child.kind)).map((child) => [child.slot, child]));
       for (const slot of ['support-rear', 'subject', 'support-front']) {
         if (!slots.has(slot)) add('error', 'composition-support-slot', `supported-subject 缺少 ${slot}。`, `${nodeLocation}.children`);
       }
@@ -170,8 +232,9 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       if (!node.support) add('error', 'composition-support', 'supported-subject 必须声明 support。', `${nodeLocation}.support`);
       const subject = slots.get('subject');
       if (subject && node.support?.subjectId !== subject.id) add('error', 'composition-support-subject', 'support.subjectId 必须指向 subject slot。', `${nodeLocation}.support.subjectId`);
-      for (const child of (node.children ?? []).filter((item) => item.kind === 'asset')) {
-        if (child.registrationId !== node.registration?.id) add('error', 'composition-registration-member', `耦合成员 ${child.id} 必须共享 registrationId。`, `${nodeLocation}.children`);
+      for (const child of (node.children ?? []).filter((item) => ['asset', 'state-sequence'].includes(item.kind))) {
+        const registrationId = child.kind === 'asset' ? child.registrationId : child.registration?.id;
+        if (registrationId !== node.registration?.id) add('error', 'composition-registration-member', `耦合成员 ${child.id} 必须共享 registrationId。`, `${nodeLocation}.children`);
         const groupHasCarrierMotion = (node.motion?.keyframes ?? []).some((keyframe) =>
           (keyframe.x ?? 0) !== 0 ||
           (keyframe.y ?? 0) !== 0 ||
@@ -213,7 +276,21 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       }
     }
   }
-  return {issues, nodeIds, groups, assets};
+  for (const proof of proofTimes) {
+    for (const assertion of proof.stateAssertions ?? []) {
+      const entry = sequences.find(({node}) => node.id === assertion.nodeId);
+      if (!entry) {
+        add('error', 'composition-sequence-proof-node', `证明 ${proof.id} 引用了不存在的状态序列 ${assertion.nodeId}。`, `${location}.proofTimes#${proof.id}`);
+        continue;
+      }
+      if (!entry.node.states.some(({id}) => id === assertion.stateId)) add('error', 'composition-sequence-proof-state', `证明 ${proof.id} 引用了不存在的状态 ${assertion.stateId}。`, `${location}.proofTimes#${proof.id}`);
+      const resolved = resolveSequenceState({node: entry.node, progress: proof.at});
+      if (resolved?.id !== assertion.stateId) add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${assertion.stateId}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
+      const phase = resolveSequencePhase({...entry.node.playback, progress: proof.at});
+      if (entry.node.transition.type === 'crossfade' && resolved?.at === phase && resolved.at > 0) add('error', 'composition-sequence-proof-transition', `证明 ${proof.id} 落在 ${resolved.id} 交叉淡化的起点，此时新状态尚不可见。`, `${location}.proofTimes#${proof.id}`);
+    }
+  }
+  return {issues, nodeIds, groups, assets, sequences, freeNodes};
 };
 
 export const deriveCueEvents = ({scene, sceneFrom = 0, fps}) =>

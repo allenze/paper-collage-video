@@ -81,6 +81,8 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     settings: request.settings ?? {},
     quality: request.quality ?? null,
     compositionBinding: request.compositionBinding ?? null,
+    stateBinding: request.stateBinding ?? null,
+    stateSheetBinding: request.stateSheetBinding ?? null,
     semanticBinding: request.semanticBinding ?? null,
     providerId,
   };
@@ -533,7 +535,7 @@ export const resolveWorkspacePath = (input, label = '路径') => {
 
 export const validateAssetRequest = (request) => {
   const errors = [];
-  if (![2, 3].includes(request?.schemaVersion)) errors.push('schemaVersion 必须为 2 或 3');
+  if (request?.schemaVersion !== 4) errors.push('schemaVersion 必须为 4');
   if (!SLUG_PATTERN.test(request?.projectSlug ?? '')) errors.push('projectSlug 格式无效');
   if (!SLUG_PATTERN.test(request?.assetId ?? '')) errors.push('assetId 格式无效');
   if (!PROVIDER_CAPABILITIES.includes(request?.capability)) errors.push('capability 必须是 text、image 或 voice');
@@ -543,8 +545,8 @@ export const validateAssetRequest = (request) => {
   if (request?.capability === 'image' && !isPlainObject(request.compositionBinding)) {
     errors.push('image request 缺少 compositionBinding');
   }
-  if (request?.capability === 'image' && request.schemaVersion === 3 && !isPlainObject(request.semanticBinding)) {
-    errors.push('schema-v3 image request 缺少 semanticBinding');
+  if (request?.capability === 'image' && !isPlainObject(request.semanticBinding)) {
+    errors.push('schema-v4 image request 缺少 semanticBinding');
   }
   if (request?.capability === 'voice' && !request.text) errors.push('voice request 缺少 text');
   if (request?.timingBinding !== undefined) {
@@ -592,10 +594,34 @@ export const validateAssetRequest = (request) => {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 compositionBinding');
     const binding = request.compositionBinding;
     if (!binding.sceneId || !binding.nodeId || !binding.outputRole) errors.push('compositionBinding 缺少 sceneId、nodeId 或 outputRole');
-    if (!['free', 'supported-subject', 'registered-environment'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
+    if (!['free', 'supported-subject', 'registered-environment', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
     if (!Number.isInteger(binding.canvas?.width) || binding.canvas.width < 1 || !Number.isInteger(binding.canvas?.height) || binding.canvas.height < 1) errors.push('compositionBinding.canvas 无效');
     if (!['provider-generation', 'provider-edit', 'alpha-extraction', 'crop', 'mask-application', 'manual-import'].includes(binding.derivation?.method)) errors.push('compositionBinding.derivation.method 无效');
-    if (['supported-subject', 'registered-environment'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
+    if (['supported-subject', 'registered-environment', 'state-sequence'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
+    if (binding.pattern === 'state-sequence') {
+      const state = request.stateBinding;
+      const sheet = request.stateSheetBinding;
+      if (Boolean(state) === Boolean(sheet)) errors.push('state-sequence 图像必须且只能声明 stateBinding 或 stateSheetBinding 之一');
+      if (state && (!isPlainObject(state) || !state.poseFamilyId || !state.stateId || !state.registrationId || !state.sourceMasterAssetId)) errors.push('stateBinding 不完整');
+      if (state && (state.registrationId !== binding.registrationId || state.sourceMasterAssetId !== binding.sourceMasterAssetId)) errors.push('stateBinding 必须与 compositionBinding 使用同一注册族');
+      if (sheet) {
+        if (!isPlainObject(sheet) || !sheet.poseFamilyId || !sheet.registrationId || !sheet.sourceMasterAssetId || !Number.isInteger(sheet.layout?.columns) || !Number.isInteger(sheet.layout?.rows) || !Array.isArray(sheet.states) || sheet.states.length < 2 || sheet.recoveryPolicy !== 'regenerate-failed-cell-only') errors.push('stateSheetBinding 不完整');
+        if (sheet.registrationId !== binding.registrationId || sheet.sourceMasterAssetId !== binding.sourceMasterAssetId) errors.push('stateSheetBinding 必须与 compositionBinding 使用同一注册族');
+        const cells = new Set();
+        const stateIds = new Set();
+        for (const member of sheet.states ?? []) {
+          const cell = `${member.row}:${member.column}`;
+          if (!member.stateId || stateIds.has(member.stateId) || cells.has(cell) || member.row < 0 || member.row >= sheet.layout.rows || member.column < 0 || member.column >= sheet.layout.columns) errors.push('stateSheetBinding 状态 id/格位重复或越界');
+          stateIds.add(member.stateId);
+          cells.add(cell);
+        }
+        const generationFamily = request.semanticBinding?.generationFamily;
+        if (generationFamily && (
+          generationFamily.familyId !== sheet.poseFamilyId ||
+          JSON.stringify([...generationFamily.memberIds].sort()) !== JSON.stringify(sheet.states.map(({stateId}) => stateId).sort())
+        )) errors.push('stateSheetBinding 必须与 semanticBinding.generationFamily 使用同一 family 和成员集合');
+      }
+    }
   }
   if (request?.semanticBinding !== undefined) {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 semanticBinding');
@@ -635,13 +661,6 @@ export const validateAssetRequest = (request) => {
 export const loadAssetRequest = async (requestInput) => {
   const file = resolveWorkspacePath(requestInput, 'request 路径');
   const request = validateAssetRequest(await readJson(file));
-  if (
-    request.capability === 'image' &&
-    request.schemaVersion < 3 &&
-    await fileExists(generationAttemptsPath(request.projectSlug))
-  ) {
-    throw new Error('启用生成尝试账本的新项目必须使用 schema-v3 image request。');
-  }
   await assertRequestSemanticContracts(request);
   const output = resolveWorkspacePath(request.output, 'output 路径');
   return {file, request, output};
@@ -817,6 +836,8 @@ export const recordAssetProvenance = async ({
       recordedAt: new Date().toISOString(),
       request: {...request},
       compositionBinding: request.compositionBinding ?? null,
+      stateBinding: request.stateBinding ?? null,
+      stateSheetBinding: request.stateSheetBinding ?? null,
       semanticBinding: request.semanticBinding ?? null,
       familyFingerprint: null,
     };
@@ -843,7 +864,7 @@ export const recordAssetProvenance = async ({
       const familyFingerprint = createHash('sha256')
         .update(JSON.stringify(stableValue({
           key,
-          members: members.map(({assetId, sha256: memberSha256, requestFingerprint, compositionBinding}) => ({assetId, sha256: memberSha256, requestFingerprint, compositionBinding})),
+          members: members.map(({assetId, sha256: memberSha256, requestFingerprint, compositionBinding, stateBinding}) => ({assetId, sha256: memberSha256, requestFingerprint, compositionBinding, stateBinding})),
         })))
         .digest('hex');
       for (const member of members) member.familyFingerprint = familyFingerprint;

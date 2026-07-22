@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "slug": "starter-demo",
   "title": "Paper Collage Workspace",
   "plan": {

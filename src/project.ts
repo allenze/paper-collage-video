@@ -68,6 +68,58 @@ export type CompositionAssetNode = {
   clip?: {boundaryId: string; side: 'upper' | 'lower'};
 };
 
+export type SequenceState = {
+  id: string;
+  src: string;
+  at: number;
+};
+
+export type CompositionStateSequenceNode = {
+  id: string;
+  kind: 'state-sequence';
+  assetRole: 'character' | 'prop' | 'decorative';
+  poseFamilyId: string;
+  registration: CompositionRegistration;
+  states: SequenceState[];
+  playback: {mode: 'once' | 'loop' | 'ping-pong'; cycles: number};
+  transition: {type: 'cut' | 'crossfade'; durationSeconds: number};
+  z: number;
+  slot?: string;
+  semanticCoverage?: string[];
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  clip?: {boundaryId: string; side: 'upper' | 'lower'};
+};
+
+export type CompositionTextNode = {
+  id: string;
+  kind: 'text';
+  text: string;
+  style: {
+    color: string;
+    fontSize: number;
+    fontWeight: number;
+    lineHeight: number;
+    align: 'left' | 'center' | 'right';
+    letterSpacing?: number;
+    fontFamily?: string;
+  };
+  z: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+};
+
+export type CompositionShapeNode = {
+  id: string;
+  kind: 'shape';
+  shape: 'rectangle' | 'ellipse' | 'line';
+  style: {fill: string; stroke: string; strokeWidth: number; radius: number};
+  z: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+};
+
 export type CompositionBoundary = {
   id: string;
   normalizedY?: number;
@@ -97,7 +149,12 @@ export type CompositionGroupNode = {
   children: CompositionNode[];
 };
 
-export type CompositionNode = CompositionAssetNode | CompositionGroupNode;
+export type CompositionNode =
+  | CompositionAssetNode
+  | CompositionStateSequenceNode
+  | CompositionTextNode
+  | CompositionShapeNode
+  | CompositionGroupNode;
 
 export type SceneComposition = {
   coordinateSpace: CoordinateSpace;
@@ -144,6 +201,7 @@ export type ProofTime = {
   label: string;
   kind: 'establish' | 'action' | 'peak' | 'final';
   assertions: string[];
+  stateAssertions?: Array<{nodeId: string; stateId: string}>;
 };
 
 export type SceneMotion = {
@@ -174,11 +232,28 @@ export type ProjectAudioMastering = {
   truePeakDbtp: number;
 };
 
+export type SceneAppearance = {
+  background?: string;
+  paperTexture?: {
+    visible: boolean;
+    opacity: number;
+    blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+  };
+  chapter?: {visible: boolean};
+  subtitles?: {
+    variant: 'boxed' | 'plain' | 'hidden';
+    color?: string;
+    background?: string;
+    maxWidth?: number;
+  };
+};
+
 export type ProjectScene = {
   id: string;
   label: string;
   eyebrow: string;
   tailSeconds: number;
+  appearance?: SceneAppearance;
   motion: SceneMotion;
   composition: SceneComposition;
   camera: SceneCamera;
@@ -196,7 +271,7 @@ export type ProjectScene = {
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 4;
+  schemaVersion: 5;
   slug: string;
   title: string;
   plan: {

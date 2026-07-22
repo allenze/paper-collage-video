@@ -9,8 +9,8 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `brief.md` | Human intent, audience, facts, format, style, rights, prohibitions |
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
 | `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
-| `storyboard.json` | Approved arc, schema-v2 beat-to-proof bindings, composition patterns, relationships, and proof assertions |
-| `project.json` | Resolved plan and v4 Remotion execution tree |
+| `storyboard.json` | Approved arc, schema-v3 beat/state-to-proof bindings, composition patterns, relationships, and proof assertions |
+| `project.json` | Resolved plan and v5 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
@@ -37,9 +37,13 @@ The combined confirmation is the normal path. Composition proof is machine evide
 
 When the approved storyboard uses `supported-subject` or `registered-environment`, `approve-style-voice` additionally requires a current schema-v3 `style-motion-proof.json`. The report fingerprint binds the representative group, member hashes, timing/proof inputs, and source family. Its full-resolution frames and per-member alpha/checkerboard/tight/motion-stress evidence must exist, and the participating asset/composite semantic checks must already be recorded. This is an executable precondition inside `style-review`, not another approval state.
 
-## v4 Composition Tree
+## v5 Composition Tree
 
-Schema v4 is the only supported project contract. A scene has `composition.nodes`; it must not contain legacy `background`, `layers`, or `environmentLayers` arrays. Nodes are recursive `asset` or `group` records. All transforms and keyframe deltas are normalized to the immediate parent.
+Schema v5 is the only supported project contract. A scene has `composition.nodes`; nodes are recursive `asset`, `state-sequence`, `text`, `shape`, or `group` records. All transforms and keyframe deltas are normalized to the immediate parent. Older projects are not parsed or migrated; regenerate their equivalent output from the latest contract when needed.
+
+`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Continuous transform/cue motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
+
+When a family needs multiple generated states, create one registered state sheet where practical and run `assets:process-state-sheet`. Every cell keeps the same full canvas; trimming individual silhouettes would destroy registration and cause visible jumping. The derived records share a family fingerprint and do not count as additional provider calls. A failed cell may be regenerated alone only after the sheet review identifies that local defect.
 
 Use only these patterns:
 
@@ -57,7 +61,7 @@ Derivation method is part of correctness. Complex silhouettes and negative space
 
 ## Proof and Cue Contract
 
-- Scene id, blueprint, `compositionPlan`, proof ids/times/assertions, and beat ids must match the approved storyboard. In schema v2, a beat-bound `proofTimeId` is also immutable evidence intent.
+- Scene id, blueprint, `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. In schema v3, beat-bound and state-bound proof intent is immutable.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside fades.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.
 - `scene.cues` is the only visual/sound event source. Every storyboard beat has exactly one cue; cue drift is at most `0.035` normalized units.
@@ -71,4 +75,4 @@ Run `project:composition-proof` after assembling real groups. It fingerprints sc
 
 Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `style:proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
 
-Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, proof, attempt accounting, or report logic ad hoc. Composition project v3 is not migrated or executed; schema-v2 asset requests remain legacy-readable only in projects without a generation-attempt ledger.
+Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, state-sheet processing, proof, attempt accounting, or report logic ad hoc. Only project schema v5, storyboard schema v3, and asset-request schema v4 are supported; older contracts are intentionally not migrated or executed.

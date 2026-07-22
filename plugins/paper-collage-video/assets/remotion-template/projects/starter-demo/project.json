@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "slug": "starter-demo",
   "title": "Paper Collage Starter",
   "plan": {
@@ -82,7 +82,8 @@
             "kind": "establish",
             "assertions": [
               "背景完整建立"
-            ]
+            ],
+            "stateAssertions": []
           },
           {
             "id": "proof-action",
@@ -91,7 +92,8 @@
             "kind": "peak",
             "assertions": [
               "主体位于画面中央"
-            ]
+            ],
+            "stateAssertions": []
           },
           {
             "id": "proof-final",
@@ -100,7 +102,8 @@
             "kind": "final",
             "assertions": [
               "主体与标题构图稳定"
-            ]
+            ],
+            "stateAssertions": []
           }
         ]
       },

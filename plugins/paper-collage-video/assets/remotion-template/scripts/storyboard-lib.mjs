@@ -41,8 +41,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (![1, 2].includes(storyboard?.schemaVersion)) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 1 或 2。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 3) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 3。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -134,6 +134,30 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
           add('storyboard-relationship-pattern', `关系 ${relationship.id} 必须声明模式 ${requiredPattern}。`, `${location}.compositionPlan.patterns`);
         }
       }
+      if (!Array.isArray(compositionPlan.stateSequences)) {
+        add('storyboard-state-sequences', 'compositionPlan.stateSequences 必须是数组。', `${location}.compositionPlan.stateSequences`);
+      }
+      const sequenceIds = new Set();
+      for (const [sequenceIndex, sequence] of (compositionPlan.stateSequences ?? []).entries()) {
+        const sequenceLocation = `${location}.compositionPlan.stateSequences[${sequenceIndex}]`;
+        if (!nonEmpty(sequence.nodeId) || sequenceIds.has(sequence.nodeId)) add('storyboard-sequence-node-id', '状态序列 nodeId 缺失或重复。', `${sequenceLocation}.nodeId`);
+        sequenceIds.add(sequence.nodeId);
+        if (!nonEmpty(sequence.poseFamilyId)) add('storyboard-sequence-family', '状态序列必须声明 poseFamilyId。', `${sequenceLocation}.poseFamilyId`);
+        if (!['once', 'loop', 'ping-pong'].includes(sequence.playback)) add('storyboard-sequence-playback', '状态序列 playback 无效。', `${sequenceLocation}.playback`);
+        if (!['cut', 'crossfade'].includes(sequence.transition)) add('storyboard-sequence-transition', '状态序列 transition 无效。', `${sequenceLocation}.transition`);
+        const stateIds = new Set();
+        let previousStateAt = -1;
+        if (!Array.isArray(sequence.states) || sequence.states.length < 2) add('storyboard-sequence-states', '状态序列至少需要两个状态。', `${sequenceLocation}.states`);
+        for (const [stateIndex, state] of (sequence.states ?? []).entries()) {
+          const stateLocation = `${sequenceLocation}.states[${stateIndex}]`;
+          if (!nonEmpty(state.id) || stateIds.has(state.id)) add('storyboard-sequence-state-id', '状态 id 缺失或重复。', `${stateLocation}.id`);
+          stateIds.add(state.id);
+          if (!normalizedTime(state.at) || state.at <= previousStateAt) add('storyboard-sequence-state-at', '状态 at 必须位于 0..1 且严格递增。', `${stateLocation}.at`);
+          previousStateAt = state.at;
+          if (!nonEmpty(state.visualChange)) add('storyboard-sequence-visual-change', '状态必须描述可见变化。', `${stateLocation}.visualChange`);
+        }
+        if (sequence.states?.[0]?.at !== 0) add('storyboard-sequence-start', '状态序列必须从 at=0 开始。', `${sequenceLocation}.states[0].at`);
+      }
     }
     if (!Array.isArray(scene.beats) || scene.beats.length < 3) {
       add('storyboard-beats', '每个镜头至少需要 3 个节拍。', `${location}.beats`);
@@ -189,7 +213,20 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       if (!Array.isArray(proof.assertions) || proof.assertions.length === 0 || proof.assertions.some((item) => !nonEmpty(item))) {
         add('storyboard-proof-assertions', '证明时刻必须声明至少一项可见关系断言。', `${proofLocation}.assertions`);
       }
+      if (!Array.isArray(proof.stateAssertions)) add('storyboard-proof-state-assertions', 'v3 proofTime 必须显式声明 stateAssertions 数组。', `${proofLocation}.stateAssertions`);
       if (proof.kind === 'final' && proof.at >= 0.82) hasFinal = true;
+    }
+    for (const sequence of compositionPlan?.stateSequences ?? []) {
+      const plannedStates = new Set(sequence.states.map(({id}) => id));
+      const assertedStates = new Set((scene.proofTimes ?? []).flatMap((proof) =>
+        (proof.stateAssertions ?? []).filter(({nodeId}) => nodeId === sequence.nodeId).map(({stateId}) => stateId),
+      ));
+      for (const stateId of assertedStates) {
+        if (!plannedStates.has(stateId)) add('storyboard-proof-state-unknown', `状态证明引用了未知状态 ${stateId}。`, `${location}.proofTimes`);
+      }
+      for (const stateId of plannedStates) {
+        if (!assertedStates.has(stateId)) add('storyboard-proof-state-coverage', `状态 ${sequence.nodeId}/${stateId} 缺少证明时刻。`, `${location}.proofTimes`);
+      }
     }
     for (const binding of beatEvidenceBindings) {
       if (!proofIds.has(binding.proofTimeId)) {

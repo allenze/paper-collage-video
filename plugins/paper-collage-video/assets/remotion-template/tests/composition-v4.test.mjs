@@ -10,6 +10,7 @@ import {
   pointInPolygon,
   validateCompositionStructure,
 } from '../scripts/composition-lib.mjs';
+import {resolveSequencePhase, resolveSequenceState} from '../scripts/state-sequence-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -73,7 +74,7 @@ const validate = (node, proofTimes = [{id: 'establish', at: 0.08}, {id: 'action'
   proofTimes,
 });
 
-test('v4 supported subjects require contact, front occlusion and one carrier motion', () => {
+test('v5 supported subjects require contact, front occlusion and one carrier motion', () => {
   assert.deepEqual(validate(supportedGroup()).issues, []);
   const missingFront = supportedGroup();
   missingFront.children = missingFront.children.filter(({slot}) => slot !== 'support-front');
@@ -89,7 +90,7 @@ test('v4 supported subjects require contact, front occlusion and one carrier mot
   assert.ok(validate(duplicated).issues.some(({code}) => code === 'composition-duplicated-carrier-motion'));
 });
 
-test('v4 registered environments enforce a shared canvas, boundary and exclusive semantics', () => {
+test('v5 registered environments enforce a shared canvas, boundary and exclusive semantics', () => {
   assert.deepEqual(validate(registeredGroup()).issues, []);
   const shifted = registeredGroup();
   shifted.children[1].transform.x = 0.02;
@@ -129,7 +130,57 @@ test('geometry, cue catalog and fingerprints remain deterministic', () => {
   });
 });
 
-test('bundled render fixture exercises supported-subject and registered-environment together', () => {
+test('v5 state sequences resolve discrete poses and require proof coverage', () => {
+  const node = {
+    id: 'reader',
+    kind: 'state-sequence',
+    assetRole: 'character',
+    poseFamilyId: 'reader-family',
+    registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-sheet', canvas: {width: 100, height: 100}, origin: 'top-left'},
+    states: [
+      {id: 'book-open', src: 'reader-open.png', at: 0},
+      {id: 'page-turn', src: 'reader-turn.png', at: 0.35},
+      {id: 'pointing', src: 'reader-point.png', at: 0.7},
+    ],
+    playback: {mode: 'once', cycles: 1},
+    transition: {type: 'cut', durationSeconds: 0},
+    z: 1,
+    transform: fullTransform(),
+    motion: still(),
+  };
+  const proofTimes = [
+    {id: 'open', at: 0.1, stateAssertions: [{nodeId: 'reader', stateId: 'book-open'}]},
+    {id: 'turn', at: 0.5, stateAssertions: [{nodeId: 'reader', stateId: 'page-turn'}]},
+    {id: 'point', at: 0.9, stateAssertions: [{nodeId: 'reader', stateId: 'pointing'}]},
+  ];
+  assert.equal(resolveSequenceState({node, progress: 0.5}).id, 'page-turn');
+  assert.equal(resolveSequencePhase({progress: 0.75, mode: 'ping-pong', cycles: 2}), 1);
+  assert.deepEqual(validate(node, proofTimes).issues, []);
+  const wrong = structuredClone(proofTimes);
+  wrong[1].stateAssertions[0].stateId = 'pointing';
+  assert.ok(validate(node, wrong).issues.some(({code}) => code === 'composition-sequence-proof-mismatch'));
+});
+
+test('v5 text and shape nodes keep explanatory UI editable', () => {
+  const nodes = [
+    {
+      id: 'card', kind: 'shape', shape: 'rectangle', style: {fill: '#17191d', stroke: '#5f6670', strokeWidth: 2, radius: 12}, z: 1,
+      transform: {x: 0.1, y: 0.1, width: 0.8, height: 0.5, anchorX: 0, anchorY: 0}, motion: still(),
+    },
+    {
+      id: 'question', kind: 'text', text: '为什么？', style: {color: '#ffffff', fontSize: 42, fontWeight: 700, lineHeight: 1.2, align: 'center'}, z: 2,
+      transform: {x: 0.2, y: 0.2, width: 0.6, height: 0.2, anchorX: 0, anchorY: 0}, motion: still(),
+    },
+  ];
+  const result = validateCompositionStructure({
+    composition: {coordinateSpace: {width: 100, height: 100}, nodes},
+    video: {width: 100, height: 100},
+    proofTimes: [{id: 'establish', at: 0.1}, {id: 'action', at: 0.5}, {id: 'final', at: 0.9}],
+  });
+  assert.deepEqual(result.issues, []);
+});
+
+test('bundled render fixture exercises v5 registration and state sequence together', () => {
   const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'fixtures', 'composition-v4', 'project.json'), 'utf8'));
   const scene = fixture.scenes[0];
   const result = validateCompositionStructure({
@@ -139,4 +190,5 @@ test('bundled render fixture exercises supported-subject and registered-environm
   });
   assert.deepEqual(result.issues, []);
   assert.deepEqual(result.groups.map(({node}) => node.pattern).sort(), ['registered-environment', 'supported-subject']);
+  assert.deepEqual(result.sequences.map(({node}) => node.poseFamilyId), ['traveler-poses']);
 });

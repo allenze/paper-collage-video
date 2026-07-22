@@ -1,10 +1,10 @@
 {
-  "schemaVersion": 4,
-  "slug": "composition-v4-fixture",
-  "title": "Composition v4 Fixture",
+  "schemaVersion": 5,
+  "slug": "composition-v5-fixture",
+  "title": "Composition v5 Fixture",
   "plan": {
     "schemaVersion": 1,
-    "slug": "composition-v4-fixture",
+    "slug": "composition-v5-fixture",
     "status": "resolved",
     "inputMode": "both",
     "productionProfile": "draft",
@@ -23,13 +23,13 @@
   "voice": {"mode": "fictional", "provider": "fixture", "displayName": "Fixture"},
   "audio": {"narration": {"volume": 0.01}, "music": null, "mastering": {"targetLufs": -24, "toleranceLufs": 3, "truePeakDbtp": -18}},
   "scenes": [{
-    "id": "fixture", "label": "注册组合", "eyebrow": "V4", "tailSeconds": 1,
+    "id": "fixture", "label": "注册组合", "eyebrow": "V5", "tailSeconds": 1,
     "motion": {
       "blueprint": "chapter-tableau", "intensity": 0.6, "seed": 41,
       "proofTimes": [
-        {"id": "establish", "at": 0.08, "label": "岸水建立", "kind": "establish", "assertions": ["树位于岸线上方，水位于下方"]},
-        {"id": "action", "at": 0.5, "label": "船中主体", "kind": "peak", "assertions": ["人物下身被前船舷遮挡"]},
-        {"id": "final", "at": 0.9, "label": "关系稳定", "kind": "final", "assertions": ["船人共享运动且岸水边界不漂移"]}
+        {"id": "establish", "at": 0.08, "label": "岸水建立", "kind": "establish", "assertions": ["树位于岸线上方，水位于下方"], "stateAssertions": [{"nodeId": "traveler", "stateId": "reading"}]},
+        {"id": "action", "at": 0.5, "label": "船中主体", "kind": "peak", "assertions": ["人物下身被前船舷遮挡并抬手指向"], "stateAssertions": [{"nodeId": "traveler", "stateId": "pointing"}]},
+        {"id": "final", "at": 0.9, "label": "关系稳定", "kind": "final", "assertions": ["船人共享运动且岸水边界不漂移"], "stateAssertions": [{"nodeId": "traveler", "stateId": "pointing"}]}
       ]
     },
     "composition": {
@@ -57,7 +57,7 @@
           "support": {"subjectId": "traveler", "contactAnchor": {"x": 0.5, "y": 0.7}, "contactZone": [[0.25,0.55],[0.78,0.55],[0.8,0.86],[0.22,0.86]], "occlusionZone": [[0.16,0.58],[0.85,0.58],[0.85,0.9],[0.16,0.9]]},
           "children": [
             {"id": "boat-rear", "kind": "asset", "assetRole": "prop", "src": "fixtures/composition-v4/boat-rear.svg", "slot": "support-rear", "z": 0, "registrationId": "boat-family", "transform": {"x": 0, "y": 0, "width": 1, "height": 1, "anchorX": 0, "anchorY": 0}, "motion": {"keyframes": [{"at": 0, "x": 0}, {"at": 1, "x": 0}]}},
-            {"id": "traveler", "kind": "asset", "assetRole": "character", "src": "fixtures/composition-v4/traveler.svg", "slot": "subject", "z": 1, "registrationId": "boat-family", "transform": {"x": 0, "y": 0, "width": 1, "height": 1, "anchorX": 0, "anchorY": 0}, "motion": {"keyframes": [{"at": 0, "y": 0}, {"at": 1, "y": -0.01}]}},
+            {"id": "traveler", "kind": "state-sequence", "assetRole": "character", "poseFamilyId": "traveler-poses", "registration": {"id": "boat-family", "sourceMasterAssetId": "traveler-pose-sheet", "canvas": {"width": 1000, "height": 600}, "origin": "top-left"}, "states": [{"id": "reading", "src": "fixtures/composition-v4/traveler.svg", "at": 0}, {"id": "pointing", "src": "fixtures/composition-v4/traveler-pointing.svg", "at": 0.45}], "playback": {"mode": "once", "cycles": 1}, "transition": {"type": "cut", "durationSeconds": 0}, "slot": "subject", "z": 1, "transform": {"x": 0, "y": 0, "width": 1, "height": 1, "anchorX": 0, "anchorY": 0}, "motion": {"keyframes": [{"at": 0, "y": 0}, {"at": 1, "y": -0.01}]}},
             {"id": "boat-front", "kind": "asset", "assetRole": "prop", "src": "fixtures/composition-v4/boat-front.svg", "slot": "support-front", "z": 2, "registrationId": "boat-family", "transform": {"x": 0, "y": 0, "width": 1, "height": 1, "anchorX": 0, "anchorY": 0}, "motion": {"keyframes": [{"at": 0, "x": 0}, {"at": 1, "x": 0}]}}
           ]
         }

@@ -6,7 +6,7 @@
   "required": ["schemaVersion", "projectSlug", "assetId", "capability", "output"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"enum": [2, 3]},
+    "schemaVersion": {"const": 4},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "assetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "capability": {"enum": ["text", "image", "voice"]},
@@ -36,7 +36,7 @@
       "properties": {
         "sceneId": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "pattern": {"enum": ["free", "supported-subject", "registered-environment"]},
+        "pattern": {"enum": ["free", "supported-subject", "registered-environment", "state-sequence"]},
         "registrationId": {"type": "string", "minLength": 1},
         "sourceMasterAssetId": {"type": "string", "minLength": 1},
         "outputRole": {"type": "string", "minLength": 1},
@@ -61,10 +61,55 @@
       },
       "allOf": [
         {
-          "if": {"properties": {"pattern": {"enum": ["supported-subject", "registered-environment"]}}},
+          "if": {"properties": {"pattern": {"enum": ["supported-subject", "registered-environment", "state-sequence"]}}},
           "then": {"required": ["registrationId", "sourceMasterAssetId"]}
         }
       ],
+      "additionalProperties": false
+    },
+    "stateBinding": {
+      "type": "object",
+      "required": ["poseFamilyId", "stateId", "registrationId", "sourceMasterAssetId"],
+      "properties": {
+        "poseFamilyId": {"type": "string", "minLength": 1},
+        "stateId": {"type": "string", "minLength": 1},
+        "registrationId": {"type": "string", "minLength": 1},
+        "sourceMasterAssetId": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "stateSheetBinding": {
+      "type": "object",
+      "required": ["poseFamilyId", "registrationId", "sourceMasterAssetId", "layout", "states", "recoveryPolicy"],
+      "properties": {
+        "poseFamilyId": {"type": "string", "minLength": 1},
+        "registrationId": {"type": "string", "minLength": 1},
+        "sourceMasterAssetId": {"type": "string", "minLength": 1},
+        "layout": {
+          "type": "object",
+          "required": ["columns", "rows"],
+          "properties": {
+            "columns": {"type": "integer", "minimum": 1},
+            "rows": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        },
+        "states": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["stateId", "row", "column"],
+            "properties": {
+              "stateId": {"type": "string", "minLength": 1},
+              "row": {"type": "integer", "minimum": 0},
+              "column": {"type": "integer", "minimum": 0}
+            },
+            "additionalProperties": false
+          }
+        },
+        "recoveryPolicy": {"const": "regenerate-failed-cell-only"}
+      },
       "additionalProperties": false
     },
     "semanticBinding": {
@@ -122,7 +167,8 @@
   "allOf": [
     {"if": {"properties": {"capability": {"const": "text"}}}, "then": {"required": ["prompt"]}},
     {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["prompt", "compositionBinding"]}},
-    {"if": {"properties": {"capability": {"const": "image"}, "schemaVersion": {"const": 3}}}, "then": {"required": ["semanticBinding"]}},
+    {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["semanticBinding"]}},
+    {"if": {"properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}, "then": {"oneOf": [{"required": ["stateBinding"]}, {"required": ["stateSheetBinding"]}]}},
     {"if": {"properties": {"capability": {"const": "voice"}}}, "then": {"required": ["text"]}},
     {"if": {"required": ["timingBinding"]}, "then": {"properties": {"capability": {"const": "voice"}}}}
   ]

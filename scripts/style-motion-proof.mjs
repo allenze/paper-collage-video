@@ -2,7 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
-import {collectCompositionGroups, flattenCompositionNodes} from './composition-lib.mjs';
+import {collectCompositionGroups, collectStateSequences, flattenCompositionNodes} from './composition-lib.mjs';
 import {
   buildAssetEvidence,
   padEvidenceBounds,
@@ -33,32 +33,6 @@ const slug = args.find((argument) => !argument.startsWith('--'));
 const valueFor = (name) => args.find((argument) => argument.startsWith(`${name}=`))?.slice(name.length + 1);
 const durationSeconds = Number(valueFor('--duration') ?? 5);
 
-const proofBoundsFor = ({group, localBounds, video}) => {
-  const transform = group.transform ?? {};
-  const groupWidth = Number(transform.width ?? 1) * video.width;
-  const groupHeight = transform.height === undefined
-    ? groupWidth * group.coordinateSpace.height / group.coordinateSpace.width
-    : Number(transform.height) * video.height;
-  const groupLeft = Number(transform.x ?? 0) * video.width - Number(transform.anchorX ?? 0) * groupWidth;
-  const groupTop = Number(transform.y ?? 0) * video.height - Number(transform.anchorY ?? 0) * groupHeight;
-  const scaleX = groupWidth / group.coordinateSpace.width;
-  const scaleY = groupHeight / group.coordinateSpace.height;
-  return padEvidenceBounds({
-    left: Math.floor(groupLeft + localBounds.left * scaleX),
-    top: Math.floor(groupTop + localBounds.top * scaleY),
-    width: Math.ceil(localBounds.width * scaleX),
-    height: Math.ceil(localBounds.height * scaleY),
-  }, video, 32);
-};
-
-const unionBounds = (bounds) => {
-  const left = Math.min(...bounds.map((entry) => entry.left));
-  const top = Math.min(...bounds.map((entry) => entry.top));
-  const right = Math.max(...bounds.map((entry) => entry.left + entry.width));
-  const bottom = Math.max(...bounds.map((entry) => entry.top + entry.height));
-  return {left, top, width: right - left, height: bottom - top};
-};
-
 const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
   <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
     <rect x="${bounds.left}" y="${bounds.top}" width="${bounds.width}" height="${bounds.height}" fill="none" stroke="#ff3b30" stroke-width="6"/>
@@ -66,6 +40,33 @@ const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
     <text x="${bounds.left + 12}" y="${Math.max(30, bounds.top - 12)}" fill="white" font-size="24" font-family="sans-serif">${label.replace(/[<>&]/g, '')}</text>
   </svg>
 `);
+
+const findTargetBounds = ({scene, nodeId, video}) => {
+  let result = null;
+  const visit = (nodes, parentRect) => {
+    for (const node of nodes ?? []) {
+      const transform = node.transform ?? {};
+      const width = Number(transform.width ?? 1) * parentRect.width;
+      const height = transform.height !== undefined
+        ? Number(transform.height) * parentRect.height
+        : node.kind === 'group'
+          ? width * node.coordinateSpace.height / node.coordinateSpace.width
+          : node.kind === 'state-sequence'
+            ? width * node.registration.canvas.height / node.registration.canvas.width
+            : parentRect.height;
+      const rect = {
+        left: parentRect.left + Number(transform.x ?? 0) * parentRect.width - Number(transform.anchorX ?? 0) * width,
+        top: parentRect.top + Number(transform.y ?? 0) * parentRect.height - Number(transform.anchorY ?? 0) * height,
+        width,
+        height,
+      };
+      if (node.id === nodeId) result = rect;
+      if (node.kind === 'group') visit(node.children, rect);
+    }
+  };
+  visit(scene.composition?.nodes, {left: 0, top: 0, width: video.width, height: video.height});
+  return padEvidenceBounds(result ?? {left: 0, top: 0, width: video.width, height: video.height}, video, 32);
+};
 
 const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
   const sampleCount = sampleRate * seconds;
@@ -93,8 +94,11 @@ try {
   assertSlug(slug);
   if (!Number.isFinite(durationSeconds) || durationSeconds < 3 || durationSeconds > 5) throw new Error('--duration 必须位于 3..5 秒。');
   const {project} = await loadProject(slug);
-  const selected = project.scenes.find((scene) => collectCompositionGroups(scene.composition).some(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern)));
-  if (!selected) throw new Error('项目没有可用于真实拓扑样片的 supported-subject 或 registered-environment 组合。');
+  const selected = project.scenes.find((scene) =>
+    collectCompositionGroups(scene.composition).some(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern)) ||
+    collectStateSequences(scene.composition).length > 0,
+  );
+  if (!selected) throw new Error('项目没有可用于真实运动样片的 state-sequence、supported-subject 或 registered-environment 组合。');
 
   const paths = projectPaths(slug);
   const proofDirectory = path.join(paths.distDirectory, 'style-proof');
@@ -162,20 +166,33 @@ try {
     .toFile(contactSheet);
 
   const coupledGroups = collectCompositionGroups(selected.composition).filter(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern));
+  const stateSequences = collectStateSequences(selected.composition);
   const memberNodes = new Map();
   for (const {node: group} of coupledGroups) {
-    for (const {node} of flattenCompositionNodes(group.children).filter(({node}) => node.kind === 'asset')) memberNodes.set(node.id, node);
+    for (const {node} of flattenCompositionNodes(group.children)) {
+      if (node.kind === 'asset') memberNodes.set(`${node.id}:${node.src}`, {node, evidenceId: node.id});
+      if (node.kind === 'state-sequence') {
+        for (const state of node.states) memberNodes.set(`${node.id}:${state.src}`, {
+          node: {...node, kind: 'asset', src: state.src},
+          evidenceId: `${node.id}-${state.id}`,
+        });
+      }
+    }
+  }
+  for (const {node} of stateSequences) {
+    for (const state of node.states) memberNodes.set(`${node.id}:${state.src}`, {
+      node: {...node, kind: 'asset', src: state.src},
+      evidenceId: `${node.id}-${state.id}`,
+    });
   }
   const assetEvidence = [];
-  for (const node of memberNodes.values()) {
-    assetEvidence.push(await buildAssetEvidence({node, directory: evidenceDirectory}));
+  for (const {node, evidenceId} of memberNodes.values()) {
+    assetEvidence.push(await buildAssetEvidence({node, directory: evidenceDirectory, evidenceId}));
   }
-  const evidenceByNode = new Map(assetEvidence.map((entry) => [entry.nodeId, entry]));
-  const targets = (await collectCompositeQualityTargets(project)).filter(({sceneId, pattern}) => sceneId === selected.id && ['supported-subject', 'registered-environment'].includes(pattern));
+  const targets = (await collectCompositeQualityTargets(project)).filter(({sceneId, pattern}) => sceneId === selected.id && ['state-sequence', 'supported-subject', 'registered-environment'].includes(pattern));
   const composites = [];
   for (const target of targets) {
-    const localBounds = unionBounds(target.memberNodeIds.map((nodeId) => evidenceByNode.get(nodeId)?.alphaBounds).filter(Boolean));
-    const bounds = proofBoundsFor({group: target.group, localBounds, video: project.video});
+    const bounds = findTargetBounds({scene: selected, nodeId: target.nodeId, video: project.video});
     const proofFrames = [];
     for (const proofTimeId of target.proofTimeIds) {
       const fullFrame = renderedFrames.get(proofTimeId);
@@ -204,7 +221,10 @@ try {
   }
 
   const probe = await probeMedia(output);
-  const groups = coupledGroups.map(({node}) => ({id: node.id, pattern: node.pattern, registrationId: node.registration?.id ?? null, sourceMasterAssetId: node.registration?.sourceMasterAssetId ?? null}));
+  const groups = [
+    ...coupledGroups.map(({node}) => ({id: node.id, pattern: node.pattern, registrationId: node.registration?.id ?? null, sourceMasterAssetId: node.registration?.sourceMasterAssetId ?? null})),
+    ...stateSequences.map(({node}) => ({id: node.id, pattern: 'state-sequence', registrationId: node.registration.id, sourceMasterAssetId: node.registration.sourceMasterAssetId})),
+  ];
   await writeJson(reportFile, {
     schemaVersion: 3,
     slug,
@@ -213,14 +233,14 @@ try {
     output: path.relative(ROOT, output),
     contactSheet: path.relative(ROOT, contactSheet),
     proofProject: path.relative(ROOT, propsFile),
-    method: 'real v4 project composition, registered derivatives, authored keyframes and cue runtime',
+    method: 'real v5 project composition, registered derivatives and state sequences, authored keyframes and cue runtime',
     groups,
     composites,
     assetEvidence,
     durationSeconds: Number(probe.format?.duration ?? durationSeconds),
     proofFrameCount: panels.length,
   });
-  console.log(`✓ v4 真实拓扑运动证明：${path.relative(ROOT, output)}`);
+  console.log(`✓ v5 真实拓扑运动证明：${path.relative(ROOT, output)}`);
   console.log(`✓ 组合证明联系表：${path.relative(ROOT, contactSheet)}`);
   console.log(`✓ 运动报告：${path.relative(ROOT, reportFile)}`);
 } catch (error) {

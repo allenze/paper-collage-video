@@ -4,6 +4,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {
   collectCompositionAssets,
+  collectStateSequences,
   deriveCueEvents,
 } from './composition-lib.mjs';
 import {
@@ -43,6 +44,8 @@ const findTargetBounds = ({scene, nodeId, video}) => {
         ? (transform.height === undefined
             ? width * node.coordinateSpace.height / node.coordinateSpace.width
             : Number(transform.height) * parentRect.height)
+        : node.kind === 'state-sequence' && transform.height === undefined
+          ? width * node.registration.canvas.height / node.registration.canvas.width
         : Number(transform.height ?? 1) * parentRect.height;
       const rect = {
         left: parentRect.left + Number(transform.x ?? 0) * parentRect.width - Number(transform.anchorX ?? 0) * width,
@@ -81,7 +84,7 @@ try {
   const {project} = await loadProject(slug);
   const validation = await validateProject(project);
   console.log(formatValidation(validation));
-  if (!validation.passed) throw new Error('v4 组合结构未通过，不能生成证明帧。');
+  if (!validation.passed) throw new Error('v5 组合结构未通过，不能生成证明帧。');
 
   const timeline = deriveTimeline(project);
   const paths = projectPaths(slug);
@@ -169,11 +172,20 @@ try {
       if (!parent || !['supported-subject', 'registered-environment'].includes(parent.pattern)) continue;
       coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {sceneId: scene.id, node});
     }
+    for (const {node} of collectStateSequences(scene.composition)) {
+      for (const state of node.states) {
+        coupledNodes.set(`${scene.id}:${node.id}:${state.src}`, {
+          sceneId: scene.id,
+          stateId: state.id,
+          node: {...node, kind: 'asset', src: state.src},
+        });
+      }
+    }
   }
   const assetEvidence = [];
   let reusedEvidence = 0;
   let generatedEvidence = 0;
-  for (const {sceneId, node} of coupledNodes.values()) {
+  for (const {sceneId, node, stateId = null} of coupledNodes.values()) {
     const cached = previousEvidence.get(`${node.id}:${node.src}`);
     if (await assetEvidenceIsCurrent(cached, node)) {
       assetEvidence.push(cached);
@@ -182,7 +194,7 @@ try {
       assetEvidence.push(await buildAssetEvidence({
         node,
         directory: evidenceDirectory,
-        evidenceId: `${sceneId}-${node.id}`,
+        evidenceId: `${sceneId}-${node.id}${stateId ? `-${stateId}` : ''}`,
       }));
       generatedEvidence += 1;
     }

@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v4",
+  "title": "Paper Collage Project v5",
   "type": "object",
   "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "scenes"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 4},
+    "schemaVersion": {"const": 5},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "plan": {"$ref": "#/$defs/plan"},
@@ -160,7 +160,20 @@
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "label": {"type": "string", "minLength": 1},
         "kind": {"enum": ["establish", "action", "peak", "final"]},
-        "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "stateAssertions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": ["nodeId", "stateId"],
+            "properties": {
+              "nodeId": {"type": "string", "minLength": 1},
+              "stateId": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        }
       },
       "additionalProperties": false
     },
@@ -180,6 +193,40 @@
       },
       "additionalProperties": false
     },
+    "sceneAppearance": {
+      "type": "object",
+      "properties": {
+        "background": {"type": "string", "minLength": 1},
+        "paperTexture": {
+          "type": "object",
+          "required": ["visible", "opacity", "blendMode"],
+          "properties": {
+            "visible": {"type": "boolean"},
+            "opacity": {"type": "number", "minimum": 0, "maximum": 1},
+            "blendMode": {"enum": ["normal", "multiply", "screen", "overlay"]}
+          },
+          "additionalProperties": false
+        },
+        "chapter": {
+          "type": "object",
+          "required": ["visible"],
+          "properties": {"visible": {"type": "boolean"}},
+          "additionalProperties": false
+        },
+        "subtitles": {
+          "type": "object",
+          "required": ["variant"],
+          "properties": {
+            "variant": {"enum": ["boxed", "plain", "hidden"]},
+            "color": {"type": "string"},
+            "background": {"type": "string"},
+            "maxWidth": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "scene": {
       "type": "object",
       "required": ["id", "label", "eyebrow", "tailSeconds", "motion", "composition", "camera", "transition", "narration", "subtitles", "cues"],
@@ -188,6 +235,7 @@
         "label": {"type": "string"},
         "eyebrow": {"type": "string"},
         "tailSeconds": {"type": "number", "minimum": 0},
+        "appearance": {"$ref": "#/$defs/sceneAppearance"},
         "motion": {
           "type": "object",
           "required": ["blueprint", "intensity", "seed", "proofTimes"],

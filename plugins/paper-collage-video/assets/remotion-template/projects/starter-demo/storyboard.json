@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -60,7 +60,8 @@
           "kind": "establish",
           "assertions": [
             "背景完整建立"
-          ]
+          ],
+          "stateAssertions": []
         },
         {
           "id": "proof-action",
@@ -69,7 +70,8 @@
           "kind": "peak",
           "assertions": [
             "主体位于画面中央"
-          ]
+          ],
+          "stateAssertions": []
         },
         {
           "id": "proof-final",
@@ -78,13 +80,15 @@
           "kind": "final",
           "assertions": [
             "主体与标题构图稳定"
-          ]
+          ],
+          "stateAssertions": []
         }
       ],
       "compositionPlan": {
         "patterns": [
           "free"
         ],
+        "stateSequences": [],
         "relationships": [
           {
             "id": "traveler-over-background",

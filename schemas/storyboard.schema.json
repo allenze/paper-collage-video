@@ -6,7 +6,7 @@
   "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"enum": [1, 2]},
+    "schemaVersion": {"const": 3},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"enum": ["pending", "ready"]},
     "arc": {"type": "string"},
@@ -35,7 +35,7 @@
           "estimatedDurationSeconds": {"type": "number", "exclusiveMinimum": 0},
           "compositionPlan": {
             "type": "object",
-            "required": ["patterns", "relationships"],
+            "required": ["patterns", "relationships", "stateSequences"],
             "properties": {
               "patterns": {
                 "type": "array",
@@ -55,6 +55,34 @@
                     "predicate": {"enum": ["free", "inside", "on", "held-by", "worn-by", "above-boundary", "below-boundary"]},
                     "object": {"type": "string", "minLength": 1},
                     "proof": {"type": "string", "minLength": 1}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "stateSequences": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["nodeId", "poseFamilyId", "states", "playback", "transition"],
+                  "properties": {
+                    "nodeId": {"type": "string", "minLength": 1},
+                    "poseFamilyId": {"type": "string", "minLength": 1},
+                    "states": {
+                      "type": "array",
+                      "minItems": 2,
+                      "items": {
+                        "type": "object",
+                        "required": ["id", "at", "visualChange"],
+                        "properties": {
+                          "id": {"type": "string", "minLength": 1},
+                          "at": {"type": "number", "minimum": 0, "maximum": 1},
+                          "visualChange": {"type": "string", "minLength": 1}
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "playback": {"enum": ["once", "loop", "ping-pong"]},
+                    "transition": {"enum": ["cut", "crossfade"]}
                   },
                   "additionalProperties": false
                 }
@@ -91,7 +119,19 @@
                 "at": {"type": "number", "minimum": 0, "maximum": 1},
                 "label": {"type": "string", "minLength": 1},
                 "kind": {"enum": ["establish", "action", "peak", "final"]},
-                "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+                "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+                "stateAssertions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["nodeId", "stateId"],
+                    "properties": {
+                      "nodeId": {"type": "string", "minLength": 1},
+                      "stateId": {"type": "string", "minLength": 1}
+                    },
+                    "additionalProperties": false
+                  }
+                }
               },
               "additionalProperties": false
             }

@@ -15,13 +15,18 @@ import type {
   CompositionBoundary,
   CompositionGroupNode,
   CompositionNode,
+  CompositionShapeNode,
+  CompositionStateSequenceNode,
+  CompositionTextNode,
   CoordinateSpace,
   NormalizedProjectScene,
   NormalizedSubtitleCue,
   ProjectCue,
   ProjectTheme,
+  SceneAppearance,
 } from './project';
 import {resolveCueState, resolveIdleState, resolveMotionState} from './motion';
+import {resolveSequenceLayers} from './stateSequence';
 
 const clamp = {
   extrapolateLeft: 'clamp',
@@ -35,7 +40,7 @@ const phaseFor = (id: string, seed: number) => {
 };
 
 const slotOrder = (node: CompositionNode) => {
-  if (node.kind !== 'asset') return node.z;
+  if (node.kind !== 'asset' && node.kind !== 'state-sequence') return node.z;
   const fixed = {
     'support-rear': -30,
     'contact-shadow': -20,
@@ -89,7 +94,7 @@ const clipStyle = ({
   node,
   boundaries,
 }: {
-  node: CompositionAssetNode;
+  node: CompositionAssetNode | CompositionStateSequenceNode;
   boundaries: CompositionBoundary[];
 }): CSSProperties => {
   if (!node.clip) return {};
@@ -112,6 +117,26 @@ const clipStyle = ({
     ? {clipPath: `inset(0 0 ${(1 - y) * 100}% 0)`}
     : {clipPath: `inset(${y * 100}% 0 0 0)`};
 };
+
+const containerStyle = ({
+  node,
+  resolved,
+  renderZ,
+}: {
+  node: CompositionNode;
+  resolved: ReturnType<typeof composeNodeTransform>;
+  renderZ: number;
+}): CSSProperties => ({
+  position: 'absolute',
+  left: resolved.left,
+  top: resolved.top,
+  width: resolved.width,
+  ...(resolved.height === undefined ? {} : {height: resolved.height}),
+  zIndex: renderZ,
+  opacity: resolved.opacity,
+  transform: resolved.css,
+  transformOrigin: `${node.transform.anchorX * 100}% ${node.transform.anchorY * 100}%`,
+});
 
 const AssetView = ({
   node,
@@ -145,15 +170,7 @@ const AssetView = ({
       data-composition-node={node.id}
       data-composition-kind="asset"
       style={{
-        position: 'absolute',
-        left: resolved.left,
-        top: resolved.top,
-        width: resolved.width,
-        ...(resolved.height === undefined ? {} : {height: resolved.height}),
-        zIndex: renderZ,
-        opacity: resolved.opacity,
-        transform: resolved.css,
-        transformOrigin: `${node.transform.anchorX * 100}% ${node.transform.anchorY * 100}%`,
+        ...containerStyle({node, resolved, renderZ}),
         filter: cutout
           ? `drop-shadow(3px 0 ${paperEdge}) drop-shadow(-3px 0 ${paperEdge}) drop-shadow(0 10px 7px rgba(20,15,12,.28))`
           : undefined,
@@ -166,6 +183,150 @@ const AssetView = ({
         style={{display: 'block', width: '100%', height: resolved.height === undefined ? 'auto' : '100%', objectFit: 'contain'}}
       />
     </div>
+  );
+};
+
+const StateSequenceView = ({
+  node,
+  parent,
+  boundaries,
+  progress,
+  frame,
+  fps,
+  cues,
+  durationSeconds,
+  seed,
+  renderZ,
+  paperEdge,
+}: {
+  node: CompositionStateSequenceNode;
+  parent: CoordinateSpace;
+  boundaries: CompositionBoundary[];
+  progress: number;
+  frame: number;
+  fps: number;
+  cues: ProjectCue[];
+  durationSeconds: number;
+  seed: number;
+  renderZ: number;
+  paperEdge: string;
+}) => {
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  const layers = resolveSequenceLayers({node, progress, durationSeconds});
+  const registeredHeight = resolved.height ?? resolved.width * node.registration.canvas.height / node.registration.canvas.width;
+  return (
+    <div
+      data-composition-node={node.id}
+      data-composition-kind="state-sequence"
+      data-pose-family={node.poseFamilyId}
+      data-active-state={layers.at(-1)?.id}
+      style={{
+        ...containerStyle({node, resolved, renderZ}),
+        height: registeredHeight,
+        filter: `drop-shadow(3px 0 ${paperEdge}) drop-shadow(-3px 0 ${paperEdge}) drop-shadow(0 10px 7px rgba(20,15,12,.28))`,
+        ...clipStyle({node, boundaries}),
+      }}
+    >
+      {layers.map((layer) => (
+        <Img
+          key={layer.id}
+          alt=""
+          src={staticFile(layer.src)}
+          data-sequence-state={layer.id}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            opacity: layer.opacity,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+const TextView = ({
+  node,
+  parent,
+  progress,
+  frame,
+  fps,
+  cues,
+  durationSeconds,
+  seed,
+  renderZ,
+}: {
+  node: CompositionTextNode;
+  parent: CoordinateSpace;
+  progress: number;
+  frame: number;
+  fps: number;
+  cues: ProjectCue[];
+  durationSeconds: number;
+  seed: number;
+  renderZ: number;
+}) => {
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  return (
+    <div
+      data-composition-node={node.id}
+      data-composition-kind="text"
+      style={{
+        ...containerStyle({node, resolved, renderZ}),
+        color: node.style.color,
+        fontSize: node.style.fontSize,
+        fontWeight: node.style.fontWeight,
+        lineHeight: node.style.lineHeight,
+        textAlign: node.style.align,
+        letterSpacing: node.style.letterSpacing,
+        fontFamily: node.style.fontFamily,
+        whiteSpace: 'pre-wrap',
+      }}
+    >
+      {node.text}
+    </div>
+  );
+};
+
+const ShapeView = ({
+  node,
+  parent,
+  progress,
+  frame,
+  fps,
+  cues,
+  durationSeconds,
+  seed,
+  renderZ,
+}: {
+  node: CompositionShapeNode;
+  parent: CoordinateSpace;
+  progress: number;
+  frame: number;
+  fps: number;
+  cues: ProjectCue[];
+  durationSeconds: number;
+  seed: number;
+  renderZ: number;
+}) => {
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  const isLine = node.shape === 'line';
+  return (
+    <div
+      data-composition-node={node.id}
+      data-composition-kind="shape"
+      style={{
+        ...containerStyle({node, resolved, renderZ}),
+        height: isLine ? Math.max(1, node.style.strokeWidth) : resolved.height,
+        background: isLine ? node.style.stroke : node.style.fill,
+        border: isLine ? undefined : `${node.style.strokeWidth}px solid ${node.style.stroke}`,
+        borderRadius: node.shape === 'ellipse' ? '50%' : node.style.radius,
+        boxSizing: 'border-box',
+      }}
+    />
   );
 };
 
@@ -257,23 +418,24 @@ const CompositionNodeView = ({
   seed: number;
   renderZ?: number;
   paperEdge: string;
-}) =>
-  node.kind === 'group' ? (
-    <GroupView {...{node, parent, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />
-  ) : (
-    <AssetView {...{node, parent, boundaries, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />
-  );
+}) => {
+  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />;
+  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />;
+  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />;
+  if (node.kind === 'text') return <TextView {...{node, parent, progress, frame, fps, cues, durationSeconds, seed, renderZ}} />;
+  return <ShapeView {...{node, parent, progress, frame, fps, cues, durationSeconds, seed, renderZ}} />;
+};
 
-const Subtitle = ({cues, theme}: {cues: NormalizedSubtitleCue[]; theme: ProjectTheme}) => {
+const Subtitle = ({cues, theme, appearance}: {cues: NormalizedSubtitleCue[]; theme: ProjectTheme; appearance?: SceneAppearance['subtitles']}) => {
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const scale = Math.min(width / 1920, height / 1080);
   const cue = cues.find(({from, to}) => frame >= from && frame < to);
-  if (!cue) return null;
+  if (!cue || appearance?.variant === 'hidden') return null;
   const opacity = interpolate(frame, [cue.from, cue.from + 6, cue.to - 6, cue.to], [0, 1, 1, 0], clamp);
   return (
-    <div style={{position: 'absolute', zIndex: 100, left: 210 * scale, right: 210 * scale, bottom: 58 * scale, textAlign: 'center', opacity, color: theme.subtitle, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif'), fontWeight: 700, fontSize: 42 * scale, letterSpacing: 2 * scale, lineHeight: 1.35, textShadow: '0 3px 2px rgba(28,15,10,.9), 0 0 14px rgba(28,15,10,.78)'}}>
-      <span style={{display: 'inline-block', padding: `${12 * scale}px ${32 * scale}px ${14 * scale}px`, background: theme.subtitleBackground, border: '1px solid rgba(244, 222, 174, .42)', boxShadow: '0 8px 24px rgba(40, 16, 10, .22)'}}>{cue.text}</span>
+    <div style={{position: 'absolute', zIndex: 100, left: `${(1 - (appearance?.maxWidth ?? 0.78)) * 50}%`, right: `${(1 - (appearance?.maxWidth ?? 0.78)) * 50}%`, bottom: 58 * scale, textAlign: 'center', opacity, color: appearance?.color ?? theme.subtitle, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif'), fontWeight: 700, fontSize: 42 * scale, letterSpacing: 2 * scale, lineHeight: 1.35, textShadow: appearance?.variant === 'plain' ? '0 2px 8px rgba(0,0,0,.72)' : '0 3px 2px rgba(28,15,10,.9), 0 0 14px rgba(28,15,10,.78)'}}>
+      <span style={{display: 'inline-block', padding: appearance?.variant === 'plain' ? 0 : `${12 * scale}px ${32 * scale}px ${14 * scale}px`, background: appearance?.variant === 'plain' ? 'transparent' : (appearance?.background ?? theme.subtitleBackground), border: appearance?.variant === 'plain' ? undefined : '1px solid rgba(244, 222, 174, .42)', boxShadow: appearance?.variant === 'plain' ? undefined : '0 8px 24px rgba(40, 16, 10, .22)'}}>{cue.text}</span>
     </div>
   );
 };
@@ -330,18 +492,19 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme}: {scene: Nor
   const fadeFrames = scene.transitionFrames;
   const fadeIn = fadeFrames === 0 ? 1 : interpolate(frame, [0, fadeFrames], [0, 1], clamp);
   const fadeOut = fadeFrames === 0 ? 1 : interpolate(frame, [scene.durationInFrames - fadeFrames, scene.durationInFrames], [1, 0], clamp);
+  const paperTexture = scene.appearance?.paperTexture ?? {visible: true, opacity: 0.14, blendMode: 'multiply' as const};
   return (
-    <AbsoluteFill style={{overflow: 'hidden', opacity: Math.min(fadeIn, fadeOut), background: theme.sceneBackground}}>
+    <AbsoluteFill style={{overflow: 'hidden', opacity: Math.min(fadeIn, fadeOut), background: scene.appearance?.background ?? theme.sceneBackground}}>
       <AbsoluteFill style={{transform: `translate3d(${sceneCue.x * scene.composition.coordinateSpace.width}px, ${sceneCue.y * scene.composition.coordinateSpace.height}px, 0) scale(${sceneCue.scale}) rotate(${sceneCue.rotation}deg)`, opacity: sceneCue.opacity, transformOrigin: '50% 54%'}}>
         <AbsoluteFill style={{transform: `translate3d(${cameraX}px, ${cameraY}px, 0) scale(${cameraZoom})`, transformOrigin: '50% 54%'}}>
           {[...scene.composition.nodes].sort((a, b) => a.z - b.z).map((node) => (
             <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} cues={scene.cues} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} />
           ))}
         </AbsoluteFill>
-        <AbsoluteFill style={{opacity: 0.14, mixBlendMode: 'multiply', backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} />
+        {paperTexture.visible ? <AbsoluteFill style={{opacity: paperTexture.opacity, mixBlendMode: paperTexture.blendMode, backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}
       </AbsoluteFill>
-      <ChapterLabel eyebrow={scene.eyebrow} label={scene.label} theme={theme} />
-      <Subtitle cues={scene.subtitles} theme={theme} />
+      {scene.appearance?.chapter?.visible === false ? null : <ChapterLabel eyebrow={scene.eyebrow} label={scene.label} theme={theme} />}
+      <Subtitle cues={scene.subtitles} theme={theme} appearance={scene.appearance?.subtitles} />
       <Sequence from={scene.narrationStartFrame} layout="none"><Audio src={staticFile(scene.narration.src)} volume={narrationVolume} /></Sequence>
       <CueSounds cues={scene.cues} durationInFrames={scene.durationInFrames} />
     </AbsoluteFill>

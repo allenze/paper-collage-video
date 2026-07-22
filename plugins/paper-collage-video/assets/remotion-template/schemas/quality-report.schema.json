@@ -44,7 +44,7 @@
         "properties": {
           "compositeId": {"type": "string", "minLength": 1},
           "sceneId": {"type": "string", "minLength": 1},
-          "pattern": {"enum": ["supported-subject", "registered-environment", "cue", "semantic-contract"]},
+          "pattern": {"enum": ["supported-subject", "registered-environment", "state-sequence", "cue", "semantic-contract"]},
           "nodeId": {"type": "string", "minLength": 1},
           "memberNodeIds": {"type": "array", "items": {"type": "string"}},
           "memberHashes": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},

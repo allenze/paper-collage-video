@@ -11,7 +11,7 @@ import {
 } from './project-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
 
-const COUPLED_PATTERNS = new Set(['supported-subject', 'registered-environment']);
+const COUPLED_PATTERNS = new Set(['state-sequence', 'supported-subject', 'registered-environment']);
 const REQUIRED_ASSET_EVIDENCE = ['alphaMask', 'checkerboard', 'tightCrop', 'motionStress'];
 const REQUIRED_FRAME_EVIDENCE = ['fullFrame', 'crop', 'debugFrame'];
 
@@ -39,12 +39,13 @@ const assertReviewedEvidence = (entry, files, label) => {
 export const assertStyleProofReady = async (slug) => {
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
   const required = (storyboard.scenes ?? []).some((scene) =>
-    (scene.compositionPlan?.patterns ?? []).some((pattern) => COUPLED_PATTERNS.has(pattern)),
+    (scene.compositionPlan?.patterns ?? []).some((pattern) => COUPLED_PATTERNS.has(pattern)) ||
+    (scene.compositionPlan?.stateSequences ?? []).length > 0,
   );
   if (!required) return {required: false, ready: true, report: null, composites: []};
 
   const targets = (await collectCompositeQualityTargets(project)).filter(({pattern}) => COUPLED_PATTERNS.has(pattern));
-  if (targets.length === 0) throw new Error('故事板需要耦合拓扑，但项目尚未实现 supported-subject 或 registered-environment 组合。');
+  if (targets.length === 0) throw new Error('故事板需要受证运动，但项目尚未实现 state-sequence、supported-subject 或 registered-environment 组合。');
 
   const reportFile = styleProofReportPath(slug);
   if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
@@ -89,14 +90,19 @@ export const assertStyleProofReady = async (slug) => {
     compositeEvidence.push(...targetAssetEvidence.map(({motionStress}) => motionStress));
     assertReviewedEvidence(composite, compositeEvidence, target.compositeId);
     for (const nodeId of target.memberNodeIds) {
-      const asset = quality.report.assets.find(({sources}) => sources.includes(`scene:${target.sceneId}:node:${nodeId}`));
-      if (!asset || !asset.technical.passed || !allPassed(asset.semanticChecks)) {
+      const assets = quality.report.assets.filter(({sources}) => sources.includes(`scene:${target.sceneId}:node:${nodeId}`));
+      if (assets.length === 0 || assets.some((asset) => !asset.technical.passed || !allPassed(asset.semanticChecks))) {
         throw new Error(`${target.compositeId} 的成员 ${nodeId} 尚未通过完整素材质量检查。`);
       }
-      const evidence = targetAssetEvidence.find((candidate) => candidate.nodeId === nodeId);
-      assertReviewedEvidence(asset, REQUIRED_ASSET_EVIDENCE.map((field) => evidence[field]), `${target.compositeId} 的成员 ${nodeId}`);
+      for (const asset of assets) {
+        const evidence = targetAssetEvidence.find((candidate) =>
+          candidate.nodeId === nodeId && candidate.source && path.normalize(path.relative(ROOT, path.resolve(ROOT, 'public', candidate.source))) === path.normalize(asset.file),
+        ) ?? targetAssetEvidence.find((candidate) => candidate.nodeId === nodeId && !candidate.source);
+        if (!evidence) throw new Error(`${target.compositeId} 的成员 ${nodeId} 缺少 ${asset.file} 的当前素材证据。`);
+        assertReviewedEvidence(asset, REQUIRED_ASSET_EVIDENCE.map((field) => evidence[field]), `${target.compositeId} 的成员 ${nodeId}`);
+      }
     }
-    const masterAssetId = target.group.registration?.sourceMasterAssetId;
+    const masterAssetId = target.group?.registration?.sourceMasterAssetId ?? target.sequence?.registration?.sourceMasterAssetId;
     if (masterAssetId) {
       const master = quality.report.assets.find(({assetId}) => assetId === masterAssetId);
       if (master && (!master.technical.passed || !allPassed(master.semanticChecks))) {

@@ -43,6 +43,7 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
     estimatedDurationSeconds: durationSeconds / sceneCount,
     compositionPlan: {
       patterns: ['free'],
+      stateSequences: [],
       relationships: [
         {id: `s${index + 1}-free`, subject: 'subject', predicate: 'free', object: 'background', proof: 'Independent cutout remains readable'},
       ],
@@ -53,9 +54,9 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
       {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', motion: 'Settle all layers', audioCue: null, proofTimeId: `s${index + 1}-proof-final`},
     ],
     proofTimes: [
-      {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable']},
-      {id: `s${index + 1}-proof-action`, at: 0.5, label: 'Action', kind: 'peak', assertions: ['Action is visible']},
-      {id: `s${index + 1}-proof-final`, at: 0.9, label: 'Resolved', kind: 'final', assertions: ['Final composition is stable']},
+      {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable'], stateAssertions: []},
+      {id: `s${index + 1}-proof-action`, at: 0.5, label: 'Action', kind: 'peak', assertions: ['Action is visible'], stateAssertions: []},
+      {id: `s${index + 1}-proof-final`, at: 0.9, label: 'Resolved', kind: 'final', assertions: ['Final composition is stable'], stateAssertions: []},
     ],
   })),
 });
@@ -203,7 +204,7 @@ test('command adapters write a local output and provenance records its hash', as
     );
     const recorded = await recordAssetProvenance({
       request: {
-        schemaVersion: 2,
+        schemaVersion: 4,
         projectSlug: slug,
         assetId: 'draft-script',
         capability: 'text',
@@ -237,7 +238,7 @@ test('voice outputs are measured and rejected before recording when scene timing
     ], {encoding: 'utf8'});
     assert.equal(generated.status, 0, generated.stderr);
     const base = {
-      schemaVersion: 3,
+      schemaVersion: 4,
       projectSlug: 'voice-timing-test',
       assetId: 'scene-one-narration',
       capability: 'voice',
@@ -260,13 +261,13 @@ test('voice outputs are measured and rejected before recording when scene timing
   }
 });
 
-test('v2 image requests require complete composition bindings', () => {
+test('v4 image requests require complete composition and semantic bindings', () => {
   assert.throws(
-    () => validateAssetRequest({schemaVersion: 2, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
+    () => validateAssetRequest({schemaVersion: 4, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
     /compositionBinding/,
   );
   assert.doesNotThrow(() => validateAssetRequest({
-    schemaVersion: 2,
+    schemaVersion: 4,
     projectSlug: 'binding-test',
     assetId: 'water',
     capability: 'image',
@@ -277,6 +278,7 @@ test('v2 image requests require complete composition bindings', () => {
       sourceMasterAssetId: 'river-master', outputRole: 'lower-band', canvas: {width: 1920, height: 1080},
       derivation: {method: 'alpha-extraction', parentAssetId: 'river-master'},
     },
+    semanticBinding: {riskClass: 'topology-critical', contractIds: ['river-topology']},
   }));
 });
 
@@ -310,7 +312,7 @@ test('bundled provider status is valid and defers host capability selection', ()
 });
 
 test('new projects require a locked storyboard before concept approval', async () => {
-  const slug = `v4-smoke-${process.pid}`;
+  const slug = `v5-smoke-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
   try {
@@ -330,7 +332,7 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 4);
+    assert.equal(project.schemaVersion, 5);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');

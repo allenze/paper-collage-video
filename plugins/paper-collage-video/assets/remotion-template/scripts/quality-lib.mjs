@@ -4,7 +4,9 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {
   collectCompositionAssets,
+  collectCompositionVisualSources,
   collectCompositionGroups,
+  collectStateSequences,
   deriveCueEvents,
   flattenCompositionNodes,
   hashCompositionValue,
@@ -68,6 +70,10 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'sound-event-bound',
   'proof-time-bound',
   'final-state-preserved',
+  'state-order-correct',
+  'pose-registration-stable',
+  'state-identity-consistent',
+  'transition-clean',
 ];
 
 export const QUALITY_CHECKS = [
@@ -92,6 +98,7 @@ const COMPOSITE_PROFILES = {
   'supported-subject': ['support-contact', 'inside-or-on-readable', 'front-occlusion', 'shared-motion', 'identity-continuity', 'motion-isolation-clean'],
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
   cue: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
+  'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
 };
 
 const qualityReportPath = (slug) => path.join(ROOT, 'projects', slug, 'quality-report.json');
@@ -165,6 +172,20 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
         ? [...(QUALITY_PROFILES[node.assetRole] ?? QUALITY_PROFILES.image), ...TOPOLOGY_ASSET_CHECKS]
         : null;
       add({file: resolvePublicFile(node.src), kind: node.assetRole, source: `scene:${scene.id}:node:${node.id}`, requiredChecks: topologyChecks});
+    }
+    for (const {node, parent} of collectStateSequences(scene.composition)) {
+      const topologyChecks = parent && ['supported-subject', 'registered-environment'].includes(parent.pattern)
+        ? [...(QUALITY_PROFILES[node.assetRole] ?? QUALITY_PROFILES.image), ...TOPOLOGY_ASSET_CHECKS]
+        : null;
+      for (const state of node.states) {
+        add({
+          assetId: `${node.poseFamilyId}:${state.id}`,
+          file: resolvePublicFile(state.src),
+          kind: node.assetRole,
+          source: `scene:${scene.id}:node:${node.id}`,
+          requiredChecks: topologyChecks,
+        });
+      }
     }
     for (const {node} of collectCompositionGroups(scene.composition)) {
       for (const boundary of node.boundaries ?? []) {
@@ -260,15 +281,55 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
   const recordsByFile = new Map((assetManifest.assets ?? []).map((record) => [path.normalize(record.file), record]));
   const targets = [];
   for (const scene of project.scenes ?? []) {
+    for (const {node} of collectStateSequences(scene.composition)) {
+      const proofTimes = (scene.motion?.proofTimes ?? []).filter((proof) =>
+        (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
+      );
+      const memberHashes = await hashReferencedFiles(node.states.map(({src}) => src));
+      const stateRecords = node.states.map((state) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(state.src)))) ?? null);
+      const familyProvenance = stateRecords.map((record) => record ? {
+        assetId: record.assetId,
+        compositionBinding: record.compositionBinding ?? record.request?.compositionBinding ?? null,
+        stateBinding: record.stateBinding ?? record.request?.stateBinding ?? null,
+        familyFingerprint: record.familyFingerprint ?? null,
+      } : null);
+      const fingerprint = hashCompositionValue({
+        sceneId: scene.id,
+        node,
+        proofTimes,
+        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, transition: scene.transition},
+        camera: scene.camera,
+        affectingCues: (scene.cues ?? []).filter(({targetId}) => targetId === 'scene' || targetId === node.id),
+        memberHashes,
+        familyProvenance,
+      });
+      targets.push({
+        compositeId: `state-sequence:${scene.id}:${node.id}`,
+        sceneId: scene.id,
+        pattern: 'state-sequence',
+        nodeId: node.id,
+        memberNodeIds: [node.id],
+        memberHashes,
+        compositionHash: hashCompositionValue(node),
+        fingerprint,
+        proofTimeIds: proofTimes.map(({id}) => id),
+        requiredChecks: COMPOSITE_PROFILES['state-sequence'],
+        sequence: node,
+        stateRecords,
+      });
+    }
     for (const {node: group} of collectCompositionGroups(scene.composition)) {
       if (!['supported-subject', 'registered-environment'].includes(group.pattern)) continue;
-      const members = descendants(group).filter((node) => node.kind === 'asset');
+      const members = descendants(group).filter((node) => ['asset', 'state-sequence'].includes(node.kind));
       const sources = [
-        ...members.map(({src}) => src),
+        ...members.flatMap((member) => member.kind === 'asset' ? [member.src] : member.states.map(({src}) => src)),
         ...(group.boundaries ?? []).flatMap(({upperMaskSrc, lowerMaskSrc}) => [upperMaskSrc, lowerMaskSrc]),
       ];
       const memberHashes = await hashReferencedFiles(sources);
-      const familyRecords = members.map((member) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(member.src)))) ?? null);
+      const familyRecords = members.flatMap((member) =>
+        (member.kind === 'asset' ? [member.src] : member.states.map(({src}) => src))
+          .map((source) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(source)))) ?? null),
+      );
       const familyProvenance = familyRecords.map((record) => record ? {
         assetId: record.assetId,
         compositionBinding: record.compositionBinding ?? record.request?.compositionBinding ?? null,
@@ -302,7 +363,11 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
     for (const cue of scene.cues ?? []) {
       if (!cue.proofTimeId && !cue.sound) continue;
       const targetNode = cue.targetId === 'scene' ? null : findNode(scene, cue.targetId);
-      const targetSources = targetNode ? descendants(targetNode.kind === 'group' ? targetNode : {children: [targetNode]}).filter((node) => node.kind === 'asset').map(({src}) => src) : collectCompositionAssets(scene.composition).map(({node}) => node.src);
+      const targetSources = targetNode
+        ? targetNode.kind === 'state-sequence'
+          ? targetNode.states.map(({src}) => src)
+          : descendants(targetNode.kind === 'group' ? targetNode : {children: [targetNode]}).flatMap((node) => node.kind === 'asset' ? [node.src] : node.kind === 'state-sequence' ? node.states.map(({src}) => src) : [])
+        : collectCompositionVisualSources(scene.composition);
       const memberHashes = await hashReferencedFiles(targetSources);
       const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === cue.proofTimeId) ?? null;
       const fingerprint = hashCompositionValue({sceneId: scene.id, cue, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, transition: scene.transition}, camera: scene.camera, memberHashes});
@@ -344,9 +409,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
             throw new Error(`${contract.id}/${evidenceTarget.id} 引用了未知节点 ${shot.nodeId}。`);
           }
           const nodes = targetNode
-            ? (targetNode.kind === 'asset' ? [targetNode] : descendants(targetNode).filter(({kind}) => kind === 'asset'))
-            : collectCompositionAssets(scene.composition).map(({node}) => node);
-          sources.push(...nodes.map(({src}) => src));
+            ? (['asset', 'state-sequence'].includes(targetNode.kind) ? [targetNode] : descendants(targetNode).filter(({kind}) => ['asset', 'state-sequence'].includes(kind)))
+            : flattenCompositionNodes(scene.composition?.nodes).map(({node}) => node).filter(({kind}) => ['asset', 'state-sequence'].includes(kind));
+          sources.push(...nodes.flatMap((node) => node.kind === 'asset' ? [node.src] : node.states.map(({src}) => src)));
           memberNodeIds.push(...nodes.map(({id}) => id));
           sceneEvidence.push({
             sceneId: scene.id,
@@ -448,6 +513,26 @@ const inspectCompositeTechnical = async ({target, proofReport}) => {
     checks.push(
       {id: 'cue-proof-bound', passed: Boolean(target.cue.proofTimeId), actual: target.cue.proofTimeId ?? null},
       {id: 'cue-sound-valid', passed: !target.cue.sound || Boolean(target.cue.sound.src), actual: target.cue.sound?.src ?? 'not-required'},
+    );
+  }
+  if (target.pattern === 'state-sequence') {
+    const proofStateIds = new Set((target.proofTimeIds ?? []).flatMap((proofTimeId) => {
+      const proof = proofFrames.find((frame) => frame.proofTimeId === proofTimeId);
+      return proof ? [proofTimeId] : [];
+    }));
+    const registrationsBound = target.stateRecords.every((record) => {
+      if (!record) return false;
+      const binding = record.stateBinding ?? record.request?.stateBinding;
+      return binding?.poseFamilyId === target.sequence.poseFamilyId && binding?.registrationId === target.sequence.registration.id;
+    });
+    const registeredDimensions = new Set(target.stateRecords.map((record) =>
+      record?.media ? `${record.media.width}x${record.media.height}` : 'missing',
+    ));
+    const expectedDimensions = `${target.sequence.registration.canvas.width}x${target.sequence.registration.canvas.height}`;
+    checks.push(
+      {id: 'state-proofs-complete', passed: proofStateIds.size === target.proofTimeIds.length, expected: target.proofTimeIds.length, actual: proofStateIds.size},
+      {id: 'registered-state-family', passed: registrationsBound, actual: registrationsBound},
+      {id: 'registered-state-dimensions', passed: registeredDimensions.size === 1 && registeredDimensions.has(expectedDimensions), expected: expectedDimensions, actual: [...registeredDimensions].join(', ')},
     );
   }
   return {passed: checks.every(({passed}) => passed), checks, proofFrames};

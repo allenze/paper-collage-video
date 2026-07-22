@@ -78,6 +78,25 @@ If an earlier production needs a new revision, use its approved content and fina
 film as references and rebuild it as a fresh latest-version project. Regenerating
 or re-importing assets is acceptable.
 
+### 2.4 Quality is fixed; waste is optional
+
+Meet the approved quality contract while minimizing provider calls, paid quota,
+render work, and broad regeneration. Efficiency must be designed into the
+contract and provenance rather than hidden in prompts or manual operator habits.
+
+For related states of one identity or prop, prefer one dense registered sheet
+(for example 2x2 or 3x2) when it can preserve identity and useful cell detail.
+Split, key, and register those cells locally. Do not combine unrelated identities
+merely to fill a grid, and do not accept smaller cells when they make silhouettes,
+text, or critical mechanisms unreadable. If one reviewed cell fails, regenerate
+or repair that cell rather than discarding the accepted family.
+
+Reports must distinguish one quota-consuming provider result from its
+deterministic local derivatives, retain source-family provenance, and state how
+many individual calls were avoided. Cache reuse, audio-only remuxing, incremental
+proof rendering, and exact asset reuse follow the same principle: save work only
+when fingerprints prove the result remains current.
+
 ## 3. Decision framework for a new behavior
 
 Classify every requested behavior before implementation:

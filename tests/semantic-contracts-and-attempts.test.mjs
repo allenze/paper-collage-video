@@ -111,9 +111,9 @@ test('semantic contracts reject cloned coexisting identities and broken force pa
   );
 });
 
-test('schema-v3 image requests classify semantic risk independently from composition families', () => {
+test('schema-v4 image requests classify semantic risk independently from composition families', () => {
   const base = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: 'contract-test',
     assetId: 'cast-master',
     capability: 'image',
@@ -152,7 +152,7 @@ test('multi-contract images inherit checks and identity family rules from every 
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const requestFile = path.join(projectDirectory, 'requests', 'machine-cast.json');
   const request = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: slug,
     assetId: 'machine-cast',
     capability: 'image',
@@ -198,7 +198,7 @@ test('multi-contract images inherit checks and identity family rules from every 
   }
 });
 
-test('new ledger-enabled projects cannot bypass semantic contracts with schema-v2 images', async () => {
+test('old image request schemas are rejected instead of bypassing semantic contracts', async () => {
   const slug = `request-v3-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const requestFile = path.join(projectDirectory, 'requests', 'legacy.json');
@@ -219,7 +219,7 @@ test('new ledger-enabled projects cannot bypass semantic contracts with schema-v
     }, null, 2)}\n`);
     await assert.rejects(
       () => loadAssetRequest(path.relative(ROOT, requestFile)),
-      /必须使用 schema-v3 image request/,
+      /schemaVersion 必须为 4/,
     );
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
@@ -232,7 +232,7 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
   const output = path.join(ROOT, 'public', 'projects', slug, 'wrong-size.png');
   const provider = {id: 'test-image', adapter: 'host', model: 'fixture'};
   const request = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: slug,
     assetId: 'diagram-card',
     capability: 'image',
@@ -248,7 +248,7 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
     await fs.mkdir(projectDirectory, {recursive: true});
     await fs.mkdir(path.dirname(output), {recursive: true});
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify({
-      schemaVersion: 4,
+      schemaVersion: 5,
       slug,
       plan: {productionProfile: 'draft', assetBudget: {maxGeneratedImages: 1}},
       video: {width: 100, height: 100, fps: 30},
@@ -311,7 +311,7 @@ test('diagram filters fail deterministically and semantic proof targets span sce
     await fs.writeFile(cardFile, '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence/></filter><text filter="url(#noise)" x="5" y="50">A</text></svg>');
     await sharp({create: {width: 100, height: 100, channels: 4, background: '#806040'}}).png().toFile(castFile);
     const project = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},
@@ -355,7 +355,7 @@ test('manual attempt closure requires truthful quota semantics', async () => {
   const slug = `attempt-close-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: slug,
     assetId: 'asset',
     capability: 'image',
@@ -378,7 +378,7 @@ test('parallel reservations cannot oversubscribe the approved image budget', asy
   const slug = `attempt-race-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = (assetId) => ({
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: slug,
     assetId,
     capability: 'image',
