@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard-authoring.schema.json",
-  "title": "Paper Collage Storyboard Authoring v5",
+  "title": "Paper Collage Storyboard Authoring v6",
   "description": "Author treatments only. compositionPlan, directing, fingerprints, and budget demand are compiler-owned.",
   "type": "object",
   "required": ["arc", "style", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 5},
+    "schemaVersion": {"const": 6},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"enum": ["pending", "ready"]},
     "arc": {"type": "string"},
@@ -41,8 +41,22 @@
         "additionalProperties": false
       }
     },
-    "sceneTransitions": {"type": "array", "items": {"$ref": "storyboard.schema.json#/$defs/sceneBoundaryTransition"}},
+    "sceneTransitions": {"type": "array", "items": {"oneOf": [{"$ref": "#/$defs/intentRoutedBoundary"}, {"$ref": "storyboard.schema.json#/$defs/sceneBoundaryTransition"}]}},
     "updatedAt": {"type": "string", "format": "date-time"}
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "intentRoutedBoundary": {
+      "type": "object",
+      "required": ["id", "fromSceneId", "toSceneId", "intent", "rationale"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "fromSceneId": {"type": "string", "minLength": 1},
+        "toSceneId": {"type": "string", "minLength": 1},
+        "intent": {"enum": ["continuity", "location-change", "time-passage", "focus-reveal", "chapter-reset", "impact-cut"]},
+        "rationale": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  }
 }

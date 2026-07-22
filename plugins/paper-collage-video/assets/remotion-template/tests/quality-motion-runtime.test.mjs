@@ -151,7 +151,7 @@ test('quality scaffold exposes pending checks and current proof evidence without
   assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
 });
 
-test('v6 scene transitions use one seconds-based opaque-boundary protocol', () => {
+test('v7 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {
   const timeline = deriveTimeline({
     video: {fps: 30},
     scenes: [
@@ -172,8 +172,8 @@ test('v6 scene transitions use one seconds-based opaque-boundary protocol', () =
       },
     ],
     sceneTransitions: [
-      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', type: 'paper-wipe', direction: 'left-to-right', durationSeconds: 0.4},
-      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', type: 'dip-to-paper', durationSeconds: 0.4},
+      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', type: 'paper-wipe', direction: 'left-to-right', durationSeconds: 0.4},
+      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', type: 'dip-to-paper', durationSeconds: 0.4},
     ],
   });
   assert.equal(timeline.scenes[0].from, 0);
@@ -182,7 +182,7 @@ test('v6 scene transitions use one seconds-based opaque-boundary protocol', () =
   assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v6 projects are rejected instead of migrated', async () => {
+test('pre-v7 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -196,14 +196,14 @@ test('pre-v6 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 6'),
+          code === 'schema-version' && message.includes('必须为 7'),
     ),
   );
 });
 
-test('v6 projects require an explicit bounded narration gain', async () => {
+test('v7 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 6,
+    schemaVersion: 7,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -327,7 +327,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
       path.join(projectDirectory, 'project.json'),
       `${JSON.stringify(
         {
-          schemaVersion: 6,
+          schemaVersion: 7,
           slug,
           title: 'Quality Gate',
           quality: {minimumAssetScale: 1},
@@ -490,7 +490,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
         .toFile(file);
     }
     const project = {
-      schemaVersion: 6,
+      schemaVersion: 7,
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},

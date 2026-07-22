@@ -209,7 +209,7 @@ test('quality scaffold and record-batch measure one AI review session', async ()
       productionState({slug, createdAt, updatedAt: createdAt}),
     );
     await writeJson(path.join(projectDirectory, 'project.json'), {
-      schemaVersion: 6,
+      schemaVersion: 7,
       slug,
       title: 'Metrics review fixture',
       quality: {minimumAssetScale: 0.5},

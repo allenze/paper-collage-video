@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 7,
+  "slug": "transition-gallery",
+  "title": "Intent-routed paper transition gallery",
+  "video": {"width": 960, "height": 540, "fps": 30},
+  "theme": {
+    "canvas": "#efe3ca",
+    "sceneBackground": "#8a271f",
+    "accent": "#d9a441",
+    "ink": "#2d211c",
+    "subtitle": "#fff8ea",
+    "subtitleBackground": "rgba(45, 33, 28, .72)",
+    "paperEdge": "#fff5dc",
+    "foreground": "#54231d",
+    "texture": "textures/paper-grain.png",
+    "fontFamily": "STKaiti, KaiTi, serif"
+  },
+  "audio": {"narration": {"volume": 0}, "music": null},
+  "scenes": [
+    {
+      "id": "slide", "label": "纸张推入", "eyebrow": "PAPER SLIDE", "tailSeconds": 0.8,
+      "appearance": {"background": "#973b32", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 1, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    },
+    {
+      "id": "wipe", "label": "纸边擦除", "eyebrow": "PAPER WIPE", "tailSeconds": 0.8,
+      "appearance": {"background": "#315f78", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 2, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    },
+    {
+      "id": "torn", "label": "撕纸擦除", "eyebrow": "TORN WIPE", "tailSeconds": 0.8,
+      "appearance": {"background": "#5f6f3a", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 3, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    },
+    {
+      "id": "iris", "label": "圆孔聚焦", "eyebrow": "PAPER IRIS", "tailSeconds": 0.8,
+      "appearance": {"background": "#6d4679", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 4, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    },
+    {
+      "id": "page", "label": "翻页换时", "eyebrow": "PAGE TURN", "tailSeconds": 0.8,
+      "appearance": {"background": "#a1652f", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 5, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    },
+    {
+      "id": "shutters", "label": "纸幕闭合", "eyebrow": "PAPER SHUTTERS", "tailSeconds": 0.8,
+      "appearance": {"background": "#356b63", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 6, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    },
+    {
+      "id": "dip", "label": "纸色遮罩", "eyebrow": "DIP TO PAPER", "tailSeconds": 0.8,
+      "appearance": {"background": "#7a4450", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 7, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    },
+    {
+      "id": "complete", "label": "全部完成", "eyebrow": "SEVEN ANIMATED TYPES", "tailSeconds": 0.2,
+      "appearance": {"background": "#4b5747", "paperTexture": {"visible": true, "opacity": 0.18, "blendMode": "multiply"}},
+      "motion": {"blueprint": "quiet-lockup", "intensity": 0, "seed": 8, "proofTimes": []},
+      "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
+      "camera": {"preset": "static", "intensity": 0},
+      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "subtitles": [], "events": []
+    }
+  ],
+  "sceneTransitions": [
+    {"id": "slide-wipe", "fromSceneId": "slide", "toSceneId": "wipe", "intent": "continuity", "rationale": "Continue the gallery with an incoming paper panel.", "type": "paper-slide", "direction": "right-to-left", "durationSeconds": 0.45},
+    {"id": "wipe-torn", "fromSceneId": "wipe", "toSceneId": "torn", "intent": "location-change", "rationale": "A clean paper edge moves to another visual location.", "type": "paper-wipe", "direction": "left-to-right", "durationSeconds": 0.5},
+    {"id": "torn-iris", "fromSceneId": "torn", "toSceneId": "iris", "intent": "location-change", "rationale": "A rough paper edge demonstrates a more tactile location change.", "type": "torn-wipe", "direction": "top-to-bottom", "durationSeconds": 0.5},
+    {"id": "iris-page", "fromSceneId": "iris", "toSceneId": "page", "intent": "focus-reveal", "rationale": "The circular opening focuses attention on the next card.", "type": "paper-iris", "durationSeconds": 0.55},
+    {"id": "page-shutters", "fromSceneId": "page", "toSceneId": "shutters", "intent": "time-passage", "rationale": "A page turn signals elapsed time.", "type": "page-turn", "direction": "right-to-left", "durationSeconds": 0.7},
+    {"id": "shutters-dip", "fromSceneId": "shutters", "toSceneId": "dip", "intent": "chapter-reset", "rationale": "Two opaque paper shutters close one chapter.", "type": "paper-shutters", "durationSeconds": 0.65},
+    {"id": "dip-complete", "fromSceneId": "dip", "toSceneId": "complete", "intent": "chapter-reset", "rationale": "An opaque paper field resets the final lockup.", "type": "dip-to-paper", "durationSeconds": 0.6}
+  ]
+}

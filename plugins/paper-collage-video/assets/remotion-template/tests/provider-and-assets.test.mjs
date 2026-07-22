@@ -56,8 +56,8 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
     id: `scene-${String(index + 1).padStart(2, '0')}-to-scene-${String(index + 2).padStart(2, '0')}`,
     fromSceneId: `scene-${String(index + 1).padStart(2, '0')}`,
     toSceneId: `scene-${String(index + 2).padStart(2, '0')}`,
-    type: 'cut',
-    durationSeconds: 0,
+    intent: 'continuity',
+    rationale: 'Keep the synthetic fixture moving through one continuous story.',
   })),
 });
 
@@ -312,7 +312,7 @@ test('bundled provider status is valid and defers host capability selection', ()
 });
 
 test('new projects require a locked storyboard before concept approval', async () => {
-  const slug = `v5-smoke-${process.pid}`;
+  const slug = `v7-smoke-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
   try {
@@ -332,7 +332,7 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 6);
+    assert.equal(project.schemaVersion, 7);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
@@ -344,7 +344,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 5);
+    assert.equal(storyboardTemplate.schemaVersion, 6);
     assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
@@ -502,6 +502,12 @@ test('new projects require a locked storyboard before concept approval', async (
       durationSeconds: 45,
     });
     assert.equal(storyboard.status, 0, storyboard.stderr);
+    const compiledStoryboard = JSON.parse(
+      await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
+    );
+    assert.equal(compiledStoryboard.schemaVersion, 6);
+    assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
+    assert.ok(compiledStoryboard.sceneTransitions.every(({type}) => type === 'paper-slide'));
 
     const compactStatus = spawnSync(
       process.execPath,

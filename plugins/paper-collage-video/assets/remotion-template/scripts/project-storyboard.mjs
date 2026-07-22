@@ -9,6 +9,7 @@ import {
   summarizeStoryboard,
   validateStoryboard,
 } from './storyboard-lib.mjs';
+import {materializeSceneTransitionRecipes} from '../src/sceneTimeline.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -28,9 +29,10 @@ try {
   const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 5,
+    schemaVersion: 6,
     slug,
     status: 'ready',
+    sceneTransitions: materializeSceneTransitionRecipes(supplied.sceneTransitions),
     updatedAt: new Date().toISOString(),
   };
   const storyboard = compileStoryboardDirecting(authored, {plan: project.plan});

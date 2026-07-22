@@ -1,18 +1,94 @@
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
+const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 
 export const SCENE_TRANSITION_TYPES = Object.freeze([
   'cut',
   'paper-wipe',
   'dip-to-paper',
+  'paper-slide',
+  'torn-wipe',
+  'paper-iris',
+  'page-turn',
+  'paper-shutters',
 ]);
 
-export const PAPER_WIPE_DIRECTIONS = Object.freeze([
+export const SCENE_TRANSITION_INTENTS = Object.freeze([
+  'continuity',
+  'location-change',
+  'time-passage',
+  'focus-reveal',
+  'chapter-reset',
+  'impact-cut',
+]);
+
+export const PAPER_MOTION_DIRECTIONS = Object.freeze([
   'left-to-right',
   'right-to-left',
   'top-to-bottom',
   'bottom-to-top',
 ]);
+
+export const TRANSITION_RECIPES = Object.freeze({
+  continuity: Object.freeze({type: 'paper-slide', durationSeconds: 0.45, direction: 'right-to-left'}),
+  'location-change': Object.freeze({type: 'paper-wipe', durationSeconds: 0.5, direction: 'left-to-right'}),
+  'time-passage': Object.freeze({type: 'page-turn', durationSeconds: 0.7, direction: 'right-to-left'}),
+  'focus-reveal': Object.freeze({type: 'paper-iris', durationSeconds: 0.55}),
+  'chapter-reset': Object.freeze({type: 'paper-shutters', durationSeconds: 0.65}),
+  'impact-cut': Object.freeze({type: 'cut', durationSeconds: 0}),
+});
+
+export const materializeSceneTransitionRecipes = (sceneTransitions = []) =>
+  sceneTransitions.map((transition) => {
+    if (
+      transition?.type !== undefined ||
+      transition?.durationSeconds !== undefined ||
+      transition?.direction !== undefined
+    ) {
+      return transition;
+    }
+    const recipe = TRANSITION_RECIPES[transition?.intent];
+    return recipe ? {...transition, ...recipe} : transition;
+  });
+
+export const summarizeSceneTransitions = (sceneTransitions = []) => {
+  const countBy = (key) => Object.fromEntries(
+    [...new Set(sceneTransitions.map((transition) => transition[key]))]
+      .sort()
+      .map((value) => [value, sceneTransitions.filter((transition) => transition[key] === value).length]),
+  );
+  const cutCount = sceneTransitions.filter(({type}) => type === 'cut').length;
+  return {
+    total: sceneTransitions.length,
+    animatedCount: sceneTransitions.length - cutCount,
+    cutCount,
+    cutRatio: sceneTransitions.length === 0 ? 0 : cutCount / sceneTransitions.length,
+    typeCounts: countBy('type'),
+    intentCounts: countBy('intent'),
+  };
+};
+
+const DIRECTIONAL_TYPES = new Set(['paper-wipe', 'paper-slide', 'torn-wipe']);
+const HORIZONTAL_TYPES = new Set(['page-turn']);
+const NON_DIRECTIONAL_TYPES = new Set(['cut', 'dip-to-paper', 'paper-iris', 'paper-shutters']);
+const HORIZONTAL_DIRECTIONS = new Set(['left-to-right', 'right-to-left']);
+const MINIMUM_DURATION = Object.freeze({
+  'paper-wipe': 0.2,
+  'dip-to-paper': 0.3,
+  'paper-slide': 0.25,
+  'torn-wipe': 0.3,
+  'paper-iris': 0.3,
+  'page-turn': 0.4,
+  'paper-shutters': 0.4,
+});
+const TYPES_BY_INTENT = Object.freeze({
+  continuity: new Set(['paper-slide', 'paper-wipe']),
+  'location-change': new Set(['paper-slide', 'paper-wipe', 'torn-wipe']),
+  'time-passage': new Set(['page-turn', 'torn-wipe', 'paper-wipe']),
+  'focus-reveal': new Set(['paper-iris']),
+  'chapter-reset': new Set(['paper-shutters', 'dip-to-paper', 'page-turn']),
+  'impact-cut': new Set(['cut']),
+});
 
 const durationFramesFor = (transition, fps) =>
   transition?.type === 'cut'
@@ -54,6 +130,18 @@ export const validateSceneTransitionSequence = ({scenes = [], sceneTransitions =
       add('scene-transition-type', `未知场景转场：${transition?.type}`, `${location}.type`);
       continue;
     }
+    if (!SCENE_TRANSITION_INTENTS.includes(transition?.intent)) {
+      add('scene-transition-intent', `未知转场意图：${transition?.intent}`, `${location}.intent`);
+    } else if (!TYPES_BY_INTENT[transition.intent].has(transition.type)) {
+      add(
+        'scene-transition-intent-type',
+        `${transition.intent} 不应使用 ${transition.type}；请按编辑意图选择纸张转场。`,
+        `${location}.type`,
+      );
+    }
+    if (!nonEmpty(transition?.rationale)) {
+      add('scene-transition-rationale', '每个场景边界都必须说明转场理由。', `${location}.rationale`);
+    }
     if (!finite(transition.durationSeconds) || transition.durationSeconds < 0) {
       add('scene-transition-duration', '场景转场 durationSeconds 必须是非负数。', `${location}.durationSeconds`);
       continue;
@@ -62,25 +150,28 @@ export const validateSceneTransitionSequence = ({scenes = [], sceneTransitions =
       if (transition.durationSeconds !== 0) {
         add('scene-transition-cut-duration', 'cut 的 durationSeconds 必须为 0。', `${location}.durationSeconds`);
       }
-      if (transition.direction !== undefined) {
-        add('scene-transition-cut-direction', 'cut 不得声明 direction。', `${location}.direction`);
+    } else {
+      const minimum = MINIMUM_DURATION[transition.type];
+      if (transition.durationSeconds < minimum || transition.durationSeconds > 1.5) {
+        add(
+          'scene-transition-duration-bounds',
+          `${transition.type} 必须位于 ${minimum}–1.5 秒，避免难以辨认的闪烁或拖沓遮挡。`,
+          `${location}.durationSeconds`,
+        );
       }
-      continue;
     }
-    if (transition.durationSeconds < 0.15 || transition.durationSeconds > 1.5) {
-      add(
-        'scene-transition-duration-bounds',
-        '非切换转场必须位于 0.15–1.5 秒，避免难以辨认的闪烁或拖沓遮挡。',
-        `${location}.durationSeconds`,
-      );
-    }
-    if (transition.type === 'paper-wipe') {
-      if (!PAPER_WIPE_DIRECTIONS.includes(transition.direction)) {
-        add('scene-transition-direction', 'paper-wipe 必须声明受支持的 direction。', `${location}.direction`);
+    if (DIRECTIONAL_TYPES.has(transition.type)) {
+      if (!PAPER_MOTION_DIRECTIONS.includes(transition.direction)) {
+        add('scene-transition-direction', `${transition.type} 必须声明受支持的 direction。`, `${location}.direction`);
       }
-    } else if (transition.direction !== undefined) {
-      add('scene-transition-dip-direction', 'dip-to-paper 不得声明 direction。', `${location}.direction`);
+    } else if (HORIZONTAL_TYPES.has(transition.type)) {
+      if (!HORIZONTAL_DIRECTIONS.has(transition.direction)) {
+        add('scene-transition-direction', 'page-turn 只支持水平翻页方向。', `${location}.direction`);
+      }
+    } else if (NON_DIRECTIONAL_TYPES.has(transition.type) && transition.direction !== undefined) {
+      add('scene-transition-direction-forbidden', `${transition.type} 不得声明 direction。`, `${location}.direction`);
     }
+    if (transition.type === 'cut') continue;
     if (finite(outgoing?.tailSeconds) && outgoing.tailSeconds + 1e-6 < transition.durationSeconds) {
       add(
         'scene-transition-tail-budget',
@@ -147,6 +238,12 @@ const smoothstep = (value) => {
   return t * t * (3 - 2 * t);
 };
 
+const coverSwapEnvelope = (rawProgress) => {
+  if (rawProgress < 0.42) return smoothstep(rawProgress / 0.42);
+  if (rawProgress <= 0.58) return 1;
+  return 1 - smoothstep((rawProgress - 0.58) / 0.42);
+};
+
 const wipeClipPath = (direction, progress) => {
   const hidden = (1 - progress) * 100;
   switch (direction) {
@@ -162,37 +259,106 @@ const wipeClipPath = (direction, progress) => {
   }
 };
 
+const slideTransform = (direction, progress) => {
+  const distance = (1 - progress) * 100;
+  switch (direction) {
+    case 'left-to-right': return `translate3d(${-distance}%, 0, 0)`;
+    case 'top-to-bottom': return `translate3d(0, ${-distance}%, 0)`;
+    case 'bottom-to-top': return `translate3d(0, ${distance}%, 0)`;
+    case 'right-to-left':
+    default: return `translate3d(${distance}%, 0, 0)`;
+  }
+};
+
+const TORN_OFFSETS = Object.freeze([0, -0.72, 0.48, -0.34, 0.82, -0.58, 0.3, -0.76, 0]);
+
+const resolveTornEdgePoints = (direction, progress) => {
+  const boundary = progress * 100;
+  const amplitude = Math.min(1.5, boundary, 100 - boundary);
+  return TORN_OFFSETS.map((offset, index) => {
+    const cross = (index / (TORN_OFFSETS.length - 1)) * 100;
+    const along = Math.max(0, Math.min(100, boundary + offset * amplitude));
+    return direction === 'left-to-right' || direction === 'right-to-left'
+      ? {x: along, y: cross}
+      : {x: cross, y: along};
+  });
+};
+
+const tornClipPath = (direction, edgePoints) => {
+  const edge = edgePoints.map(({x, y}) => `${x}% ${y}%`);
+  switch (direction) {
+    case 'right-to-left':
+      return `polygon(100% 0, ${edge.join(', ')}, 100% 100%)`;
+    case 'top-to-bottom':
+      return `polygon(0 0, 100% 0, ${[...edge].reverse().join(', ')})`;
+    case 'bottom-to-top':
+      return `polygon(0 100%, ${edge.join(', ')}, 100% 100%)`;
+    case 'left-to-right':
+    default:
+      return `polygon(0 0, ${edge.join(', ')}, 0 100%)`;
+  }
+};
+
+const basePresentation = ({rawProgress = 1, progress = 1} = {}) => ({
+  rawProgress,
+  progress,
+  incomingVisible: true,
+  incomingClipPath: 'none',
+  incomingTransform: 'none',
+  incomingTransformOrigin: '50% 50%',
+  paperOpacity: 0,
+  edgeProgress: null,
+  tornEdgePoints: null,
+  irisRadius: null,
+  shutterClosure: null,
+  pageTurnFold: null,
+});
+
 export const resolveSceneTransitionPresentation = ({transition, frame}) => {
   if (!transition || transition.type === 'cut' || transition.durationInFrames <= 0) {
-    return {
-      progress: 1,
-      incomingVisible: true,
-      incomingClipPath: 'none',
-      paperOpacity: 0,
-      wipeEdgeProgress: null,
-    };
+    return basePresentation();
   }
   const rawProgress = clamp01(frame / Math.max(1, transition.durationInFrames - 1));
   const progress = smoothstep(rawProgress);
+  const base = basePresentation({rawProgress, progress});
   if (transition.type === 'paper-wipe') {
+    return {...base, incomingClipPath: wipeClipPath(transition.direction, progress), edgeProgress: progress};
+  }
+  if (transition.type === 'paper-slide') {
+    return {...base, incomingTransform: slideTransform(transition.direction, progress), edgeProgress: progress};
+  }
+  if (transition.type === 'torn-wipe') {
+    const tornEdgePoints = resolveTornEdgePoints(transition.direction, progress);
     return {
-      progress,
-      incomingVisible: true,
-      incomingClipPath: wipeClipPath(transition.direction, progress),
-      paperOpacity: 0,
-      wipeEdgeProgress: progress,
+      ...base,
+      incomingClipPath: tornClipPath(transition.direction, tornEdgePoints),
+      edgeProgress: progress,
+      tornEdgePoints,
     };
   }
-  const firstHalf = rawProgress <= 0.5;
-  const paperOpacity = firstHalf
-    ? smoothstep(rawProgress * 2)
-    : 1 - smoothstep((rawProgress - 0.5) * 2);
+  if (transition.type === 'paper-iris') {
+    const irisRadius = progress * 72;
+    return {...base, incomingClipPath: `circle(${irisRadius}% at 50% 50%)`, irisRadius};
+  }
+  if (transition.type === 'page-turn') {
+    return {
+      ...base,
+      incomingClipPath: wipeClipPath(transition.direction, progress),
+      edgeProgress: progress,
+      pageTurnFold: Math.sin(progress * Math.PI),
+    };
+  }
+  if (transition.type === 'paper-shutters') {
+    return {
+      ...base,
+      incomingVisible: rawProgress >= 0.5,
+      shutterClosure: coverSwapEnvelope(rawProgress),
+    };
+  }
   return {
-    progress,
-    incomingVisible: !firstHalf,
-    incomingClipPath: 'none',
-    paperOpacity,
-    wipeEdgeProgress: null,
+    ...base,
+    incomingVisible: rawProgress >= 0.5,
+    paperOpacity: coverSwapEnvelope(rawProgress),
   };
 };
 
@@ -204,27 +370,27 @@ export const deriveTransitionProofSamples = ({timeline, fps, durationSeconds}) =
       return [
         {
           time: before / fps,
-          label: `${transition.fromSceneId} → ${transition.toSceneId} · cut 前`,
+          label: `${transition.fromSceneId} → ${transition.toSceneId} · ${transition.intent} · cut 前`,
           transitionId: transition.id,
           progress: 0,
         },
         {
           time: after / fps,
-          label: `${transition.fromSceneId} → ${transition.toSceneId} · cut 后`,
+          label: `${transition.fromSceneId} → ${transition.toSceneId} · ${transition.intent} · cut 后`,
           transitionId: transition.id,
           progress: 1,
         },
       ];
     }
-    return [0.25, 0.5, 0.75].map((progress) => {
+    return [0.25, 0.5, 0.75].map((sampleProgress) => {
       const absoluteFrame = transition.from + Math.round(
-        Math.max(0, transition.durationInFrames - 1) * progress,
+        Math.max(0, transition.durationInFrames - 1) * sampleProgress,
       );
       return {
         time: Math.max(0, Math.min(durationSeconds - 0.04, absoluteFrame / fps)),
-        label: `${transition.fromSceneId} → ${transition.toSceneId} · ${transition.type} ${Math.round(progress * 100)}%`,
+        label: `${transition.fromSceneId} → ${transition.toSceneId} · ${transition.intent} · ${transition.type} ${Math.round(sampleProgress * 100)}%`,
         transitionId: transition.id,
-        progress,
+        progress: sampleProgress,
       };
     });
   });

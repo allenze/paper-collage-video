@@ -225,7 +225,23 @@ export type SceneBoundaryTransition = {
   id: string;
   fromSceneId: string;
   toSceneId: string;
-  type: 'cut' | 'paper-wipe' | 'dip-to-paper';
+  intent:
+    | 'continuity'
+    | 'location-change'
+    | 'time-passage'
+    | 'focus-reveal'
+    | 'chapter-reset'
+    | 'impact-cut';
+  rationale: string;
+  type:
+    | 'cut'
+    | 'paper-wipe'
+    | 'dip-to-paper'
+    | 'paper-slide'
+    | 'torn-wipe'
+    | 'paper-iris'
+    | 'page-turn'
+    | 'paper-shutters';
   durationSeconds: number;
   direction?:
     | 'left-to-right'
@@ -309,7 +325,7 @@ export type ProjectScene = {
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 6;
+  schemaVersion: 7;
   slug: string;
   title: string;
   plan: {

@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -193,6 +193,6 @@
     },
     "styleProofSceneId": "starter",
     "styleProofTreatmentId": "show-traveler",
-    "fingerprint": "06f67e6b13e9b9cd1d36d4133f014707dc4efeb97719d85647eb3e0267aa647c"
+    "fingerprint": "3b8e82b91a352567415c52683bfdcba8dcdd752b6d138da86055a76ec56bfb29"
   }
 }

@@ -4,8 +4,8 @@ Composition v5 adds a first-class limited-animation model for the small pose cha
 
 ## Contract boundary
 
-- `project.json` supports schema v6 only; v5 state sequences remain the limited-animation primitive inside it.
-- `storyboard.json` supports schema v5 only; authors declare treatments and scene boundaries while the compiler derives composition/state/visibility plans.
+- `project.json` supports schema v7 only; v5 state sequences remain the limited-animation primitive inside it.
+- `storyboard.json` supports schema v6 only; authors declare treatments and boundary intent while the compiler derives composition/state/visibility plans and default transition recipes.
 - image requests support schema v5 only.
 - old files are not migrated or dual-parsed. Equivalent old outputs can be authored again with current primitives.
 
@@ -60,4 +60,4 @@ v5 also exposes generic `text` and `shape` nodes. Cards, labels, questions, circ
 
 ## Authoring rule
 
-Storyboard v5 classifies the visible change before production. Use continuous transforms for movement of the same drawing, persistent visibility events for show/hide lifecycle, and `state-sequence` when the drawing itself changes. Combine them with `supported-subject`, `registered-environment`, editable graphics, or continuous motion when those relationships coexist. The compiler derives and fingerprints the v6 execution plan from orthogonal treatments. Extend the reusable schema/runtime if neither model expresses the approved visual language; do not introduce project-specific renderer branches.
+Storyboard v6 classifies the visible change before production. Use continuous transforms for movement of the same drawing, persistent visibility events for show/hide lifecycle, and `state-sequence` when the drawing itself changes. Combine them with `supported-subject`, `registered-environment`, editable graphics, or continuous motion when those relationships coexist. The compiler derives and fingerprints the v7 execution plan from orthogonal treatments and intent-routed scene boundaries. Extend the reusable schema/runtime if neither model expresses the approved visual language; do not introduce project-specific renderer branches.

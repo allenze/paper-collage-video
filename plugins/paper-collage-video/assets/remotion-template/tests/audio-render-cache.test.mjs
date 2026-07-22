@@ -15,7 +15,7 @@ import {createRenderFingerprints} from '../scripts/render-cache-lib.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const makeProject = (slug) => ({
-  schemaVersion: 6,
+  schemaVersion: 7,
   slug,
   title: 'Cache Test',
   video: {width: 1920, height: 1080, fps: 30},

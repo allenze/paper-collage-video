@@ -499,7 +499,7 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme}: {scene: Nor
   const boundary = resolveSceneTransitionPresentation({transition: scene.enterTransition, frame});
   const paperTexture = scene.appearance?.paperTexture ?? {visible: true, opacity: 0.14, blendMode: 'multiply' as const};
   return (
-    <AbsoluteFill style={{overflow: 'hidden', visibility: boundary.incomingVisible ? 'visible' : 'hidden', clipPath: boundary.incomingClipPath, background: theme.canvas}}>
+    <AbsoluteFill style={{overflow: 'hidden', visibility: boundary.incomingVisible ? 'visible' : 'hidden', clipPath: boundary.incomingClipPath, transform: boundary.incomingTransform, transformOrigin: boundary.incomingTransformOrigin, background: theme.canvas, willChange: 'transform, clip-path'}}>
       <AbsoluteFill style={{background: scene.appearance?.background ?? theme.sceneBackground}} />
       <AbsoluteFill>
         <AbsoluteFill style={{transform: `translate3d(${cameraX}px, ${cameraY}px, 0) scale(${cameraZoom})`, transformOrigin: '50% 54%'}}>

@@ -1,6 +1,6 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v6 composition authoring, proof review, or delivery tuning.
+Read this before style sampling, bulk images, v7 composition authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
@@ -48,7 +48,7 @@ Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, c
 }
 ```
 
-After narration files and real v6 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
+After narration files and real v7 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
@@ -97,13 +97,13 @@ The scene camera, group transform, child local transform, keyframes, idle motion
 
 Map every approved beat to one or more ordered events. Target the group when the entire registered assembly reacts, or a child for a genuinely local action. `scene.events` schedules both visuals and sound; do not create a second audio event list. A visibility event persists after its window and requires a truthful initial state; an emphasis event is transient. Bind critical events to authored proof ids.
 
-The normal contact sheet and final report reuse the authored proof moments and event timeline. A separate transition contact sheet samples every cut or opaque boundary; inspect it for false foreground/background combinations. Inspect establish, action/peak, and final states for relationship readability, subtitle safety, and preserved consequences.
+The normal contact sheet and final report reuse the authored proof moments and event timeline. A separate transition contact sheet samples every cut or opaque boundary; inspect it for false foreground/background combinations, edge gaps, uncovered midpoint swaps, and spatial-direction errors. The report must expose transition intent/type counts and cut ratio; any cut without `impact-cut` is a contract failure. Inspect establish, action/peak, and final states for relationship readability, subtitle safety, and preserved consequences.
 
 Do not count imperceptible camera drift as story activity. Use `static` when stillness is intentional; non-static presets have a minimum visible movement floor. The rendered continuity report remains authoritative because authored motion can still disappear after compositing or encoding.
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v6 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
+`project:assets-ready` owns narration synchronization, subtitle derivation, v7 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
 
 `project:assets-ready` and both render commands first build an audio-only timeline mix and measure LUFS/true peak. If it fails, use the bounded `audio.narration.volume` recommendation, rerun the preflight, and keep the final artifact report authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 

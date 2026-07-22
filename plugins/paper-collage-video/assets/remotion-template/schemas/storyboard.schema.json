@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard.schema.json",
-  "title": "Compiled Paper Collage Storyboard v5",
+  "title": "Compiled Paper Collage Storyboard v6",
   "type": "object",
   "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 5},
+    "schemaVersion": {"const": 6},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"const": "ready"},
     "arc": {"type": "string", "minLength": 1},
@@ -31,19 +31,26 @@
     },
     "sceneBoundaryTransition": {
       "type": "object",
-      "required": ["id", "fromSceneId", "toSceneId", "type", "durationSeconds"],
+      "required": ["id", "fromSceneId", "toSceneId", "intent", "rationale", "type", "durationSeconds"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "fromSceneId": {"type": "string", "minLength": 1},
         "toSceneId": {"type": "string", "minLength": 1},
-        "type": {"enum": ["cut", "paper-wipe", "dip-to-paper"]},
+        "intent": {"enum": ["continuity", "location-change", "time-passage", "focus-reveal", "chapter-reset", "impact-cut"]},
+        "rationale": {"type": "string", "minLength": 1},
+        "type": {"enum": ["cut", "paper-wipe", "dip-to-paper", "paper-slide", "torn-wipe", "paper-iris", "page-turn", "paper-shutters"]},
         "durationSeconds": {"type": "number", "minimum": 0, "maximum": 1.5},
         "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]}
       },
       "allOf": [
-        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}}, "not": {"required": ["direction"]}}},
-        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.15}}}},
-        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.15}}, "not": {"required": ["direction"]}}}
+        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"intent": {"const": "impact-cut"}, "durationSeconds": {"const": 0}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["continuity", "location-change", "time-passage"]}, "durationSeconds": {"minimum": 0.2}}}},
+        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"intent": {"const": "chapter-reset"}, "durationSeconds": {"minimum": 0.3}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"type": {"const": "paper-slide"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["continuity", "location-change"]}, "durationSeconds": {"minimum": 0.25}}}},
+        {"if": {"properties": {"type": {"const": "torn-wipe"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["location-change", "time-passage"]}, "durationSeconds": {"minimum": 0.3}}}},
+        {"if": {"properties": {"type": {"const": "paper-iris"}}}, "then": {"properties": {"intent": {"const": "focus-reveal"}, "durationSeconds": {"minimum": 0.3}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"type": {"const": "page-turn"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["time-passage", "chapter-reset"]}, "durationSeconds": {"minimum": 0.4}, "direction": {"enum": ["left-to-right", "right-to-left"]}}}},
+        {"if": {"properties": {"type": {"const": "paper-shutters"}}}, "then": {"properties": {"intent": {"const": "chapter-reset"}, "durationSeconds": {"minimum": 0.4}}, "not": {"required": ["direction"]}}}
       ],
       "additionalProperties": false
     },

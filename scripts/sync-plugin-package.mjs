@@ -272,7 +272,7 @@ await fs.writeFile(path.join(RUNTIME_ROOT, 'src', 'Root.tsx'), rootSource, 'utf8
 
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 6,
+  schemaVersion: 7,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
@@ -393,7 +393,7 @@ await writeJson(
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 5,
+  schemaVersion: 6,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',

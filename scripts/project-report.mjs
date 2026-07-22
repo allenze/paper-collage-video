@@ -21,7 +21,7 @@ import {
 import {analyzeRenderedContinuityArtifact} from './timeline-continuity-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {summarizeActualPoseSheets} from './state-sheet-lib.mjs';
-import {deriveTransitionProofSamples} from '../src/sceneTimeline.mjs';
+import {deriveTransitionProofSamples, summarizeSceneTransitions} from '../src/sceneTimeline.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -290,8 +290,8 @@ try {
     {
       id: 'scene-transition-contract',
       passed: !(validation.issues ?? []).some(({code}) => String(code).startsWith('scene-transition')),
-      expected: 'adjacent boundary contract with no alpha-blended semantic scenes',
-      actual: (project.sceneTransitions ?? []).map(({type}) => type).join(', ') || 'single scene',
+      expected: 'intent-routed adjacent boundaries with no alpha-blended semantic scenes',
+      actual: (project.sceneTransitions ?? []).map(({intent, type}) => `${intent}:${type}`).join(', ') || 'single scene',
     },
     {
       id: 'audiovisual-coverage',
@@ -432,8 +432,10 @@ try {
     contactSheet: path.relative(ROOT, contactSheet),
     contactSheetSamples,
     transitionProof: {
-      contract: 'opaque-boundary-v1',
+      contract: 'intent-routed-opaque-boundary-v2',
+      routingPolicy: 'editorial-intent-v1',
       semanticAlphaBlendAllowed: false,
+      summary: summarizeSceneTransitions(project.sceneTransitions),
       contactSheet: transitionContactSheet ? path.relative(ROOT, transitionContactSheet) : null,
       samples: transitionSamples,
     },

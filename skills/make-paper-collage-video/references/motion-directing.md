@@ -23,7 +23,7 @@ A treatment has orthogonal dimensions. Motion (`static`, continuous transform, s
 
 ## Author Intent, Compile Execution
 
-Storyboard v5 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
+Storyboard v6 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
 
 Every treatment declares:
 
@@ -71,7 +71,18 @@ This is a per-beat decision. One film can intentionally use all mechanisms; a si
 
 ## Direct Scene Boundaries Separately
 
-Scene boundaries are whole-film editorial decisions, not node reveal effects. Declare exactly one top-level boundary per adjacent pair. Default to `cut`. Use `paper-wipe` when the paper edge itself is a motivated directional gesture. Use `dip-to-paper` when a fully opaque paper cover creates a chapter or tonal reset. Never use an alpha crossfade between two semantic scenes: it can combine an outgoing foreground with an incoming background into a false image. Budget the complete non-cut duration in both the outgoing tail and incoming narration lead.
+Scene boundaries are whole-film editorial decisions, not node reveal effects. Declare exactly one top-level boundary per adjacent pair with an editorial `intent` and a concrete `rationale`. Prefer intent-only authoring and let `project:storyboard` materialize the default recipe:
+
+| Intent | Default recipe | Use |
+| --- | --- | --- |
+| `continuity` | `paper-slide`, 0.45s | Same action or thought continues |
+| `location-change` | `paper-wipe`, 0.5s | The paper edge carries the viewer to a new place |
+| `time-passage` | `page-turn`, 0.7s | A later moment or summarized interval begins |
+| `focus-reveal` | `paper-iris`, 0.55s | Attention narrows onto a newly important subject |
+| `chapter-reset` | `paper-shutters`, 0.65s | A chapter or tonal unit closes before the next opens |
+| `impact-cut` | `cut`, 0s | A deliberately abrupt shock, reveal, or comic hit |
+
+Legal motivated overrides are `paper-slide`, `paper-wipe`, or `torn-wipe` for spatial movement; `page-turn`, `torn-wipe`, or `paper-wipe` for elapsed time; `paper-iris` for focus; and `paper-shutters`, `dip-to-paper`, or `page-turn` for a chapter reset. `cut` is forbidden outside `impact-cut`. Spatial types reveal a fully opaque incoming scene through a hard clip or translation; cover types swap scenes only during a guaranteed fully opaque plateau. Never alpha-crossfade semantic scenes: it can combine an outgoing foreground with an incoming background into a false image. Budget the complete animated duration in both the outgoing tail and incoming narration lead.
 
 ## Proof and Review
 

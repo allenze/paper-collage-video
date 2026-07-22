@@ -1,7 +1,7 @@
 {
   "name": "paper-collage-video",
-  "version": "0.13.0-dev.1",
-  "description": "Create editable paper-collage and hand-drawn explainer videos with persistent visibility, opaque scene boundaries, deterministic motion directing, registered limited-animation states, context-preserving pose-sheet recovery, and proof-backed rendering.",
+  "version": "0.14.0-dev.1",
+  "description": "Create editable paper-collage and hand-drawn explainer videos with persistent visibility, intent-routed opaque scene transitions, deterministic motion directing, registered limited-animation states, context-preserving pose-sheet recovery, and proof-backed rendering.",
   "author": {
     "name": "Paper Collage Video Contributors"
   },
@@ -14,8 +14,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "纸片分层视频制作",
-    "shortDescription": "用持久可见性、不透明转场和注册状态动画制作纸片视频",
-    "longDescription": "初始化独立的 Remotion 工作区，用 Storyboard v5 逐节拍导演 treatments、持久可见性事件、不透明场景边界、图片与动作双预算、注册式有限动画、一次生成多状态且保持整表上下文的姿态表、可编辑文字/形状节点、风险排序样片、语义契约、增量合成与转场证据和音频预检，完成可恢复的纸片拼贴与手绘解释视频制作。",
+    "shortDescription": "用意图纸张转场、持久可见性和注册状态动画制作纸片视频",
+    "longDescription": "初始化独立的 Remotion 工作区，用 Storyboard v6 逐节拍导演 treatments、叙事意图路由的 7 种不透明动画转场、持久可见性事件、图片与动作双预算、注册式有限动画、一次生成多状态且保持整表上下文的姿态表、可编辑文字/形状节点、风险排序样片、语义契约、增量合成与转场证据和音频预检，完成可恢复的纸片拼贴与手绘解释视频制作。",
     "developerName": "Paper Collage Video Contributors",
     "category": "Creativity",
     "capabilities": [
