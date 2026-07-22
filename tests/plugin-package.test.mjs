@@ -14,6 +14,16 @@ const RUNTIME_ROOT = path.join(PLUGIN_ROOT, 'assets', 'remotion-template');
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const repositoryVersion = readJson(path.join(ROOT, 'package.json')).version;
 
+const assertPatchedFastUri = (lockFile) => {
+  const version = readJson(lockFile).packages?.['node_modules/fast-uri']?.version;
+  assert.ok(version, `${lockFile} must lock fast-uri`);
+  const [major, minor, patch] = version.split('.').map(Number);
+  assert.ok(
+    major > 3 || (major === 3 && (minor > 1 || (minor === 1 && patch >= 4))),
+    `${lockFile} locks vulnerable fast-uri ${version}; require >=3.1.4`,
+  );
+};
+
 test('repository marketplace exposes the paper collage plugin', () => {
   const marketplace = readJson(
     path.join(ROOT, '.agents', 'plugins', 'marketplace.json'),
@@ -64,6 +74,11 @@ test('plugin manifest points at a complete packaged skill', () => {
   assert.ok(fs.existsSync(path.join(PLUGIN_ROOT, 'THIRD_PARTY_NOTICES.md')));
   assert.ok(fs.existsSync(path.join(PLUGIN_ROOT, 'ASSET_LICENSES.md')));
   assert.ok(fs.existsSync(path.join(PLUGIN_ROOT, 'LICENSE')));
+});
+
+test('repository and packaged locks exclude the vulnerable fast-uri range', () => {
+  assertPatchedFastUri(path.join(ROOT, 'package-lock.json'));
+  assertPatchedFastUri(path.join(RUNTIME_ROOT, 'package-lock.json'));
 });
 
 test('packaged runtime is lightweight and independent from production projects', () => {

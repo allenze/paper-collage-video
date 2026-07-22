@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video",
-  "version": "0.14.0-dev.1",
+  "version": "0.14.0-dev.2",
   "description": "Create editable paper-collage and hand-drawn explainer videos with persistent visibility, intent-routed opaque scene transitions, deterministic motion directing, registered limited-animation states, context-preserving pose-sheet recovery, and proof-backed rendering.",
   "author": {
     "name": "Paper Collage Video Contributors"
