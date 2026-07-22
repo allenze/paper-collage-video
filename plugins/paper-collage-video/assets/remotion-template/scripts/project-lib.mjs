@@ -50,6 +50,7 @@ export const projectPaths = (slug) => ({
   projectDirectory: path.join(ROOT, 'projects', slug),
   projectFile: path.join(ROOT, 'projects', slug, 'project.json'),
   productionFile: path.join(ROOT, 'projects', slug, 'production.json'),
+  productionMetricsFile: path.join(ROOT, 'projects', slug, 'production-metrics.json'),
   storyboardFile: path.join(ROOT, 'projects', slug, 'storyboard.json'),
   reviewFile: path.join(ROOT, 'projects', slug, 'review.md'),
   semanticContractsFile: path.join(ROOT, 'projects', slug, 'semantic-contracts.json'),

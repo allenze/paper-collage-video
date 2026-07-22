@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import sharp from 'sharp';
+import {createProductionMetrics} from './production-metrics-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -92,6 +93,7 @@ for (const entry of [
   'scripts/python-runtime.mjs',
   'scripts/provider-lib.mjs',
   'scripts/generation-attempt-lib.mjs',
+  'scripts/production-metrics-lib.mjs',
   'scripts/semantic-contract-lib.mjs',
   'scripts/provider-attempt.mjs',
   'scripts/provider-reuse.mjs',
@@ -109,6 +111,8 @@ for (const entry of [
   'scripts/project-doctor.mjs',
   'scripts/project-handoff-check.mjs',
   'scripts/project-lib.mjs',
+  'scripts/project-metrics-run.mjs',
+  'scripts/project-metrics.mjs',
   'scripts/project-new.mjs',
   'scripts/project-plan.mjs',
   'scripts/project-quality.mjs',
@@ -138,6 +142,7 @@ for (const entry of [
   'src/project.ts',
   'src/roleMotion.ts',
   'tests/provider-and-assets.test.mjs',
+  'tests/production-metrics.test.mjs',
   'tests/audio-render-cache.test.mjs',
   'tests/creative-plan.test.mjs',
   'tests/composition-v4.test.mjs',
@@ -180,6 +185,7 @@ const workspacePackage = {
     'project:confirm-concept': rootPackage.scripts['project:confirm-concept'],
     'project:quality': rootPackage.scripts['project:quality'],
     'project:composition-proof': rootPackage.scripts['project:composition-proof'],
+    'project:metrics': rootPackage.scripts['project:metrics'],
     'project:resume': rootPackage.scripts['project:resume'],
     'project:status': rootPackage.scripts['project:status'],
     'project:handoff-check': rootPackage.scripts['project:handoff-check'],
@@ -437,6 +443,10 @@ const production = {
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production.json'),
   production,
+);
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
+  createProductionMetrics({slug: 'starter-demo', createdAt: at}),
 );
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'prompts.json'),

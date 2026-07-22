@@ -86,11 +86,12 @@ test('packaged runtime is lightweight and independent from production projects',
     packageJson.scripts['project:resume'],
     'node scripts/project-status.mjs --resume-json',
   );
-  assert.equal(packageJson.scripts['project:quality'], 'node scripts/project-quality.mjs');
-  assert.equal(packageJson.scripts['project:composition-proof'], 'node scripts/project-composition-proof.mjs');
-  assert.equal(packageJson.scripts['project:audio-preflight'], 'node scripts/project-audio-preflight.mjs');
+  assert.match(packageJson.scripts['project:quality'], /project-metrics-run\.mjs/);
+  assert.match(packageJson.scripts['project:composition-proof'], /category=evidence-render/);
+  assert.equal(packageJson.scripts['project:metrics'], 'node scripts/project-metrics.mjs');
+  assert.match(packageJson.scripts['project:audio-preflight'], /category=deterministic-check/);
   assert.equal(packageJson.scripts['project:subtitles'], 'node scripts/project-subtitles.mjs');
-  assert.equal(packageJson.scripts['style:proof'], 'node scripts/style-motion-proof.mjs');
+  assert.match(packageJson.scripts['style:proof'], /category=evidence-render/);
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'ASSET_LICENSES.md')));
@@ -108,6 +109,9 @@ test('packaged runtime is lightweight and independent from production projects',
   const starterQuality = readJson(
     path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   );
+  const starterMetrics = readJson(
+    path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
+  );
   assert.equal(starterProject.schemaVersion, 4);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
@@ -123,6 +127,8 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.ok(starterQuality.composites.every(({status}) => status === 'passed'));
   assert.equal(starterQuality.assets.length, 2);
   assert.ok(starterQuality.assets.every(({status}) => status === 'passed'));
+  assert.equal(starterMetrics.summary.coverage.status, 'full');
+  assert.equal(starterMetrics.summary.aiReview.durationMs, 0);
 
   for (const relative of [
     'scripts/production-state.mjs',
@@ -130,6 +136,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/audio-preflight-lib.mjs',
     'scripts/provider-lib.mjs',
     'scripts/generation-attempt-lib.mjs',
+    'scripts/production-metrics-lib.mjs',
     'scripts/semantic-contract-lib.mjs',
     'scripts/provider-attempt.mjs',
     'scripts/provider-reuse.mjs',
@@ -137,6 +144,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/python-runtime.mjs',
     'scripts/quality-lib.mjs',
     'scripts/project-quality.mjs',
+    'scripts/project-metrics-run.mjs',
+    'scripts/project-metrics.mjs',
     'scripts/project-audio-preflight.mjs',
     'scripts/render-cache-lib.mjs',
     'scripts/subtitle-lib.mjs',
@@ -158,10 +167,12 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/project.schema.json',
     'schemas/semantic-contracts.schema.json',
     'schemas/generation-attempt.schema.json',
+    'schemas/production-metrics.schema.json',
     'schemas/storyboard.schema.json',
     'schemas/providers.schema.json',
     'schemas/quality-report.schema.json',
     'templates/project/production.json',
+    'templates/project/production-metrics.json',
     'templates/project/semantic-contracts.json',
     'templates/project/generation-attempts.jsonl',
     'templates/project/storyboard.json',

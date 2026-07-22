@@ -35,6 +35,7 @@ try {
     'generation-attempts.jsonl',
     'project.json',
     'production.json',
+    'production-metrics.json',
     'prompts.json',
     'providers.json',
     'quality-report.json',

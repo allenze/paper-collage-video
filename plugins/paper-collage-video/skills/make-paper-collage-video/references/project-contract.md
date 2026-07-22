@@ -8,6 +8,7 @@ Read this only when creating/changing project files or diagnosing validation/sta
 |---|---|
 | `brief.md` | Human intent, audience, facts, format, style, rights, prohibitions |
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
+| `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
 | `storyboard.json` | Approved arc, schema-v2 beat-to-proof bindings, composition patterns, relationships, and proof assertions |
 | `project.json` | Resolved plan and v4 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus composition binding |
@@ -18,6 +19,8 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `review.md` | Generated approval summary plus natural-language revision history |
 
 Never ask the human to edit machine JSON. Paths in `project.json` are relative to `public/`; production artifacts are relative to the workspace root.
+
+`production-metrics.json` records wrapped command time, quality-review sessions, and image-attempt windows. Its `summary.aiReview.percentOfObservation` is the comparison field for AI-review share. Review sessions include host-model inspection, tool orchestration, and any pause before `record-batch`; image attempts likewise include the full reserve-to-close window. The runtime does not estimate provider-only inference time or tokens when the host does not expose them. `summary.unattributedMs` is deliberately unlabeled because it can contain human waits, agent work, or uninstrumented operations. A lazily created file for an older project reports partial coverage.
 
 ## Normal State Path
 

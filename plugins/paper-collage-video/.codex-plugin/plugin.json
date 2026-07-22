@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video",
-  "version": "0.10.0-dev.5",
+  "version": "0.10.0-dev.6",
   "description": "Create editable paper-collage videos with explicit production profiles, approved rhythmic storyboards, timed narration, incremental proof rendering, audio preflight, and a self-contained Remotion workspace.",
   "author": {
     "name": "Paper Collage Video Contributors"

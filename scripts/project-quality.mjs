@@ -9,6 +9,11 @@ import {
   recordQualityReviews,
 } from './quality-lib.mjs';
 import {ROOT} from './project-lib.mjs';
+import {
+  classifyQualityReviewer,
+  finishLatestMetricSegment,
+  startMetricSegment,
+} from './production-metrics-lib.mjs';
 
 const args = process.argv.slice(2);
 const positionals = args.filter((arg) => !arg.startsWith('--'));
@@ -49,6 +54,20 @@ try {
     await fs.mkdir(path.dirname(file), {recursive: true});
     await fs.writeFile(file, `${JSON.stringify(built.scaffold, null, 2)}\n`, 'utf8');
     console.log(`✓ 质量审核脚手架：${path.relative(ROOT, file)} (${built.scaffold.reviews.length} reviews)`);
+    if (built.scaffold.reviews.length > 0) {
+      const reviewer = valueFor('--reviewer') ?? 'host-vision';
+      await startMetricSegment({
+        slug,
+        category: classifyQualityReviewer(reviewer),
+        operation: 'quality-review',
+        measurement: 'review-session-window',
+        metadata: {
+          reviewer,
+          reviewCount: built.scaffold.reviews.length,
+          scaffold: path.relative(ROOT, file),
+        },
+      });
+    }
   } else if (action === 'record') {
     status = await recordQualityReview({
           slug,
@@ -70,6 +89,16 @@ try {
     status = await recordQualityReviews({
       slug,
       reviews: Array.isArray(payload) ? payload : payload.reviews,
+    });
+    const reviews = Array.isArray(payload) ? payload : payload.reviews;
+    await finishLatestMetricSegment({
+      slug,
+      operation: 'quality-review',
+      metadata: {
+        reviewers: [...new Set(reviews.map(({reviewer}) => reviewer).filter(Boolean))],
+        recordedReviewCount: reviews.length,
+        input: path.relative(ROOT, file),
+      },
     });
   } else {
     status = await prepareQualityReport(slug, {write: action === 'prepare'});

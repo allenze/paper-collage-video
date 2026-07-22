@@ -104,6 +104,8 @@ At `asset-production`:
    It synchronizes narration, caps padding tails when duration was inferred, derives subtitles, runs an audio-only LUFS/true-peak preflight with a bounded gain recommendation, validates v4 composition/cues/pre-render timing continuity, rejects stale proof fingerprints, enforces both asset and composite quality, and advances to preview. In `preview` or `human-review`, the same command is an idempotent recheck and does not advance again. Explicit duration deficits block here; add real content or revise the approved target instead of padding. This stage cannot claim rendered audiovisual coverage because no artifact exists yet. Do not run separate sync/subtitles/validate commands first.
 11. Run `project:preview`. Its post-render report is the first authoritative silence/low-motion union check. The renderer reuses an unchanged artifact, or reuses the existing video stream and performs audio-only remuxing when only audio inputs/gain changed; any visual fingerprint change forces a full render. Repair failures and continue autonomously until it reaches `human-review`.
 
+Normal production commands update `projects/<slug>/production-metrics.json`. Treat AI-review and provider-attempt durations as end-to-end session windows, not provider-only inference time; do not infer token usage. Run `project:metrics -- <slug>` once when comparing completed projects or diagnosing a slowdown, rather than polling it during production.
+
 If a confirmed provider becomes unavailable, preserve the stage and report the exact missing capability. Never invent artifacts or silently switch paid services.
 
 ## Preview, Final, and Publication
