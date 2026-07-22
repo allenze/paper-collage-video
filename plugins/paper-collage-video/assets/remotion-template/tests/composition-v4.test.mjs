@@ -4,8 +4,8 @@ import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {
-  CUE_ACTIONS,
-  deriveCueEvents,
+  EMPHASIS_ACTIONS,
+  deriveEventTimeline,
   hashCompositionValue,
   pointInPolygon,
   validateCompositionStructure,
@@ -100,27 +100,28 @@ test('v5 registered environments enforce a shared canvas, boundary and exclusive
   assert.ok(validate(duplicated).issues.some(({code}) => code === 'composition-semantic-duplicate'));
 });
 
-test('geometry, cue catalog and fingerprints remain deterministic', () => {
+test('geometry, event catalog and fingerprints remain deterministic', () => {
   assert.equal(pointInPolygon([0.5, 0.5], [[0, 0], [1, 0], [1, 1], [0, 1]]), true);
   assert.equal(pointInPolygon([1.5, 0.5], [[0, 0], [1, 0], [1, 1], [0, 1]]), false);
-  assert.ok(CUE_ACTIONS.includes('drop-impact'));
-  assert.ok(CUE_ACTIONS.includes('carve'));
+  assert.ok(EMPHASIS_ACTIONS.includes('drop-impact'));
+  assert.ok(EMPHASIS_ACTIONS.includes('carve'));
   const first = hashCompositionValue(supportedGroup());
   const changed = supportedGroup();
   changed.support.contactAnchor.x = 0.51;
   assert.notEqual(first, hashCompositionValue(changed));
   assert.equal(first, hashCompositionValue(supportedGroup()));
 
-  const events = deriveCueEvents({
-    scene: {id: 'scene', durationInFrames: 100, cues: [{id: 'impact', beatId: 'fall', at: 0.5, targetId: 'sword', action: 'drop-impact', proofTimeId: 'proof-impact', sound: {src: 'impact.wav'}}]},
+  const events = deriveEventTimeline({
+    scene: {id: 'scene', durationInFrames: 100, events: [{id: 'impact', beatId: 'fall', at: 0.5, targetId: 'sword', visual: {kind: 'emphasis', action: 'drop-impact', durationSeconds: 0.4, intensity: 1}, proofTimeId: 'proof-impact', sound: {src: 'impact.wav'}}]},
     sceneFrom: 20,
     fps: 20,
   });
   assert.deepEqual(events[0], {
     sceneId: 'scene',
-    cueId: 'impact',
+    eventId: 'impact',
     beatId: 'fall',
     targetId: 'sword',
+    visualKind: 'emphasis',
     action: 'drop-impact',
     localFrame: 50,
     absoluteFrame: 70,

@@ -34,7 +34,7 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
 });
 
 const authoredStoryboard = () => ({
-  schemaVersion: 4,
+  schemaVersion: 5,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
@@ -88,6 +88,7 @@ const authoredStoryboard = () => ({
       ],
     },
   ],
+  sceneTransitions: [],
   updatedAt: '2026-07-20T00:00:00.000Z',
 });
 
@@ -107,7 +108,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v4 compiles treatments into composition plans, risk selection, and cost evidence', () => {
+test('v5 compiles treatments into composition plans, risk selection, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);
@@ -194,6 +195,44 @@ test('question marks and circles route to editable graphics without pose-sheet c
   }).some(({code}) => code === 'directing-continuous-drift'));
 });
 
+test('visibility changes compile to persistent events with an explicit initial state', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[1].treatments = [{
+    id: 'show-subject',
+    targetId: 'subject',
+    importance: 'hero',
+    necessity: 'required',
+    changeClass: 'visibility-change',
+    motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5},
+    composition: {pattern: 'free'},
+    graphic: null,
+    semanticRisk: 'decorative',
+    proofTimeId: 'proof-action',
+    rationale: 'The subject must be absent before the beat and remain visible afterwards.',
+  }];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
+  assert.deepEqual(storyboard.scenes[0].compositionPlan.visibilityEvents, [{
+    id: 'show-subject',
+    beatId: 'action',
+    nodeId: 'subject',
+    action: 'show',
+    transition: 'fade-rise',
+    durationSeconds: 0.5,
+    at: 0.48,
+    proofTimeId: 'proof-action',
+  }]);
+  assert.equal(storyboard.directingSummary.visibilityTargets, 1);
+  const runtimeScene = {
+    camera: {preset: 'static'},
+    composition: {nodes: [{id: 'subject', kind: 'asset', visibility: {initial: 'hidden'}, motion: {keyframes: [{at: 0}, {at: 1}]}}]},
+    events: [{id: 'subject-show', beatId: 'action', targetId: 'subject', at: 0.48, visual: {kind: 'visibility', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}}],
+  };
+  assert.deepEqual(validateDirectingExecution({scene: runtimeScene, storyboardScene: storyboard.scenes[0]}), []);
+  delete runtimeScene.composition.nodes[0].visibility;
+  assert.ok(validateDirectingExecution({scene: runtimeScene, storyboardScene: storyboard.scenes[0]})
+    .some(({code}) => code === 'directing-visibility-initial'));
+});
+
 test('Cao Chong-style hero actions compile to one context-preserving pose sheet', () => {
   const authored = authoredStoryboard();
   const scene = authored.scenes[0];
@@ -265,14 +304,14 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v4 storyboard audio beats require an approved event-level proof', () => {
+test('v5 storyboard audio beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
   storyboard.scenes[0].beats[1].proofTimeId = null;
   assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})
     .some(({code}) => code === 'storyboard-audio-proof-required'));
 });
 
-test('motion proof moments cannot be hidden inside fade transitions', () => {
-  assert.equal(proofOverlapsTransition({at: 0.08, transitionFrames: 12, durationInFrames: 300}), false);
-  assert.equal(proofOverlapsTransition({at: 0.95, transitionFrames: 30, durationInFrames: 300}), true);
+test('motion proof moments cannot be hidden inside scene boundary transitions', () => {
+  assert.equal(proofOverlapsTransition({at: 0.08, enterTransitionFrames: 12, exitTransitionFrames: 0, durationInFrames: 300}), false);
+  assert.equal(proofOverlapsTransition({at: 0.95, enterTransitionFrames: 0, exitTransitionFrames: 30, durationInFrames: 300}), true);
 });

@@ -151,37 +151,38 @@ test('quality scaffold exposes pending checks and current proof evidence without
   assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
 });
 
-test('v5 scene transitions use one seconds-based timing protocol', () => {
+test('v6 scene transitions use one seconds-based opaque-boundary protocol', () => {
   const timeline = deriveTimeline({
     video: {fps: 30},
     scenes: [
       {
         id: 'one',
-        narration: {durationSeconds: 2, startSeconds: 0},
-        tailSeconds: 0,
-        transition: {type: 'fade', durationSeconds: 0.4},
+        narration: {durationSeconds: 2, startSeconds: 0.4},
+        tailSeconds: 0.4,
       },
       {
         id: 'two',
-        narration: {durationSeconds: 2, startSeconds: 0},
-        tailSeconds: 0,
-        transition: {type: 'none', durationSeconds: 1},
+        narration: {durationSeconds: 2, startSeconds: 0.4},
+        tailSeconds: 0.4,
       },
       {
         id: 'three',
-        narration: {durationSeconds: 2, startSeconds: 0},
+        narration: {durationSeconds: 2, startSeconds: 0.4},
         tailSeconds: 0,
-        transition: {type: 'fade', durationSeconds: 2 / 3},
       },
+    ],
+    sceneTransitions: [
+      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', type: 'paper-wipe', direction: 'left-to-right', durationSeconds: 0.4},
+      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', type: 'dip-to-paper', durationSeconds: 0.4},
     ],
   });
   assert.equal(timeline.scenes[0].from, 0);
-  assert.equal(timeline.scenes[1].from, 60);
-  assert.equal(timeline.scenes[2].from, 100);
-  assert.equal(timeline.durationInFrames, 160);
+  assert.equal(timeline.scenes[1].from, 72);
+  assert.equal(timeline.scenes[2].from, 144);
+  assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v5 projects are rejected instead of migrated', async () => {
+test('pre-v6 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -195,14 +196,14 @@ test('pre-v5 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 5'),
+          code === 'schema-version' && message.includes('必须为 6'),
     ),
   );
 });
 
-test('v5 projects require an explicit bounded narration gain', async () => {
+test('v6 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -214,6 +215,7 @@ test('v5 projects require an explicit bounded narration gain', async () => {
       mastering: {targetLufs: -16, toleranceLufs: 3, truePeakDbtp: -1},
     },
     scenes: [],
+    sceneTransitions: [],
   };
   const missing = await validateProject(base);
   assert.ok(
@@ -240,6 +242,14 @@ test('v5 projects require an explicit bounded narration gain', async () => {
   });
   assert.ok(
     legacyRoleSounds.issues.some(({code}) => code === 'unsupported-audio-sfx'),
+  );
+  const transparentCanvas = await validateProject({
+    ...base,
+    theme: {canvas: 'rgba(110, 30, 25, 0.5)'},
+    audio: {...base.audio, narration: {volume: 1}},
+  });
+  assert.ok(
+    transparentCanvas.issues.some(({code}) => code === 'theme-opaque-canvas'),
   );
 });
 
@@ -317,7 +327,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
       path.join(projectDirectory, 'project.json'),
       `${JSON.stringify(
         {
-          schemaVersion: 5,
+          schemaVersion: 6,
           slug,
           title: 'Quality Gate',
           quality: {minimumAssetScale: 1},
@@ -352,6 +362,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
               },
             },
           ],
+          sceneTransitions: [],
         },
         null,
         2,
@@ -479,7 +490,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
         .toFile(file);
     }
     const project = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},
@@ -502,8 +513,9 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
             children: [node('boat-rear', 'support-rear'), node('traveler', 'subject', 'character'), node('boat-front', 'support-front')],
           }],
         },
-        cues: [],
+        events: [],
       }],
+      sceneTransitions: [],
     };
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`, 'utf8');
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({

@@ -45,12 +45,13 @@ The storyboard is not another human gate. It is part of the existing combined co
 
 - Give the whole film one explicit arc and one shared visual/motion language.
 - Give each planned scene a narrative role, single message, blueprint, estimated duration, and at least three ordered beats.
-- Read `motion-directing.md`. Add one or more v4 `treatments` to every beat. Author the visible change, motion mechanism, composition relationship, optional graphic mechanism, risk, importance, necessity, proof binding, and rationale. Never hand-author `compositionPlan`, `directing`, or sheet grids; `project:storyboard` compiles them and rejects drift.
+- Read `motion-directing.md`. Add one or more v5 `treatments` to every beat. Author the visible change, motion or visibility mechanism, composition relationship, optional graphic mechanism, risk, importance, necessity, proof binding, and rationale. Never hand-author `compositionPlan`, `directing`, or sheet grids; `project:storyboard` compiles them and rejects drift.
 - Use normalized beat time (`at=0..1`) so rhythm survives narration resync.
 - Choose one of the bounded blueprints: `layered-reveal`, `map-journey`, `archive-stack`, `character-procession`, `discovery-wipe`, `transformation-tableau`, `chapter-tableau`, or `quiet-lockup`.
 - Define at least three proof moments per scene: an establishing state, an action/peak state, and a `final` state at or after `0.82`. Every proof needs a stable id, visible relationship assertions, and a `stateAssertions` array. Cover every planned sequence state at least once so its schedule can be verified deterministically.
-- Keep proof moments outside the scene's fade-in/fade-out interval so every sampled frame clearly proves the intended composition.
-- In schema v4, every beat and treatment declares `proofTimeId` as an approved proof id or `null`; treatment proof must match its beat. If a beat names an `audioCue`, it must bind an event-level proof and production must attach a real sound asset to the matching cue using that same proof id.
+- Declare exactly one top-level `sceneTransitions[]` record for every adjacent pair. Default to `cut`; non-cut boundaries must be intentional, opaque, and covered by both the outgoing tail and incoming narration lead.
+- Keep proof moments outside scene-boundary intervals so every sampled frame clearly proves the intended composition.
+- In schema v5, every beat and treatment declares `proofTimeId` as an approved proof id or `null`; treatment proof must match its beat. If a beat names an `audioCue`, it must bind an event-level proof and production must attach a real sound asset to at least one matching event using that same proof id.
 
 The compiler protects required hero actions. If the selected profile cannot afford them, it rejects the storyboard instead of silently replacing a pose change with a cheap transform. Reduce enhancement motion first, raise the profile, or reduce story scope inside the existing concept decision.
 

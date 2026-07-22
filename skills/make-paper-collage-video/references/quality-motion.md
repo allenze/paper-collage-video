@@ -1,10 +1,10 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v5 composition authoring, proof review, or delivery tuning.
+Read this before style sampling, bulk images, v6 composition authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
-`quality-report.json` v2 contains `assets` and `composites`. A passing file does not prove that a person is inside a boat or trees remain above water. Both scopes must pass.
+`quality-report.json` v3 contains `eventTimeline`, `assets`, and `composites`. A passing file does not prove that a person is inside a boat or trees remain above water. Both quality scopes must pass.
 
 Run `project:quality <slug> prepare` after files exist. Then generate a fillable review batch with `project:quality <slug> scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`. The scaffold lists required/pending checks and current evidence paths but never pre-populates `passedChecks`; inspect original-resolution assets in small same-type batches, make real decisions, and record the edited file. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
 
@@ -48,7 +48,7 @@ Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, c
 }
 ```
 
-After narration files and real v5 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
+After narration files and real v6 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
@@ -78,7 +78,7 @@ Semantic targets use ids such as `semantic:recurring-cast:cast-comparison`. When
 npm run project:quality -- <slug> record-batch --input=<reviews.json> --quiet
 ```
 
-Never pass a semantic check merely to unblock production. Changing a member, mask, group transform, boundary, anchor, keyframe, cue, or proof time changes the composite fingerprint and invalidates that review.
+Never pass a semantic check merely to unblock production. Changing a member, mask, group transform, boundary, anchor, keyframe, event, scene transition, or proof time changes the composite fingerprint and invalidates that review.
 Replacing or editing a recorded evidence file also invalidates its review. At the style gate, each member review must reference that proof bundle's alpha mask, checkerboard, tight crop, and motion-stress sheet; the composite review must reference its full/crop/debug proof frames and member motion-stress sheets. An unrelated screenshot cannot satisfy the gate.
 
 ## Pattern-Specific Review
@@ -86,24 +86,24 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
 - `supported-subject`: support contact, readable inside/on relation, visible front occlusion, shared carrier motion, identity continuity, and clean subject isolation under relative motion.
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
 - `state-sequence`: state order correct, pose registration stable, identity consistent, transition clean, every state bound to a current proof frame.
-- bound cue: visual event visible, sound event bound when required, proof time bound, final state preserved.
+- bound event: visual event visible, sound event bound when required, proof time bound, final state preserved.
 - semantic contract: every requested check is visible in its exact target shots; cross-scene checks compare all bound scenes rather than one attractive frame.
 
 Deterministic checks already block missing slots, mismatched canvases, duplicate carrier motion, off-zone contacts, absent front alpha, incomplete upper/lower clips, duplicate semantic coverage, invalid targets, missing required sounds, out-of-window proofs, stale style fingerprints, and missing topology evidence. They do not infer whether every semantic part is intact; that remains evidence-backed semantic review.
 
-## Motion and Cue Authoring
+## Motion, Visibility, and Event Authoring
 
-The scene camera, group transform, child local transform, keyframes, idle motion, and cue transform compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship.
+The scene camera, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship.
 
-Map every approved beat to one cue. Target the group when the entire registered assembly reacts, or a child for a genuinely local action. `scene.cues` schedules both visuals and sound; do not create a second audio event list. Bind critical events to authored proof ids.
+Map every approved beat to one or more ordered events. Target the group when the entire registered assembly reacts, or a child for a genuinely local action. `scene.events` schedules both visuals and sound; do not create a second audio event list. A visibility event persists after its window and requires a truthful initial state; an emphasis event is transient. Bind critical events to authored proof ids.
 
-The normal contact sheet and final report reuse the authored proof moments and cue event table. Inspect establish, action/peak, and final states for relationship readability, subtitle safety, and preserved consequences.
+The normal contact sheet and final report reuse the authored proof moments and event timeline. A separate transition contact sheet samples every cut or opaque boundary; inspect it for false foreground/background combinations. Inspect establish, action/peak, and final states for relationship readability, subtitle safety, and preserved consequences.
 
 Do not count imperceptible camera drift as story activity. Use `static` when stillness is intentional; non-static presets have a minimum visible movement floor. The rendered continuity report remains authoritative because authored motion can still disappear after compositing or encoding.
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v5 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
+`project:assets-ready` owns narration synchronization, subtitle derivation, v6 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
 
 `project:assets-ready` and both render commands first build an audio-only timeline mix and measure LUFS/true peak. If it fails, use the bounded `audio.narration.volume` recommendation, rerun the preflight, and keep the final artifact report authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 

@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard-authoring.schema.json",
-  "title": "Paper Collage Storyboard Authoring v4",
+  "title": "Paper Collage Storyboard Authoring v5",
   "description": "Author treatments only. compositionPlan, directing, fingerprints, and budget demand are compiler-owned.",
   "type": "object",
-  "required": ["arc", "style", "scenes"],
+  "required": ["arc", "style", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 4},
+    "schemaVersion": {"const": 5},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"enum": ["pending", "ready"]},
     "arc": {"type": "string"},
@@ -41,6 +41,7 @@
         "additionalProperties": false
       }
     },
+    "sceneTransitions": {"type": "array", "items": {"$ref": "storyboard.schema.json#/$defs/sceneBoundaryTransition"}},
     "updatedAt": {"type": "string", "format": "date-time"}
   },
   "additionalProperties": false

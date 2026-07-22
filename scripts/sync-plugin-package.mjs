@@ -143,10 +143,15 @@ for (const entry of [
   'src/MainVideo.tsx',
   'src/motion.ts',
   'src/ReplicaChapterScene.tsx',
+  'src/SceneTransitionOverlay.tsx',
   'src/index.ts',
   'src/project.ts',
   'src/roleMotion.ts',
+  'src/sceneTimeline.mjs',
+  'src/sceneTimeline.d.mts',
   'src/stateSequence.ts',
+  'src/visibilityLifecycle.mjs',
+  'src/visibilityLifecycle.d.mts',
   'tests/provider-and-assets.test.mjs',
   'tests/production-metrics.test.mjs',
   'tests/audio-render-cache.test.mjs',
@@ -160,6 +165,7 @@ for (const entry of [
   'tests/semantic-contracts-and-attempts.test.mjs',
   'tests/timeline-continuity.test.mjs',
   'tests/render-continuity.test.mjs',
+  'tests/visibility-scene-transition.test.mjs',
   'fixtures/composition-v4',
   'public/fixtures/composition-v4',
   'public/textures/paper-grain.png',
@@ -266,7 +272,7 @@ await fs.writeFile(path.join(RUNTIME_ROOT, 'src', 'Root.tsx'), rootSource, 'utf8
 
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 5,
+  schemaVersion: 6,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
@@ -328,7 +334,7 @@ const project = {
         seed: 17,
         proofTimes: [
           {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},
-          {id: 'proof-action', at: 0.5, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央'], stateAssertions: []},
+          {id: 'proof-action', at: 0.62, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央'], stateAssertions: []},
           {id: 'proof-final', at: 0.9, label: '标题与主体稳定', kind: 'final', assertions: ['主体与标题构图稳定'], stateAssertions: []},
         ],
       },
@@ -350,6 +356,7 @@ const project = {
             assetRole: 'character',
             src: 'projects/starter-demo/assets/characters/alpha/01-traveler.png',
             z: 4,
+            visibility: {initial: 'hidden'},
             transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
             motion: {
               idle: {preset: 'breathe', intensity: 0.5, cycleSeconds: 2.8},
@@ -363,7 +370,6 @@ const project = {
         ],
       },
       camera: {preset: 'push', intensity: 0.6},
-      transition: {type: 'none', durationSeconds: 0},
       narration: {
         src: 'projects/starter-demo/audio/narration/01-test-tone.wav',
         startSeconds: 0,
@@ -371,13 +377,14 @@ const project = {
         text: '',
       },
       subtitles: [{fromSeconds: 0, toSeconds: 1.15, text: '纸片分层视频'}],
-      cues: [
-        {id: 'establish', beatId: 'establish', proofTimeId: 'proof-establish', at: 0, durationSeconds: 0.35, targetId: 'scene', action: 'reveal', intensity: 0.7},
-        {id: 'subject-arrives', beatId: 'subject-arrives', proofTimeId: 'proof-action', at: 0.5, durationSeconds: 0.5, targetId: 'traveler', action: 'lift', intensity: 0.8},
-        {id: 'lockup', beatId: 'lockup', proofTimeId: 'proof-final', at: 0.9, durationSeconds: 0.25, targetId: 'traveler', action: 'settle', intensity: 0.55},
+      events: [
+        {id: 'establish', beatId: 'establish', proofTimeId: 'proof-establish', at: 0, targetId: 'background', visual: {kind: 'emphasis', action: 'pulse', durationSeconds: 0.35, intensity: 0.35}},
+        {id: 'subject-arrives', beatId: 'subject-arrives', proofTimeId: 'proof-action', at: 0.5, targetId: 'traveler', visual: {kind: 'visibility', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}},
+        {id: 'lockup', beatId: 'lockup', proofTimeId: 'proof-final', at: 0.9, targetId: 'traveler', visual: {kind: 'emphasis', action: 'settle', durationSeconds: 0.25, intensity: 0.55}},
       ],
     },
   ],
+  sceneTransitions: [],
 };
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'project.json'),
@@ -386,7 +393,7 @@ await writeJson(
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 4,
+  schemaVersion: 5,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',
@@ -406,16 +413,17 @@ const storyboard = compileStoryboardDirecting({
       estimatedDurationSeconds: 1.2,
       beats: [
         {id: 'establish', at: 0, purpose: '建立空间', visual: '纸面与背景出现', audioCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
-        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', audioCue: null, proofTimeId: 'proof-action', treatments: [{id: 'lift-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'ambient-motion', motion: {kind: 'continuous-transform', preset: 'reveal'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体以连续位移进入画面，不改变肢体结构。'}]},
+        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', audioCue: null, proofTimeId: 'proof-action', treatments: [{id: 'show-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'visibility-change', motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体从明确的隐藏状态持续出现，并在事件后保持可见。'}]},
         {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', audioCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
       ],
       proofTimes: [
         {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},
-        {id: 'proof-action', at: 0.5, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央'], stateAssertions: []},
+        {id: 'proof-action', at: 0.62, label: '主体进入画面', kind: 'peak', assertions: ['主体位于画面中央'], stateAssertions: []},
         {id: 'proof-final', at: 0.9, label: '标题与主体稳定', kind: 'final', assertions: ['主体与标题构图稳定'], stateAssertions: []},
       ],
     },
   ],
+  sceneTransitions: [],
   updatedAt: '2026-01-01T00:00:00.000Z',
 }, {plan: project.plan});
 await writeJson(
@@ -534,10 +542,10 @@ await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectSlug: 'starter-demo',
     updatedAt: at,
-    cueEvents: [],
+    eventTimeline: [],
     assets: await Promise.all(
       fixtureQualityAssets.map(async ({file, kind, source, checks}) => ({
         assetId: runtimeAssetId(file),

@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "slug": "{{slug}}",
   "title": "{{title}}",
   "plan": {
@@ -58,5 +58,6 @@
       "truePeakDbtp": -1
     }
   },
-  "scenes": []
+  "scenes": [],
+  "sceneTransitions": []
 }

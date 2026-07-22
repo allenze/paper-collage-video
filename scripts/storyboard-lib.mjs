@@ -7,6 +7,7 @@ import {
   compileStoryboardDirecting,
   validateCompiledDirecting,
 } from './motion-treatment-lib.mjs';
+import {validateSceneTransitionSequence} from '../src/sceneTimeline.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -38,8 +39,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 4) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 4。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 5) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 5。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -75,6 +76,12 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       `故事板需要 ${plan.resolved?.sceneCount} 个镜头，当前为 ${scenes.length} 个。`,
       'scenes',
     );
+  }
+  for (const issue of validateSceneTransitionSequence({
+    scenes,
+    sceneTransitions: storyboard.sceneTransitions,
+  })) {
+    add(`storyboard-${issue.code}`, issue.message, issue.location);
   }
   const sceneIds = new Set();
   let estimatedDuration = 0;
@@ -156,6 +163,9 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       if (!Array.isArray(compositionPlan.continuousMotions)) {
         add('storyboard-continuous-motions', 'compositionPlan.continuousMotions 必须是数组。', `${location}.compositionPlan.continuousMotions`);
       }
+      if (!Array.isArray(compositionPlan.visibilityEvents)) {
+        add('storyboard-visibility-events', 'compositionPlan.visibilityEvents 必须是数组。', `${location}.compositionPlan.visibilityEvents`);
+      }
       if (!Array.isArray(compositionPlan.graphics)) {
         add('storyboard-graphics', 'compositionPlan.graphics 必须是数组。', `${location}.compositionPlan.graphics`);
       }
@@ -184,7 +194,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         add('storyboard-beat-audio', 'audioCue 必须为非空字符串或 null。', `${beatLocation}.audioCue`);
       }
       if (!Object.hasOwn(beat, 'proofTimeId')) {
-        add('storyboard-beat-proof-field', 'v4 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
+        add('storyboard-beat-proof-field', 'v5 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
       }
       if (beat.proofTimeId !== null && beat.proofTimeId !== undefined && !nonEmpty(beat.proofTimeId)) {
         add('storyboard-beat-proof-id', 'proofTimeId 必须为非空字符串或 null。', `${beatLocation}.proofTimeId`);
@@ -217,7 +227,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       if (!Array.isArray(proof.assertions) || proof.assertions.length === 0 || proof.assertions.some((item) => !nonEmpty(item))) {
         add('storyboard-proof-assertions', '证明时刻必须声明至少一项可见关系断言。', `${proofLocation}.assertions`);
       }
-      if (!Array.isArray(proof.stateAssertions)) add('storyboard-proof-state-assertions', 'v4 proofTime 必须显式声明 stateAssertions 数组。', `${proofLocation}.stateAssertions`);
+      if (!Array.isArray(proof.stateAssertions)) add('storyboard-proof-state-assertions', 'v5 proofTime 必须显式声明 stateAssertions 数组。', `${proofLocation}.stateAssertions`);
       if (proof.kind === 'final' && proof.at >= 0.82) hasFinal = true;
     }
     for (const sequence of compositionPlan?.stateSequences ?? []) {
@@ -279,6 +289,7 @@ export const summarizeStoryboard = (storyboard) => ({
   status: storyboard?.status ?? 'missing',
   arc: storyboard?.status === 'ready' ? storyboard.arc : null,
   sceneCount: Array.isArray(storyboard?.scenes) ? storyboard.scenes.length : 0,
+  transitionCount: Array.isArray(storyboard?.sceneTransitions) ? storyboard.sceneTransitions.length : 0,
   scenes:
     storyboard?.status === 'ready'
       ? storyboard.scenes.map(({id, title, narrativeRole, blueprint, compositionPlan, directing, beats, proofTimes}) => ({

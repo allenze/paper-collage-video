@@ -5,7 +5,7 @@ import sharp from 'sharp';
 import {
   collectCompositionAssets,
   collectStateSequences,
-  deriveCueEvents,
+  deriveEventTimeline,
 } from './composition-lib.mjs';
 import {
   assetEvidenceIsCurrent,
@@ -84,7 +84,7 @@ try {
   const {project} = await loadProject(slug);
   const validation = await validateProject(project);
   console.log(formatValidation(validation));
-  if (!validation.passed) throw new Error('v5 组合结构未通过，不能生成证明帧。');
+  if (!validation.passed) throw new Error('v6 组合结构未通过，不能生成证明帧。');
 
   const timeline = deriveTimeline(project);
   const paths = projectPaths(slug);
@@ -272,13 +272,13 @@ try {
   }
 
   const report = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectSlug: slug,
     generatedAt: new Date().toISOString(),
     frames,
     composites,
     assetEvidence,
-    cueEvents: timeline.scenes.flatMap((scene) => deriveCueEvents({scene, sceneFrom: scene.from, fps: project.video.fps})),
+    eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     cache: {
       reusedFrames,
       renderedFrames,

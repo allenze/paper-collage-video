@@ -213,35 +213,34 @@ export const analyzeLowMotionFrames = ({
   };
 };
 
-const cueLocalRange = (scene, cue, fps) => {
+const eventLocalRange = (scene, event, fps) => {
   const sceneDurationSeconds = scene.durationInFrames / fps;
   const startSeconds = Math.min(
     sceneDurationSeconds,
-    Math.max(0, cue.at * sceneDurationSeconds),
+    Math.max(0, event.at * sceneDurationSeconds),
   );
   return {
     startSeconds,
     endSeconds: Math.min(
       sceneDurationSeconds,
-      startSeconds + cue.durationSeconds,
+      startSeconds + event.visual.durationSeconds,
     ),
   };
 };
 
-const isBoundedHold = (scene, cue, fps, thresholds) => {
+const isBoundedHold = (scene, event, fps, thresholds) => {
   if (
-    cue.action !== 'hold' ||
-    cue.targetId !== 'scene' ||
-    cue.intensity !== 0 ||
-    !cue.proofTimeId ||
-    !finite(cue.durationSeconds) ||
-    cue.durationSeconds > thresholds.intentionalHoldMaxSeconds
+    event.visual?.kind !== 'hold' ||
+    event.targetId !== 'scene' ||
+    !event.proofTimeId ||
+    !finite(event.visual.durationSeconds) ||
+    event.visual.durationSeconds > thresholds.intentionalHoldMaxSeconds
   ) {
     return false;
   }
-  const proof = scene.motion?.proofTimes?.find(({id}) => id === cue.proofTimeId);
+  const proof = scene.motion?.proofTimes?.find(({id}) => id === event.proofTimeId);
   if (!proof) return false;
-  const range = cueLocalRange(scene, cue, fps);
+  const range = eventLocalRange(scene, event, fps);
   const proofSeconds = proof.at * (scene.durationInFrames / fps);
   return (
     proofSeconds >= range.startSeconds - 0.01 &&
@@ -256,10 +255,10 @@ export const deriveIntentionalHoldRanges = ({
 }) =>
   mergeTimeRanges(
     (timeline?.scenes ?? []).flatMap((scene) =>
-      (scene.cues ?? [])
-        .filter((cue) => isBoundedHold(scene, cue, fps, thresholds))
-        .map((cue) => {
-          const local = cueLocalRange(scene, cue, fps);
+      (scene.events ?? [])
+        .filter((event) => isBoundedHold(scene, event, fps, thresholds))
+        .map((event) => {
+          const local = eventLocalRange(scene, event, fps);
           return {
             startSeconds: scene.from / fps + local.startSeconds,
             endSeconds: scene.from / fps + local.endSeconds,
@@ -276,9 +275,9 @@ const allowedTailSeconds = ({scene, isFinal, fps, thresholds}) => {
     Number(scene.narration?.startSeconds ?? 0) +
     Number(scene.narration?.durationSeconds ?? 0);
   let authorizedTail = base;
-  for (const cue of scene.cues ?? []) {
-    if (!isBoundedHold(scene, cue, fps, thresholds)) continue;
-    const range = cueLocalRange(scene, cue, fps);
+  for (const event of scene.events ?? []) {
+    if (!isBoundedHold(scene, event, fps, thresholds)) continue;
+    const range = eventLocalRange(scene, event, fps);
     if (
       range.startSeconds >
       narrationEnd + thresholds.intentionalHoldJoinToleranceSeconds
@@ -351,39 +350,31 @@ export const assessTimelineContinuity = (
         location: `${location}.tailSeconds`,
       });
     }
-    for (const [cueIndex, cue] of (scene.cues ?? []).entries()) {
-      if (cue.action !== 'hold') continue;
-      const cueLocation = `${location}.cues[${cueIndex}]`;
-      if (cue.targetId !== 'scene') {
+    for (const [eventIndex, event] of (scene.events ?? []).entries()) {
+      if (event.visual?.kind !== 'hold') continue;
+      const eventLocation = `${location}.events[${eventIndex}]`;
+      if (event.targetId !== 'scene') {
         issues.push({
           level: 'error',
           code: 'scene-hold-target',
           message: 'hold 必须以 scene 为目标，不能伪装成局部动画。',
-          location: `${cueLocation}.targetId`,
+          location: `${eventLocation}.targetId`,
         });
       }
-      if (cue.intensity !== 0) {
-        issues.push({
-          level: 'error',
-          code: 'scene-hold-intensity',
-          message: 'hold.intensity 必须为 0。',
-          location: `${cueLocation}.intensity`,
-        });
-      }
-      if (!cue.proofTimeId) {
+      if (!event.proofTimeId) {
         issues.push({
           level: 'error',
           code: 'scene-hold-proof-required',
           message: '有意停顿必须绑定 proofTimeId，明确观众需要观察的画面。',
-          location: `${cueLocation}.proofTimeId`,
+          location: `${eventLocation}.proofTimeId`,
         });
       }
-      if (cue.durationSeconds > thresholds.intentionalHoldMaxSeconds) {
+      if (event.visual.durationSeconds > thresholds.intentionalHoldMaxSeconds) {
         issues.push({
           level: 'error',
           code: 'scene-hold-duration',
-          message: `有意停顿最长 ${thresholds.intentionalHoldMaxSeconds}s，当前为 ${cue.durationSeconds}s。`,
-          location: `${cueLocation}.durationSeconds`,
+          message: `有意停顿最长 ${thresholds.intentionalHoldMaxSeconds}s，当前为 ${event.visual.durationSeconds}s。`,
+          location: `${eventLocation}.visual.durationSeconds`,
         });
       }
     }

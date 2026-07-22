@@ -1,15 +1,16 @@
 {
   "$schema": "../../schemas/quality-report.schema.json",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "projectSlug": "starter-demo",
   "updatedAt": "2026-01-01T00:00:00.000Z",
-  "cueEvents": [
+  "eventTimeline": [
     {
       "sceneId": "starter",
-      "cueId": "establish",
+      "eventId": "establish",
       "beatId": "establish",
-      "targetId": "scene",
-      "action": "reveal",
+      "targetId": "background",
+      "visualKind": "emphasis",
+      "action": "pulse",
       "localFrame": 0,
       "absoluteFrame": 0,
       "seconds": 0,
@@ -18,10 +19,11 @@
     },
     {
       "sceneId": "starter",
-      "cueId": "subject-arrives",
+      "eventId": "subject-arrives",
       "beatId": "subject-arrives",
       "targetId": "traveler",
-      "action": "lift",
+      "visualKind": "visibility",
+      "action": "show",
       "localFrame": 18,
       "absoluteFrame": 18,
       "seconds": 0.6,
@@ -30,9 +32,10 @@
     },
     {
       "sceneId": "starter",
-      "cueId": "lockup",
+      "eventId": "lockup",
       "beatId": "lockup",
       "targetId": "traveler",
+      "visualKind": "emphasis",
       "action": "settle",
       "localFrame": 32,
       "absoluteFrame": 32,
@@ -162,17 +165,18 @@
   ],
   "composites": [
     {
-      "compositeId": "cue:starter:establish",
+      "compositeId": "event:starter:establish",
       "sceneId": "starter",
-      "pattern": "cue",
-      "nodeId": "scene",
-      "memberNodeIds": [],
+      "pattern": "event",
+      "nodeId": "background",
+      "memberNodeIds": [
+        "background"
+      ],
       "memberHashes": {
-        "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
-      "compositionHash": "a2482164d3871ba7ce14f84b34f41999b7ac1b705098dfb219439c049dc878b5",
-      "fingerprint": "e74db1a64a41842449dafffe4cc4b8e9491a41bdb78ddc2ed767837b4c07b973",
+      "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
+      "fingerprint": "54c372726ee3d861e16217859e9205216ff3ea2db2b301841bd6fa1b8f755f3f",
       "proofTimeIds": [
         "proof-establish"
       ],
@@ -205,8 +209,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "e74db1a64a41842449dafffe4cc4b8e9491a41bdb78ddc2ed767837b4c07b973",
-            "actual": "e74db1a64a41842449dafffe4cc4b8e9491a41bdb78ddc2ed767837b4c07b973"
+            "expected": "54c372726ee3d861e16217859e9205216ff3ea2db2b301841bd6fa1b8f755f3f",
+            "actual": "54c372726ee3d861e16217859e9205216ff3ea2db2b301841bd6fa1b8f755f3f"
           },
           {
             "id": "proof-artifacts-present",
@@ -214,12 +218,12 @@
             "actual": 1
           },
           {
-            "id": "cue-proof-bound",
+            "id": "event-proof-bound",
             "passed": true,
             "actual": "proof-establish"
           },
           {
-            "id": "cue-sound-valid",
+            "id": "event-sound-valid",
             "passed": true,
             "actual": "not-required"
           }
@@ -243,9 +247,9 @@
       "status": "passed"
     },
     {
-      "compositeId": "cue:starter:subject-arrives",
+      "compositeId": "event:starter:subject-arrives",
       "sceneId": "starter",
-      "pattern": "cue",
+      "pattern": "event",
       "nodeId": "traveler",
       "memberNodeIds": [
         "traveler"
@@ -253,8 +257,8 @@
       "memberHashes": {
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
-      "compositionHash": "00d96f25a20a6afc42ebd767e027d593338ba857d56b8fafc532962faa45a5c8",
-      "fingerprint": "8b5865b212db44296701212c4740d689cc375282edbaa036e54f71325b989248",
+      "compositionHash": "fa68dd4364ec2771470f7fc185f31cb023bd33736f0066df4044339ddeaea941",
+      "fingerprint": "c5cea2f4fab793b033391ae018bde4f30afacd026df718602fa35393986060c8",
       "proofTimeIds": [
         "proof-action"
       ],
@@ -262,7 +266,7 @@
         {
           "sceneId": "starter",
           "proofTimeId": "proof-action",
-          "absoluteFrame": 18,
+          "absoluteFrame": 22,
           "frameFingerprint": "bundled-proof-action",
           "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
           "crop": "dist/starter-demo/composition-proof/frames/proof-action.png",
@@ -287,8 +291,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "8b5865b212db44296701212c4740d689cc375282edbaa036e54f71325b989248",
-            "actual": "8b5865b212db44296701212c4740d689cc375282edbaa036e54f71325b989248"
+            "expected": "c5cea2f4fab793b033391ae018bde4f30afacd026df718602fa35393986060c8",
+            "actual": "c5cea2f4fab793b033391ae018bde4f30afacd026df718602fa35393986060c8"
           },
           {
             "id": "proof-artifacts-present",
@@ -296,12 +300,12 @@
             "actual": 1
           },
           {
-            "id": "cue-proof-bound",
+            "id": "event-proof-bound",
             "passed": true,
             "actual": "proof-action"
           },
           {
-            "id": "cue-sound-valid",
+            "id": "event-sound-valid",
             "passed": true,
             "actual": "not-required"
           }
@@ -325,9 +329,9 @@
       "status": "passed"
     },
     {
-      "compositeId": "cue:starter:lockup",
+      "compositeId": "event:starter:lockup",
       "sceneId": "starter",
-      "pattern": "cue",
+      "pattern": "event",
       "nodeId": "traveler",
       "memberNodeIds": [
         "traveler"
@@ -335,8 +339,8 @@
       "memberHashes": {
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
-      "compositionHash": "3ea2cf207751d09ae2670fbdedb09942aeb501e4a5d01001e8b215d37beeb9ac",
-      "fingerprint": "5ee5b098da19c6399ac1df9c6c4f903b3db46aceeb0e6856626dd0eed2ea4072",
+      "compositionHash": "78d86e6b3983145f7846a4f8ed62b2a75c7da912456b6fef9ff56ce0ef85b117",
+      "fingerprint": "0accbb0e09ba53b438b455cae89a3965b787c7ee46c2456bb29c532cea3b5e18",
       "proofTimeIds": [
         "proof-final"
       ],
@@ -369,8 +373,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "5ee5b098da19c6399ac1df9c6c4f903b3db46aceeb0e6856626dd0eed2ea4072",
-            "actual": "5ee5b098da19c6399ac1df9c6c4f903b3db46aceeb0e6856626dd0eed2ea4072"
+            "expected": "0accbb0e09ba53b438b455cae89a3965b787c7ee46c2456bb29c532cea3b5e18",
+            "actual": "0accbb0e09ba53b438b455cae89a3965b787c7ee46c2456bb29c532cea3b5e18"
           },
           {
             "id": "proof-artifacts-present",
@@ -378,12 +382,12 @@
             "actual": 1
           },
           {
-            "id": "cue-proof-bound",
+            "id": "event-proof-bound",
             "passed": true,
             "actual": "proof-final"
           },
           {
-            "id": "cue-sound-valid",
+            "id": "event-sound-valid",
             "passed": true,
             "actual": "not-required"
           }

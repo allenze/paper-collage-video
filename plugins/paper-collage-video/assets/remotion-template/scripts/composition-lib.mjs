@@ -15,7 +15,7 @@ const schema = JSON.parse(
 );
 
 export const COMPOSITION_PATTERNS = schema.$defs.pattern.enum;
-export const CUE_ACTIONS = schema.$defs.cueAction.enum;
+export const EMPHASIS_ACTIONS = schema.$defs.emphasisAction.enum;
 export const MOTION_EASES = schema.$defs.motionEase.enum;
 
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
@@ -158,6 +158,9 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
     if (!Number.isInteger(node.z)) add('error', 'composition-node-z', '节点 z 必须是整数。', `${nodeLocation}.z`);
     validateTransform(node.transform, `${nodeLocation}.transform`, add);
     validateMotionKeyframes(node.motion?.keyframes, `${nodeLocation}.motion.keyframes`, add);
+    if (node.visibility !== undefined && !['visible', 'hidden'].includes(node.visibility?.initial)) {
+      add('error', 'composition-node-visibility', 'visibility.initial 必须是 visible 或 hidden。', `${nodeLocation}.visibility.initial`);
+    }
     if (node.motion?.idle) {
       if (!['float', 'breathe', 'grind', 'drift', 'still'].includes(node.motion.idle.preset)) add('error', 'composition-idle-preset', `未知 idle preset：${node.motion.idle.preset}`, `${nodeLocation}.motion.idle.preset`);
       if (!(finite(node.motion.idle.intensity) && node.motion.idle.intensity >= 0 && node.motion.idle.intensity <= 3)) add('error', 'composition-idle-intensity', 'idle.intensity 必须位于 0..3。', `${nodeLocation}.motion.idle.intensity`);
@@ -293,19 +296,20 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
   return {issues, nodeIds, groups, assets, sequences, freeNodes};
 };
 
-export const deriveCueEvents = ({scene, sceneFrom = 0, fps}) =>
-  (scene.cues ?? []).map((cue) => {
-    const localFrame = Math.min(scene.durationInFrames - 1, Math.round(cue.at * scene.durationInFrames));
+export const deriveEventTimeline = ({scene, sceneFrom = 0, fps}) =>
+  (scene.events ?? []).map((event) => {
+    const localFrame = Math.min(scene.durationInFrames - 1, Math.round(event.at * scene.durationInFrames));
     return {
       sceneId: scene.id,
-      cueId: cue.id,
-      beatId: cue.beatId,
-      targetId: cue.targetId,
-      action: cue.action,
+      eventId: event.id,
+      beatId: event.beatId,
+      targetId: event.targetId,
+      visualKind: event.visual?.kind ?? null,
+      action: event.visual?.action ?? null,
       localFrame,
       absoluteFrame: sceneFrom + localFrame,
       seconds: (sceneFrom + localFrame) / fps,
-      proofTimeId: cue.proofTimeId ?? null,
-      sound: cue.sound?.src ?? null,
+      proofTimeId: event.proofTimeId ?? null,
+      sound: event.sound?.src ?? null,
     };
   });

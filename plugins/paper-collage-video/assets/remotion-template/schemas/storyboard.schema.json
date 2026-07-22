@@ -1,17 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard.schema.json",
-  "title": "Compiled Paper Collage Storyboard v4",
+  "title": "Compiled Paper Collage Storyboard v5",
   "type": "object",
-  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "directingSummary", "updatedAt"],
+  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 4},
+    "schemaVersion": {"const": 5},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"const": "ready"},
     "arc": {"type": "string", "minLength": 1},
     "style": {"$ref": "#/$defs/style"},
     "scenes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/compiledScene"}},
+    "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}},
     "directingSummary": {"$ref": "#/$defs/directingSummary"},
     "updatedAt": {"type": "string", "format": "date-time"}
   },
@@ -26,6 +27,24 @@
         "motionLanguage": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
         "layerStrategy": {"type": "string", "minLength": 1}
       },
+      "additionalProperties": false
+    },
+    "sceneBoundaryTransition": {
+      "type": "object",
+      "required": ["id", "fromSceneId", "toSceneId", "type", "durationSeconds"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "fromSceneId": {"type": "string", "minLength": 1},
+        "toSceneId": {"type": "string", "minLength": 1},
+        "type": {"enum": ["cut", "paper-wipe", "dip-to-paper"]},
+        "durationSeconds": {"type": "number", "minimum": 0, "maximum": 1.5},
+        "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.15}}}},
+        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.15}}, "not": {"required": ["direction"]}}}
+      ],
       "additionalProperties": false
     },
     "relationshipIntent": {
@@ -47,18 +66,20 @@
         "targetId": {"type": "string", "minLength": 1},
         "importance": {"enum": ["hero", "supporting", "ambient"]},
         "necessity": {"enum": ["required", "enhancement"]},
-        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold"]},
+        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold", "visibility-change"]},
         "motion": {
           "type": "object",
           "required": ["kind"],
           "properties": {
-            "kind": {"enum": ["static", "continuous-transform", "state-sequence"]},
-            "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "reveal"]},
+            "kind": {"enum": ["static", "continuous-transform", "state-sequence", "visibility-transition"]},
+            "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle"]},
             "poseFamilyId": {"type": "string", "minLength": 1},
             "stateId": {"type": "string", "minLength": 1},
             "visualChange": {"type": "string", "minLength": 1},
             "playback": {"enum": ["once", "loop", "ping-pong"]},
-            "transition": {"enum": ["cut", "crossfade"]}
+            "transition": {"enum": ["cut", "crossfade", "fade-rise", "fade-scale"]},
+            "action": {"enum": ["show", "hide"]},
+            "durationSeconds": {"type": "number", "minimum": 0, "maximum": 2}
           },
           "additionalProperties": false
         },
@@ -79,7 +100,7 @@
               "required": ["kind", "animation"],
               "properties": {
                 "kind": {"enum": ["text", "shape"]},
-                "animation": {"enum": ["reveal", "pulse", "bounce", "draw", "stamp"]}
+                "animation": {"enum": ["pulse", "bounce", "draw", "stamp"]}
               },
               "additionalProperties": false
             }
@@ -148,7 +169,7 @@
     },
     "compositionPlan": {
       "type": "object",
-      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "graphics"],
+      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "visibilityEvents", "graphics"],
       "properties": {
         "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["free", "supported-subject", "registered-environment"]}},
         "relationships": {
@@ -168,6 +189,7 @@
         },
         "stateSequences": {"type": "array", "items": {"$ref": "#/$defs/stateSequence"}},
         "continuousMotions": {"type": "array", "items": {"$ref": "#/$defs/continuousMotion"}},
+        "visibilityEvents": {"type": "array", "items": {"$ref": "#/$defs/visibilityEvent"}},
         "graphics": {"type": "array", "items": {"$ref": "#/$defs/graphicPlan"}}
       },
       "additionalProperties": false
@@ -203,7 +225,22 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "reveal"]},
+        "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle"]},
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "visibilityEvent": {
+      "type": "object",
+      "required": ["id", "beatId", "nodeId", "action", "transition", "durationSeconds", "at", "proofTimeId"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "beatId": {"type": "string", "minLength": 1},
+        "nodeId": {"type": "string", "minLength": 1},
+        "action": {"enum": ["show", "hide"]},
+        "transition": {"enum": ["cut", "fade-rise", "fade-scale"]},
+        "durationSeconds": {"type": "number", "minimum": 0, "maximum": 2},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },
@@ -216,7 +253,7 @@
         "id": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
         "kind": {"enum": ["text", "shape"]},
-        "animation": {"enum": ["reveal", "pulse", "bounce", "draw", "stamp"]},
+        "animation": {"enum": ["pulse", "bounce", "draw", "stamp"]},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },
@@ -250,7 +287,7 @@
     },
     "directingSummary": {
       "type": "object",
-      "required": ["profile", "requiredStateFamilies", "enhancementStateFamilies", "totalStateFamilies", "totalStates", "estimatedPoseSheetCalls", "maxStatesInFamily", "continuousTargets", "graphicTreatments", "coupledRelationships", "avoidedIsolatedStateCalls", "poseSheetPlans", "budget", "styleProofSceneId", "styleProofTreatmentId", "fingerprint"],
+      "required": ["profile", "requiredStateFamilies", "enhancementStateFamilies", "totalStateFamilies", "totalStates", "estimatedPoseSheetCalls", "maxStatesInFamily", "continuousTargets", "visibilityTargets", "graphicTreatments", "coupledRelationships", "avoidedIsolatedStateCalls", "poseSheetPlans", "budget", "styleProofSceneId", "styleProofTreatmentId", "fingerprint"],
       "properties": {
         "profile": {"oneOf": [{"enum": ["draft", "balanced", "full-depth"]}, {"type": "null"}]},
         "requiredStateFamilies": {"type": "integer", "minimum": 0},
@@ -260,6 +297,7 @@
         "estimatedPoseSheetCalls": {"type": "integer", "minimum": 0},
         "maxStatesInFamily": {"type": "integer", "minimum": 0},
         "continuousTargets": {"type": "integer", "minimum": 0},
+        "visibilityTargets": {"type": "integer", "minimum": 0},
         "graphicTreatments": {"type": "integer", "minimum": 0},
         "coupledRelationships": {"type": "integer", "minimum": 0},
         "avoidedIsolatedStateCalls": {"type": "integer", "minimum": 0},

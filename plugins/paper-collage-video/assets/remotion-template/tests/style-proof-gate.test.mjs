@@ -79,14 +79,13 @@ const writeFixture = async (slug) => {
     motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
   });
   const project = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     slug,
     quality: {minimumAssetScale: 1},
     video: {width: 100, height: 100, fps: 30},
     scenes: [{
       id: 'scene',
       tailSeconds: 1,
-      transition: {type: 'none', durationSeconds: 0},
       narration: {src: 'projects/fixture/audio.mp3', startSeconds: 0, durationSeconds: 3, text: ''},
       camera: {preset: 'static', intensity: 0},
       motion: {
@@ -120,11 +119,12 @@ const writeFixture = async (slug) => {
           ],
         }],
       },
-      cues: [],
+      events: [],
     }],
+    sceneTransitions: [],
   };
   const storyboard = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     slug,
     status: 'ready',
     directingSummary: {
@@ -135,7 +135,7 @@ const writeFixture = async (slug) => {
       id: 'scene',
       directing: {fingerprint: 'a'.repeat(64), riskScore: 46, highestRiskTreatmentId: 'subject-on-support', treatmentCount: 1},
       beats: [{id: 'action', treatments: [{id: 'subject-on-support', targetId: 'subject'}]}],
-      compositionPlan: {patterns: ['supported-subject'], relationships: [], stateSequences: [], continuousMotions: [], graphics: []},
+      compositionPlan: {patterns: ['supported-subject'], relationships: [], stateSequences: [], continuousMotions: [], visibilityEvents: [], graphics: []},
     }],
   };
   const manifest = {

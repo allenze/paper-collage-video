@@ -1,4 +1,7 @@
-import type {IdleMotion, MotionKeyframe, ProjectCue} from './project';
+import type {IdleMotion, MotionKeyframe, ProjectEvent} from './project';
+import {resolveVisibilityState} from './visibilityLifecycle.mjs';
+
+export {resolveVisibilityState};
 
 export type MotionState = {
   x: number;
@@ -80,39 +83,37 @@ export const resolveIdleState = ({
   }
 };
 
-export const resolveCueState = ({
-  cues,
+export const resolveEmphasisState = ({
+  events,
   targetId,
   progress,
   durationSeconds,
 }: {
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   targetId: string;
   progress: number;
   durationSeconds: number;
 }): MotionState => {
   const result = {...defaults};
-  for (const cue of cues.filter((item) => item.targetId === targetId)) {
-    const duration = Math.max(0.08, cue.durationSeconds / Math.max(0.08, durationSeconds));
-    const cueProgress = (progress - cue.at) / duration;
-    if (cueProgress < 0 || cueProgress > 1) continue;
-    const envelope = Math.sin(cueProgress * Math.PI) * cue.intensity;
-    switch (cue.action) {
-      case 'reveal':
-        result.opacity *= clamp01(cueProgress * 2.5);
-        result.scale *= 0.9 + clamp01(cueProgress * 2.5) * 0.1;
-        result.y += (1 - clamp01(cueProgress * 2.5)) * 0.04 * cue.intensity;
-        break;
+  for (const event of events.filter(
+    (item) => item.targetId === targetId && item.visual?.kind === 'emphasis',
+  )) {
+    if (event.visual?.kind !== 'emphasis') continue;
+    const duration = Math.max(0.08, event.visual.durationSeconds) / Math.max(0.08, durationSeconds);
+    const eventProgress = (progress - event.at) / duration;
+    if (eventProgress < 0 || eventProgress > 1) continue;
+    const envelope = Math.sin(eventProgress * Math.PI) * event.visual.intensity;
+    switch (event.visual.action) {
       case 'pulse':
         result.scale *= 1 + envelope * 0.055;
         break;
       case 'stamp':
         result.scale *= 1 + envelope * 0.09;
-        result.rotation += (1 - cueProgress) * 2.2 * cue.intensity;
+        result.rotation += (1 - eventProgress) * 2.2 * event.visual.intensity;
         break;
       case 'shake':
-        result.x += Math.sin(cueProgress * Math.PI * 8) * envelope * 0.008;
-        result.rotation += Math.sin(cueProgress * Math.PI * 6) * envelope * 0.8;
+        result.x += Math.sin(eventProgress * Math.PI * 8) * envelope * 0.008;
+        result.rotation += Math.sin(eventProgress * Math.PI * 6) * envelope * 0.8;
         break;
       case 'lift':
         result.y -= envelope * 0.025;
@@ -122,15 +123,15 @@ export const resolveCueState = ({
         result.rotation -= envelope * 0.65;
         break;
       case 'drop-impact':
-        result.y += cueProgress < 0.62 ? cueProgress * 0.08 * cue.intensity : (1 - cueProgress) * 0.018 * cue.intensity;
+        result.y += eventProgress < 0.62
+          ? eventProgress * 0.08 * event.visual.intensity
+          : (1 - eventProgress) * 0.018 * event.visual.intensity;
         result.rotation += envelope * 4.5;
         result.scale *= 1 + Math.max(0, envelope) * 0.025;
         break;
       case 'carve':
-        result.x += Math.sin(cueProgress * Math.PI * 10) * envelope * 0.004;
-        result.rotation += Math.sin(cueProgress * Math.PI * 8) * envelope * 1.2;
-        break;
-      case 'hold':
+        result.x += Math.sin(eventProgress * Math.PI * 10) * envelope * 0.004;
+        result.rotation += Math.sin(eventProgress * Math.PI * 8) * envelope * 1.2;
         break;
     }
   }

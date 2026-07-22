@@ -42,7 +42,7 @@ const visualScene = (scene) => ({
     durationSeconds: scene.narration.durationSeconds,
     text: scene.narration.text,
   },
-  cues: (scene.cues ?? []).map(({sound: _sound, ...cue}) => cue),
+  events: (scene.events ?? []).map(({sound: _sound, ...event}) => event),
 });
 
 export const createVisualFingerprint = async (project, mode) => {
@@ -63,6 +63,7 @@ export const createVisualFingerprint = async (project, mode) => {
     video: project.video,
     theme: project.theme,
     scenes: (project.scenes ?? []).map(visualScene),
+    sceneTransitions: project.sceneTransitions,
     sourceHashes: await hashPublicSources(sources),
   });
 };

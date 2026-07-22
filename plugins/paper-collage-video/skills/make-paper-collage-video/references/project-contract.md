@@ -9,8 +9,8 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `brief.md` | Human intent, audience, facts, format, style, rights, prohibitions |
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
 | `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
-| `storyboard.json` | Approved schema-v4 beat treatments plus compiler-owned plans, risk ranking, sheet plans, proof bindings, and directing fingerprints |
-| `project.json` | Creative Plan v2 budgets and v5 Remotion execution tree |
+| `storyboard.json` | Approved schema-v5 beat treatments and scene boundaries plus compiler-owned plans, risk ranking, sheet plans, proof bindings, and directing fingerprints |
+| `project.json` | Creative Plan v2 budgets and v6 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
@@ -37,11 +37,13 @@ The combined confirmation is the normal path. Composition proof is machine evide
 
 `approve-style-voice` requires a current schema-v4 `style-motion-proof.json` bound to the compiler-selected highest-risk scene, treatment id, and directing fingerprint. When that scene contains a coupled group, the report additionally binds member hashes, timing/proof inputs, and source family; its full-resolution frames and per-member alpha/checkerboard/tight/motion-stress evidence must exist, and participating asset/composite semantic checks must already be recorded. This is an executable precondition inside `style-review`, not another approval state.
 
-## v5 Composition Tree
+## v6 Composition and Boundary Tree
 
-Schema v5 is the only supported project contract. A scene has `composition.nodes`; nodes are recursive `asset`, `state-sequence`, `text`, `shape`, or `group` records. All transforms and keyframe deltas are normalized to the immediate parent. Older projects are not parsed or migrated; regenerate their equivalent output from the latest contract when needed.
+Schema v6 is the only supported project contract. A scene has `composition.nodes`; nodes are recursive `asset`, `state-sequence`, `text`, `shape`, or `group` records. All transforms and keyframe deltas are normalized to the immediate parent. Older projects are not parsed or migrated; regenerate their equivalent output from the latest contract when needed.
 
-`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Continuous transform/cue motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
+`theme.canvas` is a required opaque six-digit hex color. The renderer places it beneath every scene-specific background and uses it as the dip cover, so even a translucent scene treatment cannot expose pixels from the outgoing scene.
+
+`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
 When a family needs multiple generated states, create one registered state sheet where practical and run `assets:process-state-sheet`. Every cell keeps the same full canvas; trimming individual silhouettes would destroy registration and cause visible jumping. The derived records share a family fingerprint and do not count as additional provider calls. A failed cell is first reprocessed locally. Provider repair must be a masked edit of the complete original sheet and quality proof must show untargeted cells remained unchanged. If that cannot be guaranteed, regenerate the complete sheet. Independent replacement-cell generation is invalid for a multi-state family.
 
@@ -59,17 +61,20 @@ Coupled members share `registration.id`, `sourceMasterAssetId`, canvas dimension
 
 Derivation method is part of correctness. Complex silhouettes and negative spaces require capable segmentation/matting or careful manual tracing; a coarse enclosing polygon is invalid even when it has clean hard alpha. When extraction quality cannot be proved, keep the complete master rigid and use whole-family/camera motion instead of fabricating independent parts.
 
-## Proof and Cue Contract
+Every adjacent scene pair has one top-level `sceneTransitions[]` record. `cut` has zero duration. `paper-wipe` uses a hard clip with an opaque paper edge; `dip-to-paper` swaps scenes only while an opaque paper cover is complete. Alpha crossfades between semantic scenes are not supported. Non-cut duration is `0.15..1.5s`, the outgoing `tailSeconds` and incoming narration lead must both cover it, and the report samples the boundary for review.
 
-- Storyboard authors own v4 `treatments`; they do not hand-author `compositionPlan`, `directing`, fingerprints, risk ranking, or pose-sheet grids. `project:storyboard` deterministically compiles those derived fields and rejects drift.
+## Proof and Event Contract
+
+- Storyboard authors own v5 `treatments`; they do not hand-author `compositionPlan`, `directing`, fingerprints, risk ranking, or pose-sheet grids. `project:storyboard` deterministically compiles those derived fields and rejects drift.
 - Scene id, blueprint, compiled `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. Beat-bound, treatment-bound, and state-bound proof intent is immutable.
-- A compiled continuous target must exist and have visible keyframe/idle motion; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node.
-- Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside fades.
+- A compiled continuous target must exist and have visible keyframe/idle motion; a compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node.
+- Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside scene-boundary intervals.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.
-- `scene.cues` is the only visual/sound event source. Every storyboard beat has exactly one cue; cue drift is at most `0.035` normalized units.
-- Cue targets are `scene` or an existing composition node. Supported actions come from `schemas/composition.schema.json`, including `drop-impact` and `carve`.
-- Bind a critical cue to `proofTimeId`; the proof must fall inside its action window. If the approved beat names audio, the storyboard must already name its event-level proof and the same cue owns both that proof id and the sound.
-- Use `hold` only for an approved quiet observation beat: target `scene`, set `intensity: 0`, bind a proof inside the window, and keep it within the runtime maximum. Never encode an unexplained wait as a long `tailSeconds`.
+- `scene.events` is the only visual/sound event source. Every storyboard beat has one or more ordered events; event drift is at most `0.035` normalized units.
+- A visibility event targets an existing composition node and persists after its window. A first `show` requires `visibility.initial=hidden`; a first `hide` requires an initially visible node. Supported transitions are `cut`, `fade-rise`, and `fade-scale`.
+- Emphasis events are transient and use the bounded actions from `schemas/composition.schema.json`, including `drop-impact` and `carve`. They do not control persistent visibility.
+- Bind a critical event to `proofTimeId`; the proof must fall inside its action window. If the approved beat names audio, at least one matching event owns both that proof id and the sound.
+- Use a `hold` event only for an approved quiet observation beat: target `scene`, bind a proof inside the window, and keep it within the runtime maximum. Never encode an unexplained wait as a long `tailSeconds`.
 
 ## Validation and Failure Routing
 
@@ -77,4 +82,4 @@ Run `project:composition-proof` after assembling real groups. It fingerprints sc
 
 Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `style:proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
 
-Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, state-sheet processing, directing compilation, proof, attempt accounting, or report logic ad hoc. Only Creative Plan v2, project schema v5, storyboard schema v4, style-proof schema v4, and asset-request schema v5 are supported; older contracts are intentionally not migrated or executed.
+Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion, extraction, state-sheet processing, directing compilation, proof, attempt accounting, or report logic ad hoc. Only Creative Plan v2, project schema v6, storyboard schema v5, style-proof schema v4, quality-report schema v3, and asset-request schema v5 are supported; older contracts are intentionally not migrated or executed.

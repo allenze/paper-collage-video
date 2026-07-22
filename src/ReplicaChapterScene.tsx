@@ -21,11 +21,12 @@ import type {
   CoordinateSpace,
   NormalizedProjectScene,
   NormalizedSubtitleCue,
-  ProjectCue,
+  ProjectEvent,
   ProjectTheme,
   SceneAppearance,
 } from './project';
-import {resolveCueState, resolveIdleState, resolveMotionState} from './motion';
+import {resolveEmphasisState, resolveIdleState, resolveMotionState, resolveVisibilityState} from './motion';
+import {resolveSceneTransitionPresentation} from './sceneTimeline.mjs';
 import {resolveSequenceLayers} from './stateSequence';
 
 const clamp = {
@@ -56,7 +57,7 @@ const composeNodeTransform = ({
   progress,
   frame,
   fps,
-  cues,
+  events,
   durationSeconds,
   seed,
 }: {
@@ -65,7 +66,7 @@ const composeNodeTransform = ({
   progress: number;
   frame: number;
   fps: number;
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   durationSeconds: number;
   seed: number;
 }) => {
@@ -76,7 +77,14 @@ const composeNodeTransform = ({
     fps,
     phase: phaseFor(node.id, seed),
   });
-  const cue = resolveCueState({cues, targetId: node.id, progress, durationSeconds});
+  const emphasis = resolveEmphasisState({events, targetId: node.id, progress, durationSeconds});
+  const visibility = resolveVisibilityState({
+    events,
+    targetId: node.id,
+    initial: node.visibility?.initial,
+    progress,
+    durationSeconds,
+  });
   const transform = node.transform;
   const width = transform.width * parent.width;
   const height = transform.height === undefined ? undefined : transform.height * parent.height;
@@ -85,8 +93,8 @@ const composeNodeTransform = ({
     top: transform.y * parent.height,
     width,
     height,
-    opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * cue.opacity,
-    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + idle.x + cue.x) * parent.width}px, ${(authored.y + idle.y + cue.y) * parent.height}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * cue.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + idle.rotation + cue.rotation}deg)`,
+    opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * emphasis.opacity * visibility.opacity,
+    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + idle.x + emphasis.x + visibility.x) * parent.width}px, ${(authored.y + idle.y + emphasis.y + visibility.y) * parent.height}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
   };
 };
 
@@ -145,7 +153,7 @@ const AssetView = ({
   progress,
   frame,
   fps,
-  cues,
+  events,
   durationSeconds,
   seed,
   renderZ,
@@ -157,13 +165,13 @@ const AssetView = ({
   progress: number;
   frame: number;
   fps: number;
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   durationSeconds: number;
   seed: number;
   renderZ: number;
   paperEdge: string;
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed});
   const cutout = ['character', 'prop'].includes(node.assetRole) || node.slot?.startsWith('support');
   return (
     <div
@@ -193,7 +201,7 @@ const StateSequenceView = ({
   progress,
   frame,
   fps,
-  cues,
+  events,
   durationSeconds,
   seed,
   renderZ,
@@ -205,13 +213,13 @@ const StateSequenceView = ({
   progress: number;
   frame: number;
   fps: number;
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   durationSeconds: number;
   seed: number;
   renderZ: number;
   paperEdge: string;
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed});
   const layers = resolveSequenceLayers({node, progress, durationSeconds});
   const registeredHeight = resolved.height ?? resolved.width * node.registration.canvas.height / node.registration.canvas.width;
   return (
@@ -254,7 +262,7 @@ const TextView = ({
   progress,
   frame,
   fps,
-  cues,
+  events,
   durationSeconds,
   seed,
   renderZ,
@@ -264,12 +272,12 @@ const TextView = ({
   progress: number;
   frame: number;
   fps: number;
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   durationSeconds: number;
   seed: number;
   renderZ: number;
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed});
   return (
     <div
       data-composition-node={node.id}
@@ -297,7 +305,7 @@ const ShapeView = ({
   progress,
   frame,
   fps,
-  cues,
+  events,
   durationSeconds,
   seed,
   renderZ,
@@ -307,12 +315,12 @@ const ShapeView = ({
   progress: number;
   frame: number;
   fps: number;
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   durationSeconds: number;
   seed: number;
   renderZ: number;
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed});
   const isLine = node.shape === 'line';
   return (
     <div
@@ -336,7 +344,7 @@ const GroupView = ({
   progress,
   frame,
   fps,
-  cues,
+  events,
   durationSeconds,
   seed,
   renderZ,
@@ -347,13 +355,13 @@ const GroupView = ({
   progress: number;
   frame: number;
   fps: number;
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   durationSeconds: number;
   seed: number;
   renderZ: number;
   paperEdge: string;
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, cues, durationSeconds, seed});
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed});
   const ratio = node.coordinateSpace.height / node.coordinateSpace.width;
   const height = resolved.height ?? resolved.width * ratio;
   return (
@@ -383,7 +391,7 @@ const GroupView = ({
             progress={progress}
             frame={frame}
             fps={fps}
-            cues={cues}
+            events={events}
             durationSeconds={durationSeconds}
             seed={seed}
             renderZ={node.pattern === 'supported-subject' ? slotOrder(child) : child.z}
@@ -401,7 +409,7 @@ const CompositionNodeView = ({
   progress,
   frame,
   fps,
-  cues,
+  events,
   durationSeconds,
   seed,
   renderZ = node.z,
@@ -413,17 +421,17 @@ const CompositionNodeView = ({
   progress: number;
   frame: number;
   fps: number;
-  cues: ProjectCue[];
+  events: ProjectEvent[];
   durationSeconds: number;
   seed: number;
   renderZ?: number;
   paperEdge: string;
 }) => {
-  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />;
-  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />;
-  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, cues, durationSeconds, seed, renderZ, paperEdge}} />;
-  if (node.kind === 'text') return <TextView {...{node, parent, progress, frame, fps, cues, durationSeconds, seed, renderZ}} />;
-  return <ShapeView {...{node, parent, progress, frame, fps, cues, durationSeconds, seed, renderZ}} />;
+  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge}} />;
+  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge}} />;
+  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge}} />;
+  if (node.kind === 'text') return <TextView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ}} />;
+  return <ShapeView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ}} />;
 };
 
 const Subtitle = ({cues, theme, appearance}: {cues: NormalizedSubtitleCue[]; theme: ProjectTheme; appearance?: SceneAppearance['subtitles']}) => {
@@ -455,12 +463,12 @@ const ChapterLabel = ({eyebrow, label, theme}: Pick<NormalizedProjectScene, 'eye
   );
 };
 
-const CueSounds = ({cues, durationInFrames}: {cues: ProjectCue[]; durationInFrames: number}) => (
+const EventSounds = ({events, durationInFrames}: {events: ProjectEvent[]; durationInFrames: number}) => (
   <>
-    {cues.map((cue) => {
-      if (!cue.sound) return null;
-      const from = Math.min(durationInFrames - 1, Math.round(cue.at * durationInFrames));
-      return <Sequence key={`cue-sound-${cue.id}`} from={from} layout="none"><Audio src={staticFile(cue.sound.src)} volume={cue.sound.volume} /></Sequence>;
+    {events.map((event) => {
+      if (!event.sound) return null;
+      const from = Math.min(durationInFrames - 1, Math.round(event.at * durationInFrames));
+      return <Sequence key={`event-sound-${event.id}`} from={from} layout="none"><Audio src={staticFile(event.sound.src)} volume={event.sound.volume} /></Sequence>;
     })}
   </>
 );
@@ -484,21 +492,19 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme}: {scene: Nor
   const {fps} = useVideoConfig();
   const progress = Math.max(0, Math.min(1, frame / Math.max(1, scene.durationInFrames - 1)));
   const durationSeconds = scene.durationInFrames / fps;
-  const sceneCue = resolveCueState({cues: scene.cues, targetId: 'scene', progress, durationSeconds});
   const cameraFrames = scene.camera.keyframes && scene.camera.keyframes.length >= 2 ? [...scene.camera.keyframes].sort((a, b) => a.at - b.at) : cameraDefaults(scene.camera.preset, scene.camera.intensity);
   const cameraZoom = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'zoom', fallback: 1});
   const cameraX = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'x', fallback: 0});
   const cameraY = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'y', fallback: 0});
-  const fadeFrames = scene.transitionFrames;
-  const fadeIn = fadeFrames === 0 ? 1 : interpolate(frame, [0, fadeFrames], [0, 1], clamp);
-  const fadeOut = fadeFrames === 0 ? 1 : interpolate(frame, [scene.durationInFrames - fadeFrames, scene.durationInFrames], [1, 0], clamp);
+  const boundary = resolveSceneTransitionPresentation({transition: scene.enterTransition, frame});
   const paperTexture = scene.appearance?.paperTexture ?? {visible: true, opacity: 0.14, blendMode: 'multiply' as const};
   return (
-    <AbsoluteFill style={{overflow: 'hidden', opacity: Math.min(fadeIn, fadeOut), background: scene.appearance?.background ?? theme.sceneBackground}}>
-      <AbsoluteFill style={{transform: `translate3d(${sceneCue.x * scene.composition.coordinateSpace.width}px, ${sceneCue.y * scene.composition.coordinateSpace.height}px, 0) scale(${sceneCue.scale}) rotate(${sceneCue.rotation}deg)`, opacity: sceneCue.opacity, transformOrigin: '50% 54%'}}>
+    <AbsoluteFill style={{overflow: 'hidden', visibility: boundary.incomingVisible ? 'visible' : 'hidden', clipPath: boundary.incomingClipPath, background: theme.canvas}}>
+      <AbsoluteFill style={{background: scene.appearance?.background ?? theme.sceneBackground}} />
+      <AbsoluteFill>
         <AbsoluteFill style={{transform: `translate3d(${cameraX}px, ${cameraY}px, 0) scale(${cameraZoom})`, transformOrigin: '50% 54%'}}>
           {[...scene.composition.nodes].sort((a, b) => a.z - b.z).map((node) => (
-            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} cues={scene.cues} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} />
+            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} />
           ))}
         </AbsoluteFill>
         {paperTexture.visible ? <AbsoluteFill style={{opacity: paperTexture.opacity, mixBlendMode: paperTexture.blendMode, backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}
@@ -506,7 +512,7 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme}: {scene: Nor
       {scene.appearance?.chapter?.visible === false ? null : <ChapterLabel eyebrow={scene.eyebrow} label={scene.label} theme={theme} />}
       <Subtitle cues={scene.subtitles} theme={theme} appearance={scene.appearance?.subtitles} />
       <Sequence from={scene.narrationStartFrame} layout="none"><Audio src={staticFile(scene.narration.src)} volume={narrationVolume} /></Sequence>
-      <CueSounds cues={scene.cues} durationInFrames={scene.durationInFrames} />
+      <EventSounds events={scene.events} durationInFrames={scene.durationInFrames} />
     </AbsoluteFill>
   );
 };

@@ -28,7 +28,7 @@ try {
   const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 4,
+    schemaVersion: 5,
     slug,
     status: 'ready',
     updatedAt: new Date().toISOString(),

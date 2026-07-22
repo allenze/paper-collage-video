@@ -11,7 +11,7 @@ import {
   subtractTimeRanges,
 } from '../scripts/timeline-continuity-lib.mjs';
 
-const scene = ({id, tailSeconds, durationSeconds = 10, cues = []}) => ({
+const scene = ({id, tailSeconds, durationSeconds = 10, events = []}) => ({
   id,
   tailSeconds,
   narration: {startSeconds: 0, durationSeconds},
@@ -24,7 +24,7 @@ const scene = ({id, tailSeconds, durationSeconds = 10, cues = []}) => ({
       {id: 'final', at: 0.9},
     ],
   },
-  cues,
+  events,
 });
 
 const project = ({requestedDuration = null, scenes}) => ({
@@ -74,15 +74,13 @@ test('tail validation reports padding and permits only a bounded proof-backed ho
   const held = scene({
     id: 'held',
     tailSeconds: 2.2,
-    cues: [
+    events: [
       {
         id: 'hold-final',
         beatId: 'final',
         at: 10 / 12.2,
-        durationSeconds: 2.2,
         targetId: 'scene',
-        action: 'hold',
-        intensity: 0,
+        visual: {kind: 'hold', durationSeconds: 2.2},
         proofTimeId: 'final',
       },
     ],
@@ -96,7 +94,7 @@ test('tail validation reports padding and permits only a bounded proof-backed ho
     [],
   );
 
-  held.cues[0].durationSeconds = 3;
+  held.events[0].visual.durationSeconds = 3;
   const overlong = assessTimelineContinuity(
     project({scenes: [held]}),
     {scenes: [held]},

@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "slug": "starter-demo",
   "title": "Paper Collage Workspace",
   "plan": {
@@ -53,5 +53,6 @@
       "truePeakDbtp": -1
     }
   },
-  "scenes": []
+  "scenes": [],
+  "sceneTransitions": []
 }

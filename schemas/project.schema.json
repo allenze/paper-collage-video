@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v5",
+  "title": "Paper Collage Project v6",
   "type": "object",
-  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "scenes"],
+  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 5},
+    "schemaVersion": {"const": 6},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "plan": {"$ref": "#/$defs/plan"},
@@ -29,7 +29,8 @@
     "theme": {"$ref": "#/$defs/theme"},
     "voice": {"$ref": "#/$defs/voice"},
     "audio": {"$ref": "#/$defs/audio"},
-    "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}}
+    "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}},
+    "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}}
   },
   "$defs": {
     "plan": {
@@ -107,7 +108,7 @@
       "type": "object",
       "required": ["canvas", "sceneBackground", "accent", "ink", "subtitle", "subtitleBackground", "paperEdge", "foreground", "texture"],
       "properties": {
-        "canvas": {"type": "string"},
+        "canvas": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
         "sceneBackground": {"type": "string"},
         "accent": {"type": "string"},
         "ink": {"type": "string"},
@@ -192,20 +193,71 @@
       },
       "additionalProperties": false
     },
-    "cue": {
+    "visibilityVisual": {
       "type": "object",
-      "required": ["id", "beatId", "at", "durationSeconds", "targetId", "action", "intensity"],
+      "required": ["kind", "action", "transition", "durationSeconds"],
+      "properties": {
+        "kind": {"const": "visibility"},
+        "action": {"enum": ["show", "hide"]},
+        "transition": {"enum": ["cut", "fade-rise", "fade-scale"]},
+        "durationSeconds": {"type": "number", "minimum": 0, "maximum": 2}
+      },
+      "allOf": [
+        {"if": {"properties": {"transition": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}}}},
+        {"if": {"properties": {"transition": {"enum": ["fade-rise", "fade-scale"]}}}, "then": {"properties": {"durationSeconds": {"exclusiveMinimum": 0}}}}
+      ],
+      "additionalProperties": false
+    },
+    "emphasisVisual": {
+      "type": "object",
+      "required": ["kind", "action", "durationSeconds", "intensity"],
+      "properties": {
+        "kind": {"const": "emphasis"},
+        "action": {"$ref": "composition.schema.json#/$defs/emphasisAction"},
+        "durationSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "intensity": {"type": "number", "minimum": 0, "maximum": 3}
+      },
+      "additionalProperties": false
+    },
+    "holdVisual": {
+      "type": "object",
+      "required": ["kind", "durationSeconds"],
+      "properties": {
+        "kind": {"const": "hold"},
+        "durationSeconds": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "beatId", "at", "targetId", "visual"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "beatId": {"type": "string", "minLength": 1},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
-        "durationSeconds": {"type": "number", "exclusiveMinimum": 0},
         "targetId": {"type": "string", "minLength": 1},
-        "action": {"$ref": "composition.schema.json#/$defs/cueAction"},
-        "intensity": {"type": "number", "minimum": 0, "maximum": 3},
+        "visual": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/visibilityVisual"}, {"$ref": "#/$defs/emphasisVisual"}, {"$ref": "#/$defs/holdVisual"}]},
         "proofTimeId": {"type": "string", "minLength": 1},
         "sound": {"$ref": "#/$defs/sound"}
       },
+      "additionalProperties": false
+    },
+    "sceneBoundaryTransition": {
+      "type": "object",
+      "required": ["id", "fromSceneId", "toSceneId", "type", "durationSeconds"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "fromSceneId": {"type": "string", "minLength": 1},
+        "toSceneId": {"type": "string", "minLength": 1},
+        "type": {"enum": ["cut", "paper-wipe", "dip-to-paper"]},
+        "durationSeconds": {"type": "number", "minimum": 0, "maximum": 1.5},
+        "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.15}}}},
+        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.15}}, "not": {"required": ["direction"]}}}
+      ],
       "additionalProperties": false
     },
     "sceneAppearance": {
@@ -244,7 +296,7 @@
     },
     "scene": {
       "type": "object",
-      "required": ["id", "label", "eyebrow", "tailSeconds", "motion", "composition", "camera", "transition", "narration", "subtitles", "cues"],
+      "required": ["id", "label", "eyebrow", "tailSeconds", "motion", "composition", "camera", "narration", "subtitles", "events"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "label": {"type": "string"},
@@ -273,15 +325,6 @@
           },
           "additionalProperties": false
         },
-        "transition": {
-          "type": "object",
-          "required": ["type", "durationSeconds"],
-          "properties": {
-            "type": {"enum": ["fade", "none"]},
-            "durationSeconds": {"type": "number", "minimum": 0}
-          },
-          "additionalProperties": false
-        },
         "narration": {
           "type": "object",
           "required": ["src", "startSeconds", "durationSeconds", "text"],
@@ -307,7 +350,7 @@
             "additionalProperties": false
           }
         },
-        "cues": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/cue"}}
+        "events": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/event"}}
       },
       "additionalProperties": false
     }

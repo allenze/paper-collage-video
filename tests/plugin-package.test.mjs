@@ -112,17 +112,20 @@ test('packaged runtime is lightweight and independent from production projects',
   const starterMetrics = readJson(
     path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
   );
-  assert.equal(starterProject.schemaVersion, 5);
+  assert.equal(starterProject.schemaVersion, 6);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
-  assert.equal(starterProject.scenes[0].cues.length, 3);
+  assert.equal(starterProject.scenes[0].events.length, 3);
   assert.deepEqual(
-    starterProject.scenes[0].cues.map(({proofTimeId}) => proofTimeId),
+    starterProject.scenes[0].events.map(({proofTimeId}) => proofTimeId),
     ['proof-establish', 'proof-action', 'proof-final'],
   );
+  assert.equal(starterProject.scenes[0].composition.nodes[1].visibility.initial, 'hidden');
+  assert.deepEqual(starterProject.sceneTransitions, []);
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
   assert.equal(starterManifest.schemaVersion, 3);
-  assert.equal(starterQuality.schemaVersion, 2);
+  assert.equal(starterQuality.schemaVersion, 3);
+  assert.equal(starterQuality.eventTimeline.length, 3);
   assert.equal(starterQuality.composites.length, 3);
   assert.ok(starterQuality.composites.every(({status}) => status === 'passed'));
   assert.equal(starterQuality.assets.length, 2);
@@ -164,6 +167,9 @@ test('packaged runtime is lightweight and independent from production projects',
     'src/MainVideo.tsx',
     'src/motion.ts',
     'src/ReplicaChapterScene.tsx',
+    'src/SceneTransitionOverlay.tsx',
+    'src/sceneTimeline.mjs',
+    'src/visibilityLifecycle.mjs',
     'src/project.ts',
     'schemas/project.schema.json',
     'schemas/semantic-contracts.schema.json',

@@ -18,12 +18,12 @@ Read this after real narration exists, when authoring tails or an intentional qu
 - Ordinary scene tail: at most 1.2 seconds.
 - Final scene tail: at most 1.8 seconds.
 - Use tails for easing, subtitle clearance, and transition safety, not to meet a target runtime.
-- Add narration, a visible beat/cue, an approved sound passage, or shorten an explicit target when content is missing.
+- Add narration, a visible beat/event, an approved sound passage, or shorten an explicit target when content is missing.
 
-An intentional quiet observation may extend the allowed tail only through a `hold` cue that:
+An intentional quiet observation may extend the allowed tail only through a `hold` event that:
 
 - represents an approved storyboard beat;
-- targets `scene` with `intensity: 0`;
+- targets `scene` with `visual.kind=hold`;
 - binds `proofTimeId` to the state the viewer must inspect;
 - starts next to the narration boundary when it extends the tail;
 - lasts no more than 2.5 seconds.
@@ -50,4 +50,4 @@ Silent animation is valid. Static imagery with narration is valid. Background mu
 - `scene-tail-budget`: reduce the tail or author a real proof-backed hold.
 - `duration-content-deficit`: add narrative coverage or revise the explicit duration with human approval.
 - `audiovisual-coverage`: this is a post-render failure; inspect `report.json.continuityAnalysis.perScene`, repair the named interval, and rerender.
-- A legitimate quiet beat rejected by the report: verify the hold target, intensity, proof binding, duration, and exact window.
+- A legitimate quiet beat rejected by the report: verify the hold target, `visual.kind`, proof binding, duration, and exact window.

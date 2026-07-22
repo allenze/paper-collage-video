@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -60,14 +60,16 @@
           "proofTimeId": "proof-action",
           "treatments": [
             {
-              "id": "lift-traveler",
+              "id": "show-traveler",
               "targetId": "traveler",
               "importance": "hero",
               "necessity": "required",
-              "changeClass": "ambient-motion",
+              "changeClass": "visibility-change",
               "motion": {
-                "kind": "continuous-transform",
-                "preset": "reveal"
+                "kind": "visibility-transition",
+                "action": "show",
+                "transition": "fade-rise",
+                "durationSeconds": 0.5
               },
               "composition": {
                 "pattern": "free"
@@ -75,7 +77,7 @@
               "graphic": null,
               "semanticRisk": "decorative",
               "proofTimeId": "proof-action",
-              "rationale": "主体以连续位移进入画面，不改变肢体结构。"
+              "rationale": "主体从明确的隐藏状态持续出现，并在事件后保持可见。"
             }
           ]
         },
@@ -120,7 +122,7 @@
         },
         {
           "id": "proof-action",
-          "at": 0.5,
+          "at": 0.62,
           "label": "主体进入画面",
           "kind": "peak",
           "assertions": [
@@ -145,11 +147,15 @@
         ],
         "relationships": [],
         "stateSequences": [],
-        "continuousMotions": [
+        "continuousMotions": [],
+        "visibilityEvents": [
           {
-            "id": "lift-traveler",
+            "id": "show-traveler",
+            "beatId": "subject-arrives",
             "nodeId": "traveler",
-            "preset": "reveal",
+            "action": "show",
+            "transition": "fade-rise",
+            "durationSeconds": 0.5,
             "at": 0.5,
             "proofTimeId": "proof-action"
           }
@@ -157,13 +163,14 @@
         "graphics": []
       },
       "directing": {
-        "fingerprint": "e456d2fabec450110d0b1b3e579d3bcc43abd150906758a36c61eb900392e811",
+        "fingerprint": "c046e2af0e2c444af91af08ea3378369e36ad7c3f376c0fcf88386ac36bf8935",
         "treatmentCount": 3,
         "riskScore": 13,
-        "highestRiskTreatmentId": "lift-traveler"
+        "highestRiskTreatmentId": "show-traveler"
       }
     }
   ],
+  "sceneTransitions": [],
   "updatedAt": "2026-01-01T00:00:00.000Z",
   "directingSummary": {
     "profile": "draft",
@@ -173,7 +180,8 @@
     "totalStates": 0,
     "estimatedPoseSheetCalls": 0,
     "maxStatesInFamily": 0,
-    "continuousTargets": 1,
+    "continuousTargets": 0,
+    "visibilityTargets": 1,
     "graphicTreatments": 0,
     "coupledRelationships": 0,
     "avoidedIsolatedStateCalls": 0,
@@ -184,7 +192,7 @@
       "maxContinuousTargets": 2
     },
     "styleProofSceneId": "starter",
-    "styleProofTreatmentId": "lift-traveler",
-    "fingerprint": "db6456ffad27914d75fdcd4be0c782e5fcf523f49261780869fa34b82de89aea"
+    "styleProofTreatmentId": "show-traveler",
+    "fingerprint": "06f67e6b13e9b9cd1d36d4133f014707dc4efeb97719d85647eb3e0267aa647c"
   }
 }

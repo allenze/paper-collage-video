@@ -1,3 +1,5 @@
+import {deriveSceneTimeline} from './sceneTimeline.mjs';
+
 export type SceneBlueprint =
   | 'layered-reveal'
   | 'map-journey'
@@ -30,6 +32,10 @@ export type IdleMotion = {
 export type NodeMotion = {
   keyframes: MotionKeyframe[];
   idle?: IdleMotion;
+};
+
+export type NodeVisibility = {
+  initial: 'visible' | 'hidden';
 };
 
 export type NodeTransform = {
@@ -65,6 +71,7 @@ export type CompositionAssetNode = {
   depth?: number;
   transform: NodeTransform;
   motion: NodeMotion;
+  visibility?: NodeVisibility;
   clip?: {boundaryId: string; side: 'upper' | 'lower'};
 };
 
@@ -89,6 +96,7 @@ export type CompositionStateSequenceNode = {
   depth?: number;
   transform: NodeTransform;
   motion: NodeMotion;
+  visibility?: NodeVisibility;
   clip?: {boundaryId: string; side: 'upper' | 'lower'};
 };
 
@@ -108,6 +116,7 @@ export type CompositionTextNode = {
   z: number;
   transform: NodeTransform;
   motion: NodeMotion;
+  visibility?: NodeVisibility;
 };
 
 export type CompositionShapeNode = {
@@ -118,6 +127,7 @@ export type CompositionShapeNode = {
   z: number;
   transform: NodeTransform;
   motion: NodeMotion;
+  visibility?: NodeVisibility;
 };
 
 export type CompositionBoundary = {
@@ -137,6 +147,7 @@ export type CompositionGroupNode = {
   coordinateSpace: CoordinateSpace;
   transform: NodeTransform;
   motion: NodeMotion;
+  visibility?: NodeVisibility;
   registration?: CompositionRegistration;
   support?: {
     subjectId: string;
@@ -171,28 +182,56 @@ export type SceneCamera = {
   keyframes?: CameraKeyframe[];
 };
 
-export type SceneTransition = {type: 'fade' | 'none'; durationSeconds: number};
-export type CueAction =
-  | 'reveal'
+export type EmphasisAction =
   | 'pulse'
   | 'stamp'
   | 'shake'
   | 'lift'
   | 'settle'
   | 'drop-impact'
-  | 'carve'
-  | 'hold';
+  | 'carve';
 
-export type ProjectCue = {
+export type VisibilityTransition = 'cut' | 'fade-rise' | 'fade-scale';
+
+export type EventVisual =
+  | {
+      kind: 'visibility';
+      action: 'show' | 'hide';
+      transition: VisibilityTransition;
+      durationSeconds: number;
+    }
+  | {
+      kind: 'emphasis';
+      action: EmphasisAction;
+      durationSeconds: number;
+      intensity: number;
+    }
+  | {
+      kind: 'hold';
+      durationSeconds: number;
+    };
+
+export type ProjectEvent = {
   id: string;
   beatId: string;
   at: number;
-  durationSeconds: number;
   targetId: string;
-  action: CueAction;
-  intensity: number;
+  visual: EventVisual | null;
   proofTimeId?: string;
   sound?: ProjectSound;
+};
+
+export type SceneBoundaryTransition = {
+  id: string;
+  fromSceneId: string;
+  toSceneId: string;
+  type: 'cut' | 'paper-wipe' | 'dip-to-paper';
+  durationSeconds: number;
+  direction?:
+    | 'left-to-right'
+    | 'right-to-left'
+    | 'top-to-bottom'
+    | 'bottom-to-top';
 };
 
 export type ProofTime = {
@@ -257,7 +296,6 @@ export type ProjectScene = {
   motion: SceneMotion;
   composition: SceneComposition;
   camera: SceneCamera;
-  transition: SceneTransition;
   narration: {
     src: string;
     timingSrc?: string;
@@ -266,12 +304,12 @@ export type ProjectScene = {
     text: string;
   };
   subtitles: SubtitleCue[];
-  cues: ProjectCue[];
+  events: ProjectEvent[];
 };
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 5;
+  schemaVersion: 6;
   slug: string;
   title: string;
   plan: {
@@ -319,52 +357,62 @@ export type PaperCollageProject = {
     mastering: ProjectAudioMastering;
   };
   scenes: ProjectScene[];
+  sceneTransitions: SceneBoundaryTransition[];
+};
+
+export type NormalizedSceneBoundaryTransition = SceneBoundaryTransition & {
+  from: number;
+  durationInFrames: number;
 };
 
 export type NormalizedProjectScene = Omit<ProjectScene, 'subtitles'> & {
   from: number;
   durationInFrames: number;
+  narrationFrames: number;
   narrationStartFrame: number;
-  transitionFrames: number;
+  enterTransitionFrames: number;
+  exitTransitionFrames: number;
+  enterTransition: NormalizedSceneBoundaryTransition | null;
   subtitles: NormalizedSubtitleCue[];
+};
+
+export type DerivedSceneTimeline = {
+  durationInFrames: number;
+  durationSeconds: number;
+  scenes: Array<
+    ProjectScene & {
+      from: number;
+      durationInFrames: number;
+      narrationFrames: number;
+      narrationStartFrame: number;
+      enterTransitionFrames: number;
+      exitTransitionFrames: number;
+      enterTransition: NormalizedSceneBoundaryTransition | null;
+    }
+  >;
+  transitions: NormalizedSceneBoundaryTransition[];
 };
 
 export type NormalizedProject = Omit<PaperCollageProject, 'scenes'> & {
   durationInFrames: number;
+  durationSeconds: number;
   scenes: NormalizedProjectScene[];
+  transitions: NormalizedSceneBoundaryTransition[];
 };
 
 export const normalizeProject = (project: PaperCollageProject): NormalizedProject => {
-  let cursor = 0;
   const {fps} = project.video;
-  const scenes = project.scenes.map((scene, index) => {
-    const narrationFrames = Math.ceil(scene.narration.durationSeconds * fps);
-    const narrationStartFrame = Math.round(scene.narration.startSeconds * fps);
-    const tailFrames = Math.ceil(scene.tailSeconds * fps);
-    const durationInFrames = narrationStartFrame + narrationFrames + tailFrames;
-    const sceneTransitionFrames =
-      scene.transition.type === 'none'
-        ? 0
-        : Math.round(scene.transition.durationSeconds * fps);
-    const from = index === 0 ? 0 : Math.max(0, cursor - sceneTransitionFrames);
-    cursor = from + durationInFrames;
-    return {
+  const timeline = deriveSceneTimeline(project);
+  return {
+    ...project,
+    ...timeline,
+    scenes: timeline.scenes.map((scene) => ({
       ...scene,
-      from,
-      durationInFrames,
-      narrationStartFrame,
-      transitionFrames: sceneTransitionFrames,
       subtitles: scene.subtitles.map((cue) => ({
         from: Math.round(cue.fromSeconds * fps),
         to: Math.round(cue.toSeconds * fps),
         text: cue.text,
       })),
-    };
-  });
-
-  return {
-    ...project,
-    durationInFrames: scenes.length === 0 ? fps : cursor,
-    scenes,
+    })),
   };
 };

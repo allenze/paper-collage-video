@@ -4,10 +4,10 @@ Composition v5 adds a first-class limited-animation model for the small pose cha
 
 ## Contract boundary
 
-- `project.json` supports schema v5 only.
-- `storyboard.json` supports schema v4 only; authors declare treatments and the compiler derives composition/state plans.
+- `project.json` supports schema v6 only; v5 state sequences remain the limited-animation primitive inside it.
+- `storyboard.json` supports schema v5 only; authors declare treatments and scene boundaries while the compiler derives composition/state/visibility plans.
 - image requests support schema v5 only.
-- old files are not migrated or dual-parsed. Equivalent old outputs can be authored again with v5 primitives.
+- old files are not migrated or dual-parsed. Equivalent old outputs can be authored again with current primitives.
 
 ## State sequence
 
@@ -18,7 +18,7 @@ A `state-sequence` node contains:
 - ordered `states[]`: state id, public source and normalized activation time;
 - `playback`: `once`, `loop`, or `ping-pong`, plus cycle count;
 - `transition`: deterministic `cut` or bounded `crossfade`;
-- one transform/motion/cue path applied to the whole family.
+- one transform/motion/event path applied to the whole family.
 
 The renderer selects state layers internally. Authors must not create one asset node per state and toggle opacity. Proof moments use `stateAssertions[]`, and validation rejects missing coverage, unknown states, or a proof whose expected state disagrees with the resolved schedule.
 
@@ -47,7 +47,7 @@ Preserving the full cell canvas is mandatory: trimming each silhouette independe
 
 ## Dynamic graphics
 
-v5 also exposes generic `text` and `shape` nodes. Cards, labels, questions, circles, highlights, and simple dark/light interface panels remain live React/CSS graphics instead of baked full-frame imagery. These nodes share the same transform, keyframe, cue, grouping, proof, and fingerprint system as image assets.
+v5 also exposes generic `text` and `shape` nodes. Cards, labels, questions, circles, highlights, and simple dark/light interface panels remain live React/CSS graphics instead of baked full-frame imagery. These nodes share the same transform, keyframe, event, grouping, proof, and fingerprint system as image assets.
 
 ## Evidence and invalidation
 
@@ -60,4 +60,4 @@ v5 also exposes generic `text` and `shape` nodes. Cards, labels, questions, circ
 
 ## Authoring rule
 
-Storyboard v4 classifies the visible change before production. Use continuous transforms for movement of the same drawing. Use `state-sequence` when the drawing itself changes. Combine it with `supported-subject`, `registered-environment`, editable graphics, or continuous motion when those relationships coexist. The compiler derives and fingerprints the v5 execution plan from orthogonal treatments. Extend the reusable schema/runtime if neither model expresses the approved visual language; do not introduce project-specific renderer branches.
+Storyboard v5 classifies the visible change before production. Use continuous transforms for movement of the same drawing, persistent visibility events for show/hide lifecycle, and `state-sequence` when the drawing itself changes. Combine them with `supported-subject`, `registered-environment`, editable graphics, or continuous motion when those relationships coexist. The compiler derives and fingerprints the v6 execution plan from orthogonal treatments. Extend the reusable schema/runtime if neither model expresses the approved visual language; do not introduce project-specific renderer branches.

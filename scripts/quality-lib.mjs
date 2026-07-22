@@ -7,7 +7,7 @@ import {
   collectCompositionVisualSources,
   collectCompositionGroups,
   collectStateSequences,
-  deriveCueEvents,
+  deriveEventTimeline,
   flattenCompositionNodes,
   hashCompositionValue,
   pointInPolygon,
@@ -98,7 +98,7 @@ const QUALITY_PROFILES = {
 const COMPOSITE_PROFILES = {
   'supported-subject': ['support-contact', 'inside-or-on-readable', 'front-occlusion', 'shared-motion', 'identity-continuity', 'motion-isolation-clean'],
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
-  cue: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
+  event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
   'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
 };
 
@@ -400,6 +400,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
   const recordsByFile = new Map((assetManifest.assets ?? []).map((record) => [path.normalize(record.file), record]));
   const targets = [];
   for (const scene of project.scenes ?? []) {
+    const sceneTransitions = (project.sceneTransitions ?? []).filter(
+      ({fromSceneId, toSceneId}) => fromSceneId === scene.id || toSceneId === scene.id,
+    );
     for (const {node} of collectStateSequences(scene.composition)) {
       const proofTimes = (scene.motion?.proofTimes ?? []).filter((proof) =>
         (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
@@ -416,9 +419,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         sceneId: scene.id,
         node,
         proofTimes,
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, transition: scene.transition},
+        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
         camera: scene.camera,
-        affectingCues: (scene.cues ?? []).filter(({targetId}) => targetId === 'scene' || targetId === node.id),
+        affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === node.id),
         memberHashes,
         familyProvenance,
       });
@@ -458,9 +461,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         sceneId: scene.id,
         group,
         proofTimes: scene.motion?.proofTimes ?? [],
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, transition: scene.transition},
+        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
         camera: scene.camera,
-        affectingCues: (scene.cues ?? []).filter(({targetId}) => targetId === 'scene' || targetId === group.id),
+        affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === group.id),
         memberHashes,
         familyProvenance,
       });
@@ -479,29 +482,29 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         familyRecords,
       });
     }
-    for (const cue of scene.cues ?? []) {
-      if (!cue.proofTimeId && !cue.sound) continue;
-      const targetNode = cue.targetId === 'scene' ? null : findNode(scene, cue.targetId);
+    for (const event of scene.events ?? []) {
+      if (!event.proofTimeId && !event.sound) continue;
+      const targetNode = findNode(scene, event.targetId);
       const targetSources = targetNode
         ? targetNode.kind === 'state-sequence'
           ? targetNode.states.map(({src}) => src)
           : descendants(targetNode.kind === 'group' ? targetNode : {children: [targetNode]}).flatMap((node) => node.kind === 'asset' ? [node.src] : node.kind === 'state-sequence' ? node.states.map(({src}) => src) : [])
         : collectCompositionVisualSources(scene.composition);
       const memberHashes = await hashReferencedFiles(targetSources);
-      const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === cue.proofTimeId) ?? null;
-      const fingerprint = hashCompositionValue({sceneId: scene.id, cue, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, transition: scene.transition}, camera: scene.camera, memberHashes});
+      const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === event.proofTimeId) ?? null;
+      const fingerprint = hashCompositionValue({sceneId: scene.id, event, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions}, camera: scene.camera, memberHashes});
       targets.push({
-        compositeId: `cue:${scene.id}:${cue.id}`,
+        compositeId: `event:${scene.id}:${event.id}`,
         sceneId: scene.id,
-        pattern: 'cue',
-        nodeId: cue.targetId,
+        pattern: 'event',
+        nodeId: event.targetId,
         memberNodeIds: targetNode ? [targetNode.id] : [],
         memberHashes,
-        compositionHash: hashCompositionValue({cue, proof, targetNode}),
+        compositionHash: hashCompositionValue({event, proof, targetNode}),
         fingerprint,
-        proofTimeIds: cue.proofTimeId ? [cue.proofTimeId] : [],
-        requiredChecks: COMPOSITE_PROFILES.cue,
-        cue,
+        proofTimeIds: event.proofTimeId ? [event.proofTimeId] : [],
+        requiredChecks: COMPOSITE_PROFILES.event,
+        event,
       });
     }
   }
@@ -537,7 +540,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
             nodeId: shot.nodeId,
             proofTimes: (scene.motion?.proofTimes ?? []).filter(({id}) => shot.proofTimeIds.includes(id)),
             camera: scene.camera,
-            cues: scene.cues,
+            events: scene.events,
           });
         }
         const memberHashes = await hashReferencedFiles(sources);
@@ -628,10 +631,10 @@ const inspectCompositeTechnical = async ({target, proofReport}) => {
       {id: 'registered-source-family', passed: familyBound, actual: familyBound},
     );
   }
-  if (target.pattern === 'cue') {
+  if (target.pattern === 'event') {
     checks.push(
-      {id: 'cue-proof-bound', passed: Boolean(target.cue.proofTimeId), actual: target.cue.proofTimeId ?? null},
-      {id: 'cue-sound-valid', passed: !target.cue.sound || Boolean(target.cue.sound.src), actual: target.cue.sound?.src ?? 'not-required'},
+      {id: 'event-proof-bound', passed: Boolean(target.event.proofTimeId), actual: target.event.proofTimeId ?? null},
+      {id: 'event-sound-valid', passed: !target.event.sound || Boolean(target.event.sound.src), actual: target.event.sound?.src ?? 'not-required'},
     );
   }
   if (target.pattern === 'state-sequence') {
@@ -763,10 +766,10 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const timeline = deriveTimeline(project);
   const report = {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectSlug: slug,
     updatedAt: new Date().toISOString(),
-    cueEvents: timeline.scenes.flatMap((scene) => deriveCueEvents({scene, sceneFrom: scene.from, fps: project.video.fps})),
+    eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     assets: inspectedAssets,
     composites: inspectedComposites,
   };

@@ -12,12 +12,13 @@ export const CHANGE_CLASSES = [
   'graphic-emphasis',
   'mechanism-state',
   'static-hold',
+  'visibility-change',
 ];
-export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence'];
-export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'reveal'];
+export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition'];
+export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle'];
 export const COMPOSITION_PATTERNS = ['free', 'supported-subject', 'registered-environment'];
 export const GRAPHIC_KINDS = ['text', 'shape'];
-export const GRAPHIC_ANIMATIONS = ['reveal', 'pulse', 'bounce', 'draw', 'stamp'];
+export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp'];
 export const SEMANTIC_RISKS = ['decorative', 'identity', 'topology', 'mechanism', 'diagram'];
 export const RELATIONSHIP_PREDICATES = [
   'inside',
@@ -56,6 +57,7 @@ const routeForChangeClass = {
   'graphic-emphasis': {graphic: true, motion: 'continuous-transform'},
   'mechanism-state': {proof: true},
   'static-hold': {motion: 'static'},
+  'visibility-change': {motion: 'visibility-transition'},
 };
 
 const addIssue = (issues, code, message, location) =>
@@ -126,6 +128,19 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (motion.preset !== undefined) {
       addIssue(issues, 'treatment-motion-mixed', 'state-sequence 不得声明 continuous preset。', `${location}.motion.preset`);
     }
+  } else if (motion.kind === 'visibility-transition') {
+    if (!['show', 'hide'].includes(motion.action)) {
+      addIssue(issues, 'treatment-visibility-action', 'visibility-transition.action 必须是 show 或 hide。', `${location}.motion.action`);
+    }
+    if (!['cut', 'fade-rise', 'fade-scale'].includes(motion.transition)) {
+      addIssue(issues, 'treatment-visibility-transition', 'visibility-transition.transition 无效。', `${location}.motion.transition`);
+    }
+    if (motion.transition === 'cut' ? motion.durationSeconds !== 0 : !(Number.isFinite(motion.durationSeconds) && motion.durationSeconds > 0)) {
+      addIssue(issues, 'treatment-visibility-duration', 'cut 时长必须为 0，其他 visibility-transition 时长必须大于 0。', `${location}.motion.durationSeconds`);
+    }
+    if (['preset', 'poseFamilyId', 'stateId', 'visualChange', 'playback'].some((key) => motion[key] !== undefined)) {
+      addIssue(issues, 'treatment-motion-mixed', 'visibility-transition 不得夹带连续或状态序列字段。', `${location}.motion`);
+    }
   } else if (motion && Object.keys(motion).some((key) => key !== 'kind')) {
     addIssue(issues, 'treatment-static-fields', 'static motion 只能声明 kind。', `${location}.motion`);
   }
@@ -184,6 +199,7 @@ const compileScene = (scene) => {
   const relationships = new Map();
   const stateFamilies = new Map();
   const continuousMotions = [];
+  const visibilityEvents = [];
   const graphics = [];
   const treatments = [];
 
@@ -238,6 +254,18 @@ const compileScene = (scene) => {
           proofTimeId: treatment.proofTimeId ?? null,
         });
       }
+      if (treatment.motion.kind === 'visibility-transition') {
+        visibilityEvents.push({
+          id: treatment.id,
+          beatId: beat.id,
+          nodeId: treatment.targetId,
+          action: treatment.motion.action,
+          transition: treatment.motion.transition,
+          durationSeconds: treatment.motion.durationSeconds,
+          at: beat.at,
+          proofTimeId: treatment.proofTimeId ?? null,
+        });
+      }
       if (treatment.graphic) {
         graphics.push({
           id: treatment.id,
@@ -261,6 +289,7 @@ const compileScene = (scene) => {
       .map(({necessity, importance, ...family}) => ({...family, states: [...family.states].sort((left, right) => left.at - right.at)}))
       .sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
     continuousMotions: continuousMotions.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
+    visibilityEvents: visibilityEvents.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     graphics: graphics.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
   };
   const directing = {
@@ -317,6 +346,9 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
     estimatedPoseSheetCalls: families.length,
     maxStatesInFamily: Math.max(0, ...families.map(({stateIds}) => stateIds.size)),
     continuousTargets: uniqueContinuousTargets.size,
+    visibilityTargets: new Set(
+      treatments.filter(({motion}) => motion.kind === 'visibility-transition').map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
+    ).size,
     graphicTreatments: treatments.filter(({graphic}) => Boolean(graphic)).length,
     coupledRelationships: scenes.reduce((sum, scene) => sum + scene.compositionPlan.relationships.length, 0),
     avoidedIsolatedStateCalls: families.reduce((sum, family) => sum + Math.max(0, family.stateIds.size - 1), 0),
@@ -458,6 +490,25 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       addIssue(issues, 'directing-target-missing', `导演计划的连续动效目标不存在：${planned.nodeId}。`, `${location}.composition`);
     } else if (!hasVisibleNodeMotion(node)) {
       addIssue(issues, 'directing-continuous-drift', `导演计划要求 ${planned.nodeId} 执行 ${planned.preset}，但节点没有可见关键帧或 idle。`, `${location}.composition.nodes#${planned.nodeId}.motion`);
+    }
+  }
+  for (const planned of storyboardScene?.compositionPlan?.visibilityEvents ?? []) {
+    const node = nodes.get(planned.nodeId);
+    const event = (scene?.events ?? []).find((candidate) =>
+      candidate.targetId === planned.nodeId &&
+      candidate.beatId === planned.beatId &&
+      Math.abs(candidate.at - planned.at) <= 0.035 &&
+      candidate.visual?.kind === 'visibility' &&
+      candidate.visual.action === planned.action &&
+      candidate.visual.transition === planned.transition &&
+      candidate.visual.durationSeconds === planned.durationSeconds,
+    );
+    if (!node) {
+      addIssue(issues, 'directing-visibility-target-missing', `导演计划的可见性目标不存在：${planned.nodeId}。`, `${location}.composition`);
+    } else if (!event) {
+      addIssue(issues, 'directing-visibility-drift', `导演计划要求 ${planned.nodeId} 执行 ${planned.action}/${planned.transition}，项目没有对应 visibility event。`, `${location}.events`);
+    } else if (planned.action === 'show' && node.visibility?.initial !== 'hidden' && !(scene.events ?? []).some((candidate) => candidate.targetId === planned.nodeId && candidate.at < planned.at && candidate.visual?.kind === 'visibility' && candidate.visual.action === 'hide')) {
+      addIssue(issues, 'directing-visibility-initial', `首次 show 前 ${planned.nodeId} 必须初始隐藏或先执行 hide。`, `${location}.composition.nodes#${planned.nodeId}.visibility`);
     }
   }
   for (const planned of storyboardScene?.compositionPlan?.graphics ?? []) {

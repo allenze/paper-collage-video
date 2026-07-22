@@ -52,6 +52,13 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
       {id: `s${index + 1}-proof-final`, at: 0.9, label: 'Resolved', kind: 'final', assertions: ['Final composition is stable'], stateAssertions: []},
     ],
   })),
+  sceneTransitions: Array.from({length: Math.max(0, sceneCount - 1)}, (_, index) => ({
+    id: `scene-${String(index + 1).padStart(2, '0')}-to-scene-${String(index + 2).padStart(2, '0')}`,
+    fromSceneId: `scene-${String(index + 1).padStart(2, '0')}`,
+    toSceneId: `scene-${String(index + 2).padStart(2, '0')}`,
+    type: 'cut',
+    durationSeconds: 0,
+  })),
 });
 
 const writeAndLockStoryboard = async ({slug, projectDirectory, sceneCount, durationSeconds}) => {
@@ -325,7 +332,7 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 5);
+    assert.equal(project.schemaVersion, 6);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
@@ -337,7 +344,8 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 4);
+    assert.equal(storyboardTemplate.schemaVersion, 5);
+    assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
     assert.ok(fs.existsSync(path.join(publicDirectory, 'assets', 'style', '.gitkeep')));

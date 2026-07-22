@@ -13,7 +13,7 @@
     {
       "sceneId": "starter",
       "proofTimeId": "proof-action",
-      "absoluteFrame": 18,
+      "absoluteFrame": 22,
       "fingerprint": "bundled-proof-action",
       "file": "dist/starter-demo/composition-proof/frames/proof-action.png"
     },
@@ -27,10 +27,10 @@
   ],
   "composites": [
     {
-      "compositeId": "cue:starter:establish",
+      "compositeId": "event:starter:establish",
       "sceneId": "starter",
-      "pattern": "cue",
-      "fingerprint": "e74db1a64a41842449dafffe4cc4b8e9491a41bdb78ddc2ed767837b4c07b973",
+      "pattern": "event",
+      "fingerprint": "54c372726ee3d861e16217859e9205216ff3ea2db2b301841bd6fa1b8f755f3f",
       "proofFrames": [
         {
           "sceneId": "starter",
@@ -50,15 +50,15 @@
       ]
     },
     {
-      "compositeId": "cue:starter:subject-arrives",
+      "compositeId": "event:starter:subject-arrives",
       "sceneId": "starter",
-      "pattern": "cue",
-      "fingerprint": "8b5865b212db44296701212c4740d689cc375282edbaa036e54f71325b989248",
+      "pattern": "event",
+      "fingerprint": "c5cea2f4fab793b033391ae018bde4f30afacd026df718602fa35393986060c8",
       "proofFrames": [
         {
           "sceneId": "starter",
           "proofTimeId": "proof-action",
-          "absoluteFrame": 18,
+          "absoluteFrame": 22,
           "frameFingerprint": "bundled-proof-action",
           "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
           "crop": "dist/starter-demo/composition-proof/frames/proof-action.png",
@@ -73,10 +73,10 @@
       ]
     },
     {
-      "compositeId": "cue:starter:lockup",
+      "compositeId": "event:starter:lockup",
       "sceneId": "starter",
-      "pattern": "cue",
-      "fingerprint": "5ee5b098da19c6399ac1df9c6c4f903b3db46aceeb0e6856626dd0eed2ea4072",
+      "pattern": "event",
+      "fingerprint": "0accbb0e09ba53b438b455cae89a3965b787c7ee46c2456bb29c532cea3b5e18",
       "proofFrames": [
         {
           "sceneId": "starter",

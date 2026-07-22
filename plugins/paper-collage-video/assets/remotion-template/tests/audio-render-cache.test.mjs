@@ -15,7 +15,7 @@ import {createRenderFingerprints} from '../scripts/render-cache-lib.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const makeProject = (slug) => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   slug,
   title: 'Cache Test',
   video: {width: 1920, height: 1080, fps: 30},
@@ -42,7 +42,6 @@ const makeProject = (slug) => ({
     tailSeconds: 0.2,
     motion: {blueprint: 'layered-reveal', intensity: 1, seed: 1, proofTimes: []},
     camera: {preset: 'push', intensity: 1},
-    transition: {type: 'none', durationSeconds: 0},
     narration: {
       src: `projects/${slug}/narration.wav`,
       startSeconds: 0.1,
@@ -50,7 +49,7 @@ const makeProject = (slug) => ({
       text: 'test',
     },
     subtitles: [{fromSeconds: 0.1, toSeconds: 0.9, text: 'test'}],
-    cues: [],
+    events: [],
     composition: {
       coordinateSpace: {width: 1920, height: 1080},
       nodes: [{
@@ -64,6 +63,7 @@ const makeProject = (slug) => ({
       }],
     },
   }],
+  sceneTransitions: [],
 });
 
 test('render fingerprints separate visual changes from audio-only changes', async () => {

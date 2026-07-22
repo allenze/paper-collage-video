@@ -3,17 +3,17 @@
 [![CI](https://github.com/cyberlesterr/paper-collage-video/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberlesterr/paper-collage-video/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-一个配置驱动的本地纸片分层视频生产系统。人负责内容意图、审美选择和最终批准；Codex 与本地工具负责节奏故事板、素材组织、分层关键帧、视听 cue、旁白同步、渲染和技术验收。
+一个配置驱动的本地纸片分层视频生产系统。人负责内容意图、审美选择和最终批准；Codex 与本地工具负责节奏故事板、素材组织、分层关键帧、持久显隐与视听事件、旁白同步、渲染和技术验收。
 
-项目协议已直接推进到 v4；v3 及更早项目不会自动迁移或回退。v4 用递归组合树、注册源家族、支撑/边界模式和组合证明，防止“人物站在船外”“树被水层淹没”这类单图都合格但关系错误的问题。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
+当前开发协议为 project v6 / storyboard v5；v5 及更早项目不会自动迁移或回退。v6 在递归组合、注册源家族和组合证明之上，把节点显隐建模为持久状态，并为每个相邻场景建立唯一、不透明的交接边界，同时防止“人物站在船外”、节点闪现和跨幕前景/背景混帧。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
 
-当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)。新协议加入必需的节奏故事板、注册组合模式、本地关键帧、逐节拍视听 cue、人物/拓扑/机构/说明图语义契约、真实生成尝试账本，以及资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
+当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.13.0-dev.1`。新协议加入节奏故事板、注册组合模式、本地关键帧、持久显隐/短暂强调/声音共源事件、不透明场景边界、人物/拓扑/机构/说明图语义契约、真实生成尝试账本，以及资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
 
 ## 完整演示
 
 [观看或下载唯一完整演示：《铁杵磨针》77.7 秒 1080p 纸片故事](https://github.com/cyberlesterr/paper-collage-video/releases/download/v0.5.0/tie-chu-mo-zhen-final.mp4)
 
-Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v4 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
+Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v6 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
 
 ## 从 GitHub 安装 Plugin
 
@@ -69,7 +69,7 @@ Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于
 
 正常制作一条新视频时，人参与三个内容节点：
 
-1. 口述主题后，一次确认概念、Storyboard v4 导演节拍、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
+1. 口述主题后，一次确认概念、Storyboard v5 导演节拍与不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
 2. 确认一张风格样张、短试听和必要时的 3–5 秒动作证明。
 3. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
@@ -142,7 +142,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v4 再把逐节拍导演 treatments 编译为组合计划、状态序列、图形目标、姿态母版网格、风险排名和证明指纹。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v5 再把逐节拍导演 treatments 编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、风险排名和证明指纹，并为每对相邻镜头锁定不透明边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -154,7 +154,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
 | `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
-| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v4 节拍 treatments、组合/状态计划、风险与证明时刻 |
+| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v5 节拍 treatments、可见性/组合/状态计划、场景边界、风险与证明时刻 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
 | `npm run project:resume -- <slug>` | 输出最小恢复状态、下一命令和未完成批次 |
@@ -170,16 +170,16 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:checkpoint -- <slug> <id> <status>` | 记录地点、人物、旁白或质检批次的可恢复进度 |
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
-| `npm run project:composition-proof -- <slug>` | 清除旧证明后，用真实渲染器生成关系/语义目标的全帧、裁切、跨场景比较、调试图和 cue 表 |
-| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v4 校验、证明指纹与双质量门和阶段推进 |
+| `npm run project:composition-proof -- <slug>` | 清除旧证明后，用真实渲染器生成关系/语义目标的全帧、裁切、跨场景比较、调试图和事件表 |
+| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v6 校验、证明指纹与双质量门和阶段推进 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |
 | `npm run project:subtitles -- <slug>` | 低层恢复命令：同步或生成字幕时间 |
 | `npm run project:quality -- <slug> record-batch --input=<file>` | 原子记录与哈希/组合指纹绑定的资产或组合语义检查 |
-| `npm run project:validate -- <slug>` | 检查 v4 组合、注册、支撑、边界、素材、cue、字幕和时长 |
+| `npm run project:validate -- <slug>` | 检查 v6 组合、注册、支撑、环境边界、显隐/强调/声音事件、场景交接、字幕和时长 |
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v4 组合生成 3–5 秒风格/运动证明、当前 fingerprint 和逐成员 alpha/棋盘格/紧裁/stress 证据 |
+| `npm run style:proof -- <slug>` | 用真实 v6 组合生成 3–5 秒风格/运动证明、当前 fingerprint 和逐成员 alpha/棋盘格/紧裁/stress 证据 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
 | `npm run dev` | 在 Remotion Studio 中打开通用开发 composition |
@@ -240,7 +240,8 @@ python3 scripts/remove_chroma_key.py --input KEY.png --out ALPHA.png --key-color
 - `theme`：纸张、字幕、描边和前景颜色。
 - `voice`：虚构音色或后续可选的克隆音色元数据。
 - `audio`：旁白、背景音乐和必填 LUFS/true-peak 交付规格。
-- `scenes`：故事板蓝图、带断言的证明时刻、递归 `composition` 树、本地 keyframe、旁白、逐节拍 cue、转场和字幕。
+- `scenes`：故事板蓝图、带断言的证明时刻、递归 `composition` 树、本地 keyframe、旁白、逐节拍持久/短暂/声音事件和字幕。
+- `sceneTransitions`：每对相邻场景唯一的交接契约，支持硬切、不透明纸张擦除和纸色遮罩换景。
 
 镜头时长不是人工填写的常量，而是：
 
@@ -248,7 +249,7 @@ python3 scripts/remove_chroma_key.py --input KEY.png --out ALPHA.png --key-color
 round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部留白秒数 × fps)
 ```
 
-后一个镜头按该镜头显式声明的 `transition.durationSeconds` 与前一个镜头交叠。项目作者只写秒数和归一化的节拍/关键帧位置；帧数由渲染器根据 fps 推导。v3 及更早字段不会被迁移或猜测。
+非硬切边界按顶层 `sceneTransitions[].durationSeconds` 交叠，且只能在硬裁剪或完全不透明的纸色遮罩下交接。项目作者只写秒数和归一化的节拍/关键帧位置；帧数由渲染器根据 fps 推导。旧字段不会被迁移或猜测。
 
 生产状态遵循 [schemas/production.schema.json](schemas/production.schema.json)。它是断点恢复协议，不是创意配置：记录 `stage`、审批、粗粒度生产批次、产物和追加式事件历史。默认路径用组合故事板/概念/provider 确认、风格确认和预览确认。不要直接改状态 JSON。
 
@@ -265,15 +266,16 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 - 非注册场景素材是否达到输出规格；注册成员和 mask 是否与母版画布完全一致。
 - 旁白配置时长是否等于 ffprobe 实测时长。
 - 项目逐幕蓝图、组合模式、证明 id/时刻/断言是否与已批准故事板一致。
-- 组与子节点关键帧是否覆盖完整镜头，每个故事节拍是否有唯一 cue、有效目标及正确证明窗口。
+- 组与子节点关键帧是否覆盖完整镜头，每个故事节拍是否有有效事件目标、正确显隐生命周期和证明窗口。
+- 每对相邻场景是否恰好有一条边界，非硬切的出场 tail/入场旁白 lead 是否覆盖完整转场。
 - 字幕范围、重叠、越界、单条长度和阅读速度。
 - 支撑主体在各证明时刻是否仍位于接触区，注册环境是否只声明一次语义区域。
 
-`project:quality` 同时检查单文件和跨文件组合；文件哈希变化使资产审查失效，成员、mask、变换、边界、cue 或证明变化使对应组合审查失效。`project:report` 继续检查成片编码、分辨率、帧率、音轨、响度/峰值，并纳入 cue 事件表和真实组合证明摘要。
+`project:quality` 同时检查单文件和跨文件组合；文件哈希变化使资产审查失效，成员、mask、变换、环境边界、事件、场景交接或证明变化使对应组合审查失效。`project:report` 继续检查成片编码、分辨率、帧率、音轨、响度/峰值，并纳入事件时间线、场景边界联系表和真实组合证明摘要。
 
 ## 历史项目
 
-仓库中的旧演示成片及其 v3/更早项目数据只保留为历史制作记录，当前运行时不会迁移或执行它们。插件发行包只携带符合 v4 的独立 `starter-demo` 技术夹具。
+仓库中的旧演示成片及其旧项目数据只保留为历史制作记录，当前运行时不会迁移或执行它们。插件发行包只携带符合 v6 的独立 `starter-demo` 技术夹具。
 
 ## 贡献、支持与安全
 

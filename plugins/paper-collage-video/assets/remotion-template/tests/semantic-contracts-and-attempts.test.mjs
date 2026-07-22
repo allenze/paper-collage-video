@@ -293,7 +293,7 @@ test('diagram filters fail deterministically and semantic proof targets span sce
         ...(id === 'scene-a' ? [{id: 'diagram', kind: 'asset', assetRole: 'decorative', src: `projects/${slug}/card.svg`, z: 2, transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0}, motion: {keyframes: [{at: 0}, {at: 1}]}}] : []),
       ],
     },
-    cues: [],
+    events: [],
   });
   const diagram = {
     id: 'diagram-contract',
@@ -311,12 +311,13 @@ test('diagram filters fail deterministically and semantic proof targets span sce
     await fs.writeFile(cardFile, '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence/></filter><text filter="url(#noise)" x="5" y="50">A</text></svg>');
     await sharp({create: {width: 100, height: 100, channels: 4, background: '#806040'}}).png().toFile(castFile);
     const project = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},
       audio: {narration: {volume: 1}},
       scenes: [scene('scene-a'), scene('scene-b')],
+      sceneTransitions: [{id: 'a-b', fromSceneId: 'scene-a', toSceneId: 'scene-b', type: 'cut', durationSeconds: 0}],
     };
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`);
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({

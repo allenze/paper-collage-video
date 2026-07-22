@@ -54,19 +54,19 @@ export const collectProjectAudioEvents = (project) => {
       startSeconds: (scene.from + scene.narrationStartFrame) / fps,
       volume: project.audio.narration.volume,
     });
-    for (const cue of scene.cues ?? []) {
-      if (!cue.sound) continue;
+    for (const event of scene.events ?? []) {
+      if (!event.sound) continue;
       events.push({
-        kind: 'cue',
-        id: `cue:${scene.id}:${cue.id}`,
+        kind: 'event',
+        id: `event:${scene.id}:${event.id}`,
         sceneId: scene.id,
-        src: cue.sound.src,
+        src: event.sound.src,
         startSeconds:
           (scene.from + Math.min(
             scene.durationInFrames - 1,
-            Math.round(cue.at * scene.durationInFrames),
+            Math.round(event.at * scene.durationInFrames),
           )) / fps,
-        volume: cue.sound.volume,
+        volume: event.sound.volume,
       });
     }
   }

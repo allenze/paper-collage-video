@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "slug": "starter-demo",
   "title": "Paper Collage Starter",
   "plan": {
@@ -92,7 +92,7 @@
           },
           {
             "id": "proof-action",
-            "at": 0.5,
+            "at": 0.62,
             "label": "主体进入画面",
             "kind": "peak",
             "assertions": [
@@ -152,6 +152,9 @@
             "assetRole": "character",
             "src": "projects/starter-demo/assets/characters/alpha/01-traveler.png",
             "z": 4,
+            "visibility": {
+              "initial": "hidden"
+            },
             "transform": {
               "x": 0,
               "y": 0,
@@ -196,10 +199,6 @@
         "preset": "push",
         "intensity": 0.6
       },
-      "transition": {
-        "type": "none",
-        "durationSeconds": 0
-      },
       "narration": {
         "src": "projects/starter-demo/audio/narration/01-test-tone.wav",
         "startSeconds": 0,
@@ -213,38 +212,48 @@
           "text": "纸片分层视频"
         }
       ],
-      "cues": [
+      "events": [
         {
           "id": "establish",
           "beatId": "establish",
           "proofTimeId": "proof-establish",
           "at": 0,
-          "durationSeconds": 0.35,
-          "targetId": "scene",
-          "action": "reveal",
-          "intensity": 0.7
+          "targetId": "background",
+          "visual": {
+            "kind": "emphasis",
+            "action": "pulse",
+            "durationSeconds": 0.35,
+            "intensity": 0.35
+          }
         },
         {
           "id": "subject-arrives",
           "beatId": "subject-arrives",
           "proofTimeId": "proof-action",
           "at": 0.5,
-          "durationSeconds": 0.5,
           "targetId": "traveler",
-          "action": "lift",
-          "intensity": 0.8
+          "visual": {
+            "kind": "visibility",
+            "action": "show",
+            "transition": "fade-rise",
+            "durationSeconds": 0.5
+          }
         },
         {
           "id": "lockup",
           "beatId": "lockup",
           "proofTimeId": "proof-final",
           "at": 0.9,
-          "durationSeconds": 0.25,
           "targetId": "traveler",
-          "action": "settle",
-          "intensity": 0.55
+          "visual": {
+            "kind": "emphasis",
+            "action": "settle",
+            "durationSeconds": 0.25,
+            "intensity": 0.55
+          }
         }
       ]
     }
-  ]
+  ],
+  "sceneTransitions": []
 }

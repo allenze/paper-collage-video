@@ -209,7 +209,7 @@ test('quality scaffold and record-batch measure one AI review session', async ()
       productionState({slug, createdAt, updatedAt: createdAt}),
     );
     await writeJson(path.join(projectDirectory, 'project.json'), {
-      schemaVersion: 5,
+      schemaVersion: 6,
       slug,
       title: 'Metrics review fixture',
       quality: {minimumAssetScale: 0.5},
@@ -231,6 +231,7 @@ test('quality scaffold and record-batch measure one AI review session', async ()
           }],
         },
       }],
+      sceneTransitions: [],
     });
     const scaffoldFile = path.join(projectDirectory, 'quality-review-scaffold.json');
     const scaffoldResult = spawnSync(

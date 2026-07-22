@@ -21,6 +21,7 @@ import {
 import {analyzeRenderedContinuityArtifact} from './timeline-continuity-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {summarizeActualPoseSheets} from './state-sheet-lib.mjs';
+import {deriveTransitionProofSamples} from '../src/sceneTimeline.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -287,6 +288,12 @@ try {
           : tailBudgetIssues.map(({location}) => location).join(', '),
     },
     {
+      id: 'scene-transition-contract',
+      passed: !(validation.issues ?? []).some(({code}) => String(code).startsWith('scene-transition')),
+      expected: 'adjacent boundary contract with no alpha-blended semantic scenes',
+      actual: (project.sceneTransitions ?? []).map(({type}) => type).join(', ') || 'single scene',
+    },
+    {
       id: 'audiovisual-coverage',
       passed: continuityAnalysis.passed,
       expected: 'no unapproved silent + low-motion interval >= 1.2s; total <= 8%',
@@ -329,12 +336,28 @@ try {
     samples: contactSheetSamples,
     framesDirectory: path.join(paths.distDirectory, 'frames'),
   });
+  const transitionSamples = deriveTransitionProofSamples({
+    timeline: validation.timeline,
+    fps: project.video.fps,
+    durationSeconds,
+  });
+  const transitionContactSheet = transitionSamples.length > 0
+    ? path.join(paths.distDirectory, 'transition-contact-sheet.jpg')
+    : null;
+  if (transitionContactSheet) {
+    await createContactSheet({
+      video: artifact,
+      output: transitionContactSheet,
+      samples: transitionSamples,
+      framesDirectory: path.join(paths.distDirectory, 'transition-frames'),
+    });
+  }
 
   const quality = qualityArgument
     ? await readQualityReportStatus(slug)
     : await prepareQualityReport(slug);
   const report = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     generatedAt: new Date().toISOString(),
     project: {slug: project.slug, title: project.title},
     artifact: {
@@ -375,7 +398,7 @@ try {
       scopes: quality.scopes,
       file: path.relative(ROOT, quality.file),
     },
-    cueEvents: quality.report.cueEvents ?? [],
+    eventTimeline: quality.report.eventTimeline ?? [],
     compositeProof: {
       total: quality.report.composites?.length ?? 0,
       entries: (quality.report.composites ?? []).map(({compositeId, sceneId, pattern, fingerprint, proofFrames, status}) => ({
@@ -408,11 +431,18 @@ try {
       technicalChecks.every((check) => check.passed),
     contactSheet: path.relative(ROOT, contactSheet),
     contactSheetSamples,
+    transitionProof: {
+      contract: 'opaque-boundary-v1',
+      semanticAlphaBlendAllowed: false,
+      contactSheet: transitionContactSheet ? path.relative(ROOT, transitionContactSheet) : null,
+      samples: transitionSamples,
+    },
   };
   const reportFile = path.join(paths.distDirectory, 'report.json');
   await writeJson(reportFile, report);
   console.log(`✓ 验收报告：${path.relative(ROOT, reportFile)}`);
   console.log(`✓ 关键帧联系表：${path.relative(ROOT, contactSheet)}`);
+  if (transitionContactSheet) console.log(`✓ 转场联系表：${path.relative(ROOT, transitionContactSheet)}`);
   for (const check of technicalChecks) {
     console.log(
       `${check.passed ? '✓' : '✗'} ${check.id}: ${check.actual} (expected ${check.expected})`,

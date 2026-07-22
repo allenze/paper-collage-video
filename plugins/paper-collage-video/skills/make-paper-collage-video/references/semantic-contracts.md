@@ -151,5 +151,5 @@ Continue to use `supported-subject` or `registered-environment` when layers touc
 
 - Run `project:composition-proof` after real assets and timings are assembled. It clears stale proof output and renders every semantic evidence target.
 - Record evidence-backed checks with the generated full frame, target crop, and debug frame.
-- Any contract, bound asset, proof time, cue, node, or referenced file change invalidates the semantic target fingerprint.
+- Any contract, bound asset, proof time, event, scene transition, node, or referenced file change invalidates the semantic target fingerprint.
 - A vision model may assist detection, but it is not sole authority for physical/historical correctness. The recorded review must state what was compared.

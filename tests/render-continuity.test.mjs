@@ -49,16 +49,14 @@ const makeTimeline = ({hold = false} = {}) => ({
       from: 0,
       durationInFrames: 72,
       motion: {proofTimes: [{id: 'observe', at: 0.5}]},
-      cues: hold
+      events: hold
         ? [
             {
               id: 'observe-hold',
               beatId: 'observe',
               at: 0,
-              durationSeconds: 2.4,
               targetId: 'scene',
-              action: 'hold',
-              intensity: 0,
+              visual: {kind: 'hold', durationSeconds: 2.4},
               proofTimeId: 'observe',
             },
           ]

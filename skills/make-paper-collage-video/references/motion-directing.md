@@ -17,12 +17,13 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `shared-boundary` | `registered-environment` | elephant crosses a waterline, object passes behind a desk edge |
 | `graphic-emphasis` | editable `text` or `shape` node plus `continuous-transform` | question marks, circles, arrows, highlights |
 | `mechanism-state` | proof-bound treatment with `mechanism` or `diagram` risk | scale balance, force path, causal diagram |
+| `visibility-change` | `visibility-transition` plus node `visibility.initial` | a question mark first appears, a card is removed, a label remains after entering |
 
-A treatment has orthogonal dimensions. Motion (`static`, continuous transform, or state sequence), composition (`free`, supported subject, or registered environment), graphic mechanism, and semantic risk can coexist. A pointing child standing on a boat is both a state sequence and a supported subject; do not collapse it into one exclusive effect label.
+A treatment has orthogonal dimensions. Motion (`static`, continuous transform, state sequence, or persistent visibility transition), composition (`free`, supported subject, or registered environment), graphic mechanism, and semantic risk can coexist. A pointing child standing on a boat is both a state sequence and a supported subject; do not collapse it into one exclusive effect label.
 
 ## Author Intent, Compile Execution
 
-Storyboard v4 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
+Storyboard v5 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
 
 Every treatment declares:
 
@@ -34,7 +35,7 @@ Every treatment declares:
 - `semanticRisk` and a proof binding for identity/topology/mechanism/diagram risk;
 - a concise rationale describing why this mechanism is truthful.
 
-The compiler turns those declarations into patterns, relationships, state schedules, continuous-motion targets, graphic targets, risk scores, sheet plans, and fingerprints. Production implements the compiled plan; it does not reinterpret the prose.
+The compiler turns those declarations into patterns, relationships, state schedules, continuous-motion targets, persistent visibility events, graphic targets, risk scores, sheet plans, and fingerprints. Production implements the compiled plan; it does not reinterpret the prose.
 
 ## Allocate Motion Without Sacrificing Hero Actions
 
@@ -67,6 +68,10 @@ For a story such as 《曹冲称象》:
 - a quiet conclusion: static hold with only restrained ambient motion.
 
 This is a per-beat decision. One film can intentionally use all mechanisms; a simple title film may use only free layers and continuous transforms.
+
+## Direct Scene Boundaries Separately
+
+Scene boundaries are whole-film editorial decisions, not node reveal effects. Declare exactly one top-level boundary per adjacent pair. Default to `cut`. Use `paper-wipe` when the paper edge itself is a motivated directional gesture. Use `dip-to-paper` when a fully opaque paper cover creates a chapter or tonal reset. Never use an alpha crossfade between two semantic scenes: it can combine an outgoing foreground with an incoming background into a false image. Budget the complete non-cut duration in both the outgoing tail and incoming narration lead.
 
 ## Proof and Review
 
