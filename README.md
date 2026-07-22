@@ -170,7 +170,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:checkpoint -- <slug> <id> <status>` | 记录地点、人物、旁白或质检批次的可恢复进度 |
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
-| `npm run project:composition-proof -- <slug>` | 清除旧证明后，用真实渲染器生成关系/语义目标的全帧、裁切、跨场景比较、调试图和事件表 |
+| `npm run project:composition-proof -- <slug> [--force]` | 按项目、资产与 runtime-build 指纹增量生成关系/语义证明；`--force` 显式禁用全部证明缓存 |
 | `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v7 校验、证明指纹与双质量门和阶段推进 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |
 | `npm run project:subtitles -- <slug>` | 低层恢复命令：同步或生成字幕时间 |
@@ -179,7 +179,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v7 组合生成 3–5 秒风格/运动证明、当前 fingerprint 和逐成员 alpha/棋盘格/紧裁/stress 证据 |
+| `npm run style:proof -- <slug>` | 用真实 v7 组合生成 3–5 秒 schema-v5 样式证明；自由目标也有非空 composite，耦合目标另含逐成员 alpha/棋盘格/紧裁/stress 证据 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
 | `npm run dev` | 在 Remotion Studio 中打开通用开发 composition |

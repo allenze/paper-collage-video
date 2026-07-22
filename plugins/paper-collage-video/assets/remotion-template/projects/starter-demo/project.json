@@ -248,7 +248,7 @@
           "visual": {
             "kind": "emphasis",
             "action": "settle",
-            "durationSeconds": 0.25,
+            "durationSeconds": 0.1,
             "intensity": 0.55
           }
         }

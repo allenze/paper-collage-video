@@ -118,6 +118,7 @@ test('v6 compiles treatments into composition plans, risk selection, and cost ev
     sceneId: 'scene-01',
     treatmentId: 'land-on-stage',
     targetId: 'subject',
+    proofTimeId: 'proof-action',
     riskScore: 46,
     directingFingerprint: storyboard.scenes[0].directing.fingerprint,
   });

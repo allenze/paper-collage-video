@@ -601,6 +601,7 @@ export const validateProject = async (project, options = {}) => {
       composition: scene.composition,
       video: project.video,
       proofTimes: scene.motion?.proofTimes ?? [],
+      durationSeconds: scene.durationInFrames / project.video.fps,
       location: `${sceneLocation}.composition`,
     });
     for (const issue of compositionResult.issues) {

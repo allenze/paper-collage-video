@@ -20,14 +20,14 @@ Semantic risk adds evidence-backed checks:
 
 The runtime deterministically rejects `feTurbulence`, `feDisplacementMap`, and `feBlend` in diagram-critical SVG files. Raster diagrams and physical correctness still require original-resolution semantic evidence.
 
-For style-gate coupled topology, run:
+For the style gate, run:
 
 ```bash
 npm run style:proof -- <slug> --duration=4
 npm run project:quality -- <slug> prepare
 ```
 
-Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, checkerboard isolates, tight crops, and before/shifted motion-stress sheets. Record participating assets and the representative composite with those paths:
+The schema-v5 report uses `scope=style` and emits a structured composite for every selected directing target, including `free` targets. Its current composite can satisfy the matching quality target directly; a separate full-project composition proof is not required merely to approve style. Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, checkerboard isolates, tight crops, and before/shifted motion-stress sheets where applicable. Record participating assets and the representative composite with those paths:
 
 ```json
 {
@@ -48,12 +48,14 @@ Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, c
 }
 ```
 
-After narration files and real v7 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only fingerprint-current frames/targets):
+After narration files and real v7 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only project-, asset-, and runtime-fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
 npm run project:quality -- <slug> prepare
 ```
+
+To deliberately bypass every proof cache layer, append `--force`. The generated report must say `cache.forced=true` and show zero reused frames, composites, and asset evidence.
 
 It also creates `composition-proof/evidence/` alpha masks, checkerboard isolates, tight crops, and motion-stress sheets for coupled assets introduced after style approval. Inspect full proof frames, relationship crops, debug frames, and these post-style asset sheets. Record composite reviews in the same atomic batch file, using `compositeId` instead of `assetId`:
 

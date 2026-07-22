@@ -11,10 +11,12 @@ import {
 } from '../scripts/style-proof-lib.mjs';
 import {
   collectCompositeQualityTargets,
+  collectStyleProofTargets,
   prepareQualityReport,
   recordQualityReviews,
 } from '../scripts/quality-lib.mjs';
 import {ROOT} from '../scripts/project-lib.mjs';
+import {createRuntimeBuildFingerprint} from '../scripts/runtime-build-lib.mjs';
 
 const relativePublicSource = (file) => path.relative(path.join(ROOT, 'public'), file);
 const relativeWorkspaceFile = (file) => path.relative(ROOT, file);
@@ -191,22 +193,26 @@ const writeProofEvidence = async ({slug, project, files}) => {
   const unrelatedFile = path.join(evidenceDirectory, 'unrelated.png');
   await sharp({create: {width: 20, height: 20, channels: 4, background: '#ffffffff'}}).png().toFile(unrelatedFile);
   const [target] = await collectCompositeQualityTargets(project);
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   const evidencePath = relativeWorkspaceFile(evidenceFile);
   await fs.writeFile(
     styleProofReportPath(slug),
     `${JSON.stringify({
-      schemaVersion: 4,
+      schemaVersion: 5,
+      scope: 'style',
       slug,
       sceneId: 'scene',
       directingTreatmentId: 'subject-on-support',
       directingTargetId: 'subject',
+      directingProofTimeId: null,
       directingFingerprint: 'a'.repeat(64),
+      runtimeBuildFingerprint,
       generatedAt: new Date().toISOString(),
       output: evidencePath,
       contactSheet: evidencePath,
       composites: [{
         compositeId: target.compositeId,
-        styleFingerprint: styleFingerprintForTarget(target),
+        fingerprint: styleFingerprintForTarget(target),
         proofFrames: [
           {proofTimeId: 'establish', fullFrame: evidencePath, crop: evidencePath, debugFrame: evidencePath},
           {proofTimeId: 'action', fullFrame: evidencePath, crop: evidencePath, debugFrame: evidencePath},
@@ -224,6 +230,33 @@ const writeProofEvidence = async ({slug, project, files}) => {
   );
   return {target, evidencePath, unrelatedPath: relativeWorkspaceFile(unrelatedFile)};
 };
+
+test('free directing targets still produce a structured style composite', async () => {
+  const slug = `style-proof-free-${process.pid}`;
+  const fixture = await writeFixture(slug);
+  try {
+    const project = structuredClone(fixture.project);
+    const subject = project.scenes[0].composition.nodes[0].children.find(({id}) => id === 'subject');
+    delete subject.slot;
+    delete subject.registrationId;
+    project.scenes[0].composition.nodes = [subject];
+    const targets = await collectStyleProofTargets(project, {
+      sceneId: 'scene',
+      treatmentId: 'free-subject',
+      targetId: 'subject',
+      directingFingerprint: 'b'.repeat(64),
+    });
+    assert.equal(targets.length, 1);
+    assert.equal(targets[0].compositeId, 'style-target:scene:subject');
+    assert.equal(targets[0].styleOnly, true);
+    assert.deepEqual(targets[0].memberNodeIds, ['subject']);
+    assert.equal(targets[0].proofTimeIds.length, 3);
+  } finally {
+    await fs.rm(fixture.projectDirectory, {recursive: true, force: true});
+    await fs.rm(fixture.publicDirectory, {recursive: true, force: true});
+    await fs.rm(fixture.distDirectory, {recursive: true, force: true});
+  }
+});
 
 test('style topology gate rejects hard-alpha false confidence, unrelated evidence, and stale evidence', async () => {
   const slug = `style-proof-gate-${process.pid}`;

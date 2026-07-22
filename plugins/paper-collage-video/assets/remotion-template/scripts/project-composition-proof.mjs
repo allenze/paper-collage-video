@@ -29,8 +29,11 @@ import {
   compositionProofReportPath,
 } from './quality-lib.mjs';
 import {createSceneProofFingerprint} from './render-cache-lib.mjs';
+import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
-const [slug] = process.argv.slice(2).filter((argument) => !argument.startsWith('--'));
+const args = process.argv.slice(2);
+const [slug] = args.filter((argument) => !argument.startsWith('--'));
+const force = args.includes('--force');
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
@@ -97,6 +100,7 @@ try {
   await fs.mkdir(debugDirectory, {recursive: true});
   const evidenceDirectory = path.join(outputDirectory, 'evidence');
   await fs.mkdir(evidenceDirectory, {recursive: true});
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
 
   const reportFile = compositionProofReportPath(slug);
   const previous = (await fileExists(reportFile))
@@ -131,6 +135,7 @@ try {
       });
       const cached = previousFrames.get(key);
       const reusable =
+        !force &&
         cached?.fingerprint === fingerprint &&
         cached.absoluteFrame === absoluteFrame &&
         await fileExists(file);
@@ -187,7 +192,7 @@ try {
   let generatedEvidence = 0;
   for (const {sceneId, node, stateId = null} of coupledNodes.values()) {
     const cached = previousEvidence.get(`${node.id}:${node.src}`);
-    if (await assetEvidenceIsCurrent(cached, node)) {
+    if (!force && await assetEvidenceIsCurrent(cached, node)) {
       assetEvidence.push(cached);
       reusedEvidence += 1;
     } else {
@@ -213,6 +218,7 @@ try {
       shot.proofTimeIds.map((proofTimeId) => ({sceneId: shot.sceneId, proofTimeId})),
     );
     const reusableComposite =
+      !force &&
       cached?.fingerprint === target.fingerprint &&
       cached.proofFrames?.length === expectedProofs.length &&
       (await Promise.all(expectedProofs.map(async ({sceneId, proofTimeId}) => {
@@ -272,14 +278,17 @@ try {
   }
 
   const report = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: slug,
     generatedAt: new Date().toISOString(),
+    scope: 'project',
+    runtimeBuildFingerprint,
     frames,
     composites,
     assetEvidence,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     cache: {
+      forced: force,
       reusedFrames,
       renderedFrames,
       reusedComposites,

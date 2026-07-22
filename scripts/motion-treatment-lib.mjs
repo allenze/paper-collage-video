@@ -539,6 +539,7 @@ export const selectStyleProofTarget = (storyboard) => {
     sceneId,
     treatmentId,
     targetId: treatment.targetId,
+    proofTimeId: treatment.proofTimeId ?? null,
     riskScore: scene.directing.riskScore,
     directingFingerprint: scene.directing.fingerprint,
   };

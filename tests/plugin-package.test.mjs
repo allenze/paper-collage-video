@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import {createRuntimeBuildManifest} from '../scripts/runtime-build-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PLUGIN_ROOT = path.join(ROOT, 'plugins', 'paper-collage-video');
@@ -150,6 +151,7 @@ test('packaged runtime is lightweight and independent from production projects',
 
   for (const relative of [
     'remotion.config.ts',
+    'runtime-build.json',
     'scripts/production-state.mjs',
     'scripts/asset-evidence-lib.mjs',
     'scripts/audio-preflight-lib.mjs',
@@ -167,6 +169,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-metrics.mjs',
     'scripts/project-audio-preflight.mjs',
     'scripts/render-cache-lib.mjs',
+    'scripts/runtime-build-lib.mjs',
     'scripts/subtitle-lib.mjs',
     'scripts/project-subtitles.mjs',
     'scripts/creative-plan-lib.mjs',
@@ -211,6 +214,18 @@ test('packaged runtime is lightweight and independent from production projects',
   }
 });
 
+test('source and packaged runtime expose the same current build identity', async () => {
+  const [source, packaged] = await Promise.all([
+    createRuntimeBuildManifest({root: ROOT}),
+    createRuntimeBuildManifest({root: RUNTIME_ROOT}),
+  ]);
+  assert.equal(source.packageVersion, repositoryVersion);
+  assert.equal(packaged.packageVersion, repositoryVersion);
+  assert.equal(packaged.fingerprint, source.fingerprint);
+  assert.deepEqual(readJson(path.join(ROOT, 'runtime-build.json')), source);
+  assert.deepEqual(readJson(path.join(RUNTIME_ROOT, 'runtime-build.json')), packaged);
+});
+
 test('packaged resolved plans can be inspected without rewriting them', () => {
   const result = spawnSync(
     process.execPath,
@@ -244,6 +259,12 @@ test('packaged starter proof keeps the complete quality gate ready', async () =>
   assert.equal(prepared.ready, true);
   assert.equal(prepared.total, 5);
   assert.equal(prepared.passed, 5);
+  const validation = spawnSync(
+    process.execPath,
+    ['scripts/project-validate.mjs', 'starter-demo'],
+    {cwd: RUNTIME_ROOT, encoding: 'utf8'},
+  );
+  assert.equal(validation.status, 0, validation.stderr || validation.stdout);
 });
 
 test('bootstrap creates an isolated resumable workspace and is idempotent', async () => {

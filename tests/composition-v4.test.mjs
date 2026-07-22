@@ -199,6 +199,45 @@ test('v5 state sequences can loop during motion and hold a registered contact st
   assert.ok(validate(unknownHold, proofTimes).issues.some(({code}) => code === 'composition-sequence-hold-state'));
 });
 
+test('final state proofs reject crossfades and states that do not hold to scene end', () => {
+  const node = {
+    id: 'butterfly',
+    kind: 'state-sequence',
+    assetRole: 'character',
+    poseFamilyId: 'butterfly-family',
+    registration: {id: 'butterfly-registration', sourceMasterAssetId: 'butterfly-sheet', canvas: {width: 100, height: 100}, origin: 'top-left'},
+    states: [
+      {id: 'folded', src: 'folded.png', at: 0},
+      {id: 'open', src: 'open.png', at: 0.35},
+      {id: 'landed', src: 'landed.png', at: 0.7},
+    ],
+    playback: {mode: 'once', cycles: 1},
+    transition: {type: 'crossfade', durationSeconds: 0.5},
+    z: 1,
+    transform: fullTransform(),
+    motion: still(),
+  };
+  const baseProofs = [
+    {id: 'folded', at: 0.1, kind: 'establish', stateAssertions: [{nodeId: 'butterfly', stateId: 'folded'}]},
+    {id: 'open', at: 0.5, kind: 'action', stateAssertions: [{nodeId: 'butterfly', stateId: 'open'}]},
+  ];
+  const inCrossfade = validateCompositionStructure({
+    composition: {coordinateSpace: {width: 100, height: 100}, nodes: [node]},
+    video: {width: 100, height: 100},
+    durationSeconds: 10,
+    proofTimes: [...baseProofs, {id: 'landed', at: 0.72, kind: 'final', stateAssertions: [{nodeId: 'butterfly', stateId: 'landed'}]}],
+  });
+  assert.ok(inCrossfade.issues.some(({code}) => code === 'composition-sequence-final-unstable'));
+
+  const stable = validateCompositionStructure({
+    composition: {coordinateSpace: {width: 100, height: 100}, nodes: [node]},
+    video: {width: 100, height: 100},
+    durationSeconds: 10,
+    proofTimes: [...baseProofs, {id: 'landed', at: 0.9, kind: 'final', stateAssertions: [{nodeId: 'butterfly', stateId: 'landed'}]}],
+  });
+  assert.ok(!stable.issues.some(({code}) => code === 'composition-sequence-final-unstable'));
+});
+
 test('v5 text and shape nodes keep explanatory UI editable', () => {
   const nodes = [
     {

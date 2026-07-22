@@ -449,3 +449,40 @@
 - 影响：当前项目和最终成片不受影响，但从插件新引导的工作区即使设置同一环境变量，也可能无法复现本次已经验证的浏览器启动路径。
 - 本次处理：把 `remotion.config.ts` 加入通用插件运行时打包清单，并在 package test 中把它纳入源码与模板逐字节一致性检查；重新执行 `plugin:sync`、测试和 TypeScript 检查。
 - 结果：完整 Chrome 路径与单路并发覆盖现在都属于可打包、可验证的正式运行时能力，而不是当前仓库的隐含本地配置。
+
+## F053：相同版本号掩盖了源码、打包模板与实际安装缓存的运行时漂移
+
+- 阶段：`complete` / Skill-runtime 审计
+- 观察：源码、`plugins/paper-collage-video` 与已安装缓存都声称 `0.14.0-dev.2`，但安装缓存缺少 `remotion.config.ts`，且 `project-lib.mjs`、`ReplicaChapterScene.tsx` 的 SHA-256 与源码/打包模板不一致。
+- 影响：只核对版本字符串会误判“当前 Skill 已升级”；新任务可能加载同名旧缓存，证明缓存也无法感知渲染器变化。
+- 本次处理：最终版本提升到 `0.14.0-dev.5`（dev.3 的安装冒烟发现 F054/F055，dev.4 的真实 style proof 又发现 F056，因此每次修复都使用新版本号）；新增确定性的 `runtime-build.json`，把渲染器、证明脚本、关键 schema 与依赖版本聚合为 build fingerprint；proof/render fingerprint 纳入该身份，package test 要求源码与模板身份一致。
+- 验收要求：`plugin:sync` 后必须验证实际安装缓存的 package version 与 runtime fingerprint，并从该缓存引导全新工作区完成 doctor、证明与预览冒烟；不能再把“源码已修改”当成“插件已生效”。
+
+## F054：bootstrap 默认继承不可写的用户级 npm/pip cache
+
+- 阶段：`0.14.0-dev.3` 实际安装缓存 / 全新工作区冒烟（修复进入 dev.4）
+- 实际错误：首次 `bootstrap-workspace --install` 在 `npm ci` 报用户级 `~/.npm/_cacache/tmp` 为 root-owned、`EPERM`；pip 也警告用户 cache 不可写。
+- 临时验证：用 `/private/tmp` 中隔离的 npm cache 重试后，依赖安装与 doctor 全部通过，没有修改用户全局 cache 所有权。
+- 本次处理：bootstrap 改为自动使用目标工作区 `.cache/npm` 与 `.cache/pip`，并把 `.cache/` 纳入模板忽略项；新工作区不再依赖用户级 cache 的权限状态。
+
+## F055：打包 starter 的最后一个强调事件超出镜头结尾
+
+- 阶段：`0.14.0-dev.3` 全新工作区 / preview 冒烟（修复进入 dev.4）
+- 实际错误：starter 镜头 1.2 秒，`lockup` 位于 `at=0.9`，但强调持续 0.25 秒；`project:preview` 在渲染前被 `event 动作窗口不得超出镜头结尾` 阻断。
+- 根因：package test 只验证 starter quality ready，没有执行完整 `project:validate`，因此一个“质量报告全绿但项目不可渲染”的模板进入插件。
+- 本次处理：把 starter 的结尾强调缩短为 0.1 秒，并在 package test 中对打包 starter 运行正式 `project-validate`。最终安装验收必须包含真实 preview，而不只 doctor 与质量报告。
+
+## F056：样式证明按目标节点匹配，误把同一节点的其他 treatment 一并纳入
+
+- 阶段：`0.14.0-dev.4` 全新工作区 / 真实 style proof（修复进入 dev.5）
+- 观察：starter 选中 `show-traveler`，报告却同时生成 `subject-arrives` 与稍后的 `lockup` 两个 event composite；原因是 style target 只按 scene/node 匹配，没有按选中 treatment 的 `proofTimeId` 收窄。
+- 影响：自由目标虽然不再是空 composite，但会扩大样式门的证据和审核范围，严重时把同一角色后续无关事件也变成风格批准前置条件。
+- 本次处理：导演目标显式携带 `proofTimeId`；共享 target 解析同时匹配 scene、node/member 与 proof id。style report 绑定该 proof id 和显式 runtime build fingerprint，gate 对两者做 current 校验。
+
+## F057：Skill 官方 quick validator 隐式依赖 PyYAML
+
+- 阶段：最终 Skill 校验
+- 实际错误：运行 `skill-creator/scripts/quick_validate.py` 立即报 `ModuleNotFoundError: No module named 'yaml'`；系统 Python、仓库 venv 与新插件工作区 venv 都没有 PyYAML。
+- 影响：Skill/runtime 全量测试和打包一致性通过，但官方 validator 不能在标准 bootstrap 环境直接执行；若把手工 frontmatter 检查称为官方验证会造成错误口径。
+- 本次处理：明确保留该失败记录，不临时污染全局 Python；使用 package test 的源码/打包 Skill 逐字节一致性与确定性 frontmatter 检查作为补充证据。
+- 候选改进：让 validator 使用标准库可完成的受限 YAML 解析，或把 PyYAML 明确加入可复现的 Skill 验证环境与 doctor 检查。

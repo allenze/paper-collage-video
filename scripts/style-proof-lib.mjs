@@ -1,6 +1,6 @@
 import path from 'node:path';
 import {
-  collectCompositeQualityTargets,
+  collectStyleProofTargets,
   prepareQualityReport,
 } from './quality-lib.mjs';
 import {
@@ -11,8 +11,8 @@ import {
 } from './project-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {selectStyleProofTarget} from './motion-treatment-lib.mjs';
+import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
-const COUPLED_PATTERNS = new Set(['state-sequence', 'supported-subject', 'registered-environment']);
 const REQUIRED_ASSET_EVIDENCE = ['alphaMask', 'checkerboard', 'tightCrop', 'motionStress'];
 const REQUIRED_FRAME_EVIDENCE = ['fullFrame', 'crop', 'debugFrame'];
 
@@ -42,24 +42,22 @@ export const assertStyleProofReady = async (slug) => {
   const directingTarget = selectStyleProofTarget(storyboard);
   if (!directingTarget) return {required: false, ready: true, report: null, composites: []};
 
-  const targets = (await collectCompositeQualityTargets(project)).filter(
-    ({sceneId, pattern, nodeId, memberNodeIds}) =>
-      sceneId === directingTarget.sceneId &&
-      COUPLED_PATTERNS.has(pattern) &&
-      (nodeId === directingTarget.targetId || memberNodeIds.includes(directingTarget.targetId)),
-  );
+  const targets = await collectStyleProofTargets(project, directingTarget);
 
   const reportFile = styleProofReportPath(slug);
   if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
   const report = await readJson(reportFile);
-  if (report.schemaVersion !== 4 || !Array.isArray(report.composites)) {
+  if (report.schemaVersion !== 5 || report.scope !== 'style' || !Array.isArray(report.composites)) {
     throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run style:proof。');
   }
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   if (
     report.sceneId !== directingTarget.sceneId ||
     report.directingTreatmentId !== directingTarget.treatmentId ||
     report.directingTargetId !== directingTarget.targetId ||
-    report.directingFingerprint !== directingTarget.directingFingerprint
+    report.directingProofTimeId !== directingTarget.proofTimeId ||
+    report.directingFingerprint !== directingTarget.directingFingerprint ||
+    report.runtimeBuildFingerprint !== runtimeBuildFingerprint
   ) {
     throw new Error('风格拓扑证明没有绑定当前最高风险导演 treatment；请重新运行 npm run style:proof。');
   }
@@ -71,7 +69,7 @@ export const assertStyleProofReady = async (slug) => {
   for (const proof of report.composites) {
     const target = targetById.get(proof.compositeId);
     if (!target) continue;
-    if (proof.styleFingerprint !== styleFingerprintForTarget(target)) {
+    if (proof.fingerprint !== styleFingerprintForTarget(target)) {
       throw new Error(`${proof.compositeId} 的风格拓扑证明已过期；请重新生成。`);
     }
     const frames = proof.proofFrames ?? [];
@@ -81,26 +79,28 @@ export const assertStyleProofReady = async (slug) => {
       for (const field of REQUIRED_FRAME_EVIDENCE) await assertEvidenceFile(frame[field], `${proof.compositeId}.${proofTimeId}.${field}`);
     }
     const assetEvidence = report.assetEvidence ?? [];
-    for (const nodeId of target.memberNodeIds) {
+    for (const nodeId of target.memberNodeIds ?? []) {
       const evidence = assetEvidence.find((candidate) => candidate.nodeId === nodeId);
       if (!evidence) throw new Error(`${proof.compositeId} 缺少成员 ${nodeId} 的 alpha 证据。`);
       for (const field of REQUIRED_ASSET_EVIDENCE) await assertEvidenceFile(evidence[field], `${nodeId}.${field}`);
     }
     provenTargets.push(target);
   }
-  if (targets.length > 0 && provenTargets.length === 0) throw new Error('风格拓扑证明没有覆盖最高风险镜头中的耦合组合。');
+  if (provenTargets.length !== targets.length || provenTargets.length === 0) {
+    throw new Error('风格证明没有完整覆盖最高风险导演目标；自由目标也必须提供结构化 composite 证据。');
+  }
 
   const quality = await prepareQualityReport(slug, {write: false});
   for (const target of provenTargets) {
     const composite = quality.report.composites.find(({compositeId}) => compositeId === target.compositeId);
-    if (!composite || !allPassed(composite.semanticChecks)) {
+    if (!target.styleOnly && (!composite || !allPassed(composite.semanticChecks))) {
       throw new Error(`${target.compositeId} 的拓扑语义检查尚未全部通过；请检查证明图并用 project:quality record-batch 记录。`);
     }
     const proof = report.composites.find(({compositeId}) => compositeId === target.compositeId);
     const compositeEvidence = (proof?.proofFrames ?? []).flatMap((frame) => REQUIRED_FRAME_EVIDENCE.map((field) => frame[field]));
     const targetAssetEvidence = (report.assetEvidence ?? []).filter(({nodeId}) => target.memberNodeIds.includes(nodeId));
     compositeEvidence.push(...targetAssetEvidence.map(({motionStress}) => motionStress));
-    assertReviewedEvidence(composite, compositeEvidence, target.compositeId);
+    if (composite) assertReviewedEvidence(composite, compositeEvidence, target.compositeId);
     for (const nodeId of target.memberNodeIds) {
       const assets = quality.report.assets.filter(({sources}) => sources.includes(`scene:${target.sceneId}:node:${nodeId}`));
       if (assets.length === 0 || assets.some((asset) => !asset.technical.passed || !allPassed(asset.semanticChecks))) {

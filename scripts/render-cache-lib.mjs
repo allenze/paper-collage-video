@@ -16,6 +16,7 @@ import {
   resolvePublicFile,
   writeJson,
 } from './project-lib.mjs';
+import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
 export const hashFileStream = async (file) =>
   new Promise((resolve, reject) => {
@@ -46,6 +47,7 @@ const visualScene = (scene) => ({
 });
 
 export const createVisualFingerprint = async (project, mode) => {
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   const sources = [project.theme.texture, project.theme.fontFile];
   for (const scene of project.scenes ?? []) {
     sources.push(
@@ -65,6 +67,7 @@ export const createVisualFingerprint = async (project, mode) => {
     scenes: (project.scenes ?? []).map(visualScene),
     sceneTransitions: project.sceneTransitions,
     sourceHashes: await hashPublicSources(sources),
+    runtimeBuildFingerprint,
   });
 };
 
@@ -74,6 +77,7 @@ export const createSceneProofFingerprint = async ({
   proof,
   absoluteFrame,
 }) => {
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   const sources = [project.theme.texture, project.theme.fontFile];
   sources.push(
     ...collectCompositionVisualSources(scene.composition),
@@ -90,6 +94,7 @@ export const createSceneProofFingerprint = async ({
     proof,
     absoluteFrame,
     sourceHashes: await hashPublicSources(sources),
+    runtimeBuildFingerprint,
   });
 };
 

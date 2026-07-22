@@ -8,13 +8,14 @@ import {
   padEvidenceBounds,
   safeEvidenceId,
 } from './asset-evidence-lib.mjs';
-import {collectCompositeQualityTargets} from './quality-lib.mjs';
+import {collectStyleProofTargets} from './quality-lib.mjs';
 import {
   styleFingerprintForTarget,
   styleProofReportPath,
 } from './style-proof-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {selectStyleProofTarget} from './motion-treatment-lib.mjs';
+import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -105,6 +106,9 @@ try {
     : flattenCompositionNodes(selected.composition?.nodes)
         .find(({node}) => node.id === directingTarget.targetId)?.node;
   if (!directingNode) throw new Error(`最高风险导演目标不存在：${directingTarget.targetId}。`);
+  const targets = await collectStyleProofTargets(project, directingTarget);
+  if (targets.length === 0) throw new Error('最高风险导演目标没有生成可审核的风格证据目标。');
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
 
   const paths = projectPaths(slug);
   const proofDirectory = path.join(paths.distDirectory, 'style-proof');
@@ -145,9 +149,8 @@ try {
     '--scale=0.5', '--crf=24', '--audio-bitrate=96k',
   ]);
 
-  const proofs = selected.motion.proofTimes.length <= 3
-    ? selected.motion.proofTimes
-    : [selected.motion.proofTimes[0], selected.motion.proofTimes[Math.floor(selected.motion.proofTimes.length / 2)], selected.motion.proofTimes.at(-1)];
+  const requiredProofIds = new Set(targets.flatMap(({proofTimeIds}) => proofTimeIds));
+  const proofs = selected.motion.proofTimes.filter(({id}) => requiredProofIds.has(id));
   const frameDirectory = path.join(proofDirectory, 'frames');
   const cropDirectory = path.join(proofDirectory, 'crops');
   const debugDirectory = path.join(proofDirectory, 'debug');
@@ -191,16 +194,21 @@ try {
       evidenceId: `${node.id}-${state.id}`,
     });
   }
+  const targetMemberIds = new Set(targets.flatMap(({memberNodeIds}) => memberNodeIds));
+  for (const {node} of flattenCompositionNodes(selected.composition?.nodes)) {
+    if (!targetMemberIds.has(node.id)) continue;
+    if (node.kind === 'asset') memberNodes.set(`${node.id}:${node.src}`, {node, evidenceId: node.id});
+    if (node.kind === 'state-sequence') {
+      for (const state of node.states) memberNodes.set(`${node.id}:${state.src}`, {
+        node: {...node, kind: 'asset', src: state.src},
+        evidenceId: `${node.id}-${state.id}`,
+      });
+    }
+  }
   const assetEvidence = [];
   for (const {node, evidenceId} of memberNodes.values()) {
     assetEvidence.push(await buildAssetEvidence({node, directory: evidenceDirectory, evidenceId}));
   }
-  const targets = (await collectCompositeQualityTargets(project)).filter(
-    ({sceneId, pattern, nodeId, memberNodeIds}) =>
-      sceneId === selected.id &&
-      ['state-sequence', 'supported-subject', 'registered-environment'].includes(pattern) &&
-      (nodeId === directingTarget.targetId || memberNodeIds.includes(directingTarget.targetId)),
-  );
   const composites = [];
   for (const target of targets) {
     const bounds = findTargetBounds({scene: selected, nodeId: target.nodeId, video: project.video});
@@ -226,7 +234,10 @@ try {
     }
     composites.push({
       compositeId: target.compositeId,
-      styleFingerprint: styleFingerprintForTarget(target),
+      pattern: target.pattern,
+      nodeId: target.nodeId,
+      memberNodeIds: target.memberNodeIds,
+      fingerprint: styleFingerprintForTarget(target),
       proofFrames,
     });
   }
@@ -237,18 +248,21 @@ try {
     ...stateSequences.map(({node}) => ({id: node.id, pattern: 'state-sequence', registrationId: node.registration.id, sourceMasterAssetId: node.registration.sourceMasterAssetId})),
   ];
   await writeJson(reportFile, {
-    schemaVersion: 4,
+    schemaVersion: 5,
     slug,
     generatedAt: new Date().toISOString(),
     sceneId: selected.id,
     directingTreatmentId: directingTarget.treatmentId,
     directingTargetId: directingTarget.targetId,
+    directingProofTimeId: directingTarget.proofTimeId,
     directingTargetKind: directingNode.kind,
     directingFingerprint: directingTarget.directingFingerprint,
+    runtimeBuildFingerprint,
     output: path.relative(ROOT, output),
     contactSheet: path.relative(ROOT, contactSheet),
     proofProject: path.relative(ROOT, propsFile),
-    method: 'highest-risk v4 directing treatment rendered through real v5 project composition and authored motion',
+    scope: 'style',
+    method: 'highest-risk directing target rendered through the real project composition with quality-compatible target evidence',
     groups,
     composites,
     assetEvidence,

@@ -6,6 +6,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import sharp from 'sharp';
 import {createProductionMetrics} from './production-metrics-lib.mjs';
 import {compileStoryboardDirecting} from './motion-treatment-lib.mjs';
+import {createRuntimeBuildManifest} from './runtime-build-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -65,6 +66,9 @@ const hashFile = async (file) =>
 const runtimeAssetId = (file) =>
   `runtime-${createHash('sha256').update(file).digest('hex').slice(0, 12)}`;
 
+const sourceRuntimeBuild = await createRuntimeBuildManifest({root: ROOT});
+await writeJson(path.join(ROOT, 'runtime-build.json'), sourceRuntimeBuild);
+
 await fs.rm(RUNTIME_ROOT, {recursive: true, force: true});
 await fs.rm(SKILL_TARGET, {recursive: true, force: true});
 await fs.mkdir(RUNTIME_ROOT, {recursive: true});
@@ -84,6 +88,7 @@ for (const entry of [
   'providers.json',
   'remotion.config.ts',
   'requirements.txt',
+  'runtime-build.json',
   'tsconfig.json',
   'schemas',
   'templates',
@@ -134,6 +139,7 @@ for (const entry of [
   'scripts/project-validate.mjs',
   'scripts/quality-lib.mjs',
   'scripts/render-cache-lib.mjs',
+  'scripts/runtime-build-lib.mjs',
   'scripts/rasterize-assets.mjs',
   'scripts/remove_chroma_key.py',
   'scripts/split_sheet.py',
@@ -226,6 +232,12 @@ const workspacePackage = {
   },
 };
 await writeJson(path.join(RUNTIME_ROOT, 'package.json'), workspacePackage);
+
+const packagedRuntimeBuild = await createRuntimeBuildManifest({root: RUNTIME_ROOT});
+if (packagedRuntimeBuild.fingerprint !== sourceRuntimeBuild.fingerprint) {
+  throw new Error(`packaged runtime fingerprint drift: source=${sourceRuntimeBuild.fingerprint} package=${packagedRuntimeBuild.fingerprint}`);
+}
+await writeJson(path.join(RUNTIME_ROOT, 'runtime-build.json'), packagedRuntimeBuild);
 
 const pluginManifestFile = path.join(PLUGIN_ROOT, '.codex-plugin', 'plugin.json');
 const pluginManifest = JSON.parse(await fs.readFile(pluginManifestFile, 'utf8'));
@@ -381,7 +393,7 @@ const project = {
       events: [
         {id: 'establish', beatId: 'establish', proofTimeId: 'proof-establish', at: 0, targetId: 'background', visual: {kind: 'emphasis', action: 'pulse', durationSeconds: 0.35, intensity: 0.35}},
         {id: 'subject-arrives', beatId: 'subject-arrives', proofTimeId: 'proof-action', at: 0.5, targetId: 'traveler', visual: {kind: 'visibility', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}},
-        {id: 'lockup', beatId: 'lockup', proofTimeId: 'proof-final', at: 0.9, targetId: 'traveler', visual: {kind: 'emphasis', action: 'settle', durationSeconds: 0.25, intensity: 0.55}},
+        {id: 'lockup', beatId: 'lockup', proofTimeId: 'proof-final', at: 0.9, targetId: 'traveler', visual: {kind: 'emphasis', action: 'settle', durationSeconds: 0.1, intensity: 0.55}},
       ],
     },
   ],

@@ -4,6 +4,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {
   collectSequenceProofCoverage,
+  resolveSequenceLayers,
   resolveSequencePhase,
   resolveSequenceState,
 } from './state-sequence-lib.mjs';
@@ -126,7 +127,7 @@ const validateTransform = (transform, location, add) => {
   }
 };
 
-export const validateCompositionStructure = ({composition, video, proofTimes = [], location = 'composition'}) => {
+export const validateCompositionStructure = ({composition, video, proofTimes = [], durationSeconds = 1, location = 'composition'}) => {
   const issues = [];
   const add = (level, code, message, issueLocation) => issues.push({level, code, message, location: issueLocation});
   if (!composition || typeof composition !== 'object') {
@@ -300,6 +301,22 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       if (resolved?.id !== assertion.stateId) add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${assertion.stateId}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
       const phase = resolveSequencePhase({...entry.node.playback, progress: proof.at});
       if (entry.node.transition.type === 'crossfade' && resolved?.at === phase && resolved.at > 0) add('error', 'composition-sequence-proof-transition', `证明 ${proof.id} 落在 ${resolved.id} 交叉淡化的起点，此时新状态尚不可见。`, `${location}.proofTimes#${proof.id}`);
+      if (proof.kind === 'final') {
+        const stabilitySpan = entry.node.transition.type === 'crossfade'
+          ? entry.node.transition.durationSeconds / Math.max(durationSeconds, 1e-9)
+          : 0;
+        const samplePoints = [...new Set([
+          proof.at,
+          Math.max(0, proof.at - stabilitySpan),
+          Math.min(1, proof.at + stabilitySpan),
+          1,
+        ])];
+        const stable = samplePoints.every((progress) => {
+          const layers = resolveSequenceLayers({node: entry.node, progress, durationSeconds});
+          return layers.length === 1 && layers[0].id === assertion.stateId && Math.abs(layers[0].opacity - 1) < 1e-6;
+        });
+        if (!stable) add('error', 'composition-sequence-final-unstable', `最终证明 ${proof.id} 的状态 ${assertion.stateId} 必须避开交叉淡化，并稳定保持到镜头结束。`, `${location}.proofTimes#${proof.id}`);
+      }
     }
   }
   return {issues, nodeIds, groups, assets, sequences, freeNodes};

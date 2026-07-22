@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "0.14.0-dev.5",
+  "fingerprint": "8739d0b4f73ff85e670dabb2e5590361edfc1c2f08e0f5a828b0e1e836b17d95",
+  "files": {
+    "package.json": "57dd710f754f5ad91272482eca1caba5be3facfa7c4e70f170eb12bf86c9c536",
+    "remotion.config.ts": "6b513b6e87a709cd00cd60c87329584379057f6927230af1f96559a3409ed728",
+    "schemas/composition.schema.json": "c662cffa4b979b0263461f199d969e0c3c045b9f66826fb6dc5c5a566f8ef7d4",
+    "schemas/project.schema.json": "e61afc8d06e32a6098fa81fc10443d6fe747a74157c71869897ff9126e09188b",
+    "schemas/quality-report.schema.json": "86ed1082ec517d5835681e7fff30ed12eed6024513b77b530b7dcf20323c579d",
+    "scripts/composition-lib.mjs": "e7c9c5b9fcbc54a135229002e5ad6064e099fc684993a94b31a1341fc6a39d0b",
+    "scripts/motion-treatment-lib.mjs": "093406c7328f381915bc20ec33a7367b207878ad1ca371982539c85e16b315c4",
+    "scripts/project-composition-proof.mjs": "0d2a20d56880a808d206318268455cd4dc6365156bd3c85e662d7e7b56d55a4c",
+    "scripts/project-lib.mjs": "23c336eb3be8e800e570e81ff07c3a5aa3c230c5190f3153e2c1f63fb4ea6eaf",
+    "scripts/quality-lib.mjs": "fb76bc5bdd4ea77c0e749a6fa291bd8f211cb90892a137690105f4fd1dedb061",
+    "scripts/render-cache-lib.mjs": "1438ecdc2440b746f95ea698e40e02b0cee0bd206374ebe420dc4223ce5d6086",
+    "scripts/runtime-build-lib.mjs": "b5aafd11eed5b246870bee1b9acc313535dec81b0f689ef5782513e4fb8b07ea",
+    "scripts/state-sequence-lib.mjs": "103770dd3accaff7370f97ac59067584a2ab7794ccfc69e2605a90b039a56426",
+    "scripts/style-motion-proof.mjs": "4e120c45ebd16847cdd48f749d7444a44a01f9e6fe06cac60a3fe7972d59da1a",
+    "scripts/style-proof-lib.mjs": "b1acebec547d2e6e3b252bfa0d8caf8eb7113d04583dba32e1ab1e59eebd1a3a",
+    "src/MainVideo.tsx": "1fcab1231499311b831a9de01e071905980197817fe3de635cabd4829ac1affa",
+    "src/ReplicaChapterScene.tsx": "6fa80d9c6983681632c04482749c43c315f771dfa75d86fa2da7b07ac5dad9f9",
+    "src/SceneTransitionOverlay.tsx": "bf5de73b04f99f45b370ff15c4409fb1cecb61e88bc96979e8797fd5136edf8d",
+    "src/motion.ts": "e7f5bac96ba9ca315e15faf12d1f9cc193740a186da8dc8b7617a673f8d11df9",
+    "src/project.ts": "262c38b59dd2d9f1ea39e711c9bc2cec0f6f6c1ac16fa70973659034e61def10",
+    "src/roleMotion.ts": "62647d164cdf26eb3e3c6ae2f8909105f8834b31ae1e125aec41b2a40b23bb0f",
+    "src/sceneTimeline.mjs": "49f96e491c7fdf08a7e221c4262bf33d453e19e686ae294811cae6d4a378863e",
+    "src/stateSequence.ts": "9562aeb918519f51779f8ca63d316ccd8e488e44a433887ed96c79878f467f75",
+    "src/visibilityLifecycle.mjs": "62eeed995de614f56757a3c0be166cd5d29c68787e7bdac0d7df132d9c81934e"
+  }
+}

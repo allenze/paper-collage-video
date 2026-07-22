@@ -27,6 +27,7 @@ import {
   requiredChecksForSemanticBinding,
   validateSemanticEvidenceTargets,
 } from './semantic-contract-lib.mjs';
+import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -406,6 +407,7 @@ const hashReferencedFiles = async (sources) => {
 const findNode = (scene, id) => flattenCompositionNodes(scene.composition?.nodes).find(({node}) => node.id === id)?.node ?? null;
 
 export const collectCompositeQualityTargets = async (project, {manifest = null} = {}) => {
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   const assetManifest = manifest ?? await readManifest(project);
   const recordsByFile = new Map((assetManifest.assets ?? []).map((record) => [path.normalize(record.file), record]));
   const targets = [];
@@ -426,6 +428,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
       const fingerprint = hashCompositionValue({
+        runtimeBuildFingerprint,
         sceneId: scene.id,
         node,
         proofTimes,
@@ -468,6 +471,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
       const fingerprint = hashCompositionValue({
+        runtimeBuildFingerprint,
         sceneId: scene.id,
         group,
         proofTimes: scene.motion?.proofTimes ?? [],
@@ -502,7 +506,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         : collectCompositionVisualSources(scene.composition);
       const memberHashes = await hashReferencedFiles(targetSources);
       const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === event.proofTimeId) ?? null;
-      const fingerprint = hashCompositionValue({sceneId: scene.id, event, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions}, camera: scene.camera, memberHashes});
+      const fingerprint = hashCompositionValue({runtimeBuildFingerprint, sceneId: scene.id, event, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions}, camera: scene.camera, memberHashes});
       targets.push({
         compositeId: `event:${scene.id}:${event.id}`,
         sceneId: scene.id,
@@ -555,6 +559,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         }
         const memberHashes = await hashReferencedFiles(sources);
         const fingerprint = hashCompositionValue({
+          runtimeBuildFingerprint,
           contract,
           evidenceTarget,
           contractFingerprint: semanticContracts.fingerprints.get(contract.id),
@@ -580,6 +585,60 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
     }
   }
   return targets;
+};
+
+export const collectStyleProofTargets = async (project, directingTarget) => {
+  const allTargets = await collectCompositeQualityTargets(project);
+  const matchesDirectingTarget = (target) => {
+    const shots = target.proofShots ?? [{
+      sceneId: target.sceneId,
+      nodeId: target.nodeId,
+    }];
+    return shots.some(({sceneId, nodeId}) =>
+      sceneId === directingTarget.sceneId &&
+      (nodeId === directingTarget.targetId || (target.memberNodeIds ?? []).includes(directingTarget.targetId)) &&
+      (!directingTarget.proofTimeId || (target.proofTimeIds ?? []).includes(directingTarget.proofTimeId)),
+    );
+  };
+  const formalTargets = allTargets.filter(matchesDirectingTarget);
+  if (formalTargets.length > 0) return formalTargets;
+
+  const scene = (project.scenes ?? []).find(({id}) => id === directingTarget.sceneId);
+  const targetNode = scene && directingTarget.targetId !== 'scene-camera'
+    ? findNode(scene, directingTarget.targetId)
+    : null;
+  const nodes = targetNode
+    ? (['asset', 'state-sequence'].includes(targetNode.kind)
+        ? [targetNode]
+        : descendants(targetNode).filter(({kind}) => ['asset', 'state-sequence'].includes(kind)))
+    : [];
+  const sources = nodes.flatMap((node) =>
+    node.kind === 'asset' ? [node.src] : node.states.map(({src}) => src),
+  );
+  const memberHashes = await hashReferencedFiles(sources);
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
+  const proofTimes = scene?.motion?.proofTimes ?? [];
+  return [{
+    compositeId: `style-target:${directingTarget.sceneId}:${directingTarget.targetId}`,
+    sceneId: directingTarget.sceneId,
+    pattern: 'style-target',
+    nodeId: directingTarget.targetId,
+    memberNodeIds: nodes.map(({id}) => id),
+    memberHashes,
+    compositionHash: hashCompositionValue(targetNode ?? {targetId: directingTarget.targetId}),
+    fingerprint: hashCompositionValue({
+      runtimeBuildFingerprint,
+      directingTarget,
+      sceneId: scene?.id,
+      targetNode,
+      proofTimes,
+      camera: scene?.camera,
+      memberHashes,
+    }),
+    proofTimeIds: proofTimes.map(({id}) => id),
+    requiredChecks: [],
+    styleOnly: true,
+  }];
 };
 
 const alphaCoverageInPolygon = async (source, polygon) => {
@@ -753,11 +812,17 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   }));
 
   const proofFile = compositionProofReportPath(slug);
-  const proofReport = (await fileExists(proofFile)) ? await readJson(proofFile) : null;
+  const styleProofFile = path.join(ROOT, 'dist', slug, 'style-motion-proof.json');
+  const proofReports = [];
+  if (await fileExists(proofFile)) proofReports.push(await readJson(proofFile));
+  if (await fileExists(styleProofFile)) proofReports.push(await readJson(styleProofFile));
   const targets = await collectCompositeQualityTargets(project, {manifest});
   const inspectedComposites = await Promise.all(targets.map(async (target) => {
     const review = await preservedReview({previous: previousComposites.get(target.compositeId), fingerprint: target.fingerprint, requiredChecks: target.requiredChecks});
-    const technical = await inspectCompositeTechnical({target, proofReport});
+    const currentProof = proofReports
+      .map((report) => report.composites?.find(({compositeId, fingerprint}) => compositeId === target.compositeId && fingerprint === target.fingerprint))
+      .find(Boolean);
+    const technical = await inspectCompositeTechnical({target, proofReport: currentProof ? {composites: [currentProof]} : null});
     return {
       compositeId: target.compositeId,
       sceneId: target.sceneId,
