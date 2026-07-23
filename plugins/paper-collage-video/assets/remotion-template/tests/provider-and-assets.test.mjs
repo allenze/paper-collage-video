@@ -52,7 +52,7 @@ test('asset lifecycle preserves audit records and enforces one active record', (
 });
 
 const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
-  schemaVersion: 9,
+  schemaVersion: 10,
   slug,
   arc: 'A concise progression from setup through action to resolution.',
   style: {
@@ -253,7 +253,7 @@ test('command adapters write a local output and provenance records its hash', as
     );
     const recorded = await recordAssetProvenance({
       request: {
-        schemaVersion: 6,
+        schemaVersion: 7,
         projectSlug: slug,
         assetId: 'draft-script',
         capability: 'text',
@@ -300,7 +300,7 @@ test('voice outputs are measured and rejected before recording when scene timing
     ], {encoding: 'utf8'});
     assert.equal(generated.status, 0, generated.stderr);
     const base = {
-      schemaVersion: 6,
+      schemaVersion: 7,
       projectSlug: 'voice-timing-test',
       assetId: 'scene-one-narration',
       capability: 'voice',
@@ -323,13 +323,13 @@ test('voice outputs are measured and rejected before recording when scene timing
   }
 });
 
-test('v6 image requests require complete composition and semantic bindings', () => {
+test('v7 image requests require complete composition and semantic bindings', () => {
   assert.throws(
-    () => validateAssetRequest({schemaVersion: 6, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
+    () => validateAssetRequest({schemaVersion: 7, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
     /compositionBinding/,
   );
   assert.doesNotThrow(() => validateAssetRequest({
-    schemaVersion: 6,
+    schemaVersion: 7,
     projectSlug: 'binding-test',
     assetId: 'water',
     capability: 'image',
@@ -350,7 +350,7 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
   const opaque = path.join(directory, 'opaque.png');
   const alpha = path.join(directory, 'alpha.png');
   const request = {
-    schemaVersion: 6,
+    schemaVersion: 7,
     capability: 'image',
     compositionBinding: {canvas: {width: 32, height: 32}},
   };
@@ -434,11 +434,11 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 9);
+    assert.equal(project.schemaVersion, 10);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
-    assert.equal(project.plan.schemaVersion, 2);
+    assert.equal(project.plan.schemaVersion, 3);
     assert.equal(project.plan.motionBudget, null);
     assert.equal(manifest.projectSlug, slug);
     assert.equal(manifest.schemaVersion, 4);
@@ -446,7 +446,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 9);
+    assert.equal(storyboardTemplate.schemaVersion, 10);
     assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
@@ -607,7 +607,7 @@ test('new projects require a locked storyboard before concept approval', async (
     const compiledStoryboard = JSON.parse(
       await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
     );
-    assert.equal(compiledStoryboard.schemaVersion, 9);
+    assert.equal(compiledStoryboard.schemaVersion, 10);
     assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'paper-slide'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.motivation === 'semantic-default'));
@@ -708,6 +708,12 @@ test('concept and all providers can be confirmed in one workflow command', async
             durationSeconds: 30,
             sceneCount: 3,
             durationAuthority: 'content-derived',
+          },
+          sourcePackageDecision: {
+            requiredProviderImageCalls: 0,
+            expectedProviderImageCalls: 0,
+            hardCeiling: 20,
+            sourcePackagePlans: [],
           },
           selections: {
             text: {providerId: 'host-text'},

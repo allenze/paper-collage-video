@@ -8,6 +8,7 @@ import {
   padEvidenceBounds,
   safeEvidenceId,
 } from './asset-evidence-lib.mjs';
+import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
 import {collectStyleProofTargets} from './quality-lib.mjs';
 import {
   styleFingerprintForTarget,
@@ -217,9 +218,15 @@ try {
       record,
     ]),
   );
+  const recordsByAssetId = new Map(
+    activeManifestAssets(manifest).map((record) => [
+      record.assetId,
+      record,
+    ]),
+  );
   const coupledGroups = selectedScenes.flatMap((scene) =>
     collectCompositionGroups(scene.composition)
-      .filter(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern))
+      .filter(({node}) => ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(node.pattern))
       .map((entry) => ({...entry, sceneId: scene.id})),
   );
   const stateSequences = selectedScenes.flatMap((scene) =>
@@ -316,6 +323,53 @@ try {
         });
       }
     }
+    let layerStackProof = null;
+    if (target.pattern === 'registered-depth-stack') {
+      const memberFiles = new Map(
+        target.group.children
+          .filter(({kind}) => kind === 'asset')
+          .map((node) => [node.id, resolvePublicFile(node.src)]),
+      );
+      const referenceRecord = recordsByAssetId.get(
+        target.group.registration.sourceMasterAssetId,
+      );
+      const built = await buildLayerStackProof({
+        group: target.group,
+        memberFiles,
+        referenceFile: referenceRecord?.file
+          ? path.resolve(ROOT, referenceRecord.file)
+          : null,
+        directory: evidenceDirectory,
+        evidenceId: `${target.sceneId}-${target.nodeId}-layer-stack`,
+      });
+      layerStackProof = {
+        ...built,
+        artifacts: {
+          neutralReconstruction: path.relative(
+            ROOT,
+            built.artifacts.neutralReconstruction,
+          ),
+          referenceComparison: path.relative(
+            ROOT,
+            built.artifacts.referenceComparison,
+          ),
+          explodedView: path.relative(
+            ROOT,
+            built.artifacts.explodedView,
+          ),
+          envelopeExtremes:
+            built.artifacts.envelopeExtremes.map((entry) => ({
+              ...entry,
+              file: path.relative(ROOT, entry.file),
+            })),
+        },
+        artifactHashes: Object.fromEntries(
+          Object.entries(built.artifactHashes).map(
+            ([file, hash]) => [path.relative(ROOT, file), hash],
+          ),
+        ),
+      };
+    }
     composites.push({
       compositeId: target.compositeId,
       pattern: target.pattern,
@@ -323,6 +377,7 @@ try {
       memberNodeIds: target.memberNodeIds,
       fingerprint: styleFingerprintForTarget(target),
       proofFrames,
+      layerStackProof,
     });
   }
 

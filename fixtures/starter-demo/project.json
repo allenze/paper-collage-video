@@ -1,10 +1,10 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "slug": "starter-demo",
   "title": "Paper Collage Workspace",
   "plan": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "slug": "starter-demo",
     "status": "pending",
     "inputMode": "none",

@@ -19,7 +19,7 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const sheetRequest = () => ({
-  schemaVersion: 6,
+  schemaVersion: 7,
   projectSlug: 'fixture-project',
   assetId: 'reader-state-sheet',
   capability: 'image',

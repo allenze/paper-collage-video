@@ -1,6 +1,7 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v9 editorial/composition authoring, proof review, or delivery tuning.
+Read this before style sampling, bulk images, v10 composition/v9 editorial
+authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
@@ -14,7 +15,14 @@ Registered members add topology-sensitive asset checks: `silhouette-fidelity`, `
 
 Every transparent foreground also receives `rectangular-alpha-band-free`. The detector scans horizontal and vertical runs whose alpha is 4–96, requires at least 24 pixels and 42% of the relevant axis, merges adjacent scan lines, and treats a band as thin at no more than 2.5% of the cross-axis. It correlates candidates within 1.2% of canvas edges, crop edges, or registered placement/rectangular clip edges; four compatible sides form an explicit rectangular-residue error. Broad soft transitions remain informational so ordinary paper shadows do not fail, while an unusually long uncorrelated straight band is a warning. Diagnostics name scale, orientation, exact coordinates, span, correlation, classification, and severity.
 
-The same inspection runs once at original resolution and again after Lanczos scaling to the asset's actual proof/render dimensions. Proof bundles contain `*-alpha-bands.json` and `*-alpha-bands.png`; quality requires current passing scale evidence for all three `supported-subject` members. These deterministic artifacts do not replace visual inspection of the alpha mask, checkerboard, tight crop, or motion-stress sheet. `key-edge-clean` is a different chroma/matte test and cannot be used as a proxy for rectangular crop residue.
+The same inspection runs once at original resolution and again after Lanczos
+scaling to the asset's actual proof/render dimensions. Proof bundles contain
+`*-alpha-bands.json` and `*-alpha-bands.png`; quality requires current passing
+scale evidence for all three `supported-subject` and
+`registered-depth-stack` members. These deterministic artifacts do not replace
+visual inspection of the alpha mask, checkerboard, tight crop, or family proof.
+`key-edge-clean` is a different chroma/matte test and cannot be used as a proxy
+for rectangular crop residue.
 
 Semantic risk adds evidence-backed checks:
 
@@ -31,7 +39,19 @@ npm run style:proof -- <slug> --duration=4
 npm run project:quality -- <slug> prepare
 ```
 
-The schema-v6 report uses `scope=style`, binds the complete `styleProofPlan`, and emits a structured composite for every selected directing target, including `free` targets. Its current composite can satisfy the matching quality target directly; a separate full-project composition proof is not required merely to approve style. Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, checkerboard isolates, tight crops, and before/shifted motion-stress sheets where applicable. Record participating assets and the representative composite with those paths:
+The schema-v6 style report uses `scope=style`, binds the complete
+`styleProofPlan`, and emits a structured composite for every selected directing
+target, including `free` targets. Its current composite can satisfy the matching
+quality target directly; a separate full-project composition proof is not
+required merely to approve style. Inspect
+`dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks,
+checkerboard isolates, tight crops, and before/shifted motion-stress sheets
+where applicable. For a `registered-depth-stack`, inspect the family as a
+whole: neutral reconstruction, reference comparison, checkerboard exploded
+view, and both reveal-envelope extremes for 16:9, 9:16, and 1:1. These six
+family artifacts must be current and show zero transparent output pixels;
+isolated member motion stress cannot prove hidden content. Record participating
+assets and the representative composite with those paths.
 
 ```json
 {
@@ -52,7 +72,10 @@ The schema-v6 report uses `scope=style`, binds the complete `styleProofPlan`, an
 }
 ```
 
-After final local audio, actual timing data, and real v9 editorial/groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only project-, asset-, and runtime-fingerprint-current frames/targets):
+After final local audio, actual timing data, and real v10 composition/v9
+editorial groups/state sequences exist, run (the proof command synchronizes
+measured narration duration first and reuses only project-, asset-, and
+runtime-fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
@@ -61,7 +84,12 @@ npm run project:quality -- <slug> prepare
 
 To deliberately bypass every proof cache layer, append `--force`. The generated report must say `cache.forced=true` and show zero reused frames, composites, and asset evidence.
 
-It also creates `composition-proof/evidence/` alpha masks, checkerboard isolates, tight crops, and motion-stress sheets for coupled assets introduced after style approval. Inspect full proof frames, relationship crops, debug frames, and these post-style asset sheets. Record composite reviews in the same atomic batch file, using `compositeId` instead of `assetId`:
+It also creates `composition-proof/evidence/` alpha masks, checkerboard
+isolates, tight crops, and motion-stress sheets for ordinary coupled assets
+introduced after style approval. Depth stacks receive the six family artifacts
+described above. Inspect full proof frames, relationship crops, debug frames,
+and these post-style family sheets. Record composite reviews in the same atomic
+batch file, using `compositeId` instead of `assetId`:
 
 ```json
 {
@@ -90,6 +118,11 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
 ## Pattern-Specific Review
 
 - `supported-subject`: support contact, readable inside/on relation, shared carrier motion, identity continuity, and clean subject isolation under relative motion. The default `between-supports` layering also requires visible front occlusion; an explicitly authored `subject-front` relationship instead requires the complete subject to remain clearly above all support members.
+- `registered-depth-stack`: exact clean rear/full subject/full front members,
+  common registration/full canvas, strict rear-to-front depth, neutral
+  reconstruction/reference conformity, no transparent exposure at either
+  extreme of every responsive reveal envelope, and clean bounded relative
+  motion.
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
 - `state-sequence`: state order correct, pose registration stable, identity consistent, transition clean, every state bound to a current proof frame.
 - `parallax-rig`: depth order readable, camera coupling clean, registered groups stable, final composition readable.
@@ -102,7 +135,14 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
 - bound event: visual event visible, sound event bound when required, proof time bound, final state preserved.
 - semantic contract: every requested check is visible in its exact target shots; cross-scene checks compare all bound scenes rather than one attractive frame.
 
-Deterministic checks already block missing slots, mismatched canvases, non-registered or mixed-provenance supported families, duplicate carrier motion, off-zone contacts, absent front alpha, rectangular low-alpha crop residue, incomplete upper/lower clips, duplicate semantic coverage, invalid targets, missing required sounds, out-of-window proofs, stale style fingerprints, and missing topology evidence. They do not infer whether every semantic part is intact; that remains evidence-backed semantic review.
+Deterministic checks already block missing slots, mismatched canvases,
+non-registered or mixed-provenance families, incomplete layer roles, wrong
+depth order, motion outside reveal envelopes, duplicate carrier motion,
+off-zone contacts, absent front alpha, rectangular low-alpha crop residue,
+incomplete upper/lower clips, duplicate semantic coverage, invalid targets,
+missing required sounds, out-of-window proofs, stale style fingerprints, and
+missing topology/family evidence. They do not infer whether every semantic part
+is intact; that remains evidence-backed semantic review.
 
 ## Motion, Visibility, and Event Authoring
 
@@ -116,7 +156,11 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v9 editorial/composition validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; actual final-audio edit-point evidence is authoritative for editorial bindings. Review reading-speed warnings.
+`project:assets-ready` owns narration synchronization, subtitle derivation, v10
+composition/v9 editorial validation, current-proof enforcement, and both
+quality gates. Provider or forced-alignment timing wins; actual final-audio
+edit-point evidence is authoritative for editorial bindings. Review
+reading-speed warnings.
 
 After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds an audio-only timeline mix, and measures LUFS/true peak. A passing mix needs no decision. A failing mix writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns preflight. Changed source audio or timing invalidates the decision. The final artifact report remains authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 

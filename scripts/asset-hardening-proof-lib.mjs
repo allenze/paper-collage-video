@@ -3,6 +3,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {
   PHASE2_REGISTERED_FAMILY,
+  PHASE2_REVEAL_ENVELOPE,
 } from '../fixtures/phase2-proof-fixture.mjs';
 import {
   alphaBandOverlaySvg,
@@ -38,6 +39,7 @@ const manualImageRecord = async ({
   file,
   index,
   compositionBinding = null,
+  request = {},
 }) => {
   const metadata = await sharp(file).metadata();
   const relative = path.relative(ROOT, file);
@@ -63,7 +65,7 @@ const manualImageRecord = async ({
       hasAlpha: metadata.hasAlpha === true,
     },
     recordedAt: fixedAt,
-    request: {},
+    request,
     compositionBinding,
     stateBinding: null,
     stateSheetBinding: null,
@@ -81,62 +83,87 @@ const manualImageRecord = async ({
   };
 };
 
-const writeMask = async ({file, shape}) => {
-  const {width, height} = PHASE2_REGISTERED_FAMILY.registration.canvas;
-  await sharp(Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="transparent"/>${shape}</svg>`,
-  )).png().toFile(file);
-};
-
 const prepareRegisteredSource = async () => {
   await fs.mkdir(ASSET_HARDENING_PUBLIC_DIR, {recursive: true});
   const {width, height} = PHASE2_REGISTERED_FAMILY.registration.canvas;
   const masterFile = path.join(ASSET_HARDENING_PUBLIC_DIR, 'source-master.png');
-  const masterSvg = Buffer.from(`
+  const rearSvg = Buffer.from(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      <rect width="100%" height="100%" fill="#00000000"/>
+      <rect width="100%" height="100%" fill="#ead9ae"/>
       <path d="M30 186 Q240 128 450 186 L432 284 H48 Z" fill="#94704c"/>
       <path d="M72 222 Q240 174 408 222 L390 274 H90 Z" fill="#c69a62"/>
+    </svg>
+  `);
+  const subjectSvg = Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <rect width="100%" height="100%" fill="#00000000"/>
       <ellipse cx="240" cy="126" rx="52" ry="82" fill="#d85f4b"/>
       <circle cx="240" cy="64" r="38" fill="#e6bb78"/>
       <path d="M184 222 Q240 184 296 222 V266 H184 Z" fill="#6c4931"/>
+    </svg>
+  `);
+  const frontSvg = Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <rect width="100%" height="100%" fill="#00000000"/>
       <path d="M30 238 Q240 190 450 238 V294 H30 Z" fill="#b98551"/>
     </svg>
   `);
-  await sharp(masterSvg).png().toFile(masterFile);
-  const masks = {
-    'phase2-mask-rear': path.join(ASSET_HARDENING_PUBLIC_DIR, 'mask-rear.png'),
-    'phase2-mask-subject': path.join(ASSET_HARDENING_PUBLIC_DIR, 'mask-subject.png'),
-    'phase2-mask-front': path.join(ASSET_HARDENING_PUBLIC_DIR, 'mask-front.png'),
-  };
-  await writeMask({
-    file: masks['phase2-mask-rear'],
-    shape: '<defs><mask id="rear"><path d="M30 176 Q240 118 450 176 L432 286 H48 Z" fill="white"/><circle cx="240" cy="64" r="42" fill="black"/><ellipse cx="240" cy="145" rx="62" ry="96" fill="black"/><path d="M24 230 Q240 182 456 230 V300 H24 Z" fill="black"/></mask></defs><rect width="100%" height="100%" fill="white" mask="url(#rear)"/>',
-  });
-  await writeMask({
-    file: masks['phase2-mask-subject'],
-    shape: '<defs><mask id="subject"><circle cx="240" cy="64" r="40" fill="white"/><ellipse cx="240" cy="145" rx="58" ry="92" fill="white"/><path d="M24 230 Q240 182 456 230 V300 H24 Z" fill="black"/></mask></defs><rect width="100%" height="100%" fill="white" mask="url(#subject)"/>',
-  });
-  await writeMask({
-    file: masks['phase2-mask-front'],
-    shape: '<path d="M24 230 Q240 182 456 230 V300 H24 Z" fill="white"/>',
-  });
-  return {masterFile, masks};
+  const rear = await sharp(rearSvg).png().toBuffer();
+  const subject = await sharp(subjectSvg).png().toBuffer();
+  const front = await sharp(frontSvg).png().toBuffer();
+  await sharp(rear)
+    .composite([
+      {input: subject, left: 0, top: 0},
+      {input: front, left: 0, top: 0},
+    ])
+    .png()
+    .toFile(masterFile);
+  const layerSheetFile = path.join(
+    ASSET_HARDENING_PUBLIC_DIR,
+    'registered-layer-sheet.png',
+  );
+  await sharp({
+    create: {
+      width: width * 2,
+      height: height * 2,
+      channels: 4,
+      background: '#00000000',
+    },
+  })
+    .composite([
+      {input: masterFile, left: 0, top: 0},
+      {input: rear, left: width, top: 0},
+      {input: subject, left: 0, top: height},
+      {input: front, left: width, top: height},
+    ])
+    .png()
+    .toFile(layerSheetFile);
+  return {masterFile, layerSheetFile};
 };
 
 const createRegisteredFamilySpec = () => ({
   $schema: '../../../../../schemas/registered-family.schema.json',
-  schemaVersion: 1,
+  schemaVersion: 2,
   projectSlug: 'vox-phase2-proof',
   sceneId: 'phase2-scene-1',
   groupId: PHASE2_REGISTERED_FAMILY.groupId,
   familyId: PHASE2_REGISTERED_FAMILY.familyId,
+  pattern: 'registered-depth-stack',
+  motionCapability: 'bounded-relative',
+  sourcePackageId: 'phase2-layer-package',
+  sourceStrategy: 'registered-layer-sheet',
+  revealEnvelope: PHASE2_REVEAL_ENVELOPE,
   registration: PHASE2_REGISTERED_FAMILY.registration,
   members: PHASE2_REGISTERED_FAMILY.members.map((member) => ({
     assetId: member.assetId,
     nodeId: member.nodeId,
     role: member.role,
     slot: member.role,
+    completeness: {
+      'support-rear': 'clean-plate',
+      subject: 'full-silhouette',
+      'support-front': 'full-overlay',
+    }[member.role],
     output: path.join(
       'public',
       'fixtures',
@@ -145,14 +172,11 @@ const createRegisteredFamilySpec = () => ({
       path.basename(member.file),
     ),
     source: {
-      kind: 'source-master',
-      assetId: PHASE2_REGISTERED_FAMILY.registration.sourceMasterAssetId,
+      kind: 'registered-layer-sheet',
+      assetId: 'phase2-registered-layer-sheet',
+      packageRole: member.role,
     },
-    derivation: {
-      maskAssetId: member.maskAssetId,
-      maskChannel: 'alpha',
-      invertMask: false,
-    },
+    derivation: {},
   })),
   recoveryPolicy: REGISTERED_FAMILY_RECOVERY_POLICY,
   applyToProject: false,
@@ -170,19 +194,18 @@ const checkerboard = ({width, height, cell = 24}) => Buffer.from(`
 `);
 
 export const prepareRegisteredFamilyProof = async () => {
-  const {masterFile, masks} = await prepareRegisteredSource();
+  const {masterFile, layerSheetFile} = await prepareRegisteredSource();
   const registration = PHASE2_REGISTERED_FAMILY.registration;
   const sourceBinding = {
     sceneId: 'phase2-scene-1',
     nodeId: PHASE2_REGISTERED_FAMILY.groupId,
-    pattern: 'supported-subject',
+    pattern: 'registered-depth-stack',
     registrationId: registration.id,
     sourceMasterAssetId: registration.sourceMasterAssetId,
     outputRole: 'source-master',
     canvas: registration.canvas,
     derivation: {
-      method: 'alpha-extraction',
-      parentAssetId: registration.sourceMasterAssetId,
+      method: 'manual-import',
     },
   };
   const records = [
@@ -193,12 +216,59 @@ export const prepareRegisteredFamilyProof = async () => {
       compositionBinding: sourceBinding,
     }),
   ];
-  let index = 2;
-  for (const [assetId, file] of Object.entries(masks)) {
-    records.push(await manualImageRecord({assetId, file, index}));
-    index += 1;
-  }
   const spec = createRegisteredFamilySpec();
+  const layerPackageBinding = {
+    sourcePackageId: spec.sourcePackageId,
+    pattern: spec.pattern,
+    motionCapability: spec.motionCapability,
+    sourceStrategy: spec.sourceStrategy,
+    registrationId: registration.id,
+    sourceMasterAssetId: registration.sourceMasterAssetId,
+    canvas: registration.canvas,
+    packageRole: 'registered-sheet',
+    completeness: null,
+    memberAssetIds: spec.members.map(({assetId}) => assetId),
+    referenceAssetIds: [registration.sourceMasterAssetId],
+    sheetLayout: {
+      columns: 2,
+      rows: 2,
+      cells: [
+        {packageRole: 'reference', row: 0, column: 0},
+        {packageRole: 'support-rear', row: 0, column: 1},
+        {packageRole: 'subject', row: 1, column: 0},
+        {packageRole: 'support-front', row: 1, column: 1},
+      ],
+    },
+    recoveryPolicy: {
+      completeSourceContext: true,
+      localDeterministicFixFirst: true,
+      isolatedMemberGeneration: 'forbidden',
+      providerRepair: 'masked-complete-source-edit',
+      fallback: 'full-source-regeneration',
+    },
+  };
+  records.push(await manualImageRecord({
+    assetId: 'phase2-registered-layer-sheet',
+    file: layerSheetFile,
+    index: 2,
+    compositionBinding: {
+      sceneId: spec.sceneId,
+      nodeId: spec.groupId,
+      pattern: spec.pattern,
+      registrationId: registration.id,
+      sourceMasterAssetId: registration.sourceMasterAssetId,
+      outputRole: 'registered-layer-sheet',
+      canvas: {
+        width: registration.canvas.width * 2,
+        height: registration.canvas.height * 2,
+      },
+      derivation: {
+        method: 'provider-generation',
+        parentAssetId: registration.sourceMasterAssetId,
+      },
+    },
+    request: {layerPackageBinding},
+  }));
   const derived = await deriveRegisteredFamily({
     root: ROOT,
     spec,
@@ -213,6 +283,8 @@ export const prepareRegisteredFamilyProof = async () => {
   const assertion = assertRegisteredFamilyRecords({
     records: derived.records,
     registration,
+    pattern: spec.pattern,
+    sourcePackageId: spec.sourcePackageId,
   });
   if (!assertion.passed) {
     throw new Error(`registered-family proof 无效：${assertion.errors.join('；')}`);

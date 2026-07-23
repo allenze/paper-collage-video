@@ -35,7 +35,7 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
 });
 
 const authoredStoryboard = () => ({
-  schemaVersion: 9,
+  schemaVersion: 10,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
@@ -113,7 +113,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v9 compiles treatments into composition plans, risk selection, and cost evidence', () => {
+test('v10 compiles treatments into composition plans, risk selection, source packages, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);
@@ -135,6 +135,66 @@ test('v9 compiles treatments into composition plans, risk selection, and cost ev
   assert.equal(summary.scenes[0].treatmentCount, 3);
   assert.equal(summary.directing.estimatedPoseSheetCalls, 0);
   assert.equal(summary.directing.styleProofPlan.targets[0].treatmentId, 'land-on-stage');
+});
+
+test('v10 compiles one registered depth stack before provider approval', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[1].treatments[0] = {
+    ...authored.scenes[0].beats[1].treatments[0],
+    id: 'boat-layer-package',
+    targetId: 'boat-stack',
+    changeClass: 'depth-layer-separation',
+    motion: {kind: 'continuous-transform', preset: 'drift'},
+    composition: {
+      pattern: 'registered-depth-stack',
+      motionCapability: 'bounded-relative',
+      sourcePackageId: 'boat-waves-package',
+      sourceStrategy: 'registered-layer-sheet',
+      layers: [
+        {
+          id: 'rear',
+          role: 'support-rear',
+          completeness: 'clean-plate',
+          depth: -0.7,
+        },
+        {
+          id: 'boat',
+          role: 'subject',
+          completeness: 'full-silhouette',
+          depth: 0,
+        },
+        {
+          id: 'front',
+          role: 'support-front',
+          completeness: 'full-overlay',
+          depth: 0.7,
+        },
+      ],
+      revealEnvelope: {
+        '16:9': {x: 0.04, y: 0.03, scale: 0.05, rotationDegrees: 2},
+        '9:16': {x: 0.02, y: 0.04, scale: 0.04, rotationDegrees: 1},
+        '1:1': {x: 0.03, y: 0.03, scale: 0.04, rotationDegrees: 1},
+      },
+    },
+    semanticRisk: 'topology',
+    rationale: 'The three complete registered layers may move only inside their proven responsive reveal envelope.',
+  };
+  const storyboard = compileStoryboardDirecting(authored, {
+    plan: plan('draft'),
+  });
+  const [layerPlan] =
+    storyboard.scenes[0].compositionPlan.layerStacks;
+  assert.equal(layerPlan.id, 'boat-waves-package');
+  assert.equal(layerPlan.providerImageCalls, 1);
+  assert.equal(
+    storyboard.directingSummary.generationBudget
+      .requiredProviderImageCalls,
+    1,
+  );
+  assert.equal(
+    storyboard.directingSummary.generationBudget.hardCeiling,
+    6,
+  );
 });
 
 test('style proof planning covers semantic, coupled, and state risks with the fewest source families', () => {

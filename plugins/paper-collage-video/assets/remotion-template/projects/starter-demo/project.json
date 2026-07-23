@@ -1,10 +1,10 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "slug": "starter-demo",
   "title": "Paper Collage Starter",
   "plan": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "slug": "starter-demo",
     "status": "resolved",
     "inputMode": "both",
@@ -14,7 +14,9 @@
       "environmentLayers": 1,
       "characterSheets": 1,
       "styleSamples": 1,
-      "maxGeneratedImages": 4
+      "baseImageAttempts": 4,
+      "layerPackageAttemptReserve": 2,
+      "maxGeneratedImages": 6
     },
     "motionBudget": {
       "maxPoseSheetCalls": 1,

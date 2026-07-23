@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v9",
+  "title": "Paper Collage Project v10",
   "type": "object",
   "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 9},
+    "schemaVersion": {"const": 10},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "plan": {"$ref": "#/$defs/plan"},
@@ -38,7 +38,7 @@
       "type": "object",
       "required": ["schemaVersion", "slug", "status", "inputMode", "productionProfile", "assetBudget", "motionBudget", "requested", "resolved", "updatedAt"],
       "properties": {
-        "schemaVersion": {"const": 2},
+        "schemaVersion": {"const": 3},
         "slug": {"type": "string"},
         "status": {"enum": ["pending", "resolved"]},
         "inputMode": {"enum": ["none", "duration-only", "scenes-only", "both"]},
@@ -48,12 +48,14 @@
             {"type": "null"},
             {
               "type": "object",
-              "required": ["backgrounds", "environmentLayers", "characterSheets", "styleSamples", "maxGeneratedImages"],
+              "required": ["backgrounds", "environmentLayers", "characterSheets", "styleSamples", "baseImageAttempts", "layerPackageAttemptReserve", "maxGeneratedImages"],
               "properties": {
                 "backgrounds": {"type": "integer", "minimum": 0},
                 "environmentLayers": {"type": "integer", "minimum": 0},
                 "characterSheets": {"type": "integer", "minimum": 0},
                 "styleSamples": {"type": "integer", "minimum": 0},
+                "baseImageAttempts": {"type": "integer", "minimum": 0},
+                "layerPackageAttemptReserve": {"type": "integer", "minimum": 0},
                 "maxGeneratedImages": {"type": "integer", "minimum": 0}
               },
               "additionalProperties": false

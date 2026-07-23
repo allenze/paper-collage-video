@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard.schema.json",
-  "title": "Compiled Paper Collage Storyboard v9",
+  "title": "Compiled Paper Collage Storyboard v10",
   "type": "object",
   "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "editorial", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 9},
+    "schemaVersion": {"const": 10},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"const": "ready"},
     "arc": {"type": "string", "minLength": 1},
@@ -78,6 +78,38 @@
       },
       "additionalProperties": false
     },
+    "layerRevealLimit": {
+      "type": "object",
+      "required": ["x", "y", "scale", "rotationDegrees"],
+      "properties": {
+        "x": {"type": "number", "minimum": 0, "maximum": 0.25},
+        "y": {"type": "number", "minimum": 0, "maximum": 0.25},
+        "scale": {"type": "number", "minimum": 0, "maximum": 0.25},
+        "rotationDegrees": {"type": "number", "minimum": 0, "maximum": 15}
+      },
+      "additionalProperties": false
+    },
+    "layerRevealEnvelope": {
+      "type": "object",
+      "required": ["16:9", "9:16", "1:1"],
+      "properties": {
+        "16:9": {"$ref": "#/$defs/layerRevealLimit"},
+        "9:16": {"$ref": "#/$defs/layerRevealLimit"},
+        "1:1": {"$ref": "#/$defs/layerRevealLimit"}
+      },
+      "additionalProperties": false
+    },
+    "layerIntent": {
+      "type": "object",
+      "required": ["id", "role", "completeness", "depth"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "role": {"enum": ["support-rear", "subject", "support-front"]},
+        "completeness": {"enum": ["clean-plate", "full-silhouette", "full-overlay"]},
+        "depth": {"type": "number", "minimum": -1, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
     "treatment": {
       "type": "object",
       "required": ["id", "targetId", "importance", "necessity", "changeClass", "motion", "composition", "graphic", "semanticRisk", "proofTimeId", "rationale"],
@@ -86,7 +118,7 @@
         "targetId": {"type": "string", "minLength": 1},
         "importance": {"enum": ["hero", "supporting", "ambient"]},
         "necessity": {"enum": ["required", "enhancement"]},
-        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold", "visibility-change", "depth-parallax", "decorative-field"]},
+        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold", "visibility-change", "depth-parallax", "depth-layer-separation", "decorative-field"]},
         "motion": {
           "type": "object",
           "required": ["kind"],
@@ -116,8 +148,18 @@
           "type": "object",
           "required": ["pattern"],
           "properties": {
-            "pattern": {"enum": ["free", "supported-subject", "registered-environment"]},
-            "relationship": {"$ref": "#/$defs/relationshipIntent"}
+            "pattern": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack"]},
+            "relationship": {"$ref": "#/$defs/relationshipIntent"},
+            "motionCapability": {"enum": ["rigid-locked", "bounded-relative"]},
+            "sourcePackageId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+            "sourceStrategy": {"enum": ["rigid-master", "registered-layer-sheet", "context-preserving-layer-edits"]},
+            "layers": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {"$ref": "#/$defs/layerIntent"}
+            },
+            "revealEnvelope": {"$ref": "#/$defs/layerRevealEnvelope"}
           },
           "additionalProperties": false
         },
@@ -198,9 +240,9 @@
     },
     "compositionPlan": {
       "type": "object",
-      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "visibilityEvents", "motifFields", "graphics"],
+      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "visibilityEvents", "motifFields", "graphics", "layerStacks"],
       "properties": {
-        "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["free", "supported-subject", "registered-environment"]}},
+        "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack"]}},
         "relationships": {
           "type": "array",
           "items": {
@@ -220,7 +262,33 @@
         "continuousMotions": {"type": "array", "items": {"$ref": "#/$defs/continuousMotion"}},
         "visibilityEvents": {"type": "array", "items": {"$ref": "#/$defs/visibilityEvent"}},
         "motifFields": {"type": "array", "items": {"$ref": "#/$defs/motifFieldPlan"}},
-        "graphics": {"type": "array", "items": {"$ref": "#/$defs/graphicPlan"}}
+        "graphics": {"type": "array", "items": {"$ref": "#/$defs/graphicPlan"}},
+        "layerStacks": {"type": "array", "items": {"$ref": "#/$defs/layerStackPlan"}}
+      },
+      "additionalProperties": false
+    },
+    "layerStackPlan": {
+      "type": "object",
+      "required": ["id", "treatmentId", "sceneId", "targetId", "pattern", "motionCapability", "sourceStrategy", "layers", "revealEnvelope", "providerImageCalls", "localDerivatives", "avoidedCalls", "proofTimeId"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "treatmentId": {"type": "string", "minLength": 1},
+        "sceneId": {"type": "string", "minLength": 1},
+        "targetId": {"type": "string", "minLength": 1},
+        "pattern": {"enum": ["supported-subject", "registered-depth-stack"]},
+        "motionCapability": {"enum": ["rigid-locked", "bounded-relative"]},
+        "sourceStrategy": {"enum": ["rigid-master", "registered-layer-sheet", "context-preserving-layer-edits"]},
+        "layers": {"type": "array", "maxItems": 3, "items": {"$ref": "#/$defs/layerIntent"}},
+        "revealEnvelope": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/layerRevealEnvelope"}
+          ]
+        },
+        "providerImageCalls": {"enum": [1, 4]},
+        "localDerivatives": {"enum": [0, 3]},
+        "avoidedCalls": {"enum": [0, 3]},
+        "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },
       "additionalProperties": false
     },
@@ -389,7 +457,7 @@
     },
     "directingSummary": {
       "type": "object",
-      "required": ["profile", "requiredStateFamilies", "enhancementStateFamilies", "totalStateFamilies", "totalStates", "estimatedPoseSheetCalls", "maxStatesInFamily", "continuousTargets", "visibilityTargets", "motifFieldTargets", "graphicTreatments", "coupledRelationships", "avoidedIsolatedStateCalls", "poseSheetPlans", "budget", "styleProofPlan", "fingerprint"],
+      "required": ["profile", "requiredStateFamilies", "enhancementStateFamilies", "totalStateFamilies", "totalStates", "estimatedPoseSheetCalls", "maxStatesInFamily", "continuousTargets", "visibilityTargets", "motifFieldTargets", "graphicTreatments", "coupledRelationships", "avoidedIsolatedStateCalls", "poseSheetPlans", "budget", "generationBudget", "styleProofPlan", "fingerprint"],
       "properties": {
         "profile": {"oneOf": [{"enum": ["draft", "balanced", "full-depth"]}, {"type": "null"}]},
         "requiredStateFamilies": {"type": "integer", "minimum": 0},
@@ -430,6 +498,21 @@
           }
         },
         "budget": {"$ref": "#/$defs/motionBudget"},
+        "generationBudget": {
+          "type": "object",
+          "required": ["requiredProviderImageCalls", "expectedProviderImageCalls", "sourcePackageProviderCalls", "poseSheetProviderCalls", "localDerivatives", "avoidedCalls", "hardCeiling", "sourcePackagePlans"],
+          "properties": {
+            "requiredProviderImageCalls": {"type": "integer", "minimum": 0},
+            "expectedProviderImageCalls": {"type": "integer", "minimum": 0},
+            "sourcePackageProviderCalls": {"type": "integer", "minimum": 0},
+            "poseSheetProviderCalls": {"type": "integer", "minimum": 0},
+            "localDerivatives": {"type": "integer", "minimum": 0},
+            "avoidedCalls": {"type": "integer", "minimum": 0},
+            "hardCeiling": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0}]},
+            "sourcePackagePlans": {"type": "array", "items": {"$ref": "#/$defs/layerStackPlan"}}
+          },
+          "additionalProperties": false
+        },
         "styleProofPlan": {"$ref": "#/$defs/styleProofPlan"},
         "fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       },

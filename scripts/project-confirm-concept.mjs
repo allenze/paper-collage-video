@@ -17,6 +17,7 @@ import {
   transitionProduction,
 } from './production-state.mjs';
 import {assertStoryboardReady} from './storyboard-lib.mjs';
+import {assertSourcePackageDecision} from './layer-source-plan-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -67,7 +68,11 @@ try {
   const {project} = await loadProject(slug);
   assertCreativePlanReady(project.plan, {slug});
   const confirmedPlan = assertConfirmedPlanDecision(payload.planDecision, project.plan);
-  await assertStoryboardReady(slug, project.plan);
+  const storyboard = await assertStoryboardReady(slug, project.plan);
+  const confirmedSourcePackages = assertSourcePackageDecision(
+    payload.sourcePackageDecision,
+    storyboard.directingSummary,
+  );
   const at = new Date().toISOString();
   const confirmed = await writeProviderSelections({
     slug,
@@ -91,6 +96,9 @@ try {
   );
   console.log(
     `✓ 已锁定制作规格：${confirmedPlan.productionProfile} · ${confirmedPlan.durationSeconds}s · ${confirmedPlan.sceneCount} 幕 · ${confirmedPlan.durationAuthority}`,
+  );
+  console.log(
+    `✓ 已锁定分层 source packages：结构最低 ${confirmedSourcePackages.requiredProviderImageCalls} 次图片调用 · 预计 ${confirmedSourcePackages.expectedProviderImageCalls} 次 · 硬上限 ${confirmedSourcePackages.hardCeiling ?? '未设置'}`,
   );
   console.log(`✓ 生产状态：${next.stage}`);
 } catch (error) {

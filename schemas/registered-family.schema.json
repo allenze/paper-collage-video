@@ -9,6 +9,11 @@
     "sceneId",
     "groupId",
     "familyId",
+    "pattern",
+    "motionCapability",
+    "sourcePackageId",
+    "sourceStrategy",
+    "revealEnvelope",
     "registration",
     "members",
     "recoveryPolicy",
@@ -16,11 +21,16 @@
   ],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 1},
+    "schemaVersion": {"const": 2},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "sceneId": {"type": "string", "minLength": 1},
     "groupId": {"type": "string", "minLength": 1},
     "familyId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "pattern": {"enum": ["supported-subject", "registered-depth-stack"]},
+    "motionCapability": {"const": "bounded-relative"},
+    "sourcePackageId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "sourceStrategy": {"enum": ["registered-layer-sheet", "context-preserving-layer-edits"]},
+    "revealEnvelope": {"$ref": "composition.schema.json#/$defs/layerRevealEnvelope"},
     "registration": {
       "type": "object",
       "required": ["id", "sourceMasterAssetId", "canvas", "origin"],
@@ -65,20 +75,11 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["kind", "assetId"],
+          "required": ["kind", "assetId", "packageRole"],
           "properties": {
-            "kind": {"const": "source-master"},
-            "assetId": {"type": "string", "minLength": 1}
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": ["kind", "assetId", "stateId"],
-          "properties": {
-            "kind": {"const": "registered-sheet"},
+            "kind": {"const": "registered-layer-sheet"},
             "assetId": {"type": "string", "minLength": 1},
-            "stateId": {"type": "string", "minLength": 1}
+            "packageRole": {"enum": ["support-rear", "subject", "support-front"]}
           },
           "additionalProperties": false
         },
@@ -86,7 +87,7 @@
           "type": "object",
           "required": ["kind", "assetId"],
           "properties": {
-            "kind": {"const": "registered-sheet-member"},
+            "kind": {"const": "layer-package-member"},
             "assetId": {"type": "string", "minLength": 1}
           },
           "additionalProperties": false
@@ -145,12 +146,13 @@
     },
     "member": {
       "type": "object",
-      "required": ["assetId", "nodeId", "role", "slot", "output", "source", "derivation"],
+      "required": ["assetId", "nodeId", "role", "slot", "completeness", "output", "source", "derivation"],
       "properties": {
         "assetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
         "nodeId": {"type": "string", "minLength": 1},
         "role": {"enum": ["support-rear", "subject", "support-front"]},
         "slot": {"enum": ["support-rear", "subject", "support-front"]},
+        "completeness": {"enum": ["clean-plate", "full-silhouette", "full-overlay"]},
         "output": {"type": "string", "minLength": 1},
         "source": {"$ref": "#/$defs/source"},
         "derivation": {"$ref": "#/$defs/derivation"}

@@ -1,4 +1,42 @@
-# Paper Collage Video 0.16.0-dev.3
+# Paper Collage Video 0.16.0-dev.4
+
+This development release moves rear/subject/front completeness planning before
+provider approval and generation. It fixes the production-design error exposed
+by the stopped 《纸舟穿浪》 pilot: a flattened image contains only visible
+pixels and therefore cannot be masked into independently moving layers with
+complete hidden content.
+
+## Layer-complete production contract
+
+- Project and Storyboard schema v10 compile a stable source package before any
+  layer-aware provider request can be reserved.
+- `registered-depth-stack` requires exactly one clean rear plate, one complete
+  subject silhouette, and one complete front overlay on a shared registration
+  canvas with strict depth order.
+- Every stack declares 16:9, 9:16, and 1:1 reveal envelopes; runtime validation
+  rejects local transforms outside those envelopes.
+- Asset-request schema v7 accepts either one registered 2x2
+  reference/rear/subject/front sheet or one complete reference plus three
+  context-preserving layer edits. Isolated member generation and flat-master
+  extraction are invalid.
+
+## Budget, provenance, and proof
+
+- Creative Plan v3 separates base attempts from a layer-package recovery
+  reserve. One-scene hard ceilings are draft 6, balanced 8, and full-depth 11.
+- Concept approval binds the exact compiler-owned `sourcePackageDecision`;
+  provider calls, local derivatives, and avoided calls remain auditable.
+- Registered-family schema v2 carries source-package strategy, completeness,
+  shared canvas, lifecycle, and responsive reveal provenance.
+- Family-aware proof adds neutral reconstruction, reference comparison,
+  checkerboard exploded members, and both extremes of all three responsive
+  reveal envelopes, alongside source/render-scale alpha-band diagnostics.
+
+No image, voice, or video provider call is required by this engineering
+release. The stopped pilot remains negative evidence and is not resumed or
+published.
+
+## Inherited 0.16.0-dev.3 hardening
 
 This development release completes VOX Phase 2.2 asset-family and transparent
 edge production hardening. It does not include a final reference film and its

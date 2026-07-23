@@ -13,6 +13,7 @@ import {
   inspectCompositeTechnical,
 } from './quality-lib.mjs';
 import {buildAssetEvidence} from './asset-evidence-lib.mjs';
+import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 import {
   lifecycleOpacity,
@@ -543,7 +544,11 @@ for (const profile of PHASE2_PROOF_PROFILES) {
     if (!artifact) throw new Error(`质量目标 ${target.compositeId} 缺少 proof frame。`);
     let cropArtifact = artifact;
     let assetEvidence = [];
-    if (target.pattern === 'supported-subject') {
+    let layerStackProof = null;
+    if (
+      target.pattern === 'supported-subject' ||
+      target.pattern === 'registered-depth-stack'
+    ) {
       const sourceFile = path.join(PHASE2_ROOT, artifact);
       const bounds = {
         left: Math.max(0, Math.floor(target.group.transform.x * profile.width)),
@@ -588,6 +593,58 @@ for (const profile of PHASE2_PROOF_PROFILES) {
           }),
         });
       }
+      if (target.pattern === 'registered-depth-stack') {
+        const memberFiles = new Map(
+          target.group.children
+            .filter(({kind}) => kind === 'asset')
+            .map((node) => [
+              node.id,
+              path.join(PHASE2_ROOT, 'public', node.src),
+            ]),
+        );
+        const referenceRecord = assetManifest.assets.find(
+          ({assetId}) =>
+            assetId === target.group.registration.sourceMasterAssetId,
+        );
+        const built = await buildLayerStackProof({
+          group: target.group,
+          memberFiles,
+          referenceFile: referenceRecord?.file
+            ? path.join(PHASE2_ROOT, referenceRecord.file)
+            : null,
+          directory: path.join(
+            PHASE2_PROOF_DIR,
+            'asset-hardening',
+            'registered-family',
+            'layer-stack',
+            suffix,
+          ),
+          evidenceId: `${target.sceneId}-${target.group.id}`,
+        });
+        layerStackProof = {
+          ...built,
+          artifacts: {
+            neutralReconstruction: path.relative(
+              PHASE2_ROOT,
+              built.artifacts.neutralReconstruction,
+            ),
+            referenceComparison: path.relative(
+              PHASE2_ROOT,
+              built.artifacts.referenceComparison,
+            ),
+            explodedView: path.relative(
+              PHASE2_ROOT,
+              built.artifacts.explodedView,
+            ),
+            envelopeExtremes: built.artifacts.envelopeExtremes.map(
+              (entry) => ({
+                ...entry,
+                file: path.relative(PHASE2_ROOT, entry.file),
+              }),
+            ),
+          },
+        };
+      }
       registeredFamilyArtifacts.push({
         profileId: profile.id,
         compositeId: target.compositeId,
@@ -595,6 +652,7 @@ for (const profile of PHASE2_PROOF_PROFILES) {
         crop: cropArtifact,
         bounds,
         assetEvidence,
+        layerStackProof,
       });
     }
     const proofReport = {
@@ -606,6 +664,7 @@ for (const profile of PHASE2_PROOF_PROFILES) {
           fullFrame: artifact,
           crop: cropArtifact,
         }],
+        layerStackProof,
       }],
       assetEvidence,
     };
@@ -627,18 +686,23 @@ const qualityReport = {
   total: qualityEntries.length,
   entries: qualityEntries,
 };
+await writeJson(
+  path.join(reportsDirectory, 'quality-report.json'),
+  qualityReport,
+);
 if (!qualityReport.passed) {
   const failed = qualityEntries
     .filter(({passed}) => !passed)
     .map(({profileId, compositeId}) => `${profileId}:${compositeId}`);
   throw new Error(`Phase 2 quality report 未通过：${failed.join(', ')}`);
 }
-await writeJson(path.join(reportsDirectory, 'quality-report.json'), qualityReport);
 const registeredFamilyChromiumPassed =
   registeredFamilyArtifacts.length === PHASE2_PROOF_PROFILES.length &&
-  registeredFamilyArtifacts.every(({assetEvidence}) =>
+  registeredFamilyArtifacts.every(({assetEvidence, layerStackProof}) =>
     assetEvidence.length === 3 &&
-    assetEvidence.every(({alphaBandInspection}) => alphaBandInspection.passed));
+    assetEvidence.every(({alphaBandInspection}) => alphaBandInspection.passed) &&
+    layerStackProof?.passed === true &&
+    layerStackProof.artifacts.envelopeExtremes.length === 3);
 if (!registeredFamilyChromiumPassed) {
   throw new Error('Phase 2 三画幅 registered-family Chromium proof 未通过');
 }

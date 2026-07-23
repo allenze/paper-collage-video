@@ -77,12 +77,22 @@ export const deriveAssetBudget = (productionProfile, sceneCount) => {
     characterSheets,
     styleSamples: 1,
   };
+  const baseImageAttempts = Object.values(budget).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+  const layerPackageAttemptReserve =
+    {
+      draft: 2,
+      balanced: 4,
+      'full-depth': 6,
+    }[productionProfile] * sceneCount;
   return {
     ...budget,
-    maxGeneratedImages: Object.values(budget).reduce(
-      (sum, count) => sum + count,
-      0,
-    ),
+    baseImageAttempts,
+    layerPackageAttemptReserve,
+    maxGeneratedImages:
+      baseImageAttempts + layerPackageAttemptReserve,
   };
 };
 
@@ -155,8 +165,8 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
     return [{code: 'plan-missing', message: '缺少创作规格计划。', location: 'plan'}];
   }
-  if (plan.schemaVersion !== 2) {
-    add('plan-schema-version', 'plan.schemaVersion 必须为 2。', 'plan.schemaVersion');
+  if (plan.schemaVersion !== 3) {
+    add('plan-schema-version', 'plan.schemaVersion 必须为 3。', 'plan.schemaVersion');
   }
   if (slug && plan.slug !== slug) {
     add('plan-slug', `plan.slug 必须为 ${slug}。`, 'plan.slug');
@@ -343,7 +353,7 @@ export const buildCreativePlan = ({
     sceneCount: requestedSceneCount,
   };
   const plan = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     slug,
     status: 'resolved',
     inputMode: deriveCreativePlanMode(requested),

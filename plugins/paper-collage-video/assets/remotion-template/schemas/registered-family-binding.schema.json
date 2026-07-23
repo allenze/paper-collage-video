@@ -7,12 +7,17 @@
     "schemaVersion",
     "familyId",
     "pattern",
+    "motionCapability",
+    "sourcePackageId",
+    "sourceStrategy",
+    "revealEnvelope",
     "registrationId",
     "sourceMasterAssetId",
     "canvas",
     "origin",
     "role",
     "slot",
+    "completeness",
     "nodeId",
     "source",
     "derivation",
@@ -20,9 +25,13 @@
     "familyFingerprint"
   ],
   "properties": {
-    "schemaVersion": {"const": 1},
+    "schemaVersion": {"const": 2},
     "familyId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
-    "pattern": {"const": "supported-subject"},
+    "pattern": {"enum": ["supported-subject", "registered-depth-stack"]},
+    "motionCapability": {"const": "bounded-relative"},
+    "sourcePackageId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "sourceStrategy": {"enum": ["registered-layer-sheet", "context-preserving-layer-edits"]},
+    "revealEnvelope": {"$ref": "composition.schema.json#/$defs/layerRevealEnvelope"},
     "registrationId": {"type": "string", "minLength": 1},
     "sourceMasterAssetId": {"type": "string", "minLength": 1},
     "canvas": {
@@ -37,6 +46,7 @@
     "origin": {"const": "top-left"},
     "role": {"enum": ["support-rear", "subject", "support-front"]},
     "slot": {"enum": ["support-rear", "subject", "support-front"]},
+    "completeness": {"enum": ["clean-plate", "full-silhouette", "full-overlay"]},
     "nodeId": {"type": "string", "minLength": 1},
     "source": {
       "type": "object",
@@ -49,7 +59,7 @@
         "sha256"
       ],
       "properties": {
-        "kind": {"enum": ["source-master", "registered-sheet", "registered-sheet-member"]},
+        "kind": {"enum": ["registered-layer-sheet", "layer-package-member"]},
         "assetId": {"type": "string", "minLength": 1},
         "stateId": {"type": ["string", "null"]},
         "sourceSheetAssetId": {"type": ["string", "null"]},
@@ -135,6 +145,45 @@
       "then": {
         "properties": {
           "slot": {"const": "support-front"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "role": {"const": "support-rear"}
+        },
+        "required": ["role"]
+      },
+      "then": {
+        "properties": {
+          "completeness": {"const": "clean-plate"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "role": {"const": "subject"}
+        },
+        "required": ["role"]
+      },
+      "then": {
+        "properties": {
+          "completeness": {"const": "full-silhouette"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "role": {"const": "support-front"}
+        },
+        "required": ["role"]
+      },
+      "then": {
+        "properties": {
+          "completeness": {"const": "full-overlay"}
         }
       }
     }

@@ -1,5 +1,5 @@
 export const directingRevisionPlan = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   slug: 'directing-revision-fixture',
   status: 'resolved',
   productionProfile: 'draft',
@@ -9,7 +9,7 @@ export const directingRevisionPlan = {
 
 export const directingRevisionAuthoring = {
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 9,
+  schemaVersion: 10,
   slug: 'directing-revision-fixture',
   status: 'ready',
   arc: '一张纸面从建立空间到主体出现并稳定落版。',

@@ -6,7 +6,7 @@
   "required": ["schemaVersion", "projectSlug", "assetId", "capability", "output"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 6},
+    "schemaVersion": {"const": 7},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "assetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "capability": {"enum": ["text", "image", "voice"]},
@@ -52,7 +52,7 @@
       "properties": {
         "sceneId": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "pattern": {"enum": ["free", "supported-subject", "registered-environment", "state-sequence"]},
+        "pattern": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "state-sequence"]},
         "registrationId": {"type": "string", "minLength": 1},
         "sourceMasterAssetId": {"type": "string", "minLength": 1},
         "outputRole": {"type": "string", "minLength": 1},
@@ -77,10 +77,88 @@
       },
       "allOf": [
         {
-          "if": {"properties": {"pattern": {"enum": ["supported-subject", "registered-environment", "state-sequence"]}}},
+          "if": {"properties": {"pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "state-sequence"]}}},
           "then": {"required": ["registrationId", "sourceMasterAssetId"]}
         }
       ],
+      "additionalProperties": false
+    },
+    "layerPackageBinding": {
+      "type": "object",
+      "required": ["sourcePackageId", "pattern", "motionCapability", "sourceStrategy", "registrationId", "sourceMasterAssetId", "canvas", "packageRole", "completeness", "memberAssetIds", "referenceAssetIds", "sheetLayout", "recoveryPolicy"],
+      "properties": {
+        "sourcePackageId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "pattern": {"enum": ["supported-subject", "registered-depth-stack"]},
+        "motionCapability": {"const": "bounded-relative"},
+        "sourceStrategy": {"enum": ["registered-layer-sheet", "context-preserving-layer-edits"]},
+        "registrationId": {"type": "string", "minLength": 1},
+        "sourceMasterAssetId": {"type": "string", "minLength": 1},
+        "canvas": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": {"type": "integer", "minimum": 1},
+            "height": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        },
+        "packageRole": {"enum": ["reference", "registered-sheet", "support-rear", "subject", "support-front"]},
+        "completeness": {"enum": ["clean-plate", "full-silhouette", "full-overlay", null]},
+        "memberAssetIds": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}
+        },
+        "referenceAssetIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}
+        },
+        "sheetLayout": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["columns", "rows", "cells"],
+              "properties": {
+                "columns": {"const": 2},
+                "rows": {"const": 2},
+                "cells": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "items": {
+                    "type": "object",
+                    "required": ["packageRole", "row", "column"],
+                    "properties": {
+                      "packageRole": {"enum": ["reference", "support-rear", "subject", "support-front"]},
+                      "row": {"type": "integer", "minimum": 0, "maximum": 1},
+                      "column": {"type": "integer", "minimum": 0, "maximum": 1}
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "recoveryPolicy": {
+          "type": "object",
+          "required": ["completeSourceContext", "localDeterministicFixFirst", "isolatedMemberGeneration", "providerRepair", "fallback"],
+          "properties": {
+            "completeSourceContext": {"const": true},
+            "localDeterministicFixFirst": {"const": true},
+            "isolatedMemberGeneration": {"const": "forbidden"},
+            "providerRepair": {"const": "masked-complete-source-edit"},
+            "fallback": {"const": "full-source-regeneration"}
+          },
+          "additionalProperties": false
+        }
+      },
       "additionalProperties": false
     },
     "stateBinding": {
@@ -218,6 +296,8 @@
     {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["prompt", "compositionBinding", "outputSurface"]}},
     {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["semanticBinding"]}},
     {"if": {"properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}, "then": {"oneOf": [{"required": ["stateBinding"]}, {"required": ["stateSheetBinding"]}]}},
+    {"if": {"properties": {"compositionBinding": {"properties": {"pattern": {"const": "registered-depth-stack"}}}}}, "then": {"required": ["layerPackageBinding"]}},
+    {"if": {"required": ["layerPackageBinding"]}, "then": {"properties": {"capability": {"const": "image"}}}},
     {"if": {"required": ["stateSheetRecoveryBinding"]}, "then": {"required": ["stateSheetBinding", "quality", "compositionBinding"], "properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}},
     {"if": {"properties": {"capability": {"const": "voice"}}}, "then": {"required": ["text"]}},
     {"if": {"required": ["timingBinding"]}, "then": {"properties": {"capability": {"const": "voice"}}}}

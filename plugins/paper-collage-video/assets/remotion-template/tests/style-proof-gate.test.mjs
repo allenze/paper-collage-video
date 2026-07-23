@@ -173,7 +173,7 @@ const writeFixture = async (slug) => {
     sceneTransitions: [],
   });
   const storyboard = {
-    schemaVersion: 9,
+    schemaVersion: 10,
     slug,
     status: 'ready',
     directingSummary: {

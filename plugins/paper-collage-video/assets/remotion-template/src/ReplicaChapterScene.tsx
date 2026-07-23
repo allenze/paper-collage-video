@@ -500,7 +500,7 @@ const GroupView = ({
             events={events}
             durationSeconds={durationSeconds}
             seed={seed}
-            renderZ={node.pattern === 'supported-subject' ? slotOrder(child, node.support?.layering) : child.z}
+            renderZ={['supported-subject', 'registered-depth-stack'].includes(node.pattern) ? slotOrder(child, node.support?.layering) : child.z}
             paperEdge={paperEdge}
             cameraX={cameraX}
             cameraY={cameraY}

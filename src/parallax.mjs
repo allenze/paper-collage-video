@@ -106,14 +106,34 @@ export const validateParallaxRig = ({
     for (const node of items) {
       if (
         parent?.kind === 'group' &&
-        parent.pattern !== 'free' &&
+        !['free', 'registered-depth-stack'].includes(parent.pattern) &&
         node.depth !== undefined
       ) {
         add(
           'parallax-coupled-child-depth',
-          '耦合组合的子节点不得单独声明 depth；应由 group 作为景深载体。',
+          '除 registered-depth-stack 外，耦合组合的子节点不得单独声明 depth；应由 group 作为景深载体。',
           `${location.replace(/camera\.parallax$/, 'composition')}#${node.id}.depth`,
         );
+      }
+      if (node?.kind === 'group' && node.pattern === 'registered-depth-stack') {
+        const shrinking = (node.children ?? [])
+          .filter(({depth}) => finite(depth))
+          .some(({depth}) =>
+            cameraKeyframesForValidation(camera).some((keyframe) =>
+              resolveParallaxState({
+                depth,
+                cameraZoom: keyframe.zoom ?? 1,
+                parallax,
+              }).scale < 1 - 1e-9,
+            ),
+          );
+        if (shrinking) {
+          add(
+            'parallax-layer-scale-shrink',
+            'registered-depth-stack 的 camera parallax 不得让任何成员缩小到 scale < 1；调整 focalDepth/zoom 或扩大源包安全 bleed。',
+            `${location.replace(/camera\.parallax$/, 'composition')}#${node.id}`,
+          );
+        }
       }
       if (node?.kind === 'group') walk(node.children ?? [], node);
     }

@@ -4,7 +4,7 @@
   "title": "Paper Collage Composition Contract",
   "$defs": {
     "pattern": {
-      "enum": ["free", "supported-subject", "registered-environment"]
+      "enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack"]
     },
     "emphasisAction": {
       "enum": ["pulse", "stamp", "shake", "lift", "settle", "drop-impact", "carve"]
@@ -88,6 +88,43 @@
         "sourceMasterAssetId": {"type": "string", "minLength": 1},
         "canvas": {"$ref": "#/$defs/coordinateSpace"},
         "origin": {"const": "top-left"}
+      },
+      "additionalProperties": false
+    },
+    "layerRevealLimit": {
+      "type": "object",
+      "required": ["x", "y", "scale", "rotationDegrees"],
+      "properties": {
+        "x": {"type": "number", "minimum": 0, "maximum": 0.25},
+        "y": {"type": "number", "minimum": 0, "maximum": 0.25},
+        "scale": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.25,
+          "description": "Maximum protective expansion above scale 1. Registered depth members may not shrink below 1."
+        },
+        "rotationDegrees": {"type": "number", "minimum": 0, "maximum": 15}
+      },
+      "additionalProperties": false
+    },
+    "layerRevealEnvelope": {
+      "type": "object",
+      "required": ["16:9", "9:16", "1:1"],
+      "properties": {
+        "16:9": {"$ref": "#/$defs/layerRevealLimit"},
+        "9:16": {"$ref": "#/$defs/layerRevealLimit"},
+        "1:1": {"$ref": "#/$defs/layerRevealLimit"}
+      },
+      "additionalProperties": false
+    },
+    "layerStack": {
+      "type": "object",
+      "required": ["sourcePackageId", "sourceStrategy", "motionCapability", "revealEnvelope"],
+      "properties": {
+        "sourcePackageId": {"type": "string", "minLength": 1},
+        "sourceStrategy": {"enum": ["registered-layer-sheet", "context-preserving-layer-edits"]},
+        "motionCapability": {"const": "bounded-relative"},
+        "revealEnvelope": {"$ref": "#/$defs/layerRevealEnvelope"}
       },
       "additionalProperties": false
     },
@@ -697,6 +734,7 @@
         "motion": {"$ref": "#/$defs/nodeMotion"},
         "visibility": {"$ref": "#/$defs/nodeVisibility"},
         "registration": {"$ref": "#/$defs/registration"},
+        "layerStack": {"$ref": "#/$defs/layerStack"},
         "support": {"$ref": "#/$defs/support"},
         "boundaries": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/boundary"}},
         "children": {
@@ -713,6 +751,10 @@
         {
           "if": {"properties": {"pattern": {"const": "registered-environment"}}},
           "then": {"required": ["registration", "boundaries"]}
+        },
+        {
+          "if": {"properties": {"pattern": {"const": "registered-depth-stack"}}},
+          "then": {"required": ["registration", "layerStack"]}
         }
       ],
       "additionalProperties": false

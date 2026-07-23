@@ -90,6 +90,7 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     stateBinding: request.stateBinding ?? null,
     stateSheetBinding: request.stateSheetBinding ?? null,
     stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
+    layerPackageBinding: request.layerPackageBinding ?? null,
     semanticBinding: request.semanticBinding ?? null,
     timingBinding: request.timingBinding ?? null,
     outputSurface: request.outputSurface ?? null,
@@ -654,7 +655,7 @@ export const inspectStateSheetRecoveryMask = async ({maskFile, stateSheetBinding
 
 export const validateAssetRequest = (request) => {
   const errors = [];
-  if (request?.schemaVersion !== 6) errors.push('schemaVersion 必须为 6');
+  if (request?.schemaVersion !== 7) errors.push('schemaVersion 必须为 7');
   if (!SLUG_PATTERN.test(request?.projectSlug ?? '')) errors.push('projectSlug 格式无效');
   if (!SLUG_PATTERN.test(request?.assetId ?? '')) errors.push('assetId 格式无效');
   if (!PROVIDER_CAPABILITIES.includes(request?.capability)) errors.push('capability 必须是 text、image 或 voice');
@@ -665,12 +666,12 @@ export const validateAssetRequest = (request) => {
     errors.push('image request 缺少 compositionBinding');
   }
   if (request?.capability === 'image' && !isPlainObject(request.semanticBinding)) {
-    errors.push('schema-v6 image request 缺少 semanticBinding');
+    errors.push('schema-v7 image request 缺少 semanticBinding');
   }
   if (request?.capability === 'image') {
     const surface = request.outputSurface;
     if (!isPlainObject(surface) || !['alpha', 'chroma-key', 'opaque'].includes(surface.mode)) {
-      errors.push('schema-v6 image request 缺少有效 outputSurface');
+      errors.push('schema-v7 image request 缺少有效 outputSurface');
     } else {
       if (
         surface.mode === 'chroma-key' &&
@@ -732,11 +733,17 @@ export const validateAssetRequest = (request) => {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 compositionBinding');
     const binding = request.compositionBinding;
     if (!binding.sceneId || !binding.nodeId || !binding.outputRole) errors.push('compositionBinding 缺少 sceneId、nodeId 或 outputRole');
-    if (!['free', 'supported-subject', 'registered-environment', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
+    if (!['free', 'supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
     if (!Number.isInteger(binding.canvas?.width) || binding.canvas.width < 1 || !Number.isInteger(binding.canvas?.height) || binding.canvas.height < 1) errors.push('compositionBinding.canvas 无效');
     if (!['provider-generation', 'provider-edit', 'alpha-extraction', 'crop', 'mask-application', 'manual-import'].includes(binding.derivation?.method)) errors.push('compositionBinding.derivation.method 无效');
     if (binding.pattern !== 'state-sequence' && (request.stateBinding || request.stateSheetBinding || request.stateSheetRecoveryBinding)) errors.push('stateBinding/stateSheetBinding/stateSheetRecoveryBinding 只能用于 state-sequence');
-    if (['supported-subject', 'registered-environment', 'state-sequence'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
+    if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
+    if (
+      binding.pattern === 'registered-depth-stack' &&
+      !isPlainObject(request.layerPackageBinding)
+    ) {
+      errors.push('registered-depth-stack 图像必须声明 layerPackageBinding');
+    }
     if (binding.pattern === 'state-sequence') {
       const state = request.stateBinding;
       const sheet = request.stateSheetBinding;
@@ -794,6 +801,171 @@ export const validateAssetRequest = (request) => {
       }
     }
   }
+  if (request?.layerPackageBinding !== undefined) {
+    const binding = request.layerPackageBinding;
+    const roleCompleteness = {
+      'support-rear': 'clean-plate',
+      subject: 'full-silhouette',
+      'support-front': 'full-overlay',
+    };
+    if (request.capability !== 'image' || !isPlainObject(binding)) {
+      errors.push('layerPackageBinding 只能用于 image request');
+    } else {
+      if (
+        !SLUG_PATTERN.test(binding.sourcePackageId ?? '') ||
+        !['supported-subject', 'registered-depth-stack'].includes(
+          binding.pattern,
+        ) ||
+        binding.motionCapability !== 'bounded-relative' ||
+        ![
+          'registered-layer-sheet',
+          'context-preserving-layer-edits',
+        ].includes(binding.sourceStrategy)
+      ) {
+        errors.push('layerPackageBinding 的 id、pattern、motionCapability 或 sourceStrategy 无效');
+      }
+      if (
+        binding.registrationId !==
+          request.compositionBinding?.registrationId ||
+        binding.sourceMasterAssetId !==
+          request.compositionBinding?.sourceMasterAssetId ||
+        binding.pattern !== request.compositionBinding?.pattern
+      ) {
+        errors.push('layerPackageBinding 必须与 compositionBinding 使用同一 pattern、registration 和 source master');
+      }
+      const sheetOutput =
+        binding.sourceStrategy === 'registered-layer-sheet';
+      const expectedCompositionCanvas = sheetOutput
+        ? {
+            width: binding.canvas?.width * 2,
+            height: binding.canvas?.height * 2,
+          }
+        : binding.canvas;
+      if (
+        expectedCompositionCanvas?.width !==
+          request.compositionBinding?.canvas?.width ||
+        expectedCompositionCanvas?.height !==
+          request.compositionBinding?.canvas?.height
+      ) {
+        errors.push(
+          sheetOutput
+            ? 'registered-layer-sheet 输出画布必须是成员注册画布的 2x2'
+            : 'layerPackageBinding.canvas 必须与 compositionBinding.canvas 一致',
+        );
+      }
+      if (
+        !Array.isArray(binding.memberAssetIds) ||
+        binding.memberAssetIds.length !== 3 ||
+        new Set(binding.memberAssetIds).size !== 3 ||
+        binding.memberAssetIds.some(
+          (assetId) => !SLUG_PATTERN.test(assetId),
+        )
+      ) {
+        errors.push('layerPackageBinding.memberAssetIds 必须恰好列出三个唯一层成员');
+      }
+      if (
+        !Array.isArray(binding.referenceAssetIds) ||
+        binding.referenceAssetIds.length === 0 ||
+        !binding.referenceAssetIds.includes(
+          binding.sourceMasterAssetId,
+        )
+      ) {
+        errors.push('layerPackageBinding.referenceAssetIds 必须包含完整 source master');
+      }
+      const expectedRecovery = {
+        completeSourceContext: true,
+        localDeterministicFixFirst: true,
+        isolatedMemberGeneration: 'forbidden',
+        providerRepair: 'masked-complete-source-edit',
+        fallback: 'full-source-regeneration',
+      };
+      if (
+        JSON.stringify(stableValue(binding.recoveryPolicy)) !==
+        JSON.stringify(stableValue(expectedRecovery))
+      ) {
+        errors.push('layerPackageBinding.recoveryPolicy 必须禁止 isolated member generation 并保留完整 source context');
+      }
+      const layerRole = roleCompleteness[binding.packageRole];
+      if (layerRole) {
+        if (
+          binding.completeness !== layerRole ||
+          request.compositionBinding?.outputRole !==
+            binding.packageRole ||
+          !binding.memberAssetIds.includes(request.assetId)
+        ) {
+          errors.push('层成员 request 的 role、completeness、outputRole 与 memberAssetIds 必须一致');
+        }
+      } else if (
+        !['reference', 'registered-sheet'].includes(
+          binding.packageRole,
+        ) ||
+        binding.completeness !== null
+      ) {
+        errors.push('非层成员 packageRole 必须是 reference 或 registered-sheet，且 completeness 为 null');
+      }
+      if (
+        binding.sourceStrategy === 'registered-layer-sheet' &&
+        binding.packageRole !== 'registered-sheet'
+      ) {
+        errors.push('registered-layer-sheet 的唯一 provider request 必须生成完整 registered sheet');
+      }
+      if (binding.sourceStrategy === 'registered-layer-sheet') {
+        const layout = binding.sheetLayout;
+        const cells = layout?.cells ?? [];
+        const expectedRoles = [
+          'reference',
+          'support-rear',
+          'subject',
+          'support-front',
+        ];
+        if (
+          layout?.columns !== 2 ||
+          layout?.rows !== 2 ||
+          cells.length !== 4 ||
+          new Set(cells.map(({packageRole}) => packageRole)).size !== 4 ||
+          expectedRoles.some(
+            (role) =>
+              !cells.some(({packageRole}) => packageRole === role),
+          ) ||
+          new Set(
+            cells.map(({row, column}) => `${row}:${column}`),
+          ).size !== 4 ||
+          cells.some(
+            ({row, column}) =>
+              ![0, 1].includes(row) || ![0, 1].includes(column),
+          )
+        ) {
+          errors.push('registered-layer-sheet 必须声明 reference + 三层的完整 2x2 sheetLayout');
+        }
+      } else if (binding.sheetLayout !== null) {
+        errors.push('context-preserving-layer-edits 的 sheetLayout 必须为 null');
+      }
+      if (
+        binding.sourceStrategy ===
+        'context-preserving-layer-edits'
+      ) {
+        if (
+          binding.packageRole === 'registered-sheet' ||
+          (binding.packageRole === 'reference' &&
+            request.compositionBinding?.derivation?.method !==
+              'provider-generation') ||
+          (layerRole &&
+            request.compositionBinding?.derivation?.method !==
+              'provider-edit')
+        ) {
+          errors.push('context-preserving-layer-edits 必须由一张 reference generation 和三个完整上下文 provider edits 组成');
+        }
+        if (
+          layerRole &&
+          !binding.referenceAssetIds.includes(
+            request.compositionBinding?.derivation?.parentAssetId,
+          )
+        ) {
+          errors.push('分层 provider edit 必须把完整 reference 声明为 derivation.parentAssetId');
+        }
+      }
+    }
+  }
   if (request?.semanticBinding !== undefined) {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 semanticBinding');
     const binding = request.semanticBinding;
@@ -833,6 +1005,37 @@ export const loadAssetRequest = async (requestInput) => {
   const file = resolveWorkspacePath(requestInput, 'request 路径');
   const request = validateAssetRequest(await readJson(file));
   await assertRequestSemanticContracts(request);
+  if (request.layerPackageBinding) {
+    const storyboardFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'storyboard.json',
+    );
+    if (!(await fileExists(storyboardFile))) {
+      throw new Error(
+        'layer package provider request 缺少已编译 storyboard，不能在规划前调用 provider',
+      );
+    }
+    const storyboard = await readJson(storyboardFile);
+    const plan =
+      storyboard.directingSummary?.generationBudget?.sourcePackagePlans?.find(
+        ({id}) =>
+          id === request.layerPackageBinding.sourcePackageId,
+      );
+    const binding = request.layerPackageBinding;
+    if (
+      !plan ||
+      plan.pattern !== binding.pattern ||
+      plan.motionCapability !== binding.motionCapability ||
+      plan.sourceStrategy !== binding.sourceStrategy ||
+      plan.targetId !== request.compositionBinding.nodeId
+    ) {
+      throw new Error(
+        'layerPackageBinding 必须与当前 storyboard 编译出的 source package 完全一致',
+      );
+    }
+  }
   if (request.stateSheetRecoveryBinding) {
     const manifestFile = path.join(ROOT, 'projects', request.projectSlug, 'assets-manifest.json');
     if (!(await fileExists(manifestFile))) throw new Error('状态表恢复请求缺少 assets-manifest.json，无法证明完整原表上下文');

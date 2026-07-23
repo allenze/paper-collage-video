@@ -18,57 +18,132 @@ Use `provider:select` only for an isolated change or fallback. A provider switch
 | `command` | User CLI/wrapper/private adapter | `provider:run` executes without a shell and records success |
 | `manual` | Authorized supplied or deterministic local asset | Copy/derive output, then `provider:record` |
 
-## Schema-v6 Image Requests and Reuse
+## Schema-v7 Image Requests and Reuse
 
-Every new image request uses schema v6 and requires `compositionBinding`, `semanticBinding`, and an explicit `outputSurface`. Use `alpha` only when the file must contain real transparent pixels, `chroma-key` with a declared edge key color, or `opaque` for a fully opaque plate. Registration rejects baked checkerboards, false alpha, unexpected transparency, and unreliable chroma boundaries. A free asset names its scene/node/role/canvas. A coupled asset also names the common registration and source master. Critical content binds a ready project semantic contract. Older request schemas are rejected rather than migrated.
+Every new image request uses schema v7 and requires `compositionBinding`,
+`semanticBinding`, and an explicit `outputSurface`. Use `alpha` only when the
+file must contain real transparent pixels, `chroma-key` with a declared edge
+key color, or `opaque` for a fully opaque plate. Registration rejects baked
+checkerboards, false alpha, unexpected transparency, and unreliable chroma
+boundaries. A free asset names its scene/node/role/canvas. Critical content
+binds a ready project semantic contract. Older request schemas are rejected
+rather than migrated.
+
+Before authoring any rear/subject/front request, compile the storyboard source
+package and read [layer-complete-assets.md](layer-complete-assets.md). A
+`registered-depth-stack` request also carries the exact compiler-owned
+`layerPackageBinding`. It identifies one stable source package, registration,
+source strategy, all three complete members, shared canvas, reveal envelopes,
+and context-preserving recovery policy.
 
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "projectSlug": "example",
-  "assetId": "boat-front",
+  "assetId": "boat-layer-sheet",
   "capability": "image",
-  "output": "public/projects/example/assets/boat/front.png",
-  "prompt": "Extract the front gunwale from the approved registered master",
+  "output": "public/projects/example/assets/boat/layer-sheet.png",
+  "prompt": "Create one registered 2x2 sheet: flat reference, clean rear plate, complete boat silhouette, complete front wave overlay",
   "outputSurface": {"mode": "alpha"},
   "compositionBinding": {
     "sceneId": "scene-01",
-    "nodeId": "boat-front",
-    "pattern": "supported-subject",
+    "nodeId": "boat-depth-stack",
+    "pattern": "registered-depth-stack",
     "registrationId": "boat-family-01",
     "sourceMasterAssetId": "boat-master",
-    "outputRole": "support-front",
-    "canvas": {"width": 1600, "height": 900},
-    "derivation": {"method": "alpha-extraction", "parentAssetId": "boat-master"}
+    "canvas": {"width": 2048, "height": 2048},
+    "derivation": {
+      "method": "provider-generation",
+      "parentAssetId": "boat-master"
+    }
+  },
+  "layerPackageBinding": {
+    "sourcePackageId": "scene-01-boat-depth-stack",
+    "pattern": "registered-depth-stack",
+    "motionCapability": "bounded-relative",
+    "sourceStrategy": "registered-layer-sheet",
+    "packageRole": "registered-sheet",
+    "registrationId": "boat-family-01",
+    "sourceMasterAssetId": "boat-master",
+    "canvas": {"width": 1024, "height": 1024},
+    "completeness": null,
+    "memberAssetIds": ["boat-rear", "boat-subject", "boat-front"],
+    "referenceAssetIds": ["boat-master"],
+    "sheetLayout": {
+      "columns": 2,
+      "rows": 2,
+      "cells": [
+        {"packageRole": "reference", "row": 0, "column": 0},
+        {"packageRole": "support-rear", "row": 0, "column": 1},
+        {"packageRole": "subject", "row": 1, "column": 0},
+        {"packageRole": "support-front", "row": 1, "column": 1}
+      ]
+    },
+    "recoveryPolicy": {
+      "completeSourceContext": true,
+      "localDeterministicFixFirst": true,
+      "isolatedMemberGeneration": "forbidden",
+      "providerRepair": "masked-complete-source-edit",
+      "fallback": "full-source-regeneration"
+    }
   },
   "semanticBinding": {"riskClass": "topology-critical", "contractIds": ["boat-topology"]}
 }
 ```
 
-For a coupled family:
+For a layer-complete family, use exactly one of these source strategies:
 
-1. request/generate/import the complete master;
-2. derive rear/subject/front, upper/lower bands, and masks from that master;
-3. keep each derivative on the identical canvas and origin;
-4. record every output so manifest v4 computes one family fingerprint.
+1. `registered-layer-sheet`: one 2x2 source containing a flat reference, a
+   clean rear plate, a complete subject silhouette, and a complete front
+   overlay; split the three layer cells deterministically;
+2. `context-preserving-layer-edits`: one complete reference plus three edits,
+   each made with the full reference in provider context and each returning one
+   complete full-canvas layer.
 
-Do not make independent text-to-image calls for registered members. For two or more poses/states of one identity, prefer one `stateSheetBinding` request with an explicit grid and the required `preserve-sheet-context` policy, then run `assets:process-state-sheet`. This converts one provider image into registered local state files without trimming their shared cell canvas. The processor records each derivative and a family fingerprint; those local crops do not consume more generation attempts. Do not put unrelated identities in one sheet merely to reduce cost.
+The manifest records the provider roots and local derivatives, then computes
+one family fingerprint. A composed flat reference is comparison evidence, not
+a valid pixel source for independently moving layers. Masking its visible
+pixels cannot reconstruct hidden rear or subject content.
 
-For a `supported-subject` family, do not hand-fill three manifest records. Author one file against `schemas/registered-family.schema.json` and run:
+Do not make isolated text-to-image calls for registered members. For two or
+more poses/states of one identity, prefer one `stateSheetBinding` request with
+an explicit grid and the required `preserve-sheet-context` policy, then run
+`assets:process-state-sheet`. This converts one provider image into registered
+local state files without trimming their shared cell canvas. The processor
+records each derivative and a family fingerprint; those local crops do not
+consume more generation attempts. Do not put unrelated identities in one sheet
+merely to reduce cost.
+
+For a `supported-subject` or `registered-depth-stack` family, do not hand-fill
+three manifest records. Author one schema-v2 file against
+`schemas/registered-family.schema.json` and run:
 
 ```bash
 npm run assets:derive-registered-family -- projects/<slug>/registered-families/<family>.json
 ```
 
-The source can be one registered complete master, one declared cell of a registered sheet, or a member already emitted by `assets:process-state-sheet`. The CLI derives exactly `support-rear`, `subject`, and `support-front`, keeps the registration canvas and top-left origin, applies optional full-canvas mask/clip/placement rules, appends `registered-family-member` provenance, supersedes prior active records for the same asset ids, and optionally patches matching authoring nodes. It reports upstream provider image calls, local derivatives, and calls avoided from manifest provenance. A tight image with no explicit placement, a member without registered sheet lineage, or a role/slot/canvas/source-family mismatch is rejected.
+Its source must be the registered layer sheet or the three full-context
+layer-package members from the compiled source strategy. The CLI materializes
+exactly `support-rear`, `subject`, and `support-front`, keeps the registration
+canvas and top-left origin, validates clean-plate/full-silhouette/full-overlay
+completeness, appends `registered-family-member` provenance, supersedes prior
+active records for the same asset ids, and optionally patches matching
+authoring nodes. It reports actual upstream provider image calls, deterministic
+local derivatives, and calls avoided from manifest provenance. A flat composed
+master, tight image, isolated member, or role/slot/canvas/source-family mismatch
+is rejected.
 
-Its required recovery policy is `preserve-family-context`: rerun deterministic local processing first; if new pixels are required, edit a mask while retaining the complete source master/sheet as provider context; if that is unreliable, regenerate the complete source. Never generate one replacement member in isolation.
+Its required recovery policy is `preserve-family-context`: rerun deterministic
+local processing first; if new pixels are required, edit a mask while retaining
+the complete source sheet/reference as provider context; if that is unreliable,
+regenerate the complete source. Never generate one replacement member in
+isolation.
 
 For recovery, follow this order:
 
 1. rerun local splitting/keying when no new pixels are needed;
-2. create a schema-v6 `masked-sheet-edit` request that names the complete recorded sheet as `stateSheetRecoveryBinding.sourceSheetAssetId`, uses the same id as `compositionBinding.derivation.parentAssetId`, includes it in `generationFamily.referenceAssetIds`, supplies a full-canvas `maskAssetId`, and names only the failed `targetStateIds`;
+2. create a schema-v7 `masked-sheet-edit` request that names the complete recorded sheet as `stateSheetRecoveryBinding.sourceSheetAssetId`, uses the same id as `compositionBinding.derivation.parentAssetId`, includes it in `generationFamily.referenceAssetIds`, supplies a full-canvas `maskAssetId`, and names only the failed `targetStateIds`;
 3. if untargeted cells cannot remain unchanged, create a `full-sheet-regeneration` request whose target ids equal every member of the state sheet.
 
 The validator rejects a provider-generation/edit request for one `stateBinding` when its generation family contains multiple states. A masked edit also requires `identity-family-consistent`, `cell-separation`, `reference-conformant`, and `untargeted-cells-unchanged`; quality preparation compares untargeted source and result pixels. This is context-preserving regional repair, not isolated cell generation.

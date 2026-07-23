@@ -20,6 +20,20 @@ export const REGISTERED_FAMILY_RECOVERY_POLICY = {
   providerRepair: 'masked-complete-source-edit',
   fallback: 'full-source-regeneration',
 };
+export const REGISTERED_FAMILY_COMPLETENESS = {
+  'support-rear': 'clean-plate',
+  subject: 'full-silhouette',
+  'support-front': 'full-overlay',
+};
+const REGISTERED_FAMILY_PATTERNS = [
+  'supported-subject',
+  'registered-depth-stack',
+];
+const REGISTERED_FAMILY_SOURCE_STRATEGIES = [
+  'registered-layer-sheet',
+  'context-preserving-layer-edits',
+];
+const RESPONSIVE_LAYER_PROFILES = ['16:9', '9:16', '1:1'];
 
 const isObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -63,8 +77,14 @@ const sameValue = (left, right) =>
 
 export const validateRegisteredFamilySpec = (spec) => {
   const errors = [];
-  if (spec?.schemaVersion !== 1) errors.push('schemaVersion 必须为 1');
-  for (const field of ['projectSlug', 'sceneId', 'groupId', 'familyId']) {
+  if (spec?.schemaVersion !== 2) errors.push('schemaVersion 必须为 2');
+  for (const field of [
+    'projectSlug',
+    'sceneId',
+    'groupId',
+    'familyId',
+    'sourcePackageId',
+  ]) {
     if (!nonEmpty(spec?.[field])) errors.push(`${field} 不能为空`);
   }
   if (!slugPattern.test(spec?.projectSlug ?? '')) {
@@ -72,6 +92,31 @@ export const validateRegisteredFamilySpec = (spec) => {
   }
   if (!slugPattern.test(spec?.familyId ?? '')) {
     errors.push('familyId 格式无效');
+  }
+  if (!slugPattern.test(spec?.sourcePackageId ?? '')) {
+    errors.push('sourcePackageId 格式无效');
+  }
+  if (!REGISTERED_FAMILY_PATTERNS.includes(spec?.pattern)) {
+    errors.push('pattern 必须是 supported-subject 或 registered-depth-stack');
+  }
+  if (spec?.motionCapability !== 'bounded-relative') {
+    errors.push('motionCapability 必须是 bounded-relative');
+  }
+  if (!REGISTERED_FAMILY_SOURCE_STRATEGIES.includes(spec?.sourceStrategy)) {
+    errors.push(
+      'sourceStrategy 必须是 registered-layer-sheet 或 context-preserving-layer-edits',
+    );
+  }
+  for (const profile of RESPONSIVE_LAYER_PROFILES) {
+    const limit = spec?.revealEnvelope?.[profile];
+    if (
+      !isObject(limit) ||
+      !['x', 'y', 'scale', 'rotationDegrees'].every(
+        (key) => Number.isFinite(limit[key]) && limit[key] >= 0,
+      )
+    ) {
+      errors.push(`revealEnvelope.${profile} 必须声明非负 x/y/scale/rotationDegrees`);
+    }
   }
   const registration = spec?.registration;
   if (
@@ -89,7 +134,7 @@ export const validateRegisteredFamilySpec = (spec) => {
     !Array.isArray(spec?.members) ||
     spec.members.length !== REGISTERED_FAMILY_ROLES.length
   ) {
-    errors.push('members 必须恰好包含 supported-subject 三个角色');
+    errors.push('members 必须恰好包含三种注册层角色');
   }
   const roles = new Set();
   const slots = new Set();
@@ -110,27 +155,29 @@ export const validateRegisteredFamilySpec = (spec) => {
     if (member?.slot !== member?.role || slots.has(member.slot)) {
       errors.push(`${location}.slot 必须与唯一 role 相同`);
     }
+    if (
+      member?.completeness !==
+      REGISTERED_FAMILY_COMPLETENESS[member?.role]
+    ) {
+      errors.push(
+        `${location}.completeness 必须是 ${REGISTERED_FAMILY_COMPLETENESS[member?.role] ?? '对应角色完整性'}`,
+      );
+    }
     if (!nonEmpty(member?.output) || outputs.has(member.output)) {
       errors.push(`${location}.output 缺失或重复`);
     }
     if (
-      !['source-master', 'registered-sheet', 'registered-sheet-member']
+      !['registered-layer-sheet', 'layer-package-member']
         .includes(member?.source?.kind) ||
       !nonEmpty(member?.source?.assetId)
     ) {
       errors.push(`${location}.source 无效`);
     }
     if (
-      member?.source?.kind === 'source-master' &&
-      member.source.assetId !== registration?.sourceMasterAssetId
+      member?.source?.kind === 'registered-layer-sheet' &&
+      member.source.packageRole !== member.role
     ) {
-      errors.push(`${location} 的 source-master 必须是 registration.sourceMasterAssetId`);
-    }
-    if (
-      member?.source?.kind === 'registered-sheet' &&
-      !nonEmpty(member.source.stateId)
-    ) {
-      errors.push(`${location} 的 registered-sheet 必须声明 stateId`);
+      errors.push(`${location} 的 registered-layer-sheet packageRole 必须与 role 相同`);
     }
     const derivation = member?.derivation;
     if (!isObject(derivation)) errors.push(`${location}.derivation 必须是对象`);
@@ -224,17 +271,46 @@ const imageMetadata = async (file) => {
   return metadata;
 };
 
-const sheetCell = async ({file, record, stateId}) => {
-  const binding = record.stateSheetBinding ?? record.request?.stateSheetBinding;
-  if (!binding) {
-    throw new Error(`registered-sheet 来源缺少 stateSheetBinding：${record.assetId}`);
+const layerSheetCell = async ({
+  file,
+  record,
+  packageRole,
+  registration,
+  sourcePackage,
+}) => {
+  const binding =
+    record.compositionBinding?.layerPackageBinding ??
+    record.request?.layerPackageBinding;
+  if (
+    binding?.sourcePackageId !== sourcePackage.id ||
+    binding?.sourceStrategy !== 'registered-layer-sheet' ||
+    binding?.packageRole !== 'registered-sheet' ||
+    binding?.registrationId !== registration.id ||
+    binding?.sourceMasterAssetId !== registration.sourceMasterAssetId
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId} 缺少同一 source package 的正式绑定`,
+    );
   }
-  const state = binding.states?.find((candidate) => candidate.stateId === stateId);
-  if (!state) {
-    throw new Error(`registered-sheet ${record.assetId} 不包含 stateId ${stateId}`);
+  const cell = binding.sheetLayout?.cells?.find(
+    (candidate) => candidate.packageRole === packageRole,
+  );
+  if (
+    binding.sheetLayout?.columns !== 2 ||
+    binding.sheetLayout?.rows !== 2 ||
+    binding.sheetLayout?.cells?.length !== 4
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId} 必须是 reference + 三层的完整 2x2 sheet`,
+    );
+  }
+  if (!cell) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId} 不包含 ${packageRole}`,
+    );
   }
   const metadata = await imageMetadata(file);
-  const {columns, rows} = binding.layout;
+  const {columns, rows} = binding.sheetLayout;
   if (
     metadata.width % columns !== 0 ||
     metadata.height % rows !== 0
@@ -246,8 +322,8 @@ const sheetCell = async ({file, record, stateId}) => {
   return {
     buffer: await sharp(file)
       .extract({
-        left: state.column * width,
-        top: state.row * height,
+        left: cell.column * width,
+        top: cell.row * height,
         width,
         height,
       })
@@ -257,54 +333,67 @@ const sheetCell = async ({file, record, stateId}) => {
     width,
     height,
     lineage: {
-      kind: 'registered-sheet',
+      kind: 'registered-layer-sheet',
       assetId: record.assetId,
-      stateId,
+      stateId: packageRole,
       sourceSheetAssetId: record.assetId,
       sourceFamilyFingerprint: record.familyFingerprint ?? null,
     },
   };
 };
 
-const sourceImage = async ({root, manifest, source, registration}) => {
+const sourceImage = async ({
+  root,
+  manifest,
+  source,
+  registration,
+  sourcePackage,
+}) => {
   const record = assertImageRecord(manifest, source.assetId, source.kind);
   const file = workspacePath(root, record.file, `${source.kind} source`);
   const actualSha256 = await sha256File(file);
   if (record.sha256 !== actualSha256) {
     throw new Error(`${source.kind} ${source.assetId} 的 manifest hash 已漂移`);
   }
-  if (source.kind === 'registered-sheet') {
-    const binding =
-      record.stateSheetBinding ?? record.request?.stateSheetBinding;
-    if (
-      binding?.registrationId !== registration.id ||
-      binding?.sourceMasterAssetId !== registration.sourceMasterAssetId ||
-      !record.familyFingerprint
-    ) {
-      throw new Error(
-        `registered-sheet ${record.assetId} 必须绑定同一 registration、source master 和 family fingerprint`,
-      );
-    }
+  if (source.kind === 'registered-layer-sheet') {
     return {
       record,
-      ...await sheetCell({file, record, stateId: source.stateId}),
+      ...await layerSheetCell({
+        file,
+        record,
+        packageRole: source.packageRole,
+        registration,
+        sourcePackage,
+      }),
       sha256: actualSha256,
     };
   }
   const metadata = await imageMetadata(file);
-  if (source.kind === 'source-master') {
-    const binding = record.compositionBinding ?? record.request?.compositionBinding;
+  if (source.kind === 'layer-package-member') {
+    const binding =
+      record.compositionBinding?.layerPackageBinding ??
+      record.request?.layerPackageBinding;
     if (
-      record.assetId !== registration.sourceMasterAssetId ||
-      binding?.registrationId !== registration.id ||
-      binding?.sourceMasterAssetId !== registration.sourceMasterAssetId ||
-      binding?.canvas?.width !== registration.canvas.width ||
-      binding?.canvas?.height !== registration.canvas.height ||
+      !binding ||
+      binding.registrationId !== registration.id ||
+      binding.sourceMasterAssetId !== registration.sourceMasterAssetId ||
+      binding.sourcePackageId !== sourcePackage.id ||
+      binding.sourceStrategy !== sourcePackage.strategy ||
+      binding.packageRole !== sourcePackage.role ||
+      binding.completeness !== sourcePackage.completeness ||
+      binding.canvas?.width !== registration.canvas.width ||
+      binding.canvas?.height !== registration.canvas.height
+    ) {
+      throw new Error(
+        `layer-package-member ${record.assetId} 必须绑定同一 registration/source master 与完整画布`,
+      );
+    }
+    if (
       metadata.width !== registration.canvas.width ||
       metadata.height !== registration.canvas.height
     ) {
       throw new Error(
-        `source master ${record.assetId} 必须是已登记的同 registration 完整画布`,
+        `layer-package-member ${record.assetId} 必须保留完整注册画布`,
       );
     }
     return {
@@ -314,7 +403,7 @@ const sourceImage = async ({root, manifest, source, registration}) => {
       height: metadata.height,
       sha256: actualSha256,
       lineage: {
-        kind: 'source-master',
+        kind: 'layer-package-member',
         assetId: record.assetId,
         stateId: null,
         sourceSheetAssetId: null,
@@ -322,32 +411,7 @@ const sourceImage = async ({root, manifest, source, registration}) => {
       },
     };
   }
-  const stateBinding = record.stateBinding ?? record.request?.stateBinding;
-  if (
-    !stateBinding ||
-    !record.sourceSheetAssetId ||
-    !record.familyFingerprint ||
-    stateBinding.registrationId !== registration.id ||
-    stateBinding.sourceMasterAssetId !== registration.sourceMasterAssetId
-  ) {
-    throw new Error(
-      `registered-sheet-member ${record.assetId} 必须由同一 registration/source master 且保留画布的正式 sheet processor 登记`,
-    );
-  }
-  return {
-    record,
-    buffer: await sharp(file).ensureAlpha().png().toBuffer(),
-    width: metadata.width,
-    height: metadata.height,
-    sha256: actualSha256,
-    lineage: {
-      kind: 'registered-sheet-member',
-      assetId: record.assetId,
-      stateId: stateBinding.stateId,
-      sourceSheetAssetId: record.sourceSheetAssetId,
-      sourceFamilyFingerprint: record.familyFingerprint,
-    },
-  };
+  throw new Error(`未知 registered family source kind: ${source.kind}`);
 };
 
 const rgbaMask = async ({file, channel, invert, canvas}) => {
@@ -395,12 +459,18 @@ const buildMemberImage = async ({
   manifest,
   member,
   registration,
+  sourcePackage,
 }) => {
   const source = await sourceImage({
     root,
     manifest,
     source: member.source,
     registration,
+    sourcePackage: {
+      ...sourcePackage,
+      role: member.role,
+      completeness: member.completeness,
+    },
   });
   const canvas = registration.canvas;
   const placement = member.derivation.placement ?? {
@@ -526,8 +596,13 @@ export const createRegisteredFamilyFingerprint = ({
   sourceRecords,
   members,
 }) => sha256Value(JSON.stringify(stableValue({
-  schemaVersion: 1,
+  schemaVersion: 2,
   familyId: spec.familyId,
+  pattern: spec.pattern,
+  motionCapability: spec.motionCapability,
+  sourcePackageId: spec.sourcePackageId,
+  sourceStrategy: spec.sourceStrategy,
+  revealEnvelope: spec.revealEnvelope,
   registration: spec.registration,
   recoveryPolicy: spec.recoveryPolicy,
   sources: sourceRecords.map((source) => ({
@@ -539,6 +614,7 @@ export const createRegisteredFamilyFingerprint = ({
     assetId: member.member.assetId,
     role: member.member.role,
     slot: member.member.slot,
+    completeness: member.member.completeness,
     output: member.file,
     source: member.source.lineage,
     placement: member.placement,
@@ -553,15 +629,24 @@ const providerRootsFor = (manifest, derivedMembers) => {
   const ids = new Set();
   for (const member of derivedMembers) {
     const record = member.source.record;
-    if (member.source.lineage.kind === 'registered-sheet-member') {
-      ids.add(record.sourceSheetAssetId);
-    } else {
-      ids.add(record.assetId);
-    }
+    ids.add(record.assetId);
   }
   return [...ids]
     .map((assetId) => activeRecord(manifest, assetId))
     .filter(Boolean);
+};
+
+const providerPackageRootsFor = (manifest, spec, derivedMembers) => {
+  if (spec.sourceStrategy === 'registered-layer-sheet') {
+    return providerRootsFor(manifest, derivedMembers);
+  }
+  return (manifest.assets ?? []).filter((record) => {
+    if (record.lifecycle?.status !== 'active') return false;
+    const binding =
+      record.compositionBinding?.layerPackageBinding ??
+      record.request?.layerPackageBinding;
+    return binding?.sourcePackageId === spec.sourcePackageId;
+  });
 };
 
 export const deriveRegisteredFamily = async ({
@@ -582,6 +667,10 @@ export const deriveRegisteredFamily = async ({
       manifest,
       member,
       registration: spec.registration,
+      sourcePackage: {
+        id: spec.sourcePackageId,
+        strategy: spec.sourceStrategy,
+      },
     }));
   }
   const familyFingerprint = createRegisteredFamilyFingerprint({
@@ -595,15 +684,20 @@ export const deriveRegisteredFamily = async ({
       `${familyFingerprint}\0${member.assetId}\0${derived.sha256}`,
     );
     const registeredFamilyBinding = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       familyId: spec.familyId,
-      pattern: 'supported-subject',
+      pattern: spec.pattern,
+      motionCapability: spec.motionCapability,
+      sourcePackageId: spec.sourcePackageId,
+      sourceStrategy: spec.sourceStrategy,
+      revealEnvelope: spec.revealEnvelope,
       registrationId: spec.registration.id,
       sourceMasterAssetId: spec.registration.sourceMasterAssetId,
       canvas: spec.registration.canvas,
       origin: spec.registration.origin,
       role: member.role,
       slot: member.slot,
+      completeness: member.completeness,
       nodeId: member.nodeId,
       source: {
         ...derived.source.lineage,
@@ -648,7 +742,7 @@ export const deriveRegisteredFamily = async ({
       compositionBinding: {
         sceneId: spec.sceneId,
         nodeId: member.nodeId,
-        pattern: 'supported-subject',
+        pattern: spec.pattern,
         registrationId: spec.registration.id,
         sourceMasterAssetId: spec.registration.sourceMasterAssetId,
         outputRole: member.role,
@@ -694,24 +788,30 @@ export const deriveRegisteredFamily = async ({
   }
   manifest.assets.push(...records);
   assertAssetManifest(manifest, spec.projectSlug);
-  const providerRoots = providerRootsFor(manifest, members);
+  const providerRoots = providerPackageRootsFor(manifest, spec, members);
   const providerImageCalls = providerRoots.filter(
     (record) =>
       ['host', 'command'].includes(record.adapter) &&
       !record.reusedFrom,
   ).length;
   const localDerivatives = records.length;
-  const avoidedCalls = Math.max(0, localDerivatives - providerImageCalls);
+  const avoidedCalls =
+    spec.sourceStrategy === 'registered-layer-sheet' ? 3 : 0;
   return {
     manifest,
     records,
     familyFingerprint,
     report: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       projectSlug: spec.projectSlug,
       sceneId: spec.sceneId,
       groupId: spec.groupId,
       familyId: spec.familyId,
+      pattern: spec.pattern,
+      motionCapability: spec.motionCapability,
+      sourcePackageId: spec.sourcePackageId,
+      sourceStrategy: spec.sourceStrategy,
+      revealEnvelope: spec.revealEnvelope,
       registration: spec.registration,
       familyFingerprint,
       sourceAssetIds: [...new Set(members.map(({source}) => source.record.assetId))],
@@ -724,6 +824,7 @@ export const deriveRegisteredFamily = async ({
         file: record.file,
         role: record.registeredFamilyBinding.role,
         slot: record.registeredFamilyBinding.slot,
+        completeness: record.registeredFamilyBinding.completeness,
         sha256: record.sha256,
         canvas: record.registeredFamilyBinding.canvas,
         source: record.registeredFamilyBinding.source,
@@ -744,8 +845,14 @@ export const applyRegisteredFamilyToProject = ({project, spec, records}) => {
     if (node?.id === spec.groupId) group = node;
     if (node?.kind === 'group') stack.push(...(node.children ?? []));
   }
-  if (!group || group.kind !== 'group' || group.pattern !== 'supported-subject') {
-    throw new Error(`groupId 必须指向 supported-subject group：${spec.groupId}`);
+  if (
+    !group ||
+    group.kind !== 'group' ||
+    group.pattern !== spec.pattern
+  ) {
+    throw new Error(
+      `groupId 必须指向 ${spec.pattern} group：${spec.groupId}`,
+    );
   }
   const recordsByRole = new Map(
     records.map((record) => [record.registeredFamilyBinding.role, record]),
@@ -775,6 +882,14 @@ export const applyRegisteredFamilyToProject = ({project, spec, records}) => {
   }
   group.registration = spec.registration;
   group.coordinateSpace = {...spec.registration.canvas};
+  if (spec.pattern === 'registered-depth-stack') {
+    group.layerStack = {
+      sourcePackageId: spec.sourcePackageId,
+      sourceStrategy: spec.sourceStrategy,
+      motionCapability: spec.motionCapability,
+      revealEnvelope: spec.revealEnvelope,
+    };
+  }
   return project;
 };
 
@@ -782,6 +897,8 @@ export const assertRegisteredFamilyRecords = ({
   records,
   registration,
   familyId = null,
+  pattern = null,
+  sourcePackageId = null,
 }) => {
   const roles = new Set();
   const fingerprints = new Set();
@@ -798,6 +915,7 @@ export const assertRegisteredFamilyRecords = ({
     familyIds.add(binding.familyId);
     if (
       record.adapter !== 'registered-family-member' ||
+      binding.schemaVersion !== 2 ||
       record.lifecycle?.status !== 'active' ||
       binding.registrationId !== registration.id ||
       binding.sourceMasterAssetId !== registration.sourceMasterAssetId ||
@@ -807,6 +925,14 @@ export const assertRegisteredFamilyRecords = ({
       binding.derivation?.trimmed !== false ||
       binding.derivation?.outputCanvasPreserved !== true ||
       binding.role !== binding.slot ||
+      binding.completeness !==
+        REGISTERED_FAMILY_COMPLETENESS[binding.role] ||
+      binding.motionCapability !== 'bounded-relative' ||
+      !REGISTERED_FAMILY_PATTERNS.includes(binding.pattern) ||
+      !REGISTERED_FAMILY_SOURCE_STRATEGIES.includes(
+        binding.sourceStrategy,
+      ) ||
+      !nonEmpty(binding.sourcePackageId) ||
       !nonEmpty(binding.nodeId) ||
       !sameValue(binding.recoveryPolicy, REGISTERED_FAMILY_RECOVERY_POLICY) ||
       record.media?.width !== registration.canvas.width ||
@@ -817,6 +943,15 @@ export const assertRegisteredFamilyRecords = ({
     }
     if (familyId && binding.familyId !== familyId) {
       errors.push(`${record.assetId} familyId 不匹配`);
+    }
+    if (pattern && binding.pattern !== pattern) {
+      errors.push(`${record.assetId} pattern 不匹配`);
+    }
+    if (
+      sourcePackageId &&
+      binding.sourcePackageId !== sourcePackageId
+    ) {
+      errors.push(`${record.assetId} sourcePackageId 不匹配`);
     }
   }
   for (const role of REGISTERED_FAMILY_ROLES) {

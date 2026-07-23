@@ -12,6 +12,7 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `ambient-motion` | `continuous-transform` | breathing, paper drift, floating question mark |
 | `camera-change` | `continuous-transform` on `scene-camera` | push, pull, pan |
 | `depth-parallax` | `continuous-transform` with `parallax-camera` on `scene-camera` | camera-coupled paper planes at authored depth |
+| `depth-layer-separation` | `registered-depth-stack` with `bounded-relative` | complete rear plate, complete subject, and complete front overlay move within reviewed reveal envelopes |
 | `pose-change` | `state-sequence` | hand moves from chest to pointing at a board |
 | `prop-state-change` | `state-sequence` | page turns, cards change, book lowers |
 | `contact-change` | `supported-subject` | person stands on a boat, book remains in hand |
@@ -21,15 +22,36 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `visibility-change` | `visibility-transition` plus node `visibility.initial` | a question mark first appears, a card is removed, a label remains after entering |
 | `decorative-field` | `motion.kind=motif-field` | bounded petals, dots, fragments, confetti, diagram accents |
 
-A treatment has orthogonal dimensions. Motion (`static`, continuous transform, state sequence, persistent visibility transition, or deterministic motif field), composition (`free`, supported subject, or registered environment), graphic mechanism, and semantic risk can coexist. A pointing child standing on a boat is both a state sequence and a supported subject; do not collapse it into one exclusive effect label.
+A treatment has orthogonal dimensions. Motion (`static`, continuous transform,
+state sequence, persistent visibility transition, or deterministic motif
+field), composition (`free`, supported subject, registered depth stack, or
+registered environment), graphic mechanism, and semantic risk can coexist. A
+pointing child standing on a boat is both a state sequence and a supported
+subject; do not collapse it into one exclusive effect label.
 
-`depth-parallax` is not generic drift. It targets `scene-camera`, uses `parallax-camera`, and requires visible camera movement plus at least two distinct runtime `depth` values in `-1..1`. `0` is the focal plane. A coupled group owns one depth; its registered children must not repeat the world-space parallax path. A free group may add deliberate local depth only when that nested separation is part of the approved design.
+`depth-parallax` is not generic drift. It targets `scene-camera`, uses
+`parallax-camera`, and requires visible camera movement plus at least two
+distinct runtime `depth` values in `-1..1`. `0` is the focal plane. A rigid
+coupled group owns one depth; its registered children must not repeat the
+world-space parallax path. A `registered-depth-stack` is the only coupled
+pattern whose rear/subject/front children own separate ordered depths and
+bounded local motion. It is legal only after the compiler has locked the three
+complete layer roles, shared canvas, source strategy, and 16:9/9:16/1:1 reveal
+envelopes. A free group may add deliberate local depth only when that nested
+separation is part of the approved design.
 
 `motif-field` is decorative only. Author one target with preset (`drift`, `fall-drift`, `burst`, or `orbit`), distribution (`scattered`, `grid`, or `edge`), bounded `count<=64`, cycles, normalized placement `bounds`, and explicit rectangle/ellipse `exclusionZones` around titles, faces, labels, and explanatory data. Keep all fields in one scene at or below 192 instances. Runtime supplies a fixed integer seed, 1–8 reviewed motif sources, base size, and bounded scale/rotation/opacity variation. Placement uses deterministic bounded rejection with motif-footprint clearance; loop presets either close geometrically or hide the respawn edge. The renderer expands the instances deterministically; do not author a large array of individual asset nodes.
 
 ## Author Intent, Compile Execution
 
-Storyboard v9 input owns `beats[].treatments[]` plus the v9 editorial authoring intent. It does not own `compositionPlan`, resolved edit points, responsive/transition plans, `directing`, sheet layouts, style-proof planning, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values. Read `editorial-system-v9.md` for edit-point bindings and advanced editorial transitions.
+Storyboard v10 input owns `beats[].treatments[]`, any layer source-package
+intent, plus the v9 editorial authoring intent. It does not own
+`compositionPlan`, source-package cost totals, resolved edit points,
+responsive/transition plans, `directing`, sheet layouts, style-proof planning,
+risk ranking, or fingerprints. `project:storyboard` compiles those fields and
+rejects hand-authored derived values. Read `layer-complete-assets.md` before
+authoring relative layers and `editorial-system-v9.md` for edit-point bindings
+and advanced editorial transitions.
 
 Every treatment declares:
 
@@ -45,10 +67,20 @@ The compiler turns those declarations into patterns, relationships, state schedu
 
 ## Allocate Motion Without Sacrificing Hero Actions
 
-Creative Plan v2 gives each production profile two ceilings:
+Creative Plan v3 gives each production profile two ceilings:
 
-- `assetBudget`: quota-consuming image attempts;
+- `assetBudget`: quota-consuming image attempts, split into a compiled base and
+  an explicit source-recovery reserve;
 - `motionBudget`: pose-sheet calls, cells per sheet, and continuous-motion targets.
+
+For a one-scene project the default hard ceilings are draft `4+2=6`, balanced
+`4+4=8`, and full-depth `5+6=11` image attempts. The reserve is not permission
+to spend automatically: concept approval binds the exact
+`sourcePackageDecision`, and each provider attempt still needs validation,
+reservation, and truthful recording. A `registered-layer-sheet` source package
+normally costs one provider call, yields three deterministic local derivatives,
+and avoids three isolated calls. Full-context layer edits cost four calls and
+are chosen only when the provider cannot reliably return the registered sheet.
 
 When reducing cost or complexity, remove in this order:
 
@@ -59,7 +91,13 @@ When reducing cost or complexity, remove in this order:
 
 Never turn a `required` pose or prop change into rotation, scaling, or a static hold merely to fit the profile. If required families exceed the approved profile, the storyboard is invalid: raise the profile or reduce story scope at the existing concept gate.
 
-All related states for one identity/prop family stay on one provider-generated sheet. The compiler chooses 2×2 for up to four states and 3×2 for five or six states. Empty cells are preferable to unrelated identities. Recovery is deterministic local reprocessing, then a masked edit of the complete original sheet, then complete-sheet regeneration. Isolated replacement-cell generation is forbidden.
+All related states for one identity/prop family stay on one provider-generated
+sheet. The compiler chooses 2×2 for up to four states and 3×2 for five or six
+states. Empty cells are preferable to unrelated identities. Layer source
+packages and pose sheets have separate compiled accounting but share the same
+hard ceiling. Recovery is deterministic local reprocessing, then a masked edit
+of the complete original source context, then complete-source regeneration.
+Isolated replacement-layer or replacement-cell generation is forbidden.
 
 ## Representative Story Routing
 
@@ -92,6 +130,20 @@ Narrative intent and execution treatment are separate. Legal paper overrides are
 
 ## Proof and Review
 
-The compiler ranks treatments by semantic risk, discrete-state complexity, composition coupling, importance, and necessity, then compiles a `styleProofPlan`. The plan requires coverage for the highest semantic-risk classes, each concrete coupled relationship, state-sequence behavior, and motif-field behavior, and greedily reuses one source family where it can prove multiple facets. If a film has no such high-risk facet, the highest-ranked treatment becomes one `baseline:representative` target so the style gate never becomes empty. `style:proof` renders every selected target and binds the report to the plan fingerprint. Parallax rigs and motif fields also become fingerprinted composite quality targets. A changed treatment, camera rig, depth map, seed, field source, density, bounds, exclusions, or runtime implementation invalidates the relevant evidence.
+The compiler ranks treatments by semantic risk, discrete-state complexity,
+composition coupling, importance, and necessity, then compiles a
+`styleProofPlan`. The plan requires coverage for the highest semantic-risk
+classes, each concrete coupled relationship, state-sequence behavior, and
+motif-field behavior, and greedily reuses one source family where it can prove
+multiple facets. If a film has no such high-risk facet, the highest-ranked
+treatment becomes one `baseline:representative` target so the style gate never
+becomes empty. `style:proof` renders every selected target and binds the report
+to the plan fingerprint. A depth stack is proven as one family through neutral
+reconstruction, reference comparison, exploded checkerboard, and both extremes
+of every responsive reveal envelope; isolated-member motion stress is not
+sufficient. Parallax rigs and motif fields also become fingerprinted composite
+quality targets. A changed treatment, source package, reveal envelope, camera
+rig, depth map, seed, field source, density, bounds, exclusions, or runtime
+implementation invalidates the relevant evidence.
 
 Final reports state the number of pose-sheet provider calls, deterministic state derivatives, and isolated calls avoided. Savings count only when provenance proves that one provider result produced multiple local derivatives.

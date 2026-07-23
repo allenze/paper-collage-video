@@ -221,6 +221,32 @@ test('parallax rigs require camera motion and distinct legal depth layers', () =
   });
   assert.ok(invalid.some(({code}) => code === 'parallax-camera-motion'));
   assert.ok(invalid.some(({code}) => code === 'parallax-depth-spread'));
+
+  const depthStack = {
+    id: 'depth-stack',
+    kind: 'group',
+    pattern: 'registered-depth-stack',
+    children: [
+      asset('rear', -0.7),
+      asset('subject', 0),
+      asset('front', 0.7),
+    ],
+  };
+  assert.ok(
+    validateParallaxRig({
+      camera,
+      composition: {nodes: [depthStack]},
+    }).some(({code}) => code === 'parallax-layer-scale-shrink'),
+  );
+  assert.ok(
+    !validateParallaxRig({
+      camera: {
+        ...camera,
+        parallax: {...camera.parallax, focalDepth: -1},
+      },
+      composition: {nodes: [depthStack]},
+    }).some(({code}) => code === 'parallax-layer-scale-shrink'),
+  );
 });
 
 test('parallax and motif primitives produce fingerprinted proof targets', async () => {
@@ -294,7 +320,7 @@ test('the no-provider VOX fixture compiles and executes every new primitive', ()
     durationSeconds: 6,
   });
   const storyboard = compileStoryboardDirecting(storyboardInput);
-  assert.equal(project.plan.assetBudget.maxGeneratedImages, 0);
+  assert.equal(project.plan.assetBudget.maxGeneratedImages, 21);
   assert.deepEqual(
     validateSceneTransitionSequence({
       scenes: storyboard.scenes,

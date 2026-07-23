@@ -68,6 +68,37 @@ const registeredGroup = () => ({
   ],
 });
 
+const depthStackGroup = () => ({
+  id: 'boat-depth-stack',
+  kind: 'group',
+  pattern: 'registered-depth-stack',
+  z: 0,
+  coordinateSpace: {width: 100, height: 100},
+  transform: fullTransform(),
+  motion: still(),
+  registration: {
+    id: 'family-01',
+    sourceMasterAssetId: 'boat-master',
+    canvas: {width: 100, height: 100},
+    origin: 'top-left',
+  },
+  layerStack: {
+    sourcePackageId: 'boat-package',
+    sourceStrategy: 'registered-layer-sheet',
+    motionCapability: 'bounded-relative',
+    revealEnvelope: {
+      '16:9': {x: 0.04, y: 0.04, scale: 0.05, rotationDegrees: 2},
+      '9:16': {x: 0.03, y: 0.04, scale: 0.04, rotationDegrees: 1},
+      '1:1': {x: 0.03, y: 0.03, scale: 0.04, rotationDegrees: 1},
+    },
+  },
+  children: [
+    {...asset({id: 'rear', slot: 'support-rear', role: 'environment'}), depth: -0.7},
+    {...asset({id: 'boat', slot: 'subject', role: 'character'}), depth: 0},
+    {...asset({id: 'front', slot: 'support-front', role: 'environment'}), depth: 0.7},
+  ],
+});
+
 const validate = (node, proofTimes = [{id: 'establish', at: 0.08}, {id: 'action', at: 0.5}, {id: 'final', at: 0.9}]) => validateCompositionStructure({
   composition: {coordinateSpace: {width: 100, height: 100}, nodes: [node]},
   video: {width: 100, height: 100},
@@ -101,6 +132,46 @@ test('v5 registered environments enforce a shared canvas, boundary and exclusive
   const duplicated = registeredGroup();
   duplicated.children[1].semanticCoverage.push('trees');
   assert.ok(validate(duplicated).issues.some(({code}) => code === 'composition-semantic-duplicate'));
+});
+
+test('v10 registered depth stacks require full-canvas ordered layers inside every reveal envelope', () => {
+  assert.deepEqual(validate(depthStackGroup()).issues, []);
+
+  const flat = depthStackGroup();
+  flat.layerStack.sourceStrategy = 'rigid-master';
+  assert.ok(
+    validate(flat).issues.some(
+      ({code}) => code === 'composition-layer-source-strategy',
+    ),
+  );
+
+  const cropped = depthStackGroup();
+  cropped.children[1].transform.width = 0.5;
+  assert.ok(
+    validate(cropped).issues.some(
+      ({code}) => code === 'composition-layer-canvas',
+    ),
+  );
+
+  const overTravel = depthStackGroup();
+  overTravel.children[1].motion = {
+    keyframes: [{at: 0, x: 0}, {at: 1, x: 0.035}],
+  };
+  assert.ok(
+    validate(overTravel).issues.some(
+      ({code}) => code === 'composition-layer-reveal-exceeded',
+    ),
+  );
+
+  const shrinking = depthStackGroup();
+  shrinking.children[0].motion = {
+    keyframes: [{at: 0, scale: 1}, {at: 1, scale: 0.98}],
+  };
+  assert.ok(
+    validate(shrinking).issues.some(
+      ({code}) => code === 'composition-layer-scale-shrink',
+    ),
+  );
 });
 
 test('geometry, event catalog and fingerprints remain deterministic', () => {
@@ -274,7 +345,7 @@ test('v9 typography and shape nodes keep explanatory UI editable', () => {
   assert.deepEqual(result.issues, []);
 });
 
-test('bundled render fixture exercises v5 registration and state sequence together', () => {
+test('bundled render fixture exercises current registration and state sequence together', () => {
   const fixture = JSON.parse(fs.readFileSync(path.join(ROOT, 'fixtures', 'composition-v4', 'project.json'), 'utf8'));
   const scene = fixture.scenes[0];
   const result = validateCompositionStructure({

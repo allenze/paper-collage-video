@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -480,10 +480,11 @@
           }
         ],
         "motifFields": [],
-        "graphics": []
+        "graphics": [],
+        "layerStacks": []
       },
       "directing": {
-        "fingerprint": "de3cb06708588515ba3f207dc14024159216c3db72740fe1a115b73ff944cf89",
+        "fingerprint": "3da16adb6b4f304044128244e802c86d388afe038456b60678f4cf11b45037db",
         "treatmentCount": 3,
         "riskScore": 13,
         "highestRiskTreatmentId": "show-traveler"
@@ -512,6 +513,16 @@
       "maxStatesPerSheet": 4,
       "maxContinuousTargets": 2
     },
+    "generationBudget": {
+      "requiredProviderImageCalls": 0,
+      "expectedProviderImageCalls": 0,
+      "sourcePackageProviderCalls": 0,
+      "poseSheetProviderCalls": 0,
+      "localDerivatives": 0,
+      "avoidedCalls": 0,
+      "hardCeiling": 6,
+      "sourcePackagePlans": []
+    },
     "styleProofPlan": {
       "requiredCoverage": [
         "baseline:representative"
@@ -523,7 +534,7 @@
           "targetId": "traveler",
           "proofTimeId": "proof-action",
           "riskScore": 13,
-          "directingFingerprint": "de3cb06708588515ba3f207dc14024159216c3db72740fe1a115b73ff944cf89",
+          "directingFingerprint": "3da16adb6b4f304044128244e802c86d388afe038456b60678f4cf11b45037db",
           "sourceFamilyKey": "target:traveler",
           "coverage": [
             "baseline:representative"
@@ -533,8 +544,8 @@
       "sourceFamilyKeys": [
         "target:traveler"
       ],
-      "fingerprint": "c95aaad72ca03ea91d3e4cd4728e1bc6919764b765aa333d4ca9d07a2d2535c2"
+      "fingerprint": "e33f0623062623140de4557f134f7636883495506f75f8e16cae963d2e573adb"
     },
-    "fingerprint": "126d66f354fe57f10fbb4e251b5b6e3755eb2bf3f0726e044cf7773059a66d79"
+    "fingerprint": "66619e8772135d8ca30245ae34c3136c8bcfc7ee96aa411e13a633e69564a2c0"
   }
 }

@@ -51,6 +51,20 @@ const rectanglesOverlap = (left, right) =>
   left.x + left.width > right.x &&
   left.y < right.y + right.height &&
   left.y + left.height > right.y;
+const LAYER_ROLES = ['support-rear', 'subject', 'support-front'];
+const RESPONSIVE_LAYER_PROFILES = ['16:9', '9:16', '1:1'];
+const maximumAuthoredMotion = (keyframes = []) => ({
+  x: Math.max(0, ...keyframes.map(({x = 0}) => Math.abs(x))),
+  y: Math.max(0, ...keyframes.map(({y = 0}) => Math.abs(y))),
+  scale: Math.max(
+    0,
+    ...keyframes.map(({scale = 1}) => Math.abs(scale - 1)),
+  ),
+  rotationDegrees: Math.max(
+    0,
+    ...keyframes.map(({rotation = 0}) => Math.abs(rotation)),
+  ),
+});
 
 export const stableStringify = (value) => {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -559,6 +573,164 @@ export const validateCompositionStructure = ({
         for (const semantic of child.semanticCoverage ?? []) {
           if (semantics.has(semantic)) add('error', 'composition-semantic-duplicate', `注册环境重复声明语义区域 ${semantic}。`, `${nodeLocation}.children`);
           semantics.add(semantic);
+        }
+      }
+    }
+
+    if (node.pattern === 'registered-depth-stack') {
+      if (!node.registration) {
+        add(
+          'error',
+          'composition-registration',
+          'registered-depth-stack 必须声明 registration。',
+          `${nodeLocation}.registration`,
+        );
+      }
+      if (
+        node.registration &&
+        (node.registration.canvas.width !== node.coordinateSpace.width ||
+          node.registration.canvas.height !== node.coordinateSpace.height)
+      ) {
+        add(
+          'error',
+          'composition-registration-canvas',
+          'registration.canvas 必须与 group.coordinateSpace 一致。',
+          `${nodeLocation}.registration.canvas`,
+        );
+      }
+      if (
+        !node.layerStack ||
+        node.layerStack.motionCapability !== 'bounded-relative'
+      ) {
+        add(
+          'error',
+          'composition-layer-stack',
+          'registered-depth-stack 必须声明 bounded-relative layerStack。',
+          `${nodeLocation}.layerStack`,
+        );
+      }
+      if (
+        !['registered-layer-sheet', 'context-preserving-layer-edits'].includes(
+          node.layerStack?.sourceStrategy,
+        )
+      ) {
+        add(
+          'error',
+          'composition-layer-source-strategy',
+          'registered-depth-stack 禁止从 opaque flat master 派生；必须使用 registered-layer-sheet 或完整上下文分层编辑。',
+          `${nodeLocation}.layerStack.sourceStrategy`,
+        );
+      }
+      const members = (node.children ?? []).filter((child) =>
+        ['asset', 'state-sequence'].includes(child.kind),
+      );
+      if (
+        members.length !== 3 ||
+        (node.children ?? []).length !== members.length
+      ) {
+        add(
+          'error',
+          'composition-layer-member-count',
+          'registered-depth-stack 必须恰好包含三个可注册视觉成员。',
+          `${nodeLocation}.children`,
+        );
+      }
+      const slots = new Map(members.map((child) => [child.slot, child]));
+      for (const role of LAYER_ROLES) {
+        if (!slots.has(role)) {
+          add(
+            'error',
+            'composition-layer-slot',
+            `registered-depth-stack 缺少 ${role}。`,
+            `${nodeLocation}.children`,
+          );
+        }
+      }
+      const ordered = LAYER_ROLES.map((role) => slots.get(role));
+      if (
+        ordered.every((child) => finite(child?.depth)) &&
+        !(
+          ordered[0].depth < ordered[1].depth &&
+          ordered[1].depth < ordered[2].depth
+        )
+      ) {
+        add(
+          'error',
+          'composition-layer-depth-order',
+          '三层 depth 必须严格满足 support-rear < subject < support-front。',
+          `${nodeLocation}.children`,
+        );
+      }
+      const profileLimits = node.layerStack?.revealEnvelope;
+      for (const child of members) {
+        const registrationId =
+          child.kind === 'asset'
+            ? child.registrationId
+            : child.registration?.id;
+        if (registrationId !== node.registration?.id) {
+          add(
+            'error',
+            'composition-registration-member',
+            `景深成员 ${child.id} 必须共享 registrationId。`,
+            `${nodeLocation}.children`,
+          );
+        }
+        const transform = child.transform ?? {};
+        if (
+          transform.x !== 0 ||
+          transform.y !== 0 ||
+          transform.width !== 1 ||
+          transform.height !== 1 ||
+          transform.anchorX !== 0 ||
+          transform.anchorY !== 0
+        ) {
+          add(
+            'error',
+            'composition-layer-canvas',
+            `景深成员 ${child.id} 必须保留完整注册画布；不得 tight crop。`,
+            `${nodeLocation}.children`,
+          );
+        }
+        const requested = maximumAuthoredMotion(
+          child.motion?.keyframes,
+        );
+        if (
+          (child.motion?.keyframes ?? []).some(
+            ({scale}) => finite(scale) && scale < 1,
+          )
+        ) {
+          add(
+            'error',
+            'composition-layer-scale-shrink',
+            `${child.id} 的 layer motion 不得缩小到 scale < 1；reveal envelope 的 scale 只表示保护性 overscan 扩张。`,
+            `${nodeLocation}.children#${child.id}.motion`,
+          );
+        }
+        for (const profile of RESPONSIVE_LAYER_PROFILES) {
+          const limit = profileLimits?.[profile];
+          if (!limit) {
+            add(
+              'error',
+              'composition-layer-reveal-profile',
+              `layerStack.revealEnvelope 缺少 ${profile}。`,
+              `${nodeLocation}.layerStack.revealEnvelope.${profile}`,
+            );
+            continue;
+          }
+          for (const key of ['x', 'y', 'scale', 'rotationDegrees']) {
+            if (
+              !finite(limit[key]) ||
+              limit[key] < 0 ||
+              requested[key] > limit[key] + 1e-9
+            ) {
+              add(
+                'error',
+                'composition-layer-reveal-exceeded',
+                `${child.id} 的 ${key}=${requested[key]} 超过 ${profile} 已证明的显露包络 ${limit[key] ?? 'missing'}。`,
+                `${nodeLocation}.children#${child.id}.motion`,
+              );
+            }
+          }
         }
       }
     }

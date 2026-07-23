@@ -4,7 +4,7 @@ Read this before generating recurring characters, articulated subjects, function
 
 ## Classify Risk Before Generation
 
-Use one dominant `semanticBinding.riskClass` per schema-v6 image request, then bind every additional applicable contract in `contractIds`. The runtime unions only contract checks that are meaningful on the source asset; an evidence target with `"scope": "composite"` remains mandatory at composition proof without incorrectly failing the raster source. Use `"scope": "asset"` only for checks that must hold on the original file. If any bound contract is `identity`, declare `generationFamily` even when identity is not the dominant risk.
+Use one dominant `semanticBinding.riskClass` per schema-v7 image request, then bind every additional applicable contract in `contractIds`. The runtime unions only contract checks that are meaningful on the source asset; an evidence target with `"scope": "composite"` remains mandatory at composition proof without incorrectly failing the raster source. Use `"scope": "asset"` only for checks that must hold on the original file. If any bound contract is `identity`, declare `generationFamily` even when identity is not the dominant risk.
 
 `decorative` is valid only when `contractIds` is empty. If a plate contains a named subject, meaningful negative space, a working mechanism, or an explanatory diagram, classify it by the dominant critical risk instead of calling the whole plate decorative.
 
@@ -145,7 +145,12 @@ Name the required visible parts and negative spaces of articulated or internally
 - `negative-space-clean`
 - `background-leak-free`
 
-Continue to use `supported-subject` or `registered-environment` when layers touch or share boundaries; the topology contract does not replace registration and source-master rules. Do not invent synonymous check names because the quality recorder rejects unknown enums.
+Continue to use `supported-subject`, `registered-depth-stack`, or
+`registered-environment` when layers touch or share boundaries; the topology
+contract does not replace registration and source-package rules. Relative
+rear/subject/front motion additionally requires complete layer roles and
+responsive reveal envelopes. Do not invent synonymous check names because the
+quality recorder rejects unknown enums.
 
 ## Evidence Rules
 

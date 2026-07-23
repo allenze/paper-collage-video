@@ -17,10 +17,22 @@ Do not create a fourth default gate after final render. Local final delivery com
 ## Cost Boundary
 
 - Before combined concept approval, use only the current host model for a provisional draft; do not invoke an unconfirmed external/paid provider.
-- Before style approval, classify and contract any identity-, topology-, mechanism-, or diagram-critical sample, then create at most one representative image, a short fictional-voice audition, and one 3–5 second proof when motion is new or coupled topology is present. A topology or limited-animation proof uses the actual v5 group/state sequence, master-derived members, and renderer. It also produces full-resolution frame/crop evidence plus alpha, checkerboard, tight-crop, and motion-stress evidence for every registered member. Coupled approval cannot advance while that evidence is missing, stale, or semantically pending.
+- Before style approval, classify and contract any identity-, topology-,
+  mechanism-, or diagram-critical sample, then create at most one representative
+  source package, a short fictional-voice audition, and one 3–5 second proof
+  when motion is new or coupled topology is present. A topology or
+  limited-animation proof uses the actual v10 group/state sequence and renderer.
+  A `registered-depth-stack` uses its compiled layer-complete source package and
+  family-aware proof: neutral reconstruction, reference comparison,
+  checkerboard exploded members, and both extremes of the 16:9, 9:16, and 1:1
+  reveal envelopes. Standard alpha/tight/motion evidence remains required where
+  applicable. Coupled approval cannot advance while that evidence is missing,
+  stale, or semantically pending.
 - After style approval, produce autonomously within the approved asset budget.
 - Reuse exact-match assets and deterministic local processing before regeneration.
-- Disclose known material costs or quota effects at the decision that authorizes them.
+- Disclose the compiled source-package strategy, base/reserve/hard ceiling,
+  provider calls, local derivatives, and avoided calls at the decision that
+  authorizes them.
 
 ## Voice, Rights, and Accuracy
 

@@ -8,14 +8,14 @@ export const PHASE2_PROOF_SLUG = 'vox-phase2-proof';
 export const PHASE2_PROOF_FPS = 30;
 export const PHASE2_PROOF_UPDATED_AT = '2026-07-23T00:00:00.000Z';
 export const PHASE2_REGISTERED_FAMILY = Object.freeze({
-  familyId: 'phase2-supported-family',
+  familyId: 'phase2-depth-family',
   registration: {
-    id: 'phase2-supported-registration',
-    sourceMasterAssetId: 'phase2-supported-master',
+    id: 'phase2-depth-registration',
+    sourceMasterAssetId: 'phase2-depth-reference',
     canvas: {width: 480, height: 320},
     origin: 'top-left',
   },
-  groupId: 'phase2-supported-rig',
+  groupId: 'phase2-depth-stack',
   members: [
     {
       assetId: 'phase2-support-rear',
@@ -39,6 +39,12 @@ export const PHASE2_REGISTERED_FAMILY = Object.freeze({
       maskAssetId: 'phase2-mask-front',
     },
   ],
+});
+
+export const PHASE2_REVEAL_ENVELOPE = Object.freeze({
+  '16:9': {x: 0.02, y: 0.02, scale: 0.08, rotationDegrees: 1},
+  '9:16': {x: 0.015, y: 0.02, scale: 0.08, rotationDegrees: 1},
+  '1:1': {x: 0.018, y: 0.018, scale: 0.08, rotationDegrees: 1},
 });
 
 const still = () => ({
@@ -339,7 +345,7 @@ const boundaryData = (id) => dataGraphic({
 const registeredFamilyGroup = () => ({
   id: PHASE2_REGISTERED_FAMILY.groupId,
   kind: 'group',
-  pattern: 'supported-subject',
+  pattern: 'registered-depth-stack',
   z: 18,
   coordinateSpace: PHASE2_REGISTERED_FAMILY.registration.canvas,
   transform: transform(0.08, 0.32, 0.28, 0.34),
@@ -351,22 +357,33 @@ const registeredFamilyGroup = () => ({
     ],
   },
   registration: PHASE2_REGISTERED_FAMILY.registration,
-  support: {
-    subjectId: 'phase2-subject',
-    contactAnchor: {x: 0.5, y: 0.75},
-    contactZone: [[0.18, 0.55], [0.82, 0.55], [0.82, 0.92], [0.18, 0.92]],
-    occlusionZone: [[0.08, 0.58], [0.92, 0.58], [0.92, 0.95], [0.08, 0.95]],
+  layerStack: {
+    sourcePackageId: 'phase2-layer-package',
+    sourceStrategy: 'registered-layer-sheet',
+    motionCapability: 'bounded-relative',
+    revealEnvelope: PHASE2_REVEAL_ENVELOPE,
   },
   children: PHASE2_REGISTERED_FAMILY.members.map((member, index) => ({
     id: member.nodeId,
     kind: 'asset',
-    assetRole: member.role === 'subject' ? 'character' : 'prop',
+    assetRole:
+      member.role === 'subject'
+        ? 'character'
+        : member.role === 'support-rear'
+          ? 'environment'
+          : 'prop',
     src: member.file,
     z: index,
+    depth: [-0.7, 0, 0.7][index],
     slot: member.role,
     registrationId: PHASE2_REGISTERED_FAMILY.registration.id,
     transform: transform(0, 0, 1, 1),
-    motion: still(),
+    motion: {
+      keyframes: [
+        {at: 0, x: [-0.005, 0.003, 0.008][index]},
+        {at: 1, x: [0.005, -0.003, -0.008][index]},
+      ],
+    },
   })),
 });
 
@@ -513,6 +530,42 @@ const storyboardBeat = ({
 
 const storyboardScene = (sceneIndex) => {
   const id = `phase2-scene-${sceneIndex}`;
+  const beats = [
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-open-beat`, at: 0.08, purpose: 'establish', proofTimeId: `s${sceneIndex}-establish`, targetId: `title-${sceneIndex}`}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-action-beat`, at: 0.52, purpose: 'explain', proofTimeId: `s${sceneIndex}-action`, targetId: sceneIndex === 1 ? 'annotation-card' : 'data-switch'}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-final-beat`, at: 0.9, purpose: 'resolve', proofTimeId: `s${sceneIndex}-final`, targetId: `match-${sceneIndex === 1 ? 'source' : 'destination'}`}),
+  ];
+  if (sceneIndex === 1) {
+    beats[1].treatments.push({
+      id: 'phase2-layer-stack-treatment',
+      targetId: PHASE2_REGISTERED_FAMILY.groupId,
+      importance: 'hero',
+      necessity: 'required',
+      changeClass: 'depth-layer-separation',
+      motion: {kind: 'continuous-transform', preset: 'drift'},
+      composition: {
+        pattern: 'registered-depth-stack',
+        motionCapability: 'bounded-relative',
+        sourcePackageId: 'phase2-layer-package',
+        sourceStrategy: 'registered-layer-sheet',
+        layers: PHASE2_REGISTERED_FAMILY.members.map((member, index) => ({
+          id: member.nodeId,
+          role: member.role,
+          completeness: {
+            'support-rear': 'clean-plate',
+            subject: 'full-silhouette',
+            'support-front': 'full-overlay',
+          }[member.role],
+          depth: [-0.7, 0, 0.7][index],
+        })),
+        revealEnvelope: PHASE2_REVEAL_ENVELOPE,
+      },
+      graphic: null,
+      semanticRisk: 'topology',
+      proofTimeId: `s${sceneIndex}-action`,
+      rationale: 'The deterministic proof family exposes complete rear, subject, and front planes under bounded relative depth motion.',
+    });
+  }
   return {
     id,
     title: sceneIndex === 1 ? 'Audio becomes edit points' : 'Edit points direct graphics',
@@ -522,11 +575,7 @@ const storyboardScene = (sceneIndex) => {
       : 'The same contract directs annotations, data graphics, and responsive states.',
     blueprint: sceneIndex === 1 ? 'layered-reveal' : 'chapter-tableau',
     estimatedDurationSeconds: 3,
-    beats: [
-      storyboardBeat({sceneIndex, id: `s${sceneIndex}-open-beat`, at: 0.08, purpose: 'establish', proofTimeId: `s${sceneIndex}-establish`, targetId: `title-${sceneIndex}`}),
-      storyboardBeat({sceneIndex, id: `s${sceneIndex}-action-beat`, at: 0.52, purpose: 'explain', proofTimeId: `s${sceneIndex}-action`, targetId: sceneIndex === 1 ? 'annotation-card' : 'data-switch'}),
-      storyboardBeat({sceneIndex, id: `s${sceneIndex}-final-beat`, at: 0.9, purpose: 'resolve', proofTimeId: `s${sceneIndex}-final`, targetId: `match-${sceneIndex === 1 ? 'source' : 'destination'}`}),
-    ],
+    beats,
     proofTimes: proofTimesFor(sceneIndex),
   };
 };
@@ -863,7 +912,7 @@ export const createPhase2EditorialAuthoring = ({media}) => {
 
 export const createPhase2StoryboardAuthoring = ({media}) => ({
   $schema: '../../schemas/storyboard-authoring.schema.json',
-  schemaVersion: 9,
+  schemaVersion: 10,
   slug: PHASE2_PROOF_SLUG,
   status: 'ready',
   arc: 'Actual local audio becomes deterministic edit points, which direct reusable typography, annotation, data, responsive, and transition primitives.',
@@ -897,7 +946,7 @@ export const createPhase2StoryboardAuthoring = ({media}) => ({
 });
 
 export const createPhase2Plan = () => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   slug: PHASE2_PROOF_SLUG,
   status: 'resolved',
   inputMode: 'both',
@@ -907,7 +956,9 @@ export const createPhase2Plan = () => ({
     environmentLayers: 4,
     characterSheets: 2,
     styleSamples: 1,
-    maxGeneratedImages: 9,
+    baseImageAttempts: 9,
+    layerPackageAttemptReserve: 12,
+    maxGeneratedImages: 21,
   },
   motionBudget: {
     maxPoseSheetCalls: 2,
@@ -959,7 +1010,7 @@ const projectScene = ({sceneIndex, media}) => {
         {at: 0, x: 0, y: 0, zoom: 1},
         {at: 1, x: sceneIndex === 1 ? 4 : -4, y: 0, zoom: 1.008},
       ],
-      parallax: {enabled: true, strength: 0.3, focalDepth: 0},
+      parallax: {enabled: true, strength: 0.3, focalDepth: -1},
     },
     narration: {
       src: narration.src,
@@ -1015,7 +1066,7 @@ export const createPhase2Project = ({media, profileId}) => {
   if (!profile) throw new Error(`未知 Phase 2 proof profile：${profileId}`);
   const project = {
     $schema: '../../schemas/project.schema.json',
-    schemaVersion: 9,
+    schemaVersion: 10,
     slug: PHASE2_PROOF_SLUG,
     title: `VOX Phase 2 Editorial System · ${profileId}`,
     plan: createPhase2Plan(),

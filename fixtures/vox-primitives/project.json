@@ -1,16 +1,16 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
   "plan": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "slug": "vox-primitives",
     "status": "resolved",
     "inputMode": "both",
     "productionProfile": "full-depth",
-    "assetBudget": {"backgrounds": 0, "environmentLayers": 0, "characterSheets": 0, "styleSamples": 0, "maxGeneratedImages": 0},
-    "motionBudget": {"maxPoseSheetCalls": 1, "maxStatesPerSheet": 4, "maxContinuousTargets": 4},
+    "assetBudget": {"backgrounds": 2, "environmentLayers": 4, "characterSheets": 2, "styleSamples": 1, "baseImageAttempts": 9, "layerPackageAttemptReserve": 12, "maxGeneratedImages": 21},
+    "motionBudget": {"maxPoseSheetCalls": 2, "maxStatesPerSheet": 6, "maxContinuousTargets": 12},
     "requested": {"durationSeconds": 6, "sceneCount": 2},
     "resolved": {"durationSeconds": 6, "sceneCount": 2, "estimatedNarrationSeconds": 1, "rationale": "A compact deterministic engineering sample.", "resolvedAt": "2026-07-23T00:00:00.000Z"},
     "updatedAt": "2026-07-23T00:00:00.000Z"

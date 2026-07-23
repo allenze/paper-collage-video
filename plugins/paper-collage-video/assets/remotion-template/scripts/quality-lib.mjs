@@ -100,6 +100,10 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'depth-order-readable',
   'camera-coupling-clean',
   'registered-groups-stable',
+  'layer-completeness-proven',
+  'neutral-reconstruction-readable',
+  'exploded-view-readable',
+  'responsive-motion-stress-clean',
   'field-density-readable',
   'field-bounds-clean',
   'field-exclusions-clean',
@@ -136,6 +140,7 @@ const QUALITY_PROFILES = {
 const COMPOSITE_PROFILES = {
   'supported-subject': ['support-contact', 'inside-or-on-readable', 'front-occlusion', 'shared-motion', 'identity-continuity', 'motion-isolation-clean'],
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
+  'registered-depth-stack': ['registration-aligned', 'layer-completeness-proven', 'depth-order-readable', 'neutral-reconstruction-readable', 'exploded-view-readable', 'responsive-motion-stress-clean', 'final-composition-readable'],
   event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
   'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
   'parallax-rig': ['depth-order-readable', 'camera-coupling-clean', 'registered-groups-stable', 'final-composition-readable'],
@@ -319,13 +324,13 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
 
   for (const scene of project.scenes ?? []) {
     for (const {node, parent} of collectCompositionAssets(scene.composition)) {
-      const topologyChecks = parent && ['supported-subject', 'registered-environment'].includes(parent.pattern)
+      const topologyChecks = parent && ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(parent.pattern)
         ? [...(QUALITY_PROFILES[node.assetRole] ?? QUALITY_PROFILES.image), ...TOPOLOGY_ASSET_CHECKS]
         : null;
       add({file: resolvePublicFile(node.src), kind: node.assetRole, source: `scene:${scene.id}:node:${node.id}`, requiredChecks: topologyChecks});
     }
     for (const {node, parent} of collectStateSequences(scene.composition)) {
-      const topologyChecks = parent && ['supported-subject', 'registered-environment'].includes(parent.pattern)
+      const topologyChecks = parent && ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(parent.pattern)
         ? [...(QUALITY_PROFILES[node.assetRole] ?? QUALITY_PROFILES.image), ...TOPOLOGY_ASSET_CHECKS]
         : null;
       for (const state of node.states) {
@@ -620,7 +625,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       });
     }
     for (const {node: group} of collectCompositionGroups(scene.composition)) {
-      if (!['supported-subject', 'registered-environment'].includes(group.pattern)) continue;
+      if (!['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(group.pattern)) continue;
       const members = descendants(group).filter((node) => ['asset', 'state-sequence'].includes(node.kind));
       const sources = [
         ...members.flatMap((member) => member.kind === 'asset' ? [member.src] : member.states.map(({src}) => src)),
@@ -963,6 +968,110 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       {id: 'boundary-clips-present', passed: boundariesCovered, actual: boundariesCovered},
       {id: 'registered-source-family', passed: familyBound, actual: familyBound},
     );
+  }
+  if (target.pattern === 'registered-depth-stack') {
+    const registration = target.group.registration;
+    const registeredFamily = assertRegisteredFamilyRecords({
+      records: target.familyRecords,
+      registration,
+      pattern: 'registered-depth-stack',
+      sourcePackageId: target.group.layerStack?.sourcePackageId,
+    });
+    const requiredCompleteness = {
+      'support-rear': 'clean-plate',
+      subject: 'full-silhouette',
+      'support-front': 'full-overlay',
+    };
+    const rolesMatchNodes = target.familyRecords.every((record) => {
+      const binding = record?.registeredFamilyBinding;
+      return target.group.children.some(
+        (node) =>
+          node.id === binding?.nodeId &&
+          node.slot === binding?.role &&
+          binding?.completeness ===
+            requiredCompleteness[binding?.role],
+      );
+    });
+    const layerProof = proofEntry?.layerStackProof;
+    const layerArtifacts = [
+      layerProof?.artifacts?.neutralReconstruction,
+      layerProof?.artifacts?.referenceComparison,
+      layerProof?.artifacts?.explodedView,
+      ...(layerProof?.artifacts?.envelopeExtremes ?? []).map(
+        ({file}) => file,
+      ),
+    ].filter(Boolean);
+    const layerArtifactsPresent =
+      layerArtifacts.length === 6 &&
+      (
+        await Promise.all(
+          layerArtifacts.map(async (file) => {
+            try {
+              return await fileExists(assertWorkspaceFile(file));
+            } catch {
+              return false;
+            }
+          }),
+        )
+      ).every(Boolean);
+    const envelopeResults =
+      layerProof?.artifacts?.envelopeExtremes ?? [];
+    checks.push(
+      {
+        id: 'registered-layer-family',
+        passed: registeredFamily.passed && rolesMatchNodes,
+        expected:
+          'three complete full-canvas members from one source package',
+        actual: {
+          passed: registeredFamily.passed && rolesMatchNodes,
+          errors: registeredFamily.errors,
+          rolesMatchNodes,
+        },
+      },
+      {
+        id: 'layer-proof-artifacts',
+        passed: layerArtifactsPresent,
+        expected:
+          'neutral reconstruction, reference comparison, exploded view, and three responsive envelope extremes',
+        actual: layerArtifacts,
+      },
+      {
+        id: 'responsive-envelope-alpha',
+        passed:
+          envelopeResults.length === 3 &&
+          envelopeResults.every(
+            ({passed, transparentPixels}) =>
+              passed && transparentPixels === 0,
+          ),
+        expected: 'zero transparent pixels at both extremes of all profiles',
+        actual: envelopeResults.map(
+          ({profile, passed, transparentPixels}) => ({
+            profile,
+            passed,
+            transparentPixels,
+          }),
+        ),
+      },
+    );
+    const alphaEvidence = (proofReport?.assetEvidence ?? []).filter(
+      (entry) =>
+        entry.sceneId === target.sceneId &&
+        target.memberNodeIds.includes(entry.nodeId),
+    );
+    checks.push({
+      id: 'alpha-band-proof-evidence',
+      passed:
+        alphaEvidence.length === 3 &&
+        alphaEvidence.every(
+          (entry) => entry.alphaBandInspection?.passed,
+        ),
+      expected:
+        'all three complete members pass original and actual render-scale alpha-band inspection',
+      actual: alphaEvidence.map((entry) => ({
+        nodeId: entry.nodeId,
+        passed: entry.alphaBandInspection?.passed ?? false,
+      })),
+    });
   }
   if (target.pattern === 'event') {
     checks.push(

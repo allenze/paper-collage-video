@@ -29,7 +29,7 @@ try {
   const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 9,
+    schemaVersion: 10,
     slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(supplied.sceneTransitions),
@@ -48,6 +48,9 @@ try {
     console.log(`  ${scene.id}: ${scene.blueprint} · ${scene.treatmentCount} treatments · risk ${scene.riskScore} · ${scene.proofCount} proofs`);
   }
   console.log(`  motion budget: ${summary.directing.estimatedPoseSheetCalls} pose-sheet calls · ${summary.directing.avoidedIsolatedStateCalls} isolated calls avoided`);
+  console.log(
+    `  source packages: ${storyboard.directingSummary.generationBudget.requiredProviderImageCalls} required provider calls · ${storyboard.directingSummary.generationBudget.localDerivatives} local derivatives · ${storyboard.directingSummary.generationBudget.avoidedCalls} calls avoided · hard ceiling ${storyboard.directingSummary.generationBudget.hardCeiling}`,
+  );
 } catch (error) {
   console.error(`project:storyboard failed: ${error.message}`);
   process.exitCode = 1;

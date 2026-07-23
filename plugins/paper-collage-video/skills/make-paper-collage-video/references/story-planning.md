@@ -21,7 +21,15 @@ Draft minimum coherent beats and estimate spoken duration before resolving the p
 | `balanced` (default) | Clear depth plus grouped hero-action changes | Moderate layers, pose sheets, graphics, and continuous targets |
 | `full-depth` | Maximum environment parallax and pose detail | More pose families, up to six states per sheet, and more evidence work |
 
-`project:plan` derives both a provider-generation attempt ceiling and a motion budget from the profile and scene count. Count the style sample, unique generated backgrounds, environment layers, pose sheets, rejected results, and abandoned results when quota was consumed. Exact reuse, sheet splits, masks, and deterministic alpha extractions do not consume a new attempt.
+`project:plan` derives both a provider-generation attempt ceiling and a motion
+budget from the profile and scene count. The image ceiling has a base plus a
+source-recovery reserve: for one scene, draft is `4+2=6`, balanced is `4+4=8`,
+and full-depth is `5+6=11`. More scenes scale the reserve explicitly. The
+reserve is a hard upper bound, not an automatic spending target. Count the style
+sample, layer source packages, unique generated backgrounds, pose sheets,
+rejected results, and abandoned results when quota was consumed. Exact reuse,
+registered-sheet splits, masks, and deterministic normalization do not consume
+a new attempt.
 
 ```bash
 npm run project:plan -- <slug> \
@@ -31,7 +39,22 @@ npm run project:plan -- <slug> \
   --rationale="<story and pacing basis>"
 ```
 
-Use `project:plan --json` as the decision source. It returns `decision.durationAuthority` plus all three `decision.profileOptions`, including exact scene-count-specific image attempts, pose-sheet calls/capacity, continuous-target limits, and final-film effects. For an already resolved plan, `npm run project:plan -- <slug> --json` is read-only and re-displays the same options without needing the original write arguments. Show those options as direct structured choices in the combined concept/provider decision and again if the human selects “modify”; never require them to guess an enum in free text. Change the profile only through concept revision or another explicit budget decision. Copy the approved `productionProfile`, `durationSeconds`, `sceneCount`, and `durationAuthority` into `planDecision` for `project:confirm-concept`; the command rejects stale or mismatched confirmation data.
+Use `project:plan --json` as the decision source. It returns
+`decision.durationAuthority` plus all three `decision.profileOptions`,
+including exact scene-count-specific base/reserve/hard image ceilings,
+pose-sheet calls/capacity, continuous-target limits, and final-film effects.
+After `project:storyboard`, the compiled generation budget adds exact
+`sourcePackagePlans`, structural provider calls, local derivatives, avoided
+calls, and the remaining reserve. For an already resolved plan,
+`npm run project:plan -- <slug> --json` is read-only and re-displays the same
+options without needing the original write arguments. Show those options as
+direct structured choices in the combined concept/provider decision and again
+if the human selects “modify”; never require them to guess an enum in free text.
+Change the profile only through concept revision or another explicit budget
+decision. Copy the approved `productionProfile`, `durationSeconds`,
+`sceneCount`, and `durationAuthority` into `planDecision`, and copy the compiled
+`sourcePackageDecision`, for `project:confirm-concept`; the command rejects
+stale or mismatched confirmation data.
 
 ## Lock the Rhythmic Storyboard
 
@@ -45,13 +68,23 @@ The storyboard is not another human gate. It is part of the existing combined co
 
 - Give the whole film one explicit arc and one shared visual/motion language.
 - Give each planned scene a narrative role, single message, blueprint, estimated duration, and at least three ordered beats.
-- Read `motion-directing.md`. Add one or more v6 `treatments` to every beat. Author the visible change, motion or visibility mechanism, composition relationship, optional graphic mechanism, risk, importance, necessity, proof binding, and rationale. Never hand-author `compositionPlan`, `directing`, or sheet grids; `project:storyboard` compiles them and rejects drift.
+- Read `motion-directing.md`. Add one or more v10 `treatments` to every beat.
+  Author the visible change, motion or visibility mechanism, composition
+  relationship, optional graphic mechanism, risk, importance, necessity, proof
+  binding, and rationale. For relative rear/subject/front motion, also read
+  `layer-complete-assets.md` and author the layer-complete source-package
+  intent. Never hand-author `compositionPlan`, source-package cost totals,
+  `directing`, or sheet grids; `project:storyboard` compiles them and rejects
+  drift.
 - Use normalized beat time (`at=0..1`) so rhythm survives narration resync.
 - Choose one of the bounded blueprints: `layered-reveal`, `map-journey`, `archive-stack`, `character-procession`, `discovery-wipe`, `transformation-tableau`, `chapter-tableau`, or `quiet-lockup`.
 - Define at least three proof moments per scene: an establishing state, an action/peak state, and a `final` state at or after `0.82`. Every proof needs a stable id, visible relationship assertions, and a `stateAssertions` array. Cover every planned sequence state at least once so its schedule can be verified deterministically.
 - Declare exactly one top-level `sceneTransitions[]` record for every adjacent pair. Author narrative `intent` and `rationale`, normally letting the compiler choose the registered animated recipe. Use `intent=impact` plus an impact-cut treatment when abruptness is semantic. For ordinary intents, use a `rhythmic` cut only with a `beatId` in the outgoing final 20% or incoming first 20%. Every animated boundary must be opaque and covered by both the outgoing tail and incoming narration lead.
 - Keep proof moments outside scene-boundary intervals so every sampled frame clearly proves the intended composition.
-- In schema v5, every beat and treatment declares `proofTimeId` as an approved proof id or `null`; treatment proof must match its beat. If a beat names an `audioCue`, it must bind an event-level proof and production must attach a real sound asset to at least one matching event using that same proof id.
+- In schema v10, every beat and treatment declares `proofTimeId` as an approved
+  proof id or `null`; treatment proof must match its beat. If a beat names an
+  `audioCue`, it must bind an event-level proof and production must attach a
+  real sound asset to at least one matching event using that same proof id.
 
 The compiler protects required hero actions. If the selected profile cannot afford them, it rejects the storyboard instead of silently replacing a pose change with a cheap transform. Reduce enhancement motion first, raise the profile, or reduce story scope inside the existing concept decision.
 

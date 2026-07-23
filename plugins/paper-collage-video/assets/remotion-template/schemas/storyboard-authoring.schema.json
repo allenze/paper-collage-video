@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard-authoring.schema.json",
-  "title": "Paper Collage Storyboard Authoring v9",
+  "title": "Paper Collage Storyboard Authoring v10",
   "description": "Author treatments plus editorial timing and responsive intent. compositionPlan, directing, resolved edit points, fingerprints, and budget demand are compiler-owned.",
   "type": "object",
   "required": ["schemaVersion", "status", "arc", "style", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 9},
+    "schemaVersion": {"const": 10},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"enum": ["pending", "ready"]},
     "arc": {"type": "string"},

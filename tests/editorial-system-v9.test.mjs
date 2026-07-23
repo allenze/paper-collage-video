@@ -346,7 +346,7 @@ test('project validation reports low-alpha rectangular residue independently fro
   try {
     await fs.copyFile(source, destination);
     const group = project.scenes[0].composition.nodes.find(
-      ({id}) => id === 'phase2-supported-rig',
+      ({id}) => id === 'phase2-depth-stack',
     );
     group.children.find(({id}) => id === 'phase2-subject').src =
       'fixtures/vox-phase2-proof/registered-family/project-validation-positive.png';

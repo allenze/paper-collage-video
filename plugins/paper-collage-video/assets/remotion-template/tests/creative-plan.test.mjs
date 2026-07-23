@@ -27,7 +27,7 @@ const make = (overrides) =>
 
 test('creative planning supports all four partial-input modes', () => {
   const none = make({});
-  assert.equal(none.schemaVersion, 2);
+  assert.equal(none.schemaVersion, 3);
   assert.equal(none.inputMode, 'none');
   assert.equal(none.productionProfile, 'balanced');
   assert.deepEqual(none.assetBudget, {
@@ -35,7 +35,9 @@ test('creative planning supports all four partial-input modes', () => {
     environmentLayers: 2,
     characterSheets: 2,
     styleSamples: 1,
-    maxGeneratedImages: 8,
+    baseImageAttempts: 8,
+    layerPackageAttemptReserve: 12,
+    maxGeneratedImages: 20,
   });
   assert.deepEqual(none.motionBudget, {
     maxPoseSheetCalls: 2,
@@ -80,10 +82,12 @@ test('production profiles set explicit generated-image budgets', () => {
     environmentLayers: 2,
     characterSheets: 2,
     styleSamples: 1,
-    maxGeneratedImages: 11,
+    baseImageAttempts: 11,
+    layerPackageAttemptReserve: 12,
+    maxGeneratedImages: 23,
   });
-  assert.equal(deriveAssetBudget('balanced', 6).maxGeneratedImages, 14);
-  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 25);
+  assert.equal(deriveAssetBudget('balanced', 6).maxGeneratedImages, 38);
+  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 61);
   assert.deepEqual(deriveMotionBudget('draft', 6), {
     maxPoseSheetCalls: 2,
     maxStatesPerSheet: 4,
@@ -111,9 +115,9 @@ test('concept decisions expose bounded profile choices with exact scene budgets'
   assert.deepEqual(
     decision.profileOptions.map(({id, assetBudget}) => [id, assetBudget.maxGeneratedImages]),
     [
-      ['draft', 5],
-      ['balanced', 6],
-      ['full-depth', 9],
+      ['draft', 9],
+      ['balanced', 14],
+      ['full-depth', 21],
     ],
   );
   assert.deepEqual(

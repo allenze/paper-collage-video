@@ -88,6 +88,41 @@ export const assertStyleProofReady = async (slug) => {
       if (!frame) throw new Error(`${proof.compositeId} 缺少证明时刻 ${proofTimeId}。`);
       for (const field of REQUIRED_FRAME_EVIDENCE) await assertEvidenceFile(frame[field], `${proof.compositeId}.${proofTimeId}.${field}`);
     }
+    if (target.pattern === 'registered-depth-stack') {
+      const layerProof = proof.layerStackProof;
+      const envelopeExtremes =
+        layerProof?.artifacts?.envelopeExtremes ?? [];
+      if (
+        layerProof?.passed !== true ||
+        envelopeExtremes.length !== 3 ||
+        envelopeExtremes.some(
+          ({passed, transparentPixels}) =>
+            passed !== true || transparentPixels !== 0,
+        )
+      ) {
+        throw new Error(
+          `${proof.compositeId} 缺少通过的三画幅 layer-family 极值证明。`,
+        );
+      }
+      await assertEvidenceFile(
+        layerProof.artifacts.neutralReconstruction,
+        `${proof.compositeId}.neutralReconstruction`,
+      );
+      await assertEvidenceFile(
+        layerProof.artifacts.referenceComparison,
+        `${proof.compositeId}.referenceComparison`,
+      );
+      await assertEvidenceFile(
+        layerProof.artifacts.explodedView,
+        `${proof.compositeId}.explodedView`,
+      );
+      for (const envelope of envelopeExtremes) {
+        await assertEvidenceFile(
+          envelope.file,
+          `${proof.compositeId}.envelope.${envelope.profile}`,
+        );
+      }
+    }
     const assetEvidence = report.assetEvidence ?? [];
     for (const nodeId of target.memberNodeIds ?? []) {
       const evidence = assetEvidence.find((candidate) =>
@@ -109,6 +144,16 @@ export const assertStyleProofReady = async (slug) => {
     }
     const proof = report.composites.find(({compositeId}) => compositeId === target.compositeId);
     const compositeEvidence = (proof?.proofFrames ?? []).flatMap((frame) => REQUIRED_FRAME_EVIDENCE.map((field) => frame[field]));
+    if (target.pattern === 'registered-depth-stack') {
+      compositeEvidence.push(
+        proof.layerStackProof.artifacts.neutralReconstruction,
+        proof.layerStackProof.artifacts.referenceComparison,
+        proof.layerStackProof.artifacts.explodedView,
+        ...proof.layerStackProof.artifacts.envelopeExtremes.map(
+          ({file}) => file,
+        ),
+      );
+    }
     const targetAssetEvidence = (report.assetEvidence ?? []).filter(
       ({sceneId, nodeId}) =>
         sceneId === target.sceneId && target.memberNodeIds.includes(nodeId),

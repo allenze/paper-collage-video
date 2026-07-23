@@ -6,6 +6,9 @@
 
 ### Added
 
+- Project/Storyboard v10 的 layer-complete source package、`registered-depth-stack`、三画幅 reveal envelopes，以及在 provider 调用前锁定的完整 rear/subject/front 语义。
+- Registered-family v2 和 asset-request v7：支持 2x2 reference/rear/subject/front 注册 sheet 或完整上下文 layer edits，拒绝 flat master 抠层与 isolated member generation。
+- 家族级 neutral reconstruction、reference comparison、exploded checkerboard 和 16:9/9:16/1:1 双极值证明。
 - Project、Storyboard Authoring 与 Compiled Storyboard v9 的统一 editorial 契约：实际音频 edit points、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级切换。
 - 旁白词/短语/句子/语义强调、SFX onset/peak/tail、音乐 beat/bar/accent 与手工 cue 的来源、优先级、容差窗口、冲突解析和媒体/场景/最终渲染帧映射。
 - 文字 fit/overflow/reveal/emphasis、九类 annotation/counter、七类数据图形和八类高级编辑切换的正式 Remotion/SVG 原语。
@@ -13,6 +16,8 @@
 
 ### Changed
 
+- Creative Plan v3 将图片预算拆为 base 与 layer-package reserve；单幕 draft/balanced/full-depth 硬上限分别为 6/8/11，并在概念批准中绑定精确 `sourcePackageDecision`、provider calls、local derivatives 与 avoided calls。
+- 相对三层运动只能消费 layer-complete source package；平面合成母版仍可用于 rigid-locked 整体/相机运动和重建比较，但不能被 masking 声称为隐藏内容完整的独立层。
 - 项目、故事板 authoring/compiled schema、类型、编译器、执行校验、质量门、fixture、模板与 Skill 文档统一升级到 v9；不保留 v8 loader、双 Schema、兼容适配器、deprecated 字段或按版本分支的 Renderer。
 - 响应式导演由显式 16:9、9:16、1:1 计划驱动，同一语义 Storyboard 可以编译为不同但可检查的布局，不依赖运行时隐藏画幅特例。
 - 音频对齐证明必须绑定最终本地音频文件的探测结果与 timing SHA，不再把估算时长或 TTS token 延迟视为正式同步证据。
@@ -20,6 +25,7 @@
 
 ### Fixed
 
+- 在 provider request reservation 前阻断缺少 clean rear plate、full subject silhouette、full front overlay、共享注册画布或三画幅 reveal envelope 的相对景深计划。
 - 同时到达的多个 cue 按优先级、容差和显式冲突策略确定性解析。
 - 缺失词级 timing、无效字体签名、注释无效 target/越界/排除区碰撞、空/非法/极端数据与 match continuity 漂移会明确阻断或按声明策略降级。
 

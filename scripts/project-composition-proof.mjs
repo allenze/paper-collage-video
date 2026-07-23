@@ -34,6 +34,7 @@ import {
   activeManifestAssets,
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
+import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
 
 const args = process.argv.slice(2);
 const [slug] = args.filter((argument) => !argument.startsWith('--'));
@@ -126,7 +127,7 @@ try {
   const {project} = await loadProject(slug);
   const validation = await validateProject(project);
   console.log(formatValidation(validation));
-  if (!validation.passed) throw new Error('v9 组合结构未通过，不能生成证明帧。');
+  if (!validation.passed) throw new Error('v10 组合结构未通过，不能生成证明帧。');
 
   const timeline = deriveTimeline(project);
   const paths = projectPaths(slug);
@@ -169,6 +170,12 @@ try {
   const recordsByFile = new Map(
     activeManifestAssets(manifest).map((record) => [
       path.normalize(record.file),
+      record,
+    ]),
+  );
+  const recordsByAssetId = new Map(
+    activeManifestAssets(manifest).map((record) => [
+      record.assetId,
       record,
     ]),
   );
@@ -231,7 +238,14 @@ try {
   const coupledNodes = new Map();
   for (const scene of project.scenes ?? []) {
     for (const {node, parent} of collectCompositionAssets(scene.composition)) {
-      if (!parent || !['supported-subject', 'registered-environment'].includes(parent.pattern)) continue;
+      if (
+        !parent ||
+        ![
+          'supported-subject',
+          'registered-environment',
+          'registered-depth-stack',
+        ].includes(parent.pattern)
+      ) continue;
       coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {
         sceneId: scene.id,
         node,
@@ -320,7 +334,26 @@ try {
           await fileExists(path.resolve(ROOT, cachedFrame.crop ?? '')) &&
           await fileExists(path.resolve(ROOT, cachedFrame.debugFrame ?? '')),
         );
-      }))).every(Boolean);
+      }))).every(Boolean) &&
+      (
+        target.pattern !== 'registered-depth-stack' ||
+        (
+          cached.layerStackProof?.passed === true &&
+          (
+            await Promise.all([
+              cached.layerStackProof.artifacts?.neutralReconstruction,
+              cached.layerStackProof.artifacts?.referenceComparison,
+              cached.layerStackProof.artifacts?.explodedView,
+              ...(cached.layerStackProof.artifacts?.envelopeExtremes ?? [])
+                .map(({file}) => file),
+            ].map((file) =>
+              file
+                ? fileExists(path.resolve(ROOT, file))
+                : false,
+            ))
+          ).every(Boolean)
+        )
+      );
     if (reusableComposite) {
       composites.push(cached);
       reusedComposites += 1;
@@ -354,12 +387,60 @@ try {
         });
       }
     }
+    let layerStackProof = null;
+    if (target.pattern === 'registered-depth-stack') {
+      const memberFiles = new Map(
+        target.group.children
+          .filter(({kind}) => kind === 'asset')
+          .map((node) => [node.id, resolvePublicFile(node.src)]),
+      );
+      const referenceRecord = recordsByAssetId.get(
+        target.group.registration.sourceMasterAssetId,
+      );
+      const built = await buildLayerStackProof({
+        group: target.group,
+        memberFiles,
+        referenceFile: referenceRecord?.file
+          ? path.resolve(ROOT, referenceRecord.file)
+          : null,
+        directory: evidenceDirectory,
+        evidenceId: `${target.sceneId}-${target.nodeId}-layer-stack`,
+      });
+      layerStackProof = {
+        ...built,
+        artifacts: {
+          neutralReconstruction: path.relative(
+            ROOT,
+            built.artifacts.neutralReconstruction,
+          ),
+          referenceComparison: path.relative(
+            ROOT,
+            built.artifacts.referenceComparison,
+          ),
+          explodedView: path.relative(
+            ROOT,
+            built.artifacts.explodedView,
+          ),
+          envelopeExtremes:
+            built.artifacts.envelopeExtremes.map((entry) => ({
+              ...entry,
+              file: path.relative(ROOT, entry.file),
+            })),
+        },
+        artifactHashes: Object.fromEntries(
+          Object.entries(built.artifactHashes).map(
+            ([file, hash]) => [path.relative(ROOT, file), hash],
+          ),
+        ),
+      };
+    }
     composites.push({
       compositeId: target.compositeId,
       sceneId: target.sceneId,
       pattern: target.pattern,
       fingerprint: target.fingerprint,
       proofFrames,
+      layerStackProof,
     });
     generatedComposites += 1;
   }

@@ -5,9 +5,9 @@
 
 一个配置驱动的本地纸片分层视频生产系统。人负责内容意图、审美选择和最终批准；Codex 与本地工具负责节奏故事板、素材组织、分层关键帧、持久显隐与视听事件、旁白同步、渲染和技术验收。
 
-当前开发协议为 project/storyboard v9；旧项目不会自动迁移或回退。v9 保留递归组合、注册源家族、camera-coupled parallax、节奏硬切和确定性 `motif-field` 的输出能力，并新增统一 edit point、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级编辑切换。所有这些行为都由 authoring、compiled plan、运行时、质量报告和正式证明共同约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
+当前开发协议为 project/storyboard v10（editorial subsystem 仍为 v9）；旧项目不会自动迁移或回退。v10 保留递归组合、注册源家族、camera-coupled parallax、节奏硬切、确定性 `motif-field`、统一 edit point、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级编辑切换，并新增生图前的 layer-complete source package、`registered-depth-stack`、responsive reveal envelope 和精确 provider/local/avoided 调用账目。所有这些行为都由 authoring、compiled plan、运行时、质量报告和正式证明共同约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
 
-当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.3`。新协议加入节奏故事板、注册组合模式、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
+当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.4`。新协议加入节奏故事板、注册组合模式、完整图层源包、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
 
 ## 完整演示
 
@@ -15,14 +15,14 @@
 
 Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v9 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
 
-当前 v9 还保留一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、带排除区与循环证明的固定种子 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
+当前 v10 还保留一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、带排除区与循环证明的固定种子 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
 
 ```bash
 npm run sample:vox
 npm run sample:vox:verify
 ```
 
-输入与正式证明合同位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`，证明报告与固定帧联系表位于 `dist/vox-primitives/proof/`。验证命令会绑定 v9 项目/故事板、runtime build、全部夹具素材、编码规格、六个 proof time 与第 90 帧 rhythmic cut。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
+输入与正式证明合同位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`，证明报告与固定帧联系表位于 `dist/vox-primitives/proof/`。验证命令会绑定 v10 项目/故事板、runtime build、全部夹具素材、编码规格、六个 proof time 与第 90 帧 rhythmic cut。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
 
 Phase 2 另带完全本地、无需 provider 的三画幅 proof gallery：
 
@@ -88,7 +88,7 @@ Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于
 
 正常制作一条新视频时，人参与三个内容节点：
 
-1. 口述主题后，一次确认概念、Storyboard v9 导演节拍与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
+1. 口述主题后，一次确认概念、Storyboard v10 导演节拍/完整图层源包与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、base/reserve 图片硬上限、精确 source-package 调用账目、动作预算和文本/生图/虚构语音 provider。
 2. 确认一张风格样张、短试听和必要时的 3–5 秒动作证明。
 3. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
@@ -161,7 +161,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v9 再把逐节拍导演 treatments、统一 edit points、三画幅 composition profiles 与高级切换编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划和指纹，并为每对相邻镜头把叙事意图路由成可验证的不透明边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v3 解析时长、幕数、base + layer reserve 图片硬上限与动作预算，Storyboard v10 再把逐节拍导演 treatments、完整 rear/subject/front 源包、统一 edit points、三画幅 composition profiles 与高级切换编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划、provider/local/avoided 调用账目和指纹。相对景深运动必须在生图前锁定 clean plate、full silhouette、full overlay、共享画布、严格层级和 16:9/9:16/1:1 reveal envelopes；一张 flat master 不能再被抠成缺失隐藏像素的独立运动层。人一次确认故事板、概念、精确 `sourcePackageDecision`、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -173,7 +173,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
 | `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
-| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v9 节拍 treatments、edit points、三画幅导演计划、高级切换、多维风格证明与证明时刻 |
+| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v10 节拍 treatments、layer source packages、edit points、三画幅导演计划、高级切换、多维风格证明与证明时刻 |
 | `npm run project:revise-preview-directing -- <slug> --input=<file>` | 在预览退回后保护概念/风格并按既定 motion budget 正式重编导演字段 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
@@ -195,16 +195,16 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
 | `npm run project:composition-proof -- <slug> [--force]` | 按项目、资产与 runtime-build 指纹增量生成关系/语义证明；`--force` 显式禁用全部证明缓存 |
-| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v9 校验、证明指纹与双质量门和阶段推进 |
+| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v10 composition/v9 editorial 校验、证明指纹与双质量门和阶段推进 |
 | `npm run project:audio-calibration -- <slug> propose` | 为当前旁白与时间线生成带指纹的响度校准草案 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |
 | `npm run project:subtitles -- <slug>` | 低层恢复命令：同步或生成字幕时间 |
 | `npm run project:quality -- <slug> record-batch --input=<file>` | 原子记录与哈希/组合指纹绑定的资产或组合语义检查 |
-| `npm run project:validate -- <slug>` | 检查 v9 组合、edit-point 帧映射、编辑原语、注册/支撑、场景交接、字幕和时长 |
+| `npm run project:validate -- <slug>` | 检查 v10 组合/源包、edit-point 帧映射、编辑原语、注册/支撑、场景交接、字幕和时长 |
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v9 组合生成覆盖语义、耦合关系与状态序列的 schema-v6 多目标样式证明 |
+| `npm run style:proof -- <slug>` | 用真实 v10 组合生成覆盖语义、注册深度家族、耦合关系与状态序列的 schema-v6 多目标样式证明 |
 | `npm run sample:vox:verify` | 对 VOX 工程样片生成固定帧联系表，并校验媒体、边界、素材与 runtime 指纹 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
@@ -231,7 +231,7 @@ Skill 不会只根据名称猜测能力存在：它先检查当前宿主的实�
 
 复制 `providers.local.example.json` 为 `providers.local.json`，即可把任意 CLI、SDK 包装脚本或私有 API 接到 `command` adapter。配置只保存 `requiredEnv` 的变量名，API key 仍放在环境变量中。异步服务由用户的 adapter 自行提交和轮询；稳定接口是“读取请求 JSON、写入指定输出、退出码为 0”。
 
-新图像请求使用 schema v6，同时声明组合绑定、语义风险和可验证输出面。人物、复杂拓扑、功能机构和说明图先写入 `semantic-contracts.json`，再由 proof target 和证据型质量门验证；prompt 不作为验收依据。宿主生图先只读校验请求，再运行 `provider:attempt reserve` 并使用返回的规范 invocation；命令 adapter 由 `provider:run` 自动预留。所有可能计费的成功、废稿、拒绝和放弃结果写入只追加账本，预算用尽时下一次调用被阻断。
+新图像请求使用 schema v7，同时声明组合绑定、语义风险和可验证输出面；layer-aware 请求还必须携带与故事板完全一致的 `layerPackageBinding`。人物、复杂拓扑、功能机构和说明图先写入 `semantic-contracts.json`，再由 proof target 和证据型质量门验证；prompt 不作为验收依据。宿主生图先只读校验请求，再运行 `provider:attempt reserve` 并使用返回的规范 invocation；命令 adapter 由 `provider:run` 自动预留。所有可能计费的成功、废稿、拒绝和放弃结果写入只追加账本，预算用尽时下一次调用被阻断。
 
 被接受的输出仍通过 `provider:run` 或 `provider:record` 写入 manifest v4，记录 provider、模型/任务 id、请求指纹、SHA-256、组合/语义绑定、母版/派生成员、源家族指纹和生命周期。替换记录保留为 `superseded`；`rejected` 与 `recovery-source` 保留审计但不进入当前质量分母。相同 provider、模型、输入、设置和完整绑定才允许 `provider:reuse`；图像仍需在当前项目通过质量检查。完整契约见 [Provider Configuration](skills/make-paper-collage-video/references/providers.md) 和 [Semantic Production Contracts](skills/make-paper-collage-video/references/semantic-contracts.md)。
 

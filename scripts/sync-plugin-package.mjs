@@ -100,6 +100,8 @@ for (const entry of [
   'scripts/audio-calibration-lib.mjs',
   'scripts/creative-plan-lib.mjs',
   'scripts/composition-lib.mjs',
+  'scripts/layer-source-plan-lib.mjs',
+  'scripts/layer-stack-proof-lib.mjs',
   'scripts/motion-treatment-lib.mjs',
   'scripts/process-character-sheet.mjs',
   'scripts/derive-registered-family.mjs',
@@ -150,8 +152,8 @@ for (const entry of [
   'scripts/project-semantic-contracts.mjs',
   'scripts/storyboard-lib.mjs',
   'scripts/render-phase2-proof.mjs',
-  'scripts/schema-v9.mjs',
-  'scripts/validate_v9_schemas.py',
+  'scripts/schema-v10.mjs',
+  'scripts/validate_v10_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-vox-sample.mjs',
   'scripts/prove-alpha-bands.mjs',
@@ -277,7 +279,7 @@ const workspacePackage = {
     'proof:phase2:render': rootPackage.scripts['proof:phase2:render'],
     'proof:phase2:verify': rootPackage.scripts['proof:phase2:verify'],
     'proof:phase2': rootPackage.scripts['proof:phase2'],
-    'schema:v9': rootPackage.scripts['schema:v9'],
+    'schema:v10': rootPackage.scripts['schema:v10'],
     dev: 'remotion studio src/index.ts --props=projects/starter-demo/project.json',
     check: rootPackage.scripts.check,
     bundle: rootPackage.scripts.bundle,
@@ -383,11 +385,11 @@ const starterEditorial = {
 
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 9,
+  schemaVersion: 10,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
-    schemaVersion: 2,
+    schemaVersion: 3,
     slug: 'starter-demo',
     status: 'resolved',
     inputMode: 'both',
@@ -397,7 +399,9 @@ const project = {
       environmentLayers: 1,
       characterSheets: 1,
       styleSamples: 1,
-      maxGeneratedImages: 4,
+      baseImageAttempts: 4,
+      layerPackageAttemptReserve: 2,
+      maxGeneratedImages: 6,
     },
     motionBudget: {
       maxPoseSheetCalls: 1,
@@ -500,7 +504,7 @@ const project = {
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 9,
+  schemaVersion: 10,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',

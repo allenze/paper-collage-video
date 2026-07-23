@@ -5,6 +5,11 @@ import {
   MAX_MOTIF_INSTANCES_PER_SCENE,
 } from '../src/motifField.mjs';
 import {compileEditorialSystem} from './editorial-system-lib.mjs';
+import {
+  compileLayerStackPlan,
+  summarizeLayerSourcePackages,
+  validateLayerCompositionIntent,
+} from './layer-source-plan-lib.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -20,13 +25,19 @@ export const CHANGE_CLASSES = [
   'static-hold',
   'visibility-change',
   'depth-parallax',
+  'depth-layer-separation',
   'decorative-field',
 ];
 export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field'];
 export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'parallax-camera'];
 export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'burst', 'orbit'];
 export const MOTIF_FIELD_DISTRIBUTIONS = ['scattered', 'grid', 'edge'];
-export const COMPOSITION_PATTERNS = ['free', 'supported-subject', 'registered-environment'];
+export const COMPOSITION_PATTERNS = [
+  'free',
+  'supported-subject',
+  'registered-environment',
+  'registered-depth-stack',
+];
 export const GRAPHIC_KINDS = ['typography', 'shape', 'annotation', 'data-graphic'];
 export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'reveal', 'route', 'data-state'];
 export const SEMANTIC_RISKS = ['decorative', 'identity', 'topology', 'mechanism', 'diagram'];
@@ -85,6 +96,11 @@ const routeForChangeClass = {
   'static-hold': {motion: 'static'},
   'visibility-change': {motion: 'visibility-transition'},
   'depth-parallax': {motion: 'continuous-transform', proof: true},
+  'depth-layer-separation': {
+    motion: 'continuous-transform',
+    composition: 'registered-depth-stack',
+    proof: true,
+  },
   'decorative-field': {motion: 'motif-field', proof: true},
 };
 
@@ -94,6 +110,7 @@ const addIssue = (issues, code, message, location) =>
 export const treatmentRiskScore = (treatment) =>
   (RISK_SCORE[treatment?.semanticRisk] ?? 0) * 10 +
   (treatment?.motion?.kind === 'state-sequence' ? 5 : 0) +
+  (treatment?.composition?.pattern === 'registered-depth-stack' ? 6 : 0) +
   (treatment?.composition?.pattern === 'registered-environment' ? 4 : 0) +
   (treatment?.composition?.pattern === 'supported-subject' ? 3 : 0) +
   (IMPORTANCE_SCORE[treatment?.importance] ?? 0) +
@@ -111,8 +128,11 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   if ((STYLE_SEMANTIC_SEVERITY[treatment.semanticRisk] ?? 0) === highestSemanticSeverity && highestSemanticSeverity > 0) {
     coverage.push(`semantic:${treatment.semanticRisk}`);
   }
-  if (['supported-subject', 'registered-environment'].includes(treatment.composition?.pattern)) {
+  if (['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(treatment.composition?.pattern)) {
     coverage.push(`relationship:${treatment.composition.pattern}`);
+  }
+  if (treatment.composition?.motionCapability === 'bounded-relative') {
+    coverage.push('motion:bounded-relative-layers');
   }
   if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
   if (treatment.motion?.kind === 'motif-field') coverage.push('motion:motif-field');
@@ -152,7 +172,7 @@ export const compileStyleProofPlan = (scenes) => {
       requiredCoverage.add(coverage);
     }
   }
-  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment'].includes(compositionPattern))) {
+  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(compositionPattern))) {
     requiredCoverage.add('relationship:coupled');
   }
   const representative = [...candidates].sort((left, right) =>
@@ -335,7 +355,10 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   const composition = treatment.composition;
   if (!composition || typeof composition !== 'object' || !COMPOSITION_PATTERNS.includes(composition.pattern)) {
     addIssue(issues, 'treatment-composition-pattern', 'composition.pattern 必须使用受支持的组合模式。', `${location}.composition.pattern`);
-  } else if (composition.pattern !== 'free') {
+  } else if (
+    composition.pattern !== 'free' &&
+    composition.pattern !== 'registered-depth-stack'
+  ) {
     const relationship = composition.relationship;
     if (!relationship || typeof relationship !== 'object') {
       addIssue(issues, 'treatment-relationship', '耦合组合必须声明 relationship。', `${location}.composition.relationship`);
@@ -350,8 +373,15 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
       }
     }
   } else if (composition.relationship !== undefined) {
-    addIssue(issues, 'treatment-free-relationship', 'free 组合不得声明 relationship。', `${location}.composition.relationship`);
+    if (composition.pattern === 'free') {
+      addIssue(issues, 'treatment-free-relationship', 'free 组合不得声明 relationship。', `${location}.composition.relationship`);
+    }
   }
+  issues.push(
+    ...validateLayerCompositionIntent(composition, {
+      location: `${location}.composition`,
+    }),
+  );
 
   if (treatment.graphic !== null && treatment.graphic !== undefined) {
     if (!GRAPHIC_KINDS.includes(treatment.graphic?.kind)) {
@@ -398,6 +428,7 @@ const compileScene = (scene) => {
   const visibilityEvents = [];
   const motifFields = [];
   const graphics = [];
+  const layerStacks = new Map();
   const treatments = [];
 
   for (const beat of scene.beats ?? []) {
@@ -487,6 +518,29 @@ const compileScene = (scene) => {
           proofTimeId: treatment.proofTimeId ?? null,
         });
       }
+      const layerStack = compileLayerStackPlan({
+        sceneId: scene.id,
+        treatment,
+      });
+      if (layerStack) {
+        const key = layerStack.targetId;
+        const prior = layerStacks.get(key);
+        const stable = ({
+          id,
+          treatmentId,
+          proofTimeId,
+          ...value
+        }) => value;
+        if (
+          prior &&
+          JSON.stringify(stable(prior)) !== JSON.stringify(stable(layerStack))
+        ) {
+          throw new Error(
+            `分层资产拓扑 ${scene.id}::${key} 在同一镜头中定义不一致。`,
+          );
+        }
+        if (!prior) layerStacks.set(key, layerStack);
+      }
     }
   }
 
@@ -503,6 +557,9 @@ const compileScene = (scene) => {
     visibilityEvents: visibilityEvents.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     motifFields: motifFields.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     graphics: graphics.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
+    layerStacks: [...layerStacks.values()].sort((left, right) =>
+      left.targetId.localeCompare(right.targetId),
+    ),
   };
   const directing = {
     fingerprint: hashCompositionValue({sceneId: scene.id, beats: scene.beats, compositionPlan}),
@@ -668,9 +725,35 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     throw error;
   }
   const styleProofPlan = compileStyleProofPlan(scenes);
+  const generationBudget = summarizeLayerSourcePackages(scenes, {
+    poseSheetCalls: demand.estimatedPoseSheetCalls,
+    hardCeiling: plan?.assetBudget?.maxGeneratedImages ?? null,
+  });
+  if (
+    Number.isInteger(generationBudget.hardCeiling) &&
+    generationBudget.requiredProviderImageCalls >
+      generationBudget.hardCeiling
+  ) {
+    addIssue(
+      budgetIssues,
+      'directing-image-attempt-budget',
+      `分层 source packages 与姿态母版至少需要 ${generationBudget.requiredProviderImageCalls} 次图片 provider 调用，超过 ${plan.productionProfile} 档位硬上限 ${generationBudget.hardCeiling}；请提高档位、改用可靠 registered-layer-sheet 或缩小范围。`,
+      'directingSummary.generationBudget.requiredProviderImageCalls',
+    );
+  }
+  if (budgetIssues.length > 0) {
+    const error = new Error(
+      budgetIssues
+        .map(({location, message}) => `${location}: ${message}`)
+        .join('\n'),
+    );
+    error.issues = budgetIssues;
+    throw error;
+  }
   const directingSummary = {
     profile: plan?.productionProfile ?? null,
     ...demand,
+    generationBudget,
     styleProofPlan,
   };
   directingSummary.fingerprint = hashCompositionValue({

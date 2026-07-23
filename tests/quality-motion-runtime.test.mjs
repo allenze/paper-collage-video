@@ -196,7 +196,7 @@ test('v9 scene transitions use one seconds-based intent-routed opaque-boundary p
   assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v9 projects are rejected instead of migrated', async () => {
+test('pre-v10 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -210,14 +210,14 @@ test('pre-v9 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 9'),
+          code === 'schema-version' && message.includes('必须为 10'),
     ),
   );
 });
 
-test('v9 projects require an explicit bounded narration gain', async () => {
+test('v10 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 9,
+    schemaVersion: 10,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -489,19 +489,32 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     derivation: {method: 'alpha-extraction', parentAssetId: 'boat-master'},
   });
   const registeredFamilyBinding = (nodeId, role) => ({
-    schemaVersion: 1,
+    schemaVersion: 2,
     familyId: 'boat-family-members',
     pattern: 'supported-subject',
+    motionCapability: 'bounded-relative',
+    sourcePackageId: 'boat-layer-package',
+    sourceStrategy: 'registered-layer-sheet',
+    revealEnvelope: {
+      '16:9': {x: 0.02, y: 0.02, scale: 0.04, rotationDegrees: 1},
+      '9:16': {x: 0.015, y: 0.02, scale: 0.04, rotationDegrees: 1},
+      '1:1': {x: 0.018, y: 0.018, scale: 0.04, rotationDegrees: 1},
+    },
     registrationId: 'boat-family',
     sourceMasterAssetId: 'boat-master',
     canvas: {width: 100, height: 100},
     origin: 'top-left',
     role,
     slot: role,
+    completeness: {
+      'support-rear': 'clean-plate',
+      subject: 'full-silhouette',
+      'support-front': 'full-overlay',
+    }[role],
     nodeId,
     source: {
-      kind: 'source-master',
-      assetId: 'boat-master',
+      kind: 'registered-layer-sheet',
+      assetId: 'boat-layer-sheet',
       stateId: null,
       sourceSheetAssetId: null,
       sourceFamilyFingerprint: null,

@@ -84,26 +84,41 @@ const makeFamilyFixture = async () => {
       background: {r: 211, g: 185, b: 134, alpha: 1},
     },
   }).png().toFile(masterFile);
-  const masks = {
-    rear: path.join(publicDirectory, 'mask-rear.png'),
-    subject: path.join(publicDirectory, 'mask-subject.png'),
-    front: path.join(publicDirectory, 'mask-front.png'),
-  };
-  await writeMask({
-    file: masks.rear,
-    ...canvas,
-    shape: '<path d="M18 86 H222 V142 H18 Z" fill="white"/>',
-  });
-  await writeMask({
-    file: masks.subject,
-    ...canvas,
-    shape: '<ellipse cx="120" cy="72" rx="34" ry="58" fill="white"/>',
-  });
-  await writeMask({
-    file: masks.front,
-    ...canvas,
-    shape: '<path d="M12 116 Q120 86 228 116 V152 H12 Z" fill="white"/>',
-  });
+  const rear = await sharp(Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="240" height="160">
+      <rect width="240" height="160" fill="#d3b986"/>
+      <path d="M18 86 H222 V142 H18 Z" fill="#795336"/>
+    </svg>
+  `)).png().toBuffer();
+  const subject = await sharp(Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="240" height="160">
+      <rect width="240" height="160" fill="transparent"/>
+      <ellipse cx="120" cy="72" rx="34" ry="58" fill="#b56b49"/>
+    </svg>
+  `)).png().toBuffer();
+  const front = await sharp(Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="240" height="160">
+      <rect width="240" height="160" fill="transparent"/>
+      <path d="M12 116 Q120 86 228 116 V152 H12 Z" fill="#c1905d"/>
+    </svg>
+  `)).png().toBuffer();
+  const layerSheetFile = path.join(
+    publicDirectory,
+    'registered-layer-sheet.png',
+  );
+  await sharp({
+    create: {
+      width: 480,
+      height: 320,
+      channels: 4,
+      background: '#00000000',
+    },
+  }).composite([
+    {input: masterFile, left: 0, top: 0},
+    {input: rear, left: 240, top: 0},
+    {input: subject, left: 0, top: 160},
+    {input: front, left: 240, top: 160},
+  ]).png().toFile(layerSheetFile);
   const relative = (file) => path.relative(root, file);
   const registration = {
     id: 'fixture-registration',
@@ -130,42 +145,104 @@ const makeFamilyFixture = async () => {
       index: 1,
     }),
   ];
-  for (const [index, [id, file]] of Object.entries(masks).entries()) {
-    records.push(await writeImageRecord({
-      root,
-      assetId: `fixture-mask-${id}`,
-      file: relative(file),
-      index: index + 2,
-    }));
-  }
+  const memberAssetIds = [
+    'family-rear',
+    'family-subject',
+    'family-front',
+  ];
+  const layerPackageBinding = {
+    sourcePackageId: 'fixture-layer-package',
+    pattern: 'supported-subject',
+    motionCapability: 'bounded-relative',
+    sourceStrategy: 'registered-layer-sheet',
+    registrationId: registration.id,
+    sourceMasterAssetId: registration.sourceMasterAssetId,
+    canvas,
+    packageRole: 'registered-sheet',
+    completeness: null,
+    memberAssetIds,
+    referenceAssetIds: [registration.sourceMasterAssetId],
+    sheetLayout: {
+      columns: 2,
+      rows: 2,
+      cells: [
+        {packageRole: 'reference', row: 0, column: 0},
+        {packageRole: 'support-rear', row: 0, column: 1},
+        {packageRole: 'subject', row: 1, column: 0},
+        {packageRole: 'support-front', row: 1, column: 1},
+      ],
+    },
+    recoveryPolicy: {
+      completeSourceContext: true,
+      localDeterministicFixFirst: true,
+      isolatedMemberGeneration: 'forbidden',
+      providerRepair: 'masked-complete-source-edit',
+      fallback: 'full-source-regeneration',
+    },
+  };
+  records.push(await writeImageRecord({
+    root,
+    assetId: 'fixture-layer-sheet',
+    file: relative(layerSheetFile),
+    adapter: 'host',
+    compositionBinding: {
+      sceneId: 'scene',
+      nodeId: 'rig',
+      pattern: 'supported-subject',
+      registrationId: registration.id,
+      sourceMasterAssetId: registration.sourceMasterAssetId,
+      outputRole: 'registered-layer-sheet',
+      canvas: {width: 480, height: 320},
+      derivation: {
+        method: 'provider-generation',
+        parentAssetId: registration.sourceMasterAssetId,
+      },
+    },
+    extra: {request: {layerPackageBinding}},
+    index: 2,
+  }));
   const manifest = {
     schemaVersion: 4,
     projectSlug: 'family-proof',
     assets: records,
   };
   const members = [
-    ['family-rear', 'rear-node', 'support-rear', 'fixture-mask-rear'],
-    ['family-subject', 'subject-node', 'subject', 'fixture-mask-subject'],
-    ['family-front', 'front-node', 'support-front', 'fixture-mask-front'],
-  ].map(([assetId, nodeId, role, maskAssetId]) => ({
+    ['family-rear', 'rear-node', 'support-rear'],
+    ['family-subject', 'subject-node', 'subject'],
+    ['family-front', 'front-node', 'support-front'],
+  ].map(([assetId, nodeId, role]) => ({
     assetId,
     nodeId,
     role,
     slot: role,
     output: `public/projects/family-proof/${assetId}.png`,
-    source: {kind: 'source-master', assetId: 'fixture-master'},
-    derivation: {
-      maskAssetId,
-      maskChannel: 'alpha',
-      invertMask: false,
+    completeness: {
+      'support-rear': 'clean-plate',
+      subject: 'full-silhouette',
+      'support-front': 'full-overlay',
+    }[role],
+    source: {
+      kind: 'registered-layer-sheet',
+      assetId: 'fixture-layer-sheet',
+      packageRole: role,
     },
+    derivation: {},
   }));
   const spec = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectSlug: 'family-proof',
     sceneId: 'scene',
     groupId: 'rig',
     familyId: 'fixture-family',
+    pattern: 'supported-subject',
+    motionCapability: 'bounded-relative',
+    sourcePackageId: 'fixture-layer-package',
+    sourceStrategy: 'registered-layer-sheet',
+    revealEnvelope: {
+      '16:9': {x: 0.02, y: 0.02, scale: 0.04, rotationDegrees: 1},
+      '9:16': {x: 0.015, y: 0.02, scale: 0.04, rotationDegrees: 1},
+      '1:1': {x: 0.018, y: 0.018, scale: 0.04, rotationDegrees: 1},
+    },
     registration,
     members,
     recoveryPolicy: REGISTERED_FAMILY_RECOVERY_POLICY,
@@ -187,7 +264,7 @@ test('registered family derives three deterministic full-canvas members and life
     assert.equal(first.records.length, 3);
     assert.equal(first.report.providerImageCalls, 1);
     assert.equal(first.report.localDerivatives, 3);
-    assert.equal(first.report.avoidedCalls, 2);
+    assert.equal(first.report.avoidedCalls, 3);
     assert.deepEqual(
       first.records.map(({registeredFamilyBinding}) => registeredFamilyBinding.role).sort(),
       ['subject', 'support-front', 'support-rear'],
@@ -257,7 +334,7 @@ test('registered family derives three deterministic full-canvas members and life
   }
 });
 
-test('registered family rejects a tight independent image disguised as shared registration canvas', async () => {
+test('registered family rejects an isolated legacy member source', async () => {
   const fixture = await makeFamilyFixture();
   try {
     const tightFile = path.join(
@@ -302,14 +379,14 @@ test('registered family rejects a tight independent image disguised as shared re
         spec: fixture.spec,
         manifest: fixture.manifest,
       }),
-      /非完整画布来源必须显式声明 placement|不能把裁紧图片伪装/,
+      /registered family spec 无效.*source 无效/,
     );
   } finally {
     await fs.rm(fixture.root, {recursive: true, force: true});
   }
 });
 
-test('registered family derives directly from declared cells of a registered sheet', async () => {
+test('registered family rejects a non-2x2 layer sheet', async () => {
   const fixture = await makeFamilyFixture();
   try {
     const sheetFile = path.join(
@@ -333,38 +410,57 @@ test('registered family derives directly from declared cells of a registered she
       file: path.relative(fixture.root, sheetFile),
       index: 11,
       extra: {
-        stateSheetBinding: {
-          poseFamilyId: 'fixture-family',
+        request: {
+          layerPackageBinding: {
+          sourcePackageId: fixture.spec.sourcePackageId,
+          pattern: fixture.spec.pattern,
+          motionCapability: fixture.spec.motionCapability,
+          sourceStrategy: fixture.spec.sourceStrategy,
           registrationId: fixture.registration.id,
           sourceMasterAssetId: fixture.registration.sourceMasterAssetId,
-          layout: {columns: 3, rows: 1},
-          states: [
-            {stateId: 'rear', row: 0, column: 0},
-            {stateId: 'subject', row: 0, column: 1},
-            {stateId: 'front', row: 0, column: 2},
+          canvas: fixture.registration.canvas,
+          packageRole: 'registered-sheet',
+          completeness: null,
+          memberAssetIds: fixture.spec.members.map(({assetId}) => assetId),
+          referenceAssetIds: [fixture.registration.sourceMasterAssetId],
+          sheetLayout: {
+            columns: 3,
+            rows: 1,
+            cells: [
+            {packageRole: 'reference', row: 0, column: 0},
+            {packageRole: 'support-rear', row: 0, column: 0},
+            {packageRole: 'subject', row: 0, column: 1},
+            {packageRole: 'support-front', row: 0, column: 2},
           ],
+          },
+          recoveryPolicy: {
+            completeSourceContext: true,
+            localDeterministicFixFirst: true,
+            isolatedMemberGeneration: 'forbidden',
+            providerRepair: 'masked-complete-source-edit',
+            fallback: 'full-source-regeneration',
+          },
         },
-        familyFingerprint: 'e'.repeat(64),
+        },
       },
     }));
     fixture.spec.members = fixture.spec.members.map((member, index) => ({
       ...member,
       source: {
-        kind: 'registered-sheet',
+        kind: 'registered-layer-sheet',
         assetId: 'fixture-registered-sheet',
-        stateId: ['rear', 'subject', 'front'][index],
+        packageRole: ['support-rear', 'subject', 'support-front'][index],
       },
       derivation: {},
     }));
-    const result = await deriveRegisteredFamily({
-      root: fixture.root,
-      spec: fixture.spec,
-      manifest: fixture.manifest,
-    });
-    assert.equal(result.records.length, 3);
-    assert.ok(result.records.every(({registeredFamilyBinding}) =>
-      registeredFamilyBinding.source.kind === 'registered-sheet' &&
-      registeredFamilyBinding.source.sourceSheetAssetId === 'fixture-registered-sheet'));
+    await assert.rejects(
+      () => deriveRegisteredFamily({
+        root: fixture.root,
+        spec: fixture.spec,
+        manifest: fixture.manifest,
+      }),
+      /必须是 reference \+ 三层的完整 2x2 sheet/,
+    );
   } finally {
     await fs.rm(fixture.root, {recursive: true, force: true});
   }

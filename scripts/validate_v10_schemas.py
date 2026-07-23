@@ -76,10 +76,10 @@ try:
         "registered-family.schema.json",
     )
 except (FileNotFoundError, KeyError, ValueError) as error:
-    print(f"v9 schema validation failed:\n{error}", file=sys.stderr)
+    print(f"v10 schema validation failed:\n{error}", file=sys.stderr)
     raise SystemExit(1)
 
 print(
-    "✓ v9 authoring, compiled storyboard, three project contracts, "
+    "✓ v10 authoring, compiled storyboard, three project contracts, "
     "asset manifest, and registered-family derivation are schema-valid"
 )

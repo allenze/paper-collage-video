@@ -1,10 +1,10 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "slug": "{{slug}}",
   "title": "{{title}}",
   "plan": {
-    "schemaVersion": 2,
+    "schemaVersion": 3,
     "slug": "{{slug}}",
     "status": "pending",
     "inputMode": "none",

@@ -113,8 +113,8 @@ export const loadProject = async (slug) => {
   assertSlug(slug);
   const paths = projectPaths(slug);
   const project = await readJson(paths.projectFile);
-  if (project.schemaVersion !== 9) {
-    throw new Error('project.json 必须使用 schemaVersion 9；旧项目不会自动迁移。');
+  if (project.schemaVersion !== 10) {
+    throw new Error('project.json 必须使用 schemaVersion 10；旧项目不会自动迁移。');
   }
   return {paths, project};
 };
@@ -448,8 +448,8 @@ export const validateProject = async (project, options = {}) => {
     return inspection;
   };
 
-  if (project.schemaVersion !== 9) {
-    add('error', 'schema-version', 'schemaVersion 必须为 9。', 'schemaVersion');
+  if (project.schemaVersion !== 10) {
+    add('error', 'schema-version', 'schemaVersion 必须为 10。', 'schemaVersion');
   }
   if (!SLUG_PATTERN.test(project.slug ?? '')) {
     add('error', 'slug', 'slug 格式无效。', 'slug');
@@ -951,7 +951,10 @@ export const validateProject = async (project, options = {}) => {
     }
     if (manifest) {
       for (const {node: group} of compositionResult.groups.filter(
-        ({node}) => node.pattern === 'supported-subject',
+        ({node}) =>
+          ['supported-subject', 'registered-depth-stack'].includes(
+            node.pattern,
+          ),
       )) {
         const groupLocation = `${sceneLocation}.composition.nodes#${group.id}`;
         const assetNodes = (group.children ?? []).filter(
@@ -963,6 +966,11 @@ export const validateProject = async (project, options = {}) => {
         const result = assertRegisteredFamilyRecords({
           records,
           registration: group.registration,
+          pattern: group.pattern,
+          sourcePackageId:
+            group.pattern === 'registered-depth-stack'
+              ? group.layerStack?.sourcePackageId
+              : null,
         });
         const rolesMatchNodes = records.every((record) => {
           const binding = record.registeredFamilyBinding;
@@ -978,7 +986,7 @@ export const validateProject = async (project, options = {}) => {
           add(
             'error',
             'composition-registered-family',
-            `supported-subject 必须消费三成员完整注册画布族：${[
+            `${group.pattern} 必须消费三成员、层完整、共享注册画布族：${[
               ...result.errors,
               ...(!rolesMatchNodes ? ['成员 role/slot/nodeId/registrationId 绑定不一致'] : []),
             ].join('；')}`,

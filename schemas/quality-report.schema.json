@@ -70,7 +70,7 @@
         "properties": {
           "compositeId": {"type": "string", "minLength": 1},
           "sceneId": {"type": "string", "minLength": 1},
-          "pattern": {"enum": ["supported-subject", "registered-environment", "state-sequence", "event", "semantic-contract", "parallax-rig", "motif-field"]},
+          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "state-sequence", "event", "semantic-contract", "parallax-rig", "motif-field"]},
           "nodeId": {"type": "string", "minLength": 1},
           "memberNodeIds": {"type": "array", "items": {"type": "string"}},
           "memberHashes": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},

@@ -66,9 +66,12 @@ export type RegisteredFamilyRole =
   | 'support-front';
 
 export type RegisteredFamilySource =
-  | {kind: 'source-master'; assetId: string}
-  | {kind: 'registered-sheet'; assetId: string; stateId: string}
-  | {kind: 'registered-sheet-member'; assetId: string};
+  | {
+      kind: 'registered-layer-sheet';
+      assetId: string;
+      packageRole: RegisteredFamilyRole;
+    }
+  | {kind: 'layer-package-member'; assetId: string};
 
 export type RegisteredFamilyRect = {
   left: number;
@@ -88,17 +91,26 @@ export type RegisteredFamilyDerivation = {
 };
 
 export type RegisteredFamilySpec = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   projectSlug: string;
   sceneId: string;
   groupId: string;
   familyId: string;
+  pattern: 'supported-subject' | 'registered-depth-stack';
+  motionCapability: 'rigid-locked' | 'bounded-relative';
+  sourcePackageId: string;
+  sourceStrategy:
+    | 'rigid-master'
+    | 'registered-layer-sheet'
+    | 'context-preserving-layer-edits';
+  revealEnvelope: LayerRevealEnvelope | null;
   registration: CompositionRegistration;
   members: Array<{
     assetId: string;
     nodeId: string;
     role: RegisteredFamilyRole;
     slot: RegisteredFamilyRole;
+    completeness: 'clean-plate' | 'full-silhouette' | 'full-overlay';
     output: string;
     source: RegisteredFamilySource;
     derivation: RegisteredFamilyDerivation;
@@ -114,15 +126,20 @@ export type RegisteredFamilySpec = {
 };
 
 export type RegisteredFamilyBinding = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   familyId: string;
-  pattern: 'supported-subject';
+  pattern: 'supported-subject' | 'registered-depth-stack';
+  motionCapability: 'rigid-locked' | 'bounded-relative';
+  sourcePackageId: string;
+  sourceStrategy: RegisteredFamilySpec['sourceStrategy'];
+  revealEnvelope: LayerRevealEnvelope | null;
   registrationId: string;
   sourceMasterAssetId: string;
   canvas: CoordinateSpace;
   origin: 'top-left';
   role: RegisteredFamilyRole;
   slot: RegisteredFamilyRole;
+  completeness: 'clean-plate' | 'full-silhouette' | 'full-overlay';
   nodeId: string;
   source: {
     kind: RegisteredFamilySource['kind'];
@@ -534,10 +551,27 @@ export type CompositionBoundary = {
   lowerSemantic: string;
 };
 
+export type LayerRevealLimit = {
+  x: number;
+  y: number;
+  scale: number;
+  rotationDegrees: number;
+};
+
+export type LayerRevealEnvelope = {
+  '16:9': LayerRevealLimit;
+  '9:16': LayerRevealLimit;
+  '1:1': LayerRevealLimit;
+};
+
 export type CompositionGroupNode = {
   id: string;
   kind: 'group';
-  pattern: 'free' | 'supported-subject' | 'registered-environment';
+  pattern:
+    | 'free'
+    | 'supported-subject'
+    | 'registered-environment'
+    | 'registered-depth-stack';
   z: number;
   depth?: number;
   coordinateSpace: CoordinateSpace;
@@ -545,6 +579,14 @@ export type CompositionGroupNode = {
   motion: NodeMotion;
   visibility?: NodeVisibility;
   registration?: CompositionRegistration;
+  layerStack?: {
+    sourcePackageId: string;
+    sourceStrategy:
+      | 'registered-layer-sheet'
+      | 'context-preserving-layer-edits';
+    motionCapability: 'bounded-relative';
+    revealEnvelope: LayerRevealEnvelope;
+  };
   support?: {
     subjectId: string;
     layering?: 'between-supports' | 'subject-front';
@@ -772,11 +814,11 @@ export type ProjectScene = {
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 9;
+  schemaVersion: 10;
   slug: string;
   title: string;
   plan: {
-    schemaVersion: 2;
+    schemaVersion: 3;
     slug: string;
     status: 'pending' | 'resolved';
     inputMode: 'none' | 'duration-only' | 'scenes-only' | 'both';
@@ -786,6 +828,8 @@ export type PaperCollageProject = {
       environmentLayers: number;
       characterSheets: number;
       styleSamples: number;
+      baseImageAttempts: number;
+      layerPackageAttemptReserve: number;
       maxGeneratedImages: number;
     } | null;
     motionBudget: {
