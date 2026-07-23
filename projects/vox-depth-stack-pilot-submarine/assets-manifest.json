@@ -158,9 +158,9 @@
       },
       "familyFingerprint": "46981e3cddb93a732b06ca3d00326c76eb4febb76930948a2ac8dfc43ebc3e69",
       "lifecycle": {
-        "status": "active",
-        "changedAt": "2026-07-23T15:13:51.686Z",
-        "reason": "recorded",
+        "status": "rejected",
+        "changedAt": "2026-07-23T15:48:43.499Z",
+        "reason": "attempt-1-baked-checkerboard-false-alpha-and-blue-ocean-leak-in-submarine-negative-spaces",
         "supersededBy": null
       }
     }
