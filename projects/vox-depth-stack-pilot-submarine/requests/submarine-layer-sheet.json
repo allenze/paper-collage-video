@@ -1,0 +1,105 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 7,
+  "projectSlug": "vox-depth-stack-pilot-submarine",
+  "assetId": "submarine-layer-sheet",
+  "capability": "image",
+  "output": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/submarine-layer-sheet.png",
+  "prompt": "Create one production-ready 2048x2048 registered 2x2 layer sheet in a tactile handmade torn-paper collage style. The sheet has exactly four equal 1024x1024 cells with no gutter, divider, label, text, logo, watermark, frame, border, checkerboard, or fake transparency pattern. All four cells use exactly the same camera, object placement, scale, paper texture, torn-edge language, shallow paper shadow, lighting, and registration. Top-left REFERENCE: a clean deep-blue layered paper ocean, one complete bright yellow paper submarine traveling horizontally, and green paper seaweed/coral in front; the foreground may naturally occlude the submarine's lower hull in this reference composite. Top-right SUPPORT-REAR: the identical complete deep-blue ocean clean plate with every pixel behind the submarine and foreground fully reconstructed; no submarine, seaweed, coral, silhouette hole, shadow remnant, or erased patch. Bottom-left SUBJECT: only the complete yellow submarine on true transparent alpha, in the exact registered position and scale; include the entire upper and lower hull, rounded bow, tail fin, separate readable propeller with clean surrounding negative space, periscope with clean ocean-side negative space, and all paper edges that are hidden by seaweed in the reference; do not crop, truncate, flatten, or pre-occlude any part, and include no ocean or foreground pixels. Bottom-right SUPPORT-FRONT: only the complete green seaweed/coral foreground overlay on true transparent alpha in the exact registered position and scale; preserve all stems, fronds, holes, and torn edges, extend the overlay naturally to the cell boundaries where it forms the foreground, and include no submarine or rear-ocean pixels. Keep the palette restrained: deep navy/cobalt ocean, warm saturated yellow submarine, and layered kelp greens. Preserve readable paper fibers without photorealism, glossy 3D, cartoon outlines, gradients, airbrush, or procedural noise on semantic edges. The four cells must reconstruct the top-left reference when rear, subject, and front are composited in that order, while also remaining complete under the declared bounded relative motion.",
+  "model": "gpt-image-built-in",
+  "outputSurface": {
+    "mode": "alpha"
+  },
+  "compositionBinding": {
+    "sceneId": "submarine-scene",
+    "nodeId": "submarine-depth-stack",
+    "pattern": "registered-depth-stack",
+    "registrationId": "submarine-depth-registration",
+    "sourceMasterAssetId": "submarine-reference",
+    "outputRole": "registered-layer-sheet",
+    "canvas": {
+      "width": 2048,
+      "height": 2048
+    },
+    "derivation": {
+      "method": "provider-generation",
+      "parentAssetId": "submarine-reference"
+    }
+  },
+  "layerPackageBinding": {
+    "sourcePackageId": "submarine-seaweed-layer-package",
+    "pattern": "registered-depth-stack",
+    "motionCapability": "bounded-relative",
+    "sourceStrategy": "registered-layer-sheet",
+    "registrationId": "submarine-depth-registration",
+    "sourceMasterAssetId": "submarine-reference",
+    "canvas": {
+      "width": 1024,
+      "height": 1024
+    },
+    "packageRole": "registered-sheet",
+    "completeness": null,
+    "memberAssetIds": [
+      "ocean-rear",
+      "yellow-submarine",
+      "seaweed-front"
+    ],
+    "referenceAssetIds": [
+      "submarine-reference"
+    ],
+    "sheetLayout": {
+      "columns": 2,
+      "rows": 2,
+      "cells": [
+        {
+          "packageRole": "reference",
+          "row": 0,
+          "column": 0
+        },
+        {
+          "packageRole": "support-rear",
+          "row": 0,
+          "column": 1
+        },
+        {
+          "packageRole": "subject",
+          "row": 1,
+          "column": 0
+        },
+        {
+          "packageRole": "support-front",
+          "row": 1,
+          "column": 1
+        }
+      ]
+    },
+    "recoveryPolicy": {
+      "completeSourceContext": true,
+      "localDeterministicFixFirst": true,
+      "isolatedMemberGeneration": "forbidden",
+      "providerRepair": "masked-complete-source-edit",
+      "fallback": "full-source-regeneration"
+    }
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": [
+      "yellow-submarine-topology"
+    ]
+  },
+  "quality": {
+    "kind": "image",
+    "requiredChecks": [
+      "no-text",
+      "no-watermark",
+      "style-consistent",
+      "subject-complete",
+      "cell-separation",
+      "edge-clean",
+      "silhouette-fidelity",
+      "negative-space-clean",
+      "background-leak-free",
+      "reference-conformant"
+    ]
+  }
+}

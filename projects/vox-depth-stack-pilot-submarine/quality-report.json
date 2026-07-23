@@ -1,0 +1,10 @@
+{
+  "$schema": "../../schemas/quality-report.schema.json",
+  "schemaVersion": 4,
+  "projectSlug": "vox-depth-stack-pilot-submarine",
+  "updatedAt": "2026-07-23T14:39:09.982Z",
+  "eventTimeline": [],
+  "assetHistory": [],
+  "assets": [],
+  "composites": []
+}

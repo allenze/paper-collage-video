@@ -1,0 +1,360 @@
+{
+  "$schema": "../../schemas/storyboard-authoring.schema.json",
+  "schemaVersion": 10,
+  "slug": "vox-depth-stack-pilot-submarine",
+  "status": "ready",
+  "arc": "A complete yellow paper submarine begins behind a foreground seaweed bank, separates from the rear and front planes, then settles with every formerly occluded contour still intact.",
+  "style": {
+    "visualThesis": "A restrained three-color paper ocean makes layer completeness and occlusion reveal immediately inspectable.",
+    "compositionRules": [
+      "Keep the yellow submarine as the only focal subject.",
+      "The rear ocean plate must remain continuous wherever the submarine or seaweed moves away.",
+      "The foreground seaweed may occlude the submarine in the neutral reference but may not supply or erase any submarine pixels.",
+      "Every source-package cell uses one logical canvas and the same top-left origin."
+    ],
+    "motionLanguage": [
+      "Use one bounded relative depth separation: rear drifts slowly left, subject moves right, and front drifts left slightly faster.",
+      "Keep scale at or above 1 and use protective overscan for all responsive reveal envelopes.",
+      "End in a readable hold after the maximum reveal has been observed."
+    ],
+    "layerStrategy": "One registered 2x2 source sheet provides reference, clean rear ocean plate, complete submarine silhouette, and complete foreground seaweed overlay."
+  },
+  "editorial": {
+    "timebase": {
+      "fps": 30,
+      "rounding": "nearest"
+    },
+    "wordTimingPolicy": "block",
+    "media": [
+      {
+        "id": "pilot-local-timebase",
+        "kind": "music",
+        "src": "fixtures/vox-phase2-proof/music.wav",
+        "sha256": "627f78697ff22444349c1794a0596d72a2f99425ac3d75f42d1fea5553bbf8b3",
+        "durationSeconds": 6,
+        "timelineMode": "global"
+      }
+    ],
+    "cues": [],
+    "editPoints": [],
+    "bindings": [],
+    "responsiveProfiles": [
+      {
+        "id": "16:9",
+        "width": 1920,
+        "height": 1080,
+        "safeArea": {
+          "x": 0.04,
+          "y": 0.06,
+          "width": 0.92,
+          "height": 0.88
+        },
+        "densityBudget": 8,
+        "typographyScale": 1,
+        "parallaxScale": 1,
+        "exclusionZones": [
+          {
+            "id": "submarine-safe-16x9",
+            "role": "subject",
+            "x": 0.15,
+            "y": 0.28,
+            "width": 0.7,
+            "height": 0.5,
+            "padding": 0.02
+          }
+        ]
+      },
+      {
+        "id": "9:16",
+        "width": 1080,
+        "height": 1920,
+        "safeArea": {
+          "x": 0.07,
+          "y": 0.05,
+          "width": 0.86,
+          "height": 0.9
+        },
+        "densityBudget": 8,
+        "typographyScale": 1,
+        "parallaxScale": 0.72,
+        "exclusionZones": [
+          {
+            "id": "submarine-safe-9x16",
+            "role": "subject",
+            "x": 0.08,
+            "y": 0.3,
+            "width": 0.84,
+            "height": 0.42,
+            "padding": 0.02
+          }
+        ]
+      },
+      {
+        "id": "1:1",
+        "width": 1080,
+        "height": 1080,
+        "safeArea": {
+          "x": 0.06,
+          "y": 0.06,
+          "width": 0.88,
+          "height": 0.88
+        },
+        "densityBudget": 8,
+        "typographyScale": 1,
+        "parallaxScale": 0.84,
+        "exclusionZones": [
+          {
+            "id": "submarine-safe-1x1",
+            "role": "subject",
+            "x": 0.12,
+            "y": 0.28,
+            "width": 0.76,
+            "height": 0.48,
+            "padding": 0.02
+          }
+        ]
+      }
+    ],
+    "sceneDirecting": [
+      {
+        "sceneId": "submarine-scene",
+        "compositionProfile": "registered-depth-pilot",
+        "typographyProfile": "none",
+        "subjectFraming": {
+          "mode": "contain",
+          "focusPoint": {
+            "x": 0.5,
+            "y": 0.54
+          }
+        },
+        "parallaxScale": {
+          "16:9": 1,
+          "9:16": 0.72,
+          "1:1": 0.84
+        },
+        "cropFocus": {
+          "16:9": {
+            "x": 0.5,
+            "y": 0.54
+          },
+          "9:16": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "1:1": {
+            "x": 0.5,
+            "y": 0.52
+          }
+        },
+        "placements": [
+          {
+            "targetId": "submarine-depth-stack",
+            "role": "subject",
+            "preferredAnchor": "center",
+            "fallbackAnchors": [
+              "left",
+              "right"
+            ],
+            "densityCost": 6,
+            "profileOverrides": {
+              "16:9": {
+                "x": 0.12,
+                "y": 0.23,
+                "width": 0.76,
+                "height": 0.62
+              },
+              "9:16": {
+                "x": 0.05,
+                "y": 0.29,
+                "width": 0.9,
+                "height": 0.42
+              },
+              "1:1": {
+                "x": 0.08,
+                "y": 0.2,
+                "width": 0.84,
+                "height": 0.64
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "transitions": []
+  },
+  "scenes": [
+    {
+      "id": "submarine-scene",
+      "title": "The complete submarine crosses the seaweed",
+      "narrativeRole": "controlled capability proof",
+      "message": "Every independently moving plane remains complete through the full reveal.",
+      "blueprint": "layered-reveal",
+      "estimatedDurationSeconds": 6,
+      "beats": [
+        {
+          "id": "submarine-establish-beat",
+          "at": 0.08,
+          "purpose": "establish",
+          "visual": "The neutral reference composition establishes the submarine partly behind the seaweed.",
+          "audioCue": null,
+          "proofTimeId": "submarine-establish",
+          "treatments": [
+            {
+              "id": "submarine-establish-hold",
+              "targetId": "submarine-depth-stack",
+              "importance": "supporting",
+              "necessity": "required",
+              "changeClass": "static-hold",
+              "motion": {
+                "kind": "static"
+              },
+              "composition": {
+                "pattern": "free"
+              },
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "submarine-establish",
+              "rationale": "The neutral composition is the semantic reference against which reconstruction is judged."
+            }
+          ]
+        },
+        {
+          "id": "submarine-separation-beat",
+          "at": 0.5,
+          "purpose": "reveal",
+          "visual": "Rear, submarine, and seaweed move at bounded different rates and expose the formerly hidden lower hull.",
+          "audioCue": null,
+          "proofTimeId": "submarine-action",
+          "treatments": [
+            {
+              "id": "submarine-layer-separation",
+              "targetId": "submarine-depth-stack",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "depth-layer-separation",
+              "motion": {
+                "kind": "continuous-transform",
+                "preset": "drift"
+              },
+              "composition": {
+                "pattern": "registered-depth-stack",
+                "motionCapability": "bounded-relative",
+                "sourcePackageId": "submarine-seaweed-layer-package",
+                "sourceStrategy": "registered-layer-sheet",
+                "layers": [
+                  {
+                    "id": "ocean-rear",
+                    "role": "support-rear",
+                    "completeness": "clean-plate",
+                    "depth": -0.7
+                  },
+                  {
+                    "id": "yellow-submarine",
+                    "role": "subject",
+                    "completeness": "full-silhouette",
+                    "depth": 0
+                  },
+                  {
+                    "id": "seaweed-front",
+                    "role": "support-front",
+                    "completeness": "full-overlay",
+                    "depth": 0.7
+                  }
+                ],
+                "revealEnvelope": {
+                  "16:9": {
+                    "x": 0.04,
+                    "y": 0.02,
+                    "scale": 0.08,
+                    "rotationDegrees": 1
+                  },
+                  "9:16": {
+                    "x": 0.025,
+                    "y": 0.03,
+                    "scale": 0.08,
+                    "rotationDegrees": 1
+                  },
+                  "1:1": {
+                    "x": 0.03,
+                    "y": 0.025,
+                    "scale": 0.08,
+                    "rotationDegrees": 1
+                  }
+                }
+              },
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "submarine-action",
+              "rationale": "The pilot must expose hidden subject and rear pixels under real bounded relative motion instead of masking a flat reference."
+            }
+          ]
+        },
+        {
+          "id": "submarine-final-beat",
+          "at": 0.88,
+          "purpose": "resolve",
+          "visual": "The separated planes settle into a final readable composition with no gaps or clipped submarine parts.",
+          "audioCue": null,
+          "proofTimeId": "submarine-final",
+          "treatments": [
+            {
+              "id": "submarine-final-hold",
+              "targetId": "submarine-depth-stack",
+              "importance": "hero",
+              "necessity": "required",
+              "changeClass": "static-hold",
+              "motion": {
+                "kind": "static"
+              },
+              "composition": {
+                "pattern": "free"
+              },
+              "graphic": null,
+              "semanticRisk": "topology",
+              "proofTimeId": "submarine-final",
+              "rationale": "A stable final state makes missing contours, alpha bands, or rear-plate holes reviewable."
+            }
+          ]
+        }
+      ],
+      "proofTimes": [
+        {
+          "id": "submarine-establish",
+          "at": 0.1,
+          "label": "Neutral occluded composition",
+          "kind": "establish",
+          "assertions": [
+            "The yellow submarine is clearly focal and partly occluded by the foreground seaweed.",
+            "The rear ocean, submarine, and seaweed read as three ordered paper planes."
+          ],
+          "stateAssertions": []
+        },
+        {
+          "id": "submarine-action",
+          "at": 0.52,
+          "label": "Maximum useful layer reveal",
+          "kind": "action",
+          "assertions": [
+            "The lower hull, tail fin, propeller, and periscope remain complete when the foreground moves away.",
+            "The ocean rear plate remains continuous behind both moving upper layers.",
+            "No responsive output exposes transparent canvas pixels."
+          ],
+          "stateAssertions": []
+        },
+        {
+          "id": "submarine-final",
+          "at": 0.9,
+          "label": "Final complete depth lockup",
+          "kind": "final",
+          "assertions": [
+            "All three layers remain registered and readable at the final hold.",
+            "Neutral reconstruction preserves the approved reference meaning."
+          ],
+          "stateAssertions": []
+        }
+      ]
+    }
+  ],
+  "sceneTransitions": [],
+  "updatedAt": "2026-07-23T14:45:00.000Z"
+}

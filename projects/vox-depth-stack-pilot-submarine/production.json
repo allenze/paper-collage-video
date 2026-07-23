@@ -1,0 +1,69 @@
+{
+  "$schema": "../../schemas/production.schema.json",
+  "schemaVersion": 1,
+  "slug": "vox-depth-stack-pilot-submarine",
+  "stage": "style-review",
+  "createdAt": "2026-07-23T14:39:09.982Z",
+  "updatedAt": "2026-07-23T15:08:10.619Z",
+  "approvals": {
+    "concept": {
+      "status": "approved",
+      "decidedAt": "2026-07-23T15:08:10.619Z",
+      "note": "提议批准《海草间的黄色潜水艇》单幕 registered-depth-stack 受控 production pilot：draft、内容推导 6 秒、无旁白、一个 registered 2x2 layer sheet；预计 1 次且最多 2 次图片 provider attempts，不调用 voice 或 video provider。"
+    },
+    "styleAndVoice": {
+      "status": "pending",
+      "decidedAt": null,
+      "note": ""
+    },
+    "preview": {
+      "status": "pending",
+      "decidedAt": null,
+      "note": ""
+    },
+    "publish": {
+      "status": "pending",
+      "decidedAt": null,
+      "note": ""
+    }
+  },
+  "workItems": [],
+  "artifacts": {
+    "brief": "projects/vox-depth-stack-pilot-submarine/brief.md",
+    "project": "projects/vox-depth-stack-pilot-submarine/project.json",
+    "storyboard": "projects/vox-depth-stack-pilot-submarine/storyboard.json",
+    "prompts": "projects/vox-depth-stack-pilot-submarine/prompts.json",
+    "review": "projects/vox-depth-stack-pilot-submarine/review.md",
+    "validationReport": null,
+    "preview": null,
+    "final": null,
+    "report": null,
+    "contactSheet": null
+  },
+  "history": [
+    {
+      "at": "2026-07-23T14:39:09.982Z",
+      "action": "project-created",
+      "stage": "capability-review",
+      "note": ""
+    },
+    {
+      "at": "2026-07-23T15:08:10.619Z",
+      "action": "capabilities-ready",
+      "stage": "brief",
+      "note": "提议批准《海草间的黄色潜水艇》单幕 registered-depth-stack 受控 production pilot：draft、内容推导 6 秒、无旁白、一个 registered 2x2 layer sheet；预计 1 次且最多 2 次图片 provider attempts，不调用 voice 或 video provider。"
+    },
+    {
+      "at": "2026-07-23T15:08:10.619Z",
+      "action": "brief-ready",
+      "stage": "concept-review",
+      "note": ""
+    },
+    {
+      "at": "2026-07-23T15:08:10.619Z",
+      "action": "approve-concept",
+      "stage": "style-review",
+      "note": "提议批准《海草间的黄色潜水艇》单幕 registered-depth-stack 受控 production pilot：draft、内容推导 6 秒、无旁白、一个 registered 2x2 layer sheet；预计 1 次且最多 2 次图片 provider attempts，不调用 voice 或 video provider。"
+    }
+  ]
+}
