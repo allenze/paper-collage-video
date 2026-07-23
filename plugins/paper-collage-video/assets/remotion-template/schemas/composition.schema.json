@@ -187,26 +187,326 @@
       },
       "additionalProperties": false
     },
-    "textNode": {
+    "typographyNode": {
       "type": "object",
-      "required": ["id", "kind", "text", "style", "z", "transform", "motion"],
+      "required": ["id", "kind", "text", "treatment", "z", "transform", "motion"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
-        "kind": {"const": "text"},
+        "kind": {"const": "typography"},
         "text": {"type": "string"},
-        "style": {
+        "treatment": {
           "type": "object",
-          "required": ["color", "fontSize", "fontWeight", "lineHeight", "align"],
+          "required": ["fit", "style", "effects", "highlights", "reveal", "emphasis", "safeAreaMode", "avoidZoneIds"],
           "properties": {
-            "color": {"type": "string", "minLength": 1},
-            "fontSize": {"type": "number", "exclusiveMinimum": 0},
-            "fontWeight": {"type": "integer", "minimum": 100, "maximum": 900},
-            "lineHeight": {"type": "number", "exclusiveMinimum": 0},
-            "align": {"enum": ["left", "center", "right"]},
-            "letterSpacing": {"type": "number"},
-            "fontFamily": {"type": "string", "minLength": 1}
+            "fit": {
+              "type": "object",
+              "required": ["minFontSize", "maxFontSize", "maxLines", "overflow"],
+              "properties": {
+                "minFontSize": {"type": "number", "exclusiveMinimum": 0},
+                "maxFontSize": {"type": "number", "exclusiveMinimum": 0},
+                "maxLines": {"type": "integer", "minimum": 1, "maximum": 20},
+                "overflow": {"enum": ["error", "clip"]}
+              },
+              "additionalProperties": false
+            },
+            "style": {
+              "type": "object",
+              "required": ["color", "fontWeight", "lineHeight", "align", "fontFamily"],
+              "properties": {
+                "color": {"type": "string", "minLength": 1},
+                "fontWeight": {"type": "integer", "minimum": 100, "maximum": 900},
+                "lineHeight": {"type": "number", "exclusiveMinimum": 0},
+                "align": {"enum": ["left", "center", "right"]},
+                "letterSpacing": {"type": "number"},
+                "fontFamily": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": false
+            },
+            "effects": {
+              "type": "object",
+              "properties": {
+                "stroke": {
+                  "type": "object",
+                  "required": ["color", "width"],
+                  "properties": {
+                    "color": {"type": "string", "minLength": 1},
+                    "width": {"type": "number", "minimum": 0}
+                  },
+                  "additionalProperties": false
+                },
+                "shadow": {
+                  "type": "object",
+                  "required": ["color", "x", "y", "blur"],
+                  "properties": {
+                    "color": {"type": "string", "minLength": 1},
+                    "x": {"type": "number"},
+                    "y": {"type": "number"},
+                    "blur": {"type": "number", "minimum": 0}
+                  },
+                  "additionalProperties": false
+                },
+                "pad": {
+                  "type": "object",
+                  "required": ["color", "padding", "radius"],
+                  "properties": {
+                    "color": {"type": "string", "minLength": 1},
+                    "padding": {"type": "number", "minimum": 0},
+                    "radius": {"type": "number", "minimum": 0}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "highlights": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["text", "color"],
+                "properties": {
+                  "text": {"type": "string", "minLength": 1},
+                  "color": {"type": "string", "minLength": 1}
+                },
+                "additionalProperties": false
+              }
+            },
+            "reveal": {
+              "type": "object",
+              "required": ["mode", "editPointIds"],
+              "properties": {
+                "mode": {"enum": ["none", "word", "line", "edit-point"]},
+                "editPointIds": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "units": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "text"],
+                    "properties": {
+                      "id": {"type": "string", "minLength": 1},
+                      "text": {"type": "string", "minLength": 1}
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "emphasis": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["text", "editPointId", "durationFrames", "scale", "offsetX", "offsetY", "color"],
+                "properties": {
+                  "text": {"type": "string", "minLength": 1},
+                  "editPointId": {"type": "string", "minLength": 1},
+                  "durationFrames": {"type": "integer", "minimum": 1},
+                  "scale": {"type": "number", "exclusiveMinimum": 0, "maximum": 3},
+                  "offsetX": {"type": "number"},
+                  "offsetY": {"type": "number"},
+                  "color": {"type": "string", "minLength": 1}
+                },
+                "additionalProperties": false
+              }
+            },
+            "safeAreaMode": {"enum": ["inside", "allow-bleed"]},
+            "avoidZoneIds": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
           },
           "additionalProperties": false
+        },
+        "z": {"type": "integer"},
+        "depth": {"type": "number", "minimum": -1, "maximum": 1},
+        "transform": {"$ref": "#/$defs/transform"},
+        "motion": {"$ref": "#/$defs/nodeMotion"},
+        "visibility": {"$ref": "#/$defs/nodeVisibility"}
+      },
+      "additionalProperties": false
+    },
+    "anchorReference": {
+      "type": "object",
+      "required": ["targetId", "anchor"],
+      "properties": {
+        "targetId": {"type": "string", "minLength": 1},
+        "anchor": {"enum": ["top", "top-right", "right", "bottom-right", "bottom", "bottom-left", "left", "top-left", "center"]},
+        "point": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": {
+            "x": {"type": "number", "minimum": 0, "maximum": 1},
+            "y": {"type": "number", "minimum": 0, "maximum": 1}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "editorialLifecycle": {
+      "type": "object",
+      "properties": {
+        "enterEditPointId": {"type": "string", "minLength": 1},
+        "exitEditPointId": {"type": "string", "minLength": 1},
+        "enterFrames": {"type": "integer", "minimum": 1},
+        "exitFrames": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "annotationNode": {
+      "type": "object",
+      "required": ["id", "kind", "annotationKind", "anchor", "target", "routing", "avoidZoneIds", "label", "value", "style", "lifecycle", "z", "transform", "motion"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"const": "annotation"},
+        "annotationKind": {"enum": ["arrow", "leader-line", "label", "badge", "explainer-card", "callout", "bracket", "numeric-counter", "percentage-counter"]},
+        "anchor": {"$ref": "#/$defs/anchorReference"},
+        "target": {"$ref": "#/$defs/anchorReference"},
+        "routing": {"enum": ["straight", "orthogonal"]},
+        "avoidZoneIds": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "label": {"type": "string"},
+        "value": {"type": "number"},
+        "style": {
+          "type": "object",
+          "required": ["color", "background", "strokeWidth", "fontSize"],
+          "properties": {
+            "color": {"type": "string", "minLength": 1},
+            "background": {"type": "string", "minLength": 1},
+            "strokeWidth": {"type": "number", "exclusiveMinimum": 0},
+            "fontSize": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "additionalProperties": false
+        },
+        "lifecycle": {"$ref": "#/$defs/editorialLifecycle"},
+        "z": {"type": "integer"},
+        "depth": {"type": "number", "minimum": -1, "maximum": 1},
+        "transform": {"$ref": "#/$defs/transform"},
+        "motion": {"$ref": "#/$defs/nodeMotion"},
+        "visibility": {"$ref": "#/$defs/nodeVisibility"}
+      },
+      "additionalProperties": false
+    },
+    "dataGraphicNode": {
+      "type": "object",
+      "required": ["id", "kind", "graphicKind", "data", "scale", "format", "states", "style", "z", "transform", "motion"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"const": "data-graphic"},
+        "graphicKind": {"enum": ["bar-chart", "column-chart", "line-chart", "comparison-table", "timeline", "map", "flow"]},
+        "data": {"type": "object"},
+        "geometry": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["regionId", "path"],
+            "properties": {
+              "regionId": {"type": "string", "minLength": 1},
+              "path": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "scale": {
+          "type": "object",
+          "required": ["domain"],
+          "properties": {
+            "domain": {
+              "type": "array",
+              "prefixItems": [{"type": "number"}, {"type": "number"}],
+              "items": false,
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        "format": {
+          "type": "object",
+          "properties": {
+            "prefix": {"type": "string"},
+            "suffix": {"type": "string"},
+            "unit": {"type": "string"},
+            "decimals": {"type": "integer", "minimum": 0, "maximum": 6},
+            "multiplier": {"type": "number"}
+          },
+          "additionalProperties": false
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "editPointId", "reveal", "focusIds"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "editPointId": {"type": "string", "minLength": 1},
+              "reveal": {"type": "number", "minimum": 0, "maximum": 1},
+              "focusIds": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+            },
+            "additionalProperties": false
+          }
+        },
+        "style": {
+          "type": "object",
+          "required": ["ink", "paper", "accent", "muted", "fontSize"],
+          "properties": {
+            "ink": {"type": "string", "minLength": 1},
+            "paper": {"type": "string", "minLength": 1},
+            "accent": {"type": "string", "minLength": 1},
+            "muted": {"type": "string", "minLength": 1},
+            "fontSize": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "additionalProperties": false
+        },
+        "z": {"type": "integer"},
+        "depth": {"type": "number", "minimum": -1, "maximum": 1},
+        "transform": {"$ref": "#/$defs/transform"},
+        "motion": {"$ref": "#/$defs/nodeMotion"},
+        "visibility": {"$ref": "#/$defs/nodeVisibility"}
+      },
+      "additionalProperties": false
+    },
+    "editorialSwitchNode": {
+      "type": "object",
+      "required": ["id", "kind", "panels", "changes", "z", "transform", "motion"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"const": "editorial-switch"},
+        "panels": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id", "node"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "node": {
+                "oneOf": [
+                  {"$ref": "#/$defs/assetNode"},
+                  {"$ref": "#/$defs/stateSequenceNode"},
+                  {"$ref": "#/$defs/typographyNode"},
+                  {"$ref": "#/$defs/shapeNode"},
+                  {"$ref": "#/$defs/annotationNode"},
+                  {"$ref": "#/$defs/dataGraphicNode"},
+                  {"$ref": "#/$defs/motifFieldNode"},
+                  {"$ref": "#/$defs/groupNode"}
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "changes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "editPointId", "fromPanelId", "toPanelId", "treatment", "durationFrames"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "editPointId": {"type": "string", "minLength": 1},
+              "fromPanelId": {"type": "string", "minLength": 1},
+              "toPanelId": {"type": "string", "minLength": 1},
+              "treatment": {"enum": ["card-switch", "panel-replace", "data-state"]},
+              "durationFrames": {"type": "integer", "minimum": 1, "maximum": 60}
+            },
+            "additionalProperties": false
+          }
         },
         "z": {"type": "integer"},
         "depth": {"type": "number", "minimum": -1, "maximum": 1},
@@ -402,7 +702,7 @@
         "children": {
           "type": "array",
           "minItems": 1,
-          "items": {"oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/textNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/groupNode"}]}
+          "items": {"oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/typographyNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/annotationNode"}, {"$ref": "#/$defs/dataGraphicNode"}, {"$ref": "#/$defs/editorialSwitchNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/groupNode"}]}
         }
       },
       "allOf": [
@@ -418,7 +718,7 @@
       "additionalProperties": false
     },
     "node": {
-      "oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/textNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/groupNode"}]
+      "oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/typographyNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/annotationNode"}, {"$ref": "#/$defs/dataGraphicNode"}, {"$ref": "#/$defs/editorialSwitchNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/groupNode"}]
     },
     "composition": {
       "type": "object",

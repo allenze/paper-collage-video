@@ -6,21 +6,22 @@
 
 ### Added
 
-- project/storyboard v8 的一等 `motif-field` 契约：确定性 bounds、矩形/椭圆排除区、素材占位净空、单场 192 实例总预算。
-- `fall-drift` 与 `burst` 隐藏式重生、全部 preset 的可验证循环闭合，以及真正受 `cycles` 控制的 burst 节奏。
-- 6 秒零生图 VOX 工程样片的正式证明命令：绑定媒体规格、固定 proof frames、第 90 帧 rhythmic cut、runtime build、项目/故事板与全部素材 SHA-256。
+- Project、Storyboard Authoring 与 Compiled Storyboard v9 的统一 editorial 契约：实际音频 edit points、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级切换。
+- 旁白词/短语/句子/语义强调、SFX onset/peak/tail、音乐 beat/bar/accent 与手工 cue 的来源、优先级、容差窗口、冲突解析和媒体/场景/最终渲染帧映射。
+- 文字 fit/overflow/reveal/emphasis、九类 annotation/counter、七类数据图形和八类高级编辑切换的正式 Remotion/SVG 原语。
+- 完全本地的 Phase 2 proof gallery：合成 WAV、确定性 SVG、16:9/9:16/1:1 预览、联系表、before/at/after 帧和全量 SHA-256/fingerprint 报告。
 
 ### Changed
 
-- 项目、故事板 authoring/compiled schema、类型、编译器、执行校验、质量门、fixture、模板与 Skill 文档统一升级到 v8；不保留 v7 加载或迁移分支。
-- `motif-field` 的故事板计划现在包含 bounds 与 exclusion zones；运行时实现必须逐字段与编译计划一致。
-- 组合质量检查把含混的 safe-area 检查拆成 bounds、exclusions、placement 与 loop 的确定性证据。
+- 项目、故事板 authoring/compiled schema、类型、编译器、执行校验、质量门、fixture、模板与 Skill 文档统一升级到 v9；不保留 v8 loader、双 Schema、兼容适配器、deprecated 字段或按版本分支的 Renderer。
+- 响应式导演由显式 16:9、9:16、1:1 计划驱动，同一语义 Storyboard 可以编译为不同但可检查的布局，不依赖运行时隐藏画幅特例。
+- 音频对齐证明必须绑定最终本地音频文件的探测结果与 timing SHA，不再把估算时长或 TTS token 延迟视为正式同步证据。
+- runtime-build 指纹覆盖新增 schema、compiler、runtime primitive、proof fixture、verifier 和 Python 依赖。
 
 ### Fixed
 
-- 消除 `fall-drift` 跨循环的可见位置跳变。
-- 修复 `burst` 忽略 `cycles` 的问题。
-- 防止多个合法单字段叠加后产生无上限 DOM 实例。
+- 同时到达的多个 cue 按优先级、容差和显式冲突策略确定性解析。
+- 缺失词级 timing、无效字体签名、注释无效 target/越界/排除区碰撞、空/非法/极端数据与 match continuity 漂移会明确阻断或按声明策略降级。
 
 ## [0.8.0] - 2026-07-21
 

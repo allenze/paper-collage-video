@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "slug": "transition-gallery",
   "title": "Intent-routed paper transition gallery",
   "video": {"width": 960, "height": 540, "fps": 30},

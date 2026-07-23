@@ -17,6 +17,10 @@ import {
 import {deriveTimeline, validateProject} from '../scripts/project-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {deriveSubtitleCues, segmentSubtitleText} from '../scripts/subtitle-lib.mjs';
+import {
+  compileEditorialFixture,
+  withCompiledEditorialFixture,
+} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestFixture = (projectSlug, assets) => ({
@@ -161,7 +165,7 @@ test('quality scaffold exposes pending checks and current proof evidence without
   assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
 });
 
-test('v8 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {
+test('v9 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {
   const timeline = deriveTimeline({
     video: {fps: 30},
     scenes: [
@@ -192,7 +196,7 @@ test('v8 scene transitions use one seconds-based intent-routed opaque-boundary p
   assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v8 projects are rejected instead of migrated', async () => {
+test('pre-v9 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -206,14 +210,14 @@ test('pre-v8 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 8'),
+          code === 'schema-version' && message.includes('必须为 9'),
     ),
   );
 });
 
-test('v8 projects require an explicit bounded narration gain', async () => {
+test('v9 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 8,
+    schemaVersion: 9,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -226,6 +230,7 @@ test('v8 projects require an explicit bounded narration gain', async () => {
     },
     scenes: [],
     sceneTransitions: [],
+    editorial: compileEditorialFixture(),
   };
   const missing = await validateProject(base);
   assert.ok(
@@ -336,8 +341,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
     await fs.writeFile(
       path.join(projectDirectory, 'project.json'),
       `${JSON.stringify(
-        {
-          schemaVersion: 8,
+        withCompiledEditorialFixture({
           slug,
           title: 'Quality Gate',
           quality: {minimumAssetScale: 1},
@@ -373,7 +377,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
             },
           ],
           sceneTransitions: [],
-        },
+        }),
         null,
         2,
       )}\n`,
@@ -505,8 +509,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
         .png()
         .toFile(file);
     }
-    const project = {
-      schemaVersion: 8,
+    const project = withCompiledEditorialFixture({
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},
@@ -532,7 +535,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
         events: [],
       }],
       sceneTransitions: [],
-    };
+    });
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`, 'utf8');
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [
         ['boat-rear', 'support-rear'],

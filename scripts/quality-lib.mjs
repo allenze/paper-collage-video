@@ -38,6 +38,11 @@ import {
   resolveMotifFieldInstances,
   verifyMotifFieldLoop,
 } from '../src/motifField.mjs';
+import {
+  fitEditorialTypography,
+  resolveAnnotationRoute,
+  validateDataGraphicNode,
+} from '../src/editorialPrimitives.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -95,6 +100,14 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'field-exclusions-clean',
   'field-motion-clean',
   'field-loop-clean',
+  'typography-fit-clean',
+  'typography-timing-bound',
+  'annotation-routing-clean',
+  'annotation-exclusions-clean',
+  'data-mapping-valid',
+  'data-reveal-bound',
+  'editorial-transition-continuity',
+  'responsive-directing-bounded',
 ];
 
 export const QUALITY_CHECKS = [
@@ -122,6 +135,11 @@ const COMPOSITE_PROFILES = {
   'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
   'parallax-rig': ['depth-order-readable', 'camera-coupling-clean', 'registered-groups-stable', 'final-composition-readable'],
   'motif-field': ['field-density-readable', 'field-bounds-clean', 'field-exclusions-clean', 'field-motion-clean', 'field-loop-clean', 'final-composition-readable'],
+  typography: ['typography-fit-clean', 'typography-timing-bound', 'final-composition-readable'],
+  annotation: ['annotation-routing-clean', 'annotation-exclusions-clean', 'proof-time-bound'],
+  'data-graphic': ['data-mapping-valid', 'data-reveal-bound', 'proof-time-bound'],
+  'editorial-transition': ['editorial-transition-continuity', 'proof-time-bound'],
+  'responsive-directing': ['responsive-directing-bounded', 'final-composition-readable'],
 };
 
 const requiredChecksForGroup = (group) => {
@@ -504,6 +522,39 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         motifField: node,
       });
     }
+    for (const {node} of flattenCompositionNodes(scene.composition?.nodes).filter(
+      ({node: candidate}) => ['typography', 'annotation', 'data-graphic'].includes(candidate.kind),
+    )) {
+      const pattern = node.kind;
+      const proofTimes = scene.motion?.proofTimes ?? [];
+      const fingerprint = hashCompositionValue({
+        runtimeBuildFingerprint,
+        sceneId: scene.id,
+        node,
+        editorialFingerprint: project.editorial?.fingerprint ?? null,
+        responsivePlans: project.editorial?.responsivePlans ?? [],
+        proofTimes,
+      });
+      targets.push({
+        compositeId: `${pattern}:${scene.id}:${node.id}`,
+        sceneId: scene.id,
+        pattern,
+        nodeId: node.id,
+        memberNodeIds: [node.id],
+        memberHashes: [],
+        compositionHash: hashCompositionValue(node),
+        fingerprint,
+        proofTimeIds: proofTimes.map(({id}) => id),
+        requiredChecks: COMPOSITE_PROFILES[pattern],
+        editorialNode: node,
+        sceneNodes: scene.composition?.nodes ?? [],
+        video: project.video,
+        editorial: project.editorial,
+        exclusionZones: project.editorial?.responsiveProfiles?.find(
+          ({id}) => id === project.editorial.activeProfile,
+        )?.exclusionZones ?? [],
+      });
+    }
     for (const {node} of collectStateSequences(scene.composition)) {
       const proofTimes = (scene.motion?.proofTimes ?? []).filter((proof) =>
         (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
@@ -610,6 +661,49 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         event,
       });
     }
+  }
+  for (const transition of project.editorial?.transitionPlans ?? []) {
+    targets.push({
+      compositeId: `editorial-transition:${transition.id}`,
+      sceneId: transition.sceneId,
+      pattern: 'editorial-transition',
+      nodeId: transition.sourceAnchor?.targetId ?? transition.id,
+      memberNodeIds: [
+        transition.sourceAnchor?.targetId,
+        transition.destinationAnchor?.targetId,
+      ].filter(Boolean),
+      memberHashes: [],
+      compositionHash: hashCompositionValue(transition),
+      fingerprint: hashCompositionValue({
+        runtimeBuildFingerprint,
+        editorialFingerprint: project.editorial.fingerprint,
+        transition,
+      }),
+      proofTimeIds: transition.proofFrameIds,
+      requiredChecks: COMPOSITE_PROFILES['editorial-transition'],
+      editorialTransition: transition,
+    });
+  }
+  for (const responsive of (project.editorial?.responsivePlans ?? []).filter(
+    (plan) => plan.scenes.some(({placements}) => placements.length > 0),
+  )) {
+    targets.push({
+      compositeId: `responsive-directing:${responsive.profileId}`,
+      sceneId: project.scenes?.[0]?.id ?? 'project',
+      pattern: 'responsive-directing',
+      nodeId: responsive.profileId,
+      memberNodeIds: responsive.scenes.flatMap(({placements}) => placements.map(({targetId}) => targetId)),
+      memberHashes: [],
+      compositionHash: hashCompositionValue(responsive),
+      fingerprint: hashCompositionValue({
+        runtimeBuildFingerprint,
+        editorialFingerprint: project.editorial.fingerprint,
+        responsive,
+      }),
+      proofTimeIds: [],
+      requiredChecks: COMPOSITE_PROFILES['responsive-directing'],
+      responsive,
+    });
   }
   const semanticContracts = await loadSemanticContracts(project.slug);
   if (semanticContracts.document?.status === 'ready' && semanticContracts.issues.length === 0) {
@@ -744,7 +838,7 @@ const alphaCoverageInPolygon = async (source, polygon) => {
   return sampled === 0 ? 0 : visible / sampled;
 };
 
-const inspectCompositeTechnical = async ({target, proofReport}) => {
+export const inspectCompositeTechnical = async ({target, proofReport}) => {
   const proofEntry = proofReport?.composites?.find(({compositeId}) => compositeId === target.compositeId);
   const proofFrames = proofEntry?.proofFrames ?? [];
   const artifactsPresent = proofFrames.length > 0 && (await Promise.all(
@@ -867,6 +961,75 @@ const inspectCompositeTechnical = async ({target, proofReport}) => {
       {id: 'motif-placement-complete', passed: placementError === null && placedCount === field.count, expected: field.count, actual: placementError ?? placedCount},
       {id: 'motif-loop-continuous', passed: loop.passed, expected: 'continuous transform or invisible respawn', actual: loop},
     );
+  }
+  if (target.pattern === 'typography') {
+    const node = target.editorialNode;
+    const layout = fitEditorialTypography({
+      text: node.text,
+      width: node.transform.width * target.video.width,
+      height: (node.transform.height ?? node.transform.width) * target.video.height,
+      minFontSize: node.treatment.fit.minFontSize,
+      maxFontSize: node.treatment.fit.maxFontSize,
+      maxLines: node.treatment.fit.maxLines,
+      lineHeight: node.treatment.style.lineHeight,
+      letterSpacing: node.treatment.style.letterSpacing ?? 0,
+    });
+    const pointIds = [
+      ...(node.treatment.reveal?.editPointIds ?? []),
+      ...(node.treatment.emphasis ?? []).map(({editPointId}) => editPointId),
+    ];
+    const timingBound = pointIds.every((editPointId) =>
+      target.editorial.resolvedEditPoints.some(
+        (point) => point.id === editPointId && point.sceneId === target.sceneId,
+      ),
+    );
+    checks.push(
+      {id: 'typography-fit', passed: !layout.overflow, expected: 'no overflow', actual: layout},
+      {id: 'typography-edit-points', passed: timingBound, expected: pointIds, actual: timingBound},
+    );
+  }
+  if (target.pattern === 'annotation') {
+    const route = resolveAnnotationRoute({
+      node: target.editorialNode,
+      nodes: target.sceneNodes,
+      zones: target.exclusionZones,
+    });
+    checks.push(
+      {id: 'annotation-route', passed: route.valid, expected: 'valid', actual: route},
+      {id: 'annotation-exclusions', passed: route.valid && !route.directBlocked, expected: 'clear', actual: route.directBlocked},
+    );
+  }
+  if (target.pattern === 'data-graphic') {
+    const dataIssues = validateDataGraphicNode(target.editorialNode);
+    const timingBound = (target.editorialNode.states ?? []).every(({editPointId}) =>
+      target.editorial.resolvedEditPoints.some(
+        (point) => point.id === editPointId && point.sceneId === target.sceneId,
+      ),
+    );
+    checks.push(
+      {id: 'data-schema', passed: dataIssues.length === 0, expected: [], actual: dataIssues},
+      {id: 'data-edit-points', passed: timingBound, expected: true, actual: timingBound},
+    );
+  }
+  if (target.pattern === 'editorial-transition') {
+    const invalid = target.editorialTransition.invalidProfiles ?? [];
+    checks.push({
+      id: 'editorial-transition-continuity',
+      passed: invalid.length === 0 || target.editorialTransition.invalidPolicy === 'fallback',
+      expected: 'valid or deterministic fallback',
+      actual: target.editorialTransition.continuity,
+    });
+  }
+  if (target.pattern === 'responsive-directing') {
+    const bounded = target.responsive.scenes.every(
+      ({densityUsed}) => densityUsed <= target.responsive.densityBudget,
+    );
+    checks.push({
+      id: 'responsive-density-budget',
+      passed: bounded,
+      expected: `<= ${target.responsive.densityBudget}`,
+      actual: target.responsive.scenes.map(({sceneId, densityUsed}) => ({sceneId, densityUsed})),
+    });
   }
   return {passed: checks.every(({passed}) => passed), checks, proofFrames};
 };

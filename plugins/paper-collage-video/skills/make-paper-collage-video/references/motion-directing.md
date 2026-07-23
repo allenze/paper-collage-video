@@ -29,7 +29,7 @@ A treatment has orthogonal dimensions. Motion (`static`, continuous transform, s
 
 ## Author Intent, Compile Execution
 
-Storyboard v8 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, style-proof planning, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
+Storyboard v9 input owns `beats[].treatments[]` plus the v9 editorial authoring intent. It does not own `compositionPlan`, resolved edit points, responsive/transition plans, `directing`, sheet layouts, style-proof planning, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values. Read `editorial-system-v9.md` for edit-point bindings and advanced editorial transitions.
 
 Every treatment declares:
 

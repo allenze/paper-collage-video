@@ -11,21 +11,31 @@ import {
   useVideoConfig,
 } from 'remotion';
 import type {
+  CompositionAnnotationNode,
   CompositionAssetNode,
   CompositionBoundary,
+  CompositionDataGraphicNode,
+  CompositionEditorialSwitchNode,
   CompositionGroupNode,
   CompositionMotifFieldNode,
   CompositionNode,
   CompositionShapeNode,
   CompositionStateSequenceNode,
-  CompositionTextNode,
+  CompositionTypographyNode,
   CoordinateSpace,
+  EditorialSystem,
   NormalizedProjectScene,
   NormalizedSubtitleCue,
   ProjectEvent,
   ProjectTheme,
   SceneAppearance,
 } from './project';
+import {
+  AnnotationView,
+  DataGraphicView,
+  EditorialSwitchView,
+  TypographyView,
+} from './EditorialNodes';
 import {resolveMotifFieldInstances, resolveMotifFieldMotion} from './motifField.mjs';
 import {resolveEmphasisState, resolveIdleState, resolveMotionState, resolveVisibilityState} from './motion';
 import {resolveParallaxState} from './parallax.mjs';
@@ -295,57 +305,6 @@ const StateSequenceView = ({
   );
 };
 
-const TextView = ({
-  node,
-  parent,
-  progress,
-  frame,
-  fps,
-  events,
-  durationSeconds,
-  seed,
-  renderZ,
-  cameraX,
-  cameraY,
-  cameraZoom,
-  parallax,
-}: {
-  node: CompositionTextNode;
-  parent: CoordinateSpace;
-  progress: number;
-  frame: number;
-  fps: number;
-  events: ProjectEvent[];
-  durationSeconds: number;
-  seed: number;
-  renderZ: number;
-  cameraX: number;
-  cameraY: number;
-  cameraZoom: number;
-  parallax: NormalizedProjectScene['camera']['parallax'];
-}) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
-  return (
-    <div
-      data-composition-node={node.id}
-      data-composition-kind="text"
-      style={{
-        ...containerStyle({node, resolved, renderZ}),
-        color: node.style.color,
-        fontSize: node.style.fontSize,
-        fontWeight: node.style.fontWeight,
-        lineHeight: node.style.lineHeight,
-        textAlign: node.style.align,
-        letterSpacing: node.style.letterSpacing,
-        fontFamily: node.style.fontFamily,
-        whiteSpace: 'pre-wrap',
-      }}
-    >
-      {node.text}
-    </div>
-  );
-};
-
 const ShapeView = ({
   node,
   parent,
@@ -484,6 +443,10 @@ const GroupView = ({
   cameraY,
   cameraZoom,
   parallax,
+  sceneId,
+  editorial,
+  rootNodes,
+  zones,
 }: {
   node: CompositionGroupNode;
   parent: CoordinateSpace;
@@ -499,6 +462,10 @@ const GroupView = ({
   cameraY: number;
   cameraZoom: number;
   parallax: NormalizedProjectScene['camera']['parallax'];
+  sceneId: string;
+  editorial: EditorialSystem;
+  rootNodes: CompositionNode[];
+  zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
 }) => {
   const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
   const ratio = node.coordinateSpace.height / node.coordinateSpace.width;
@@ -539,6 +506,10 @@ const GroupView = ({
             cameraY={cameraY}
             cameraZoom={cameraZoom}
             parallax={parallax}
+            sceneId={sceneId}
+            editorial={editorial}
+            rootNodes={rootNodes}
+            zones={zones}
           />
         ))}
     </div>
@@ -561,6 +532,10 @@ const CompositionNodeView = ({
   cameraY,
   cameraZoom,
   parallax,
+  sceneId,
+  editorial,
+  rootNodes,
+  zones,
 }: {
   node: CompositionNode;
   parent: CoordinateSpace;
@@ -577,11 +552,63 @@ const CompositionNodeView = ({
   cameraY: number;
   cameraZoom: number;
   parallax: NormalizedProjectScene['camera']['parallax'];
+  sceneId: string;
+  editorial: EditorialSystem;
+  rootNodes: CompositionNode[];
+  zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
 }) => {
-  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax}} />;
+  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
   if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax}} />;
   if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax}} />;
-  if (node.kind === 'text') return <TextView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax}} />;
+  if (node.kind === 'typography') {
+    const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+    return <TypographyView node={node as CompositionTypographyNode} sceneId={sceneId} frame={frame} editorial={editorial} container={containerStyle({node, resolved, renderZ})} width={resolved.width} height={resolved.height ?? parent.height} />;
+  }
+  if (node.kind === 'annotation') {
+    const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+    return <AnnotationView node={node as CompositionAnnotationNode} sceneId={sceneId} frame={frame} editorial={editorial} container={containerStyle({node, resolved, renderZ})} width={resolved.width} height={resolved.height ?? parent.height} nodes={rootNodes} zones={zones} />;
+  }
+  if (node.kind === 'data-graphic') {
+    const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+    return <DataGraphicView node={node as CompositionDataGraphicNode} sceneId={sceneId} frame={frame} editorial={editorial} container={containerStyle({node, resolved, renderZ})} width={resolved.width} height={resolved.height ?? resolved.width} />;
+  }
+  if (node.kind === 'editorial-switch') {
+    const switchNode = node as CompositionEditorialSwitchNode;
+    const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+    const switchHeight = resolved.height ?? resolved.width;
+    return (
+      <EditorialSwitchView
+        node={switchNode}
+        sceneId={sceneId}
+        frame={frame}
+        editorial={editorial}
+        container={containerStyle({node, resolved, renderZ})}
+        width={resolved.width}
+        height={switchHeight}
+        renderPanel={(panel) => (
+          <CompositionNodeView
+            node={panel}
+            parent={{width: resolved.width, height: switchHeight}}
+            progress={progress}
+            frame={frame}
+            fps={fps}
+            events={events}
+            durationSeconds={durationSeconds}
+            seed={seed}
+            paperEdge={paperEdge}
+            cameraX={0}
+            cameraY={0}
+            cameraZoom={1}
+            parallax={{enabled: false, strength: 0, focalDepth: 0}}
+            sceneId={sceneId}
+            editorial={editorial}
+            rootNodes={rootNodes}
+            zones={zones}
+          />
+        )}
+      />
+    );
+  }
   if (node.kind === 'motif-field') return <MotifFieldView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax}} />;
   return <ShapeView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax}} />;
 };
@@ -639,7 +666,7 @@ const cameraDefaults = (preset: NormalizedProjectScene['camera']['preset'], inte
 const cameraValue = ({frame, durationInFrames, keyframes, property, fallback}: {frame: number; durationInFrames: number; keyframes: Array<{at: number; x?: number; y?: number; zoom?: number}>; property: 'x' | 'y' | 'zoom'; fallback: number}) =>
   interpolate(frame, keyframes.map(({at}) => at * durationInFrames), keyframes.map((keyframe) => keyframe[property] ?? fallback), clamp);
 
-export const ReplicaChapterScene = ({scene, narrationVolume, theme}: {scene: NormalizedProjectScene; narrationVolume: number; theme: ProjectTheme}) => {
+export const ReplicaChapterScene = ({scene, narrationVolume, theme, editorial}: {scene: NormalizedProjectScene; narrationVolume: number; theme: ProjectTheme; editorial: EditorialSystem}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const progress = Math.max(0, Math.min(1, frame / Math.max(1, scene.durationInFrames - 1)));
@@ -650,13 +677,15 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme}: {scene: Nor
   const cameraY = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'y', fallback: 0});
   const boundary = resolveSceneTransitionPresentation({transition: scene.enterTransition, frame});
   const paperTexture = scene.appearance?.paperTexture ?? {visible: true, opacity: 0.14, blendMode: 'multiply' as const};
+  const profile = editorial.responsiveProfiles.find(({id}) => id === editorial.activeProfile);
+  const zones = profile?.exclusionZones ?? [];
   return (
     <AbsoluteFill style={{overflow: 'hidden', visibility: boundary.incomingVisible ? 'visible' : 'hidden', clipPath: boundary.incomingClipPath, transform: boundary.incomingTransform, transformOrigin: boundary.incomingTransformOrigin, background: theme.canvas, willChange: 'transform, clip-path'}}>
       <AbsoluteFill style={{background: scene.appearance?.background ?? theme.sceneBackground}} />
       <AbsoluteFill>
         <AbsoluteFill style={{transform: `translate3d(${cameraX}px, ${cameraY}px, 0) scale(${cameraZoom})`, transformOrigin: '50% 54%'}}>
           {[...scene.composition.nodes].sort((a, b) => a.z - b.z).map((node) => (
-            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} />
+            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} sceneId={scene.id} editorial={editorial} rootNodes={scene.composition.nodes} zones={zones} />
           ))}
         </AbsoluteFill>
         {paperTexture.visible ? <AbsoluteFill style={{opacity: paperTexture.opacity, mixBlendMode: paperTexture.blendMode, backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}

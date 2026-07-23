@@ -8,6 +8,7 @@ import {
   validateCompiledDirecting,
 } from './motion-treatment-lib.mjs';
 import {validateSceneTransitionSequence} from '../src/sceneTimeline.mjs';
+import {validateCompiledEditorial} from './editorial-system-lib.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -39,8 +40,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 8) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 8。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 9) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 9。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -49,6 +50,15 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
     add('storyboard-status', 'storyboard.status 必须为 pending 或 ready。', 'status');
   }
   if (storyboard?.status !== 'ready') return issues;
+
+  for (const editorialIssue of validateCompiledEditorial({
+    editorial: storyboard.editorial,
+    scenes: storyboard.scenes ?? [],
+    sceneTransitions: storyboard.sceneTransitions ?? [],
+    fps: storyboard.editorial?.timebase?.fps,
+  })) {
+    add(editorialIssue.code, editorialIssue.message, editorialIssue.location);
+  }
 
   if (!nonEmpty(storyboard.arc)) add('storyboard-arc', '故事板必须写明全片叙事弧。', 'arc');
   const style = storyboard.style;

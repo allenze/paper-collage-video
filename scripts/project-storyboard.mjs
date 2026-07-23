@@ -21,7 +21,7 @@ try {
   if (!['capability-review', 'brief', 'concept-review'].includes(state.stage)) {
     throw new Error(`project:storyboard 只能在 capability-review、brief 或 concept-review 阶段运行；当前为 ${state.stage}。`);
   }
-  const {project} = await loadProject(slug);
+  const {project, paths} = await loadProject(slug);
   if (project.plan?.status !== 'resolved') throw new Error('请先运行 project:plan，再编排故事板。');
   const supplied = JSON.parse(
     await fs.readFile(resolveWorkspacePath(input, 'storyboard 输入路径'), 'utf8'),
@@ -29,7 +29,7 @@ try {
   const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 8,
+    schemaVersion: 9,
     slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(supplied.sceneTransitions),
@@ -41,6 +41,7 @@ try {
     throw new Error(issues.map(({location, message}) => `${location}: ${message}`).join('\n'));
   }
   await writeJson(storyboardFileFor(slug), storyboard);
+  await writeJson(paths.projectFile, {...project, editorial: storyboard.editorial});
   const summary = summarizeStoryboard(storyboard);
   console.log(`✓ 故事板已锁定：${summary.sceneCount} 个镜头`);
   for (const scene of summary.scenes) {

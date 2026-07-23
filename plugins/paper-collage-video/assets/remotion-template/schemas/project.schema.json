@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v8",
+  "title": "Paper Collage Project v9",
   "type": "object",
-  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "scenes", "sceneTransitions"],
+  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 8},
+    "schemaVersion": {"const": 9},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "plan": {"$ref": "#/$defs/plan"},
@@ -29,6 +29,7 @@
     "theme": {"$ref": "#/$defs/theme"},
     "voice": {"$ref": "#/$defs/voice"},
     "audio": {"$ref": "#/$defs/audio"},
+    "editorial": {"$ref": "editorial.schema.json#/$defs/editorialProject"},
     "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}},
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}}
   },

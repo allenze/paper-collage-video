@@ -1,6 +1,6 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v8 composition authoring, proof review, or delivery tuning.
+Read this before style sampling, bulk images, v9 editorial/composition authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
@@ -48,7 +48,7 @@ The schema-v6 report uses `scope=style`, binds the complete `styleProofPlan`, an
 }
 ```
 
-After narration files and real v8 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only project-, asset-, and runtime-fingerprint-current frames/targets):
+After final local audio, actual timing data, and real v9 editorial/groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only project-, asset-, and runtime-fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
@@ -90,6 +90,11 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
 - `state-sequence`: state order correct, pose registration stable, identity consistent, transition clean, every state bound to a current proof frame.
 - `parallax-rig`: depth order readable, camera coupling clean, registered groups stable, final composition readable.
 - `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable.
+- `typography`: fit/overflow, font loading, reveal/emphasis edit-point binding, mixed-script legibility, and safe-area/exclusion compliance.
+- `annotation`: semantic anchors, route validity, title/subtitle/motif exclusion clearance, lifecycle binding, and counter state.
+- `data-graphic`: data/domain/format/geometry mapping, focus/reveal states, edit-point binding, and deterministic SVG output.
+- `editorial-transition`: declared shape/position/scale/color/value continuity, hard-cut enforcement for match types, fallback policy, and before/at/after frames.
+- `responsive-directing`: three explicit plans, bounded placements/crop/focus/exclusions, and density budget.
 - bound event: visual event visible, sound event bound when required, proof time bound, final state preserved.
 - semantic contract: every requested check is visible in its exact target shots; cross-scene checks compare all bound scenes rather than one attractive frame.
 
@@ -107,7 +112,7 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v8 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
+`project:assets-ready` owns narration synchronization, subtitle derivation, v9 editorial/composition validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; actual final-audio edit-point evidence is authoritative for editorial bindings. Review reading-speed warnings.
 
 After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds an audio-only timeline mix, and measures LUFS/true peak. A passing mix needs no decision. A failing mix writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns preflight. Changed source audio or timing invalidates the decision. The final artifact report remains authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 

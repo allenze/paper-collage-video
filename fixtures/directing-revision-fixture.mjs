@@ -9,7 +9,7 @@ export const directingRevisionPlan = {
 
 export const directingRevisionAuthoring = {
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 6,
+  schemaVersion: 9,
   slug: 'directing-revision-fixture',
   status: 'ready',
   arc: '一张纸面从建立空间到主体出现并稳定落版。',
@@ -63,6 +63,10 @@ export const directingRevisionAuthoring = {
       {id: 'proof-final', at: 0.9, label: '构图稳定', kind: 'final', assertions: ['主体保持完整'], stateAssertions: []},
     ],
   }],
+  editorial: createEditorialFixture({
+    sceneIds: ['scene-01'],
+    durationSeconds: 6,
+  }),
   sceneTransitions: [],
   updatedAt: '2026-07-23T00:00:00.000Z',
 };
@@ -100,3 +104,4 @@ export const directingRevisionProduction = {
     note: '调整节奏',
   }],
 };
+import {createEditorialFixture} from './editorial-fixture.mjs';

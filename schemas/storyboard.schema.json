@@ -1,16 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard.schema.json",
-  "title": "Compiled Paper Collage Storyboard v8",
+  "title": "Compiled Paper Collage Storyboard v9",
   "type": "object",
-  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
+  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "editorial", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 8},
+    "schemaVersion": {"const": 9},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"const": "ready"},
     "arc": {"type": "string", "minLength": 1},
     "style": {"$ref": "#/$defs/style"},
+    "editorial": {"$ref": "editorial.schema.json#/$defs/editorialCompiled"},
     "scenes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/compiledScene"}},
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}},
     "directingSummary": {"$ref": "#/$defs/directingSummary"},
@@ -127,8 +128,8 @@
               "type": "object",
               "required": ["kind", "animation"],
               "properties": {
-                "kind": {"enum": ["text", "shape"]},
-                "animation": {"enum": ["pulse", "bounce", "draw", "stamp"]}
+                "kind": {"enum": ["typography", "shape", "annotation", "data-graphic"]},
+                "animation": {"enum": ["pulse", "bounce", "draw", "stamp", "reveal", "route", "data-state"]}
               },
               "additionalProperties": false
             }

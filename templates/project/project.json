@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "slug": "{{slug}}",
   "title": "{{title}}",
   "plan": {
@@ -57,6 +57,9 @@
       "toleranceLufs": 3,
       "truePeakDbtp": -1
     }
+  },
+  "editorial": {
+    "status": "pending"
   },
   "scenes": [],
   "sceneTransitions": []

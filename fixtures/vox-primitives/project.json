@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
   "plan": {
@@ -101,9 +101,18 @@
           },
           {
             "id": "world-title",
-            "kind": "text",
+            "kind": "typography",
             "text": "THE WORLD\nIN LAYERS",
-            "style": {"color": "#263a3d", "fontSize": 82, "fontWeight": 900, "lineHeight": 0.86, "align": "left", "letterSpacing": -3, "fontFamily": "Arial, Helvetica, sans-serif"},
+            "treatment": {
+              "fit": {"minFontSize": 40, "maxFontSize": 82, "maxLines": 2, "overflow": "error"},
+              "style": {"color": "#263a3d", "fontWeight": 900, "lineHeight": 0.86, "align": "left", "letterSpacing": -3, "fontFamily": "Arial, Helvetica, sans-serif"},
+              "effects": {},
+              "highlights": [],
+              "reveal": {"mode": "none", "editPointIds": []},
+              "emphasis": [],
+              "safeAreaMode": "inside",
+              "avoidZoneIds": ["world-title-zone"]
+            },
             "z": 3,
             "depth": 0.55,
             "transform": {"x": 0.17, "y": 0.38, "width": 0.58, "height": 0.32, "anchorX": 0, "anchorY": 0},
@@ -200,9 +209,18 @@
           },
           {
             "id": "cut-title",
-            "kind": "text",
+            "kind": "typography",
             "text": "CUT ON\nTHE BEAT",
-            "style": {"color": "#263a3d", "fontSize": 88, "fontWeight": 900, "lineHeight": 0.85, "align": "center", "letterSpacing": -4, "fontFamily": "Arial, Helvetica, sans-serif"},
+            "treatment": {
+              "fit": {"minFontSize": 40, "maxFontSize": 88, "maxLines": 2, "overflow": "error"},
+              "style": {"color": "#263a3d", "fontWeight": 900, "lineHeight": 0.85, "align": "center", "letterSpacing": -4, "fontFamily": "Arial, Helvetica, sans-serif"},
+              "effects": {},
+              "highlights": [],
+              "reveal": {"mode": "none", "editPointIds": []},
+              "emphasis": [],
+              "safeAreaMode": "inside",
+              "avoidZoneIds": ["cut-title-zone"]
+            },
             "z": 3,
             "depth": 0.7,
             "transform": {"x": 0.5, "y": 0.39, "width": 0.72, "height": 0.34, "anchorX": 0.5, "anchorY": 0},

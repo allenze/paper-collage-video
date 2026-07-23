@@ -9,6 +9,7 @@ import {
 import {buildCreativePlan} from '../scripts/creative-plan-lib.mjs';
 import {selectStyleProofTarget, validateDirectingExecution} from '../scripts/motion-treatment-lib.mjs';
 import {proofOverlapsTransition} from '../scripts/project-lib.mjs';
+import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const plan = (profile = 'balanced') => buildCreativePlan({
   slug: 'rhythm-test',
@@ -34,7 +35,7 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
 });
 
 const authoredStoryboard = () => ({
-  schemaVersion: 8,
+  schemaVersion: 9,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
@@ -88,6 +89,10 @@ const authoredStoryboard = () => ({
       ],
     },
   ],
+  editorial: createEditorialFixture({
+    sceneIds: ['scene-01'],
+    durationSeconds: 6,
+  }),
   sceneTransitions: [],
   updatedAt: '2026-07-20T00:00:00.000Z',
 });
@@ -108,7 +113,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v8 compiles treatments into composition plans, risk selection, and cost evidence', () => {
+test('v9 compiles treatments into composition plans, risk selection, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);
@@ -499,7 +504,7 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v8 storyboard audio beats require an approved event-level proof', () => {
+test('v9 storyboard audio beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
   storyboard.scenes[0].beats[1].proofTimeId = null;
   assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})

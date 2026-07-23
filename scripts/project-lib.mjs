@@ -1,4 +1,5 @@
 import {execFile} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {availableParallelism} from 'node:os';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
@@ -31,6 +32,10 @@ import {
   readGenerationAttemptEvents,
   summarizeGenerationAttempts,
 } from './generation-attempt-lib.mjs';
+import {
+  validateCompiledEditorial,
+  validateEditorialTransitionExecution,
+} from './editorial-system-lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -99,8 +104,8 @@ export const loadProject = async (slug) => {
   assertSlug(slug);
   const paths = projectPaths(slug);
   const project = await readJson(paths.projectFile);
-  if (project.schemaVersion !== 8) {
-    throw new Error('project.json 必须使用 schemaVersion 8；旧项目不会自动迁移。');
+  if (project.schemaVersion !== 9) {
+    throw new Error('project.json 必须使用 schemaVersion 9；旧项目不会自动迁移。');
   }
   return {paths, project};
 };
@@ -217,6 +222,9 @@ const fileExists = async (file) => {
     return false;
   }
 };
+
+const sha256File = async (file) =>
+  createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
 export const inspectCharacterPng = async (file) => {
   const metadata = await sharp(file).metadata();
@@ -368,8 +376,8 @@ export const validateProject = async (project, options = {}) => {
   const add = (level, code, message, location) =>
     issues.push(makeIssue(level, code, message, location));
 
-  if (project.schemaVersion !== 8) {
-    add('error', 'schema-version', 'schemaVersion 必须为 8。', 'schemaVersion');
+  if (project.schemaVersion !== 9) {
+    add('error', 'schema-version', 'schemaVersion 必须为 9。', 'schemaVersion');
   }
   if (!SLUG_PATTERN.test(project.slug ?? '')) {
     add('error', 'slug', 'slug 格式无效。', 'slug');
@@ -395,13 +403,13 @@ export const validateProject = async (project, options = {}) => {
     );
   }
   if (project.plan === undefined) {
-    add('error', 'plan-required', 'v8 项目必须包含 plan。', 'plan');
+    add('error', 'plan-required', 'v9 项目必须包含 plan。', 'plan');
   }
   if (!project.voice || typeof project.voice !== 'object') {
-    add('error', 'voice-required', 'v8 项目必须包含 voice。', 'voice');
+    add('error', 'voice-required', 'v9 项目必须包含 voice。', 'voice');
   }
   if (project.audio?.sfx !== undefined) {
-    add('error', 'unsupported-audio-sfx', 'v8 不支持 audio.sfx；请用逐节拍 event.sound。', 'audio.sfx');
+    add('error', 'unsupported-audio-sfx', 'v9 不支持 audio.sfx；请用统一 editorial cue 与 event.sound。', 'audio.sfx');
   }
   if (!isPositiveNumber(project.quality?.minimumAssetScale)) {
     add(
@@ -437,7 +445,7 @@ export const validateProject = async (project, options = {}) => {
     add(
       'error',
       'audio-mastering-required',
-      'audio.mastering 是 v8 项目的必填交付规格。',
+      'audio.mastering 是 v9 项目的必填交付规格。',
       'audio.mastering',
     );
   }
@@ -470,6 +478,83 @@ export const validateProject = async (project, options = {}) => {
     }
     if (JSON.stringify(project.sceneTransitions ?? []) !== JSON.stringify(storyboard.sceneTransitions ?? [])) {
       add('error', 'scene-transitions-drift', 'project.sceneTransitions 必须与已批准故事板完全一致。', 'sceneTransitions');
+    }
+    const projectEditorial = project.editorial
+      ? {...project.editorial, activeProfile: undefined}
+      : null;
+    const storyboardEditorial = storyboard.editorial
+      ? {...storyboard.editorial, activeProfile: undefined}
+      : null;
+    if (JSON.stringify(projectEditorial) !== JSON.stringify(storyboardEditorial)) {
+      add('error', 'editorial-drift', 'project.editorial 必须与已批准故事板的 v9 编译结果完全一致。', 'editorial');
+    }
+  }
+  if (!project.editorial) {
+    add('error', 'editorial-required', 'v9 项目必须包含已编译 editorial 系统。', 'editorial');
+  } else {
+    for (const issue of validateCompiledEditorial({
+      editorial: project.editorial,
+      scenes: project.scenes ?? [],
+      sceneTransitions: project.sceneTransitions ?? [],
+      fps: project.video?.fps,
+    })) {
+      add('error', issue.code, issue.message, issue.location);
+    }
+    for (const issue of validateEditorialTransitionExecution({
+      editorial: project.editorial,
+      scenes: project.scenes ?? [],
+    })) {
+      add('error', issue.code, issue.message, issue.location);
+    }
+    for (const [mediaIndex, media] of (project.editorial.media ?? []).entries()) {
+      const location = `editorial.media[${mediaIndex}]`;
+      try {
+        const file = resolvePublicFile(media.src);
+        if (!(await fileExists(file))) {
+          add('error', 'editorial-media-missing', `缺少 editorial 最终本地音频：${media.src}`, `${location}.src`);
+          continue;
+        }
+        const actualSha256 = await sha256File(file);
+        if (actualSha256 !== media.sha256) {
+          add('error', 'editorial-media-sha-drift', `editorial 音频 SHA-256 漂移：${media.src}`, `${location}.sha256`);
+        }
+        const inspected = await memoize(mediaProbeCache, file, () => probeMedia(file));
+        const actualDuration = Number(inspected.format?.duration);
+        if (!Number.isFinite(actualDuration) || Math.abs(actualDuration - media.durationSeconds) > 0.002) {
+          add(
+            'error',
+            'editorial-media-duration-drift',
+            `editorial 音频时长 ${media.durationSeconds}s 与实际文件 ${Number.isFinite(actualDuration) ? actualDuration.toFixed(6) : 'unknown'}s 不一致。`,
+            `${location}.durationSeconds`,
+          );
+        }
+        if (media.timingDataSrc) {
+          const timingFile = resolvePublicFile(media.timingDataSrc);
+          if (!(await fileExists(timingFile))) {
+            add('error', 'editorial-timing-data-missing', `缺少 editorial 实际时间数据：${media.timingDataSrc}`, `${location}.timingDataSrc`);
+          } else {
+            const timing = JSON.parse(await fs.readFile(timingFile, 'utf8'));
+            if (timing.mediaSha256 !== actualSha256 || Math.abs(Number(timing.durationSeconds) - actualDuration) > 0.002) {
+              add('error', 'editorial-timing-data-media-drift', 'timingDataSrc 未绑定当前最终本地音频的 SHA-256 与实际时长。', `${location}.timingDataSrc`);
+            }
+            const timingCues = new Map((timing.cues ?? []).map((cue) => [cue.id, cue]));
+            for (const cue of (project.editorial.cues ?? []).filter(
+              (candidate) => candidate.mediaId === media.id && candidate.source === 'detected',
+            )) {
+              const evidence = timingCues.get(cue.id);
+              if (
+                !evidence ||
+                evidence.kind !== cue.kind ||
+                Math.abs(Number(evidence.atSeconds) - cue.atSeconds) > 1e-6
+              ) {
+                add('error', 'editorial-detected-cue-drift', `detected cue ${cue.id} 与 timingDataSrc 不一致。`, `${location}.timingDataSrc`);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        add('error', 'editorial-media-proof', error.message, location);
+      }
     }
   }
   for (const issue of validateSceneTransitionSequence({
@@ -648,6 +733,16 @@ export const validateProject = async (project, options = {}) => {
       proofTimes: scene.motion?.proofTimes ?? [],
       durationSeconds: scene.durationInFrames / project.video.fps,
       location: `${sceneLocation}.composition`,
+      editorial: project.editorial,
+      sceneId: scene.id,
+      exclusionZones:
+        project.editorial?.responsiveProfiles?.find(
+          ({id}) => id === project.editorial.activeProfile,
+        )?.exclusionZones ?? [],
+      safeArea:
+        project.editorial?.responsiveProfiles?.find(
+          ({id}) => id === project.editorial.activeProfile,
+        )?.safeArea ?? {x: 0, y: 0, width: 1, height: 1},
     });
     for (const issue of compositionResult.issues) {
       add(issue.level, issue.code, issue.message, issue.location);
@@ -849,7 +944,7 @@ export const validateProject = async (project, options = {}) => {
       add('error', 'scene-events-required', '每个镜头必须包含与故事节拍对应的 events。', `${sceneLocation}.events`);
     }
     if (scene.audioEvents !== undefined) {
-      add('error', 'unsupported-audio-events', 'v8 只允许 scene.events 作为视听事件源。', `${sceneLocation}.audioEvents`);
+      add('error', 'unsupported-audio-events', 'v9 只允许 scene.events 作为视听事件源。', `${sceneLocation}.audioEvents`);
     }
     const eventIds = new Set();
     const eventBeatIds = new Set();
@@ -1004,6 +1099,37 @@ export const validateProject = async (project, options = {}) => {
       }
     } catch (error) {
       add('error', 'shared-asset-path', error.message, 'audio/theme');
+    }
+  }
+  if (project.theme?.fontFile) {
+    try {
+      const fontFile = resolvePublicFile(project.theme.fontFile);
+      if (await fileExists(fontFile)) {
+        const header = await fs.readFile(fontFile);
+        const signature = header.subarray(0, 4);
+        const extension = path.extname(fontFile).toLowerCase();
+        const valid =
+          (extension === '.woff2' && signature.toString('ascii') === 'wOF2') ||
+          (extension === '.woff' && signature.toString('ascii') === 'wOFF') ||
+          (extension === '.otf' && signature.toString('ascii') === 'OTTO') ||
+          (
+            extension === '.ttf' &&
+            (
+              signature.equals(Buffer.from([0x00, 0x01, 0x00, 0x00])) ||
+              signature.toString('ascii') === 'true'
+            )
+          );
+        if (!valid) {
+          add(
+            'error',
+            'font-load-invalid',
+            `字体文件头与扩展名不匹配，Chromium 无法确定性加载：${project.theme.fontFile}`,
+            'theme.fontFile',
+          );
+        }
+      }
+    } catch (error) {
+      add('error', 'font-load-inspection', error.message, 'theme.fontFile');
     }
   }
 

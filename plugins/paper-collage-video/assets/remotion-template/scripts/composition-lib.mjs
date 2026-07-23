@@ -13,6 +13,12 @@ import {
   MAX_MOTIF_INSTANCES_PER_SCENE,
   resolveMotifFieldInstances,
 } from '../src/motifField.mjs';
+import {
+  ANNOTATION_KINDS,
+  fitEditorialTypography,
+  resolveAnnotationRoute,
+  validateDataGraphicNode,
+} from '../src/editorialPrimitives.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -34,6 +40,17 @@ const normalizedRectangleWithinCanvas = ({x, y, width, height} = {}) =>
   height > 0 &&
   x + width <= 1 &&
   y + height <= 1;
+const rectangleForTransform = (transform = {}) => ({
+  x: transform.x - transform.anchorX * transform.width,
+  y: transform.y - transform.anchorY * (transform.height ?? transform.width),
+  width: transform.width,
+  height: transform.height ?? transform.width,
+});
+const rectanglesOverlap = (left, right) =>
+  left.x < right.x + right.width &&
+  left.x + left.width > right.x &&
+  left.y < right.y + right.height &&
+  left.y + left.height > right.y;
 
 export const stableStringify = (value) => {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -54,6 +71,8 @@ export const flattenCompositionNodes = (nodes = [], parent = null) =>
     {node, parent},
     ...(node.kind === 'group'
       ? flattenCompositionNodes(node.children ?? [], node)
+      : node.kind === 'editorial-switch'
+        ? flattenCompositionNodes((node.panels ?? []).map(({node: panel}) => panel), node)
       : []),
   ]);
 
@@ -144,7 +163,17 @@ const validateTransform = (transform, location, add) => {
   }
 };
 
-export const validateCompositionStructure = ({composition, video, proofTimes = [], durationSeconds = 1, location = 'composition'}) => {
+export const validateCompositionStructure = ({
+  composition,
+  video,
+  proofTimes = [],
+  durationSeconds = 1,
+  location = 'composition',
+  editorial,
+  sceneId,
+  exclusionZones = [],
+  safeArea = {x: 0, y: 0, width: 1, height: 1},
+}) => {
   const issues = [];
   const add = (level, code, message, issueLocation) => issues.push({level, code, message, location: issueLocation});
   if (!composition || typeof composition !== 'object') {
@@ -170,7 +199,7 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
     const nodeLocation = `${location}.nodes#${node?.id ?? 'missing'}`;
     if (!nonEmpty(node?.id) || nodeIds.has(node.id)) add('error', 'composition-node-id', '组合节点 id 缺失或重复。', `${nodeLocation}.id`);
     nodeIds.add(node?.id);
-    if (!['asset', 'state-sequence', 'text', 'shape', 'motif-field', 'group'].includes(node?.kind)) {
+    if (!['asset', 'state-sequence', 'typography', 'shape', 'annotation', 'data-graphic', 'editorial-switch', 'motif-field', 'group'].includes(node?.kind)) {
       add('error', 'composition-node-kind', `未知组合节点 kind：${node?.kind}`, `${nodeLocation}.kind`);
       continue;
     }
@@ -238,10 +267,147 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       continue;
     }
 
-    if (node.kind === 'text') {
-      if (typeof node.text !== 'string') add('error', 'composition-text-value', 'text 节点必须声明字符串内容。', `${nodeLocation}.text`);
-      if (!(finite(node.style?.fontSize) && node.style.fontSize > 0 && finite(node.style?.lineHeight) && node.style.lineHeight > 0)) add('error', 'composition-text-style', 'text 节点必须声明有效字号与行高。', `${nodeLocation}.style`);
-      if (!finite(node.transform?.height) || node.transform.height <= 0) add('error', 'composition-text-height', 'text 节点必须声明 transform.height。', `${nodeLocation}.transform.height`);
+    if (node.kind === 'typography') {
+      if (typeof node.text !== 'string') add('error', 'composition-typography-value', 'typography 节点必须声明字符串内容。', `${nodeLocation}.text`);
+      const fit = node.treatment?.fit;
+      const style = node.treatment?.style;
+      if (!nonEmpty(style?.fontFamily)) {
+        add('error', 'composition-typography-font', 'typography 必须声明确定的 fontFamily。', `${nodeLocation}.treatment.style.fontFamily`);
+      }
+      if (
+        !finite(fit?.minFontSize) ||
+        !finite(fit?.maxFontSize) ||
+        fit.minFontSize <= 0 ||
+        fit.maxFontSize < fit.minFontSize ||
+        !Number.isInteger(fit?.maxLines) ||
+        fit.maxLines < 1
+      ) add('error', 'composition-typography-fit', 'typography 必须声明有效 min/max font size 和 maxLines。', `${nodeLocation}.treatment.fit`);
+      if (!(finite(style?.lineHeight) && style.lineHeight > 0)) add('error', 'composition-typography-style', 'typography 必须声明有效行高。', `${nodeLocation}.treatment.style`);
+      if (!finite(node.transform?.height) || node.transform.height <= 0) {
+        add('error', 'composition-typography-height', 'typography 节点必须声明 transform.height。', `${nodeLocation}.transform.height`);
+      } else if (
+        finite(video?.width) &&
+        finite(video?.height) &&
+        fit?.minFontSize > 0 &&
+        fit?.maxFontSize >= fit.minFontSize &&
+        fit?.maxLines >= 1 &&
+        style?.lineHeight > 0
+      ) {
+        const report = fitEditorialTypography({
+          text: node.text,
+          width: node.transform.width * video.width,
+          height: node.transform.height * video.height,
+          minFontSize: fit.minFontSize,
+          maxFontSize: fit.maxFontSize,
+          maxLines: fit.maxLines,
+          lineHeight: style.lineHeight,
+          letterSpacing: style.letterSpacing ?? 0,
+        });
+        if (report.overflow && fit.overflow === 'error') {
+          add('error', 'composition-typography-overflow', `typography 在最小字号 ${fit.minFontSize}px 时仍溢出。`, nodeLocation);
+        }
+      }
+      const reveal = node.treatment?.reveal;
+      if (!['none', 'word', 'line', 'edit-point'].includes(reveal?.mode)) {
+        add('error', 'composition-typography-reveal', 'typography reveal mode 无效。', `${nodeLocation}.treatment.reveal.mode`);
+      }
+      if (
+        reveal?.mode !== 'none' &&
+        (!Array.isArray(reveal?.editPointIds) || reveal.editPointIds.length === 0)
+      ) {
+        add('error', 'composition-typography-reveal-points', '定时 reveal 必须绑定 edit points。', `${nodeLocation}.treatment.reveal.editPointIds`);
+      }
+      for (const editPointId of reveal?.editPointIds ?? []) {
+        if (editorial && !editorial.resolvedEditPoints?.some((point) => point.id === editPointId && (!sceneId || point.sceneId === sceneId))) {
+          add('error', 'composition-typography-edit-point', `typography reveal 引用未知 edit point：${editPointId}`, `${nodeLocation}.treatment.reveal.editPointIds`);
+        }
+      }
+      for (const emphasis of node.treatment?.emphasis ?? []) {
+        if (editorial && !editorial.resolvedEditPoints?.some((point) => point.id === emphasis.editPointId && (!sceneId || point.sceneId === sceneId))) {
+          add('error', 'composition-typography-emphasis-point', `typography emphasis 引用未知 edit point：${emphasis.editPointId}`, `${nodeLocation}.treatment.emphasis`);
+        }
+      }
+      const textBox = rectangleForTransform(node.transform);
+      if (
+        node.treatment?.safeAreaMode === 'inside' &&
+        (
+          textBox.x < safeArea.x ||
+          textBox.y < safeArea.y ||
+          textBox.x + textBox.width > safeArea.x + safeArea.width ||
+          textBox.y + textBox.height > safeArea.y + safeArea.height
+        )
+      ) {
+        add('error', 'composition-typography-safe-area', 'typography 超出当前响应式 safe area。', `${nodeLocation}.transform`);
+      }
+      for (const zone of exclusionZones.filter(({id}) => node.treatment?.avoidZoneIds?.includes(id))) {
+        const padded = {
+          x: zone.x - (zone.padding ?? 0),
+          y: zone.y - (zone.padding ?? 0),
+          width: zone.width + 2 * (zone.padding ?? 0),
+          height: zone.height + 2 * (zone.padding ?? 0),
+        };
+        if (rectanglesOverlap(textBox, padded)) {
+          add('error', 'composition-typography-exclusion', `typography 与 exclusion zone ${zone.id} 冲突。`, `${nodeLocation}.treatment.avoidZoneIds`);
+        }
+      }
+      continue;
+    }
+
+    if (node.kind === 'annotation') {
+      if (!ANNOTATION_KINDS.includes(node.annotationKind)) {
+        add('error', 'composition-annotation-kind', `未知 annotation：${node.annotationKind}`, `${nodeLocation}.annotationKind`);
+      }
+      const route = resolveAnnotationRoute({
+        node,
+        nodes: composition.nodes,
+        zones: exclusionZones,
+      });
+      if (!route.valid) {
+        add('error', `composition-annotation-${route.reason}`, `annotation 路由无效：${route.reason}`, nodeLocation);
+      }
+      const annotationBox = rectangleForTransform(node.transform);
+      if (
+        Math.abs(annotationBox.x) > 1e-9 ||
+        Math.abs(annotationBox.y) > 1e-9 ||
+        Math.abs(annotationBox.width - 1) > 1e-9 ||
+        Math.abs(annotationBox.height - 1) > 1e-9
+      ) {
+        add('error', 'composition-annotation-overlay', 'annotation 必须使用完整画布 overlay transform，保证语义 anchor 坐标一致。', `${nodeLocation}.transform`);
+      }
+      for (const editPointId of [node.lifecycle?.enterEditPointId, node.lifecycle?.exitEditPointId].filter(Boolean)) {
+        if (editorial && !editorial.resolvedEditPoints?.some((point) => point.id === editPointId && (!sceneId || point.sceneId === sceneId))) {
+          add('error', 'composition-annotation-edit-point', `annotation 引用未知 edit point：${editPointId}`, `${nodeLocation}.lifecycle`);
+        }
+      }
+      continue;
+    }
+
+    if (node.kind === 'data-graphic') {
+      for (const dataIssue of validateDataGraphicNode(node, nodeLocation)) {
+        add('error', `composition-${dataIssue.code}`, dataIssue.message, dataIssue.location);
+      }
+      for (const state of node.states ?? []) {
+        if (editorial && !editorial.resolvedEditPoints?.some((point) => point.id === state.editPointId && (!sceneId || point.sceneId === sceneId))) {
+          add('error', 'composition-data-edit-point', `data state 引用未知 edit point：${state.editPointId}`, `${nodeLocation}.states`);
+        }
+      }
+      continue;
+    }
+
+    if (node.kind === 'editorial-switch') {
+      const panelIds = new Set();
+      for (const panel of node.panels ?? []) {
+        if (!nonEmpty(panel.id) || panelIds.has(panel.id)) add('error', 'composition-switch-panel-id', 'switch panel id 缺失或重复。', `${nodeLocation}.panels`);
+        panelIds.add(panel.id);
+      }
+      if (panelIds.size < 2) add('error', 'composition-switch-panels', 'editorial-switch 至少需要两个 panel。', `${nodeLocation}.panels`);
+      for (const change of node.changes ?? []) {
+        if (!panelIds.has(change.fromPanelId) || !panelIds.has(change.toPanelId)) add('error', 'composition-switch-target', 'switch change 必须引用有效 panel。', `${nodeLocation}.changes`);
+        if (!['card-switch', 'panel-replace', 'data-state'].includes(change.treatment)) add('error', 'composition-switch-treatment', `未知 switch treatment：${change.treatment}`, `${nodeLocation}.changes`);
+        if (editorial && !editorial.resolvedEditPoints?.some((point) => point.id === change.editPointId && (!sceneId || point.sceneId === sceneId))) {
+          add('error', 'composition-switch-edit-point', `switch 引用未知 edit point：${change.editPointId}`, `${nodeLocation}.changes`);
+        }
+      }
       continue;
     }
 

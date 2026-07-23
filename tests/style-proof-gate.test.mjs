@@ -17,6 +17,7 @@ import {
 } from '../scripts/quality-lib.mjs';
 import {ROOT} from '../scripts/project-lib.mjs';
 import {createRuntimeBuildFingerprint} from '../scripts/runtime-build-lib.mjs';
+import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const relativePublicSource = (file) => path.relative(path.join(ROOT, 'public'), file);
 const relativeWorkspaceFile = (file) => path.relative(ROOT, file);
@@ -89,8 +90,7 @@ const writeFixture = async (slug) => {
     transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
     motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
   });
-  const project = {
-    schemaVersion: 8,
+  const project = withCompiledEditorialFixture({
     slug,
     quality: {minimumAssetScale: 1},
     video: {width: 100, height: 100, fps: 30},
@@ -133,9 +133,9 @@ const writeFixture = async (slug) => {
       events: [],
     }],
     sceneTransitions: [],
-  };
+  });
   const storyboard = {
-    schemaVersion: 8,
+    schemaVersion: 9,
     slug,
     status: 'ready',
     directingSummary: {

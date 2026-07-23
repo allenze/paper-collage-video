@@ -1,37 +1,46 @@
-# Paper Collage Video 0.15.0-dev.1
+# Paper Collage Video 0.16.0-dev.1
 
-This development release closes the reusable VOX-style editorial primitive
-slice without requiring a text-to-video provider. It upgrades the current
-project and storyboard contract to v8 and binds authoring, compilation,
-runtime, validation, proof, packaging, and documentation to the same behavior.
+This development release establishes the reusable VOX Phase 2 editorial
+system without requiring any image, voice, or video provider. It upgrades the
+Project, Storyboard Authoring, and Compiled Storyboard contracts to v9 and
+binds authoring, compilation, runtime, validation, proof, packaging, and
+documentation to the same behavior.
 
 ## Highlights
 
-- One intent-routed scene boundary protocol with authored rhythmic and impact
-  cuts, while normal narrative boundaries keep deterministic opaque animation.
-- Camera-coupled parallax that applies the global camera once and separates
-  authored depth planes without breaking registered relationships.
-- First-class deterministic `motif-field` nodes with explicit bounds,
-  title/face/data exclusion zones, footprint clearance, 64 instances per field,
-  and a 192-instance aggregate scene ceiling.
-- Seamless drift/orbit loops and invisible respawn edges for fall/burst fields;
-  `cycles` now controls every preset.
-- A six-second, no-provider VOX engineering sample plus
-  `npm run sample:vox:verify`, which produces a fixed-frame contact sheet and a
-  fingerprinted proof report.
-- Source and packaged plugin validation share the same runtime-build identity.
+- Actual-file edit-point compilation for narration words/phrases/sentences,
+  emphasis, SFX onset/peak/tail, music beat/bar/accent, and manual cues, with
+  authored/detected provenance, priorities, tolerance windows, conflict
+  resolution, and deterministic media/scene/render frame mappings.
+- Reusable typography, annotation, counter, chart, table, timeline, registered
+  map, flow-diagram, and editorial-switch primitives with responsive layout,
+  lifecycle and edit-point bindings.
+- Explicit 16:9, 9:16, and 1:1 directing plans covering composition,
+  typography, framing, parallax, exclusion zones, placement, crop/focus,
+  routing, safe areas, and density budgets.
+- Eight semantic advanced transitions with source/destination anchors,
+  treatments, continuity validation, fallback policy, compiled plans, and
+  before/at/after proof frames.
+- A six-second, no-provider Phase 2 proof gallery that renders all three
+  aspect ratios from synthetic WAV and deterministic SVG fixtures and emits
+  fingerprinted reports plus contact sheets.
+- Source, packaged plugin, and fresh installed-cache validation share the same
+  runtime-build identity.
 
 ## Compatibility
 
-- New projects use project and storyboard schema v8. Older projects are
-  intentionally not migrated or silently downgraded.
-- A v8 motif field must declare `bounds` and `exclusionZones`; the compiler and
-  runtime must match preset, distribution, count, cycles, bounds, and zones.
+- New projects use Project, Storyboard Authoring, and Compiled Storyboard
+  schema v9. Older projects are intentionally not migrated or silently
+  downgraded.
+- There is no v8 loader, dual schema, deprecated field, compatibility adapter,
+  or version-conditioned renderer branch.
+- Useful v8 output capabilities remain expressible under the v9 contract.
 - Start a new Codex task after upgrading so the new Skill snapshot is loaded.
 
 This release contains reusable source, the packaged Plugin, and technical test
-fixtures only. The generated VOX MP4 and proof artifacts remain local build
-outputs and are not bundled as production media.
+fixtures only. The generated VOX Phase 2 MP4s and proof artifacts remain local
+build outputs and are not bundled as production media or a final reference
+film.
 
 ## Install
 

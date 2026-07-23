@@ -25,7 +25,7 @@ const contract = {
   },
 };
 const project = {
-  schemaVersion: 8,
+  schemaVersion: 9,
   scenes: [
     {
       id: 'one',
@@ -42,7 +42,7 @@ const project = {
     treatment: {type: 'cut', motivation: 'rhythmic', beatId: 'world-cut'},
   }],
 };
-const storyboard = {schemaVersion: 8};
+const storyboard = {schemaVersion: 9};
 const compiledStoryboard = {scenes: [{}, {}], sceneTransitions: project.sceneTransitions};
 const timeline = {
   scenes: [
@@ -73,7 +73,7 @@ const build = (overrides = {}) => buildVoxSampleProofReport({
   ...overrides,
 });
 
-test('formal VOX proof binds media, v8 inputs, fingerprints, primitives, and the rhythmic boundary', () => {
+test('formal VOX proof binds media, v9 inputs, fingerprints, primitives, and the rhythmic boundary', () => {
   assert.equal(parseMediaFrameRate('30000/1000'), 30);
   const report = build();
   assert.equal(report.status, 'passed');

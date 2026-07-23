@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard-authoring.schema.json",
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "slug": "vox-primitives",
   "status": "ready",
   "arc": "A layered world resolves into a decisive editorial beat.",

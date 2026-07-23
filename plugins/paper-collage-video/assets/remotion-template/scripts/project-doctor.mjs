@@ -138,11 +138,13 @@ const pythonAvailable = commandCheck(
   ready,
 );
 if (pythonAvailable) {
-  const modules = run(pythonCommand, ['-c', 'import numpy; import PIL']);
+  const modules = run(pythonCommand, ['-c', 'import numpy; import PIL; import yaml']);
   record(
     'python-dependencies',
     modules.status === 0 ? 'ok' : ready ? 'error' : 'warning',
-    modules.status === 0 ? 'Python 图像依赖已安装' : '缺少 numpy 或 Pillow',
+    modules.status === 0
+      ? 'Python 图像与 Skill 验证依赖已安装'
+      : '缺少 numpy、Pillow 或 PyYAML',
     modules.status === 0
       ? pythonCommand
       : '运行 python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt',

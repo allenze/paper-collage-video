@@ -238,14 +238,31 @@ test('final state proofs reject crossfades and states that do not hold to scene 
   assert.ok(!stable.issues.some(({code}) => code === 'composition-sequence-final-unstable'));
 });
 
-test('v5 text and shape nodes keep explanatory UI editable', () => {
+test('v9 typography and shape nodes keep explanatory UI editable', () => {
   const nodes = [
     {
       id: 'card', kind: 'shape', shape: 'rectangle', style: {fill: '#17191d', stroke: '#5f6670', strokeWidth: 2, radius: 12}, z: 1,
       transform: {x: 0.1, y: 0.1, width: 0.8, height: 0.5, anchorX: 0, anchorY: 0}, motion: still(),
     },
     {
-      id: 'question', kind: 'text', text: '为什么？', style: {color: '#ffffff', fontSize: 42, fontWeight: 700, lineHeight: 1.2, align: 'center'}, z: 2,
+      id: 'question', kind: 'typography', text: '为什么？',
+      treatment: {
+        fit: {minFontSize: 8, maxFontSize: 16, maxLines: 2, overflow: 'error'},
+        style: {
+          color: '#ffffff',
+          fontWeight: 700,
+          lineHeight: 1.2,
+          align: 'center',
+          fontFamily: 'Arial',
+        },
+        effects: {},
+        highlights: [],
+        reveal: {mode: 'none', editPointIds: []},
+        emphasis: [],
+        safeAreaMode: 'inside',
+        avoidZoneIds: [],
+      },
+      z: 2,
       transform: {x: 0.2, y: 0.2, width: 0.6, height: 0.2, anchorX: 0, anchorY: 0}, motion: still(),
     },
   ];

@@ -47,6 +47,7 @@ export const MainVideo = (project: PaperCollageProject) => {
             scene={scene}
             narrationVolume={normalized.audio.narration.volume}
             theme={normalized.theme}
+            editorial={normalized.editorial}
           />
         </Sequence>
       ))}

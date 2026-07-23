@@ -13,6 +13,7 @@ import {
   refreshProductionMetrics,
   startMetricSegment,
 } from '../scripts/production-metrics-lib.mjs';
+import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -208,8 +209,7 @@ test('quality scaffold and record-batch measure one AI review session', async ()
       path.join(projectDirectory, 'production.json'),
       productionState({slug, createdAt, updatedAt: createdAt}),
     );
-    await writeJson(path.join(projectDirectory, 'project.json'), {
-      schemaVersion: 8,
+    await writeJson(path.join(projectDirectory, 'project.json'), withCompiledEditorialFixture({
       slug,
       title: 'Metrics review fixture',
       quality: {minimumAssetScale: 0.5},
@@ -232,7 +232,7 @@ test('quality scaffold and record-batch measure one AI review session', async ()
         },
       }],
       sceneTransitions: [],
-    });
+    }));
     const scaffoldFile = path.join(projectDirectory, 'quality-review-scaffold.json');
     const scaffoldResult = spawnSync(
       'npm',

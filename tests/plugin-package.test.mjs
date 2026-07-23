@@ -61,6 +61,10 @@ test('plugin manifest points at a complete packaged skill', () => {
     fs.readFileSync(skillFile, 'utf8'),
     /references\/story-planning\.md/,
   );
+  assert.match(
+    fs.readFileSync(skillFile, 'utf8'),
+    /references\/editorial-system-v9\.md/,
+  );
   assert.ok(
     fs.existsSync(
       path.join(
@@ -121,6 +125,22 @@ test('packaged runtime is lightweight and independent from production projects',
     packageJson.scripts['sample:vox:verify'],
     'node scripts/verify-vox-sample.mjs',
   );
+  assert.equal(
+    packageJson.scripts['proof:phase2:prepare'],
+    'node scripts/prepare-phase2-proof.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['proof:phase2:render'],
+    'node scripts/render-phase2-proof.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['proof:phase2:verify'],
+    'node scripts/verify-phase2-proof.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['schema:v9'],
+    '.venv/bin/python scripts/validate_v9_schemas.py',
+  );
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'ASSET_LICENSES.md')));
@@ -141,7 +161,7 @@ test('packaged runtime is lightweight and independent from production projects',
   const starterMetrics = readJson(
     path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
   );
-  assert.equal(starterProject.schemaVersion, 8);
+  assert.equal(starterProject.schemaVersion, 9);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
   assert.equal(starterProject.scenes[0].events.length, 3);
@@ -167,6 +187,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'runtime-build.json',
     'scripts/production-state.mjs',
     'scripts/directing-revision-lib.mjs',
+    'scripts/editorial-system-lib.mjs',
     'scripts/asset-evidence-lib.mjs',
     'scripts/asset-manifest-lib.mjs',
     'scripts/audio-preflight-lib.mjs',
@@ -196,17 +217,25 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/composition-lib.mjs',
     'scripts/motion-treatment-lib.mjs',
     'scripts/project-composition-proof.mjs',
+    'scripts/phase2-proof-lib.mjs',
+    'scripts/prepare-phase2-proof.mjs',
     'scripts/project-semantic-contracts.mjs',
     'scripts/project-plan.mjs',
     'scripts/project-storyboard.mjs',
     'scripts/project-revise-preview-directing.mjs',
     'scripts/storyboard-lib.mjs',
+    'scripts/render-phase2-proof.mjs',
+    'scripts/validate_v9_schemas.py',
+    'scripts/verify-phase2-proof.mjs',
     'scripts/verify-vox-sample.mjs',
     'scripts/vox-sample-proof-lib.mjs',
     'scripts/project-confirm-concept.mjs',
     'scripts/style-motion-proof.mjs',
     'scripts/style-proof-lib.mjs',
     'src/MainVideo.tsx',
+    'src/EditorialNodes.tsx',
+    'src/editorialPrimitives.mjs',
+    'src/editorialPrimitives.d.mts',
     'src/motion.ts',
     'src/ReplicaChapterScene.tsx',
     'src/SceneTransitionOverlay.tsx',
@@ -214,6 +243,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'src/visibilityLifecycle.mjs',
     'src/project.ts',
     'schemas/project.schema.json',
+    'schemas/editorial.schema.json',
     'schemas/semantic-contracts.schema.json',
     'schemas/generation-attempt.schema.json',
     'schemas/production-metrics.schema.json',
@@ -228,6 +258,10 @@ test('packaged runtime is lightweight and independent from production projects',
     'templates/project/storyboard.json',
     'templates/project/quality-report.json',
     'providers.json',
+    'fixtures/editorial-fixture.mjs',
+    'fixtures/phase2-proof-fixture.mjs',
+    'public/fixtures/vox-phase2-proof/narration-1.wav',
+    'public/fixtures/vox-phase2-proof/narration-1.timing.json',
   ]) {
     assert.equal(
       fs.readFileSync(path.join(RUNTIME_ROOT, relative), 'utf8'),

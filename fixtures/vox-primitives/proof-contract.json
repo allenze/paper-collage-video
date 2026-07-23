@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "sample": "vox-primitives",
-  "contract": "paper-collage-v8-vox-engineering-proof",
+  "contract": "paper-collage-v9-vox-engineering-proof",
   "review": {
     "status": "approved-direction",
     "reviewedAt": "2026-07-23",
-    "basis": "The user approved the rendered VOX engineering sample direction before the v8 closure. The closure may improve deterministic placement and loop safety but must not change the approved editorial direction.",
+    "basis": "The user approved the rendered VOX engineering sample direction before the v9 closure. The closure may improve deterministic placement and loop safety but must not change the approved editorial direction.",
     "freshHumanReviewRequiredFor": "Any material change to visual direction, pacing, typography, palette, or scene structure."
   },
   "expected": {

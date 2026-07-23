@@ -15,11 +15,11 @@ import {
   validateAudioCalibration,
 } from '../scripts/audio-calibration-lib.mjs';
 import {createRenderFingerprints} from '../scripts/render-cache-lib.mjs';
+import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const makeProject = (slug) => ({
-  schemaVersion: 8,
+const makeProject = (slug) => withCompiledEditorialFixture({
   slug,
   title: 'Cache Test',
   video: {width: 1920, height: 1080, fps: 30},

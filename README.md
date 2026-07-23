@@ -5,24 +5,34 @@
 
 一个配置驱动的本地纸片分层视频生产系统。人负责内容意图、审美选择和最终批准；Codex 与本地工具负责节奏故事板、素材组织、分层关键帧、持久显隐与视听事件、旁白同步、渲染和技术验收。
 
-当前开发协议为 project/storyboard v8；旧项目不会自动迁移或回退。v8 在递归组合、注册源家族、持久显隐与意图路由边界之上，把 camera-coupled parallax、节奏硬切和确定性 `motif-field` 收成可编译、可验证、可证明的一等原语。`motif-field` 显式声明放置边界、标题/人脸/数据排除区、闭合或隐藏重生循环，并受单场景总预算约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
+当前开发协议为 project/storyboard v9；旧项目不会自动迁移或回退。v9 保留递归组合、注册源家族、camera-coupled parallax、节奏硬切和确定性 `motif-field` 的输出能力，并新增统一 edit point、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级编辑切换。所有这些行为都由 authoring、compiled plan、运行时、质量报告和正式证明共同约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
 
-当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.15.0-dev.1`。新协议加入节奏故事板、注册组合模式、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX 编辑原语与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
+当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.1`。新协议加入节奏故事板、注册组合模式、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
 
 ## 完整演示
 
 [观看或下载唯一完整演示：《铁杵磨针》77.7 秒 1080p 纸片故事](https://github.com/cyberlesterr/paper-collage-video/releases/download/v0.5.0/tie-chu-mo-zhen-final.mp4)
 
-Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v8 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
+Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v9 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
 
-当前 v8 还附带一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、带排除区与循环证明的固定种子 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
+当前 v9 还保留一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、带排除区与循环证明的固定种子 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
 
 ```bash
 npm run sample:vox
 npm run sample:vox:verify
 ```
 
-输入与正式证明合同位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`，证明报告与固定帧联系表位于 `dist/vox-primitives/proof/`。验证命令会绑定 v8 项目/故事板、runtime build、全部夹具素材、编码规格、六个 proof time 与第 90 帧 rhythmic cut。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
+输入与正式证明合同位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`，证明报告与固定帧联系表位于 `dist/vox-primitives/proof/`。验证命令会绑定 v9 项目/故事板、runtime build、全部夹具素材、编码规格、六个 proof time 与第 90 帧 rhythmic cut。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
+
+Phase 2 另带完全本地、无需 provider 的三画幅 proof gallery：
+
+```bash
+npm run proof:phase2:prepare
+npm run proof:phase2:render
+npm run proof:phase2:verify
+```
+
+它使用合成 WAV、确定性 SVG 与同一份语义 Storyboard，实际渲染 16:9、9:16、1:1 三个导演计划，并产出 edit-point、响应式导演、文字 fit/overflow、注释避让、图表/地图/时间线、切换 before/at/after、联系表、质量与全量 SHA-256/fingerprint 报告。输出位于 `dist/vox-phase2-proof/`，不属于最终参考样片。
 
 ## 从 GitHub 安装 Plugin
 
@@ -78,7 +88,7 @@ Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于
 
 正常制作一条新视频时，人参与三个内容节点：
 
-1. 口述主题后，一次确认概念、Storyboard v8 导演节拍与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
+1. 口述主题后，一次确认概念、Storyboard v9 导演节拍与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
 2. 确认一张风格样张、短试听和必要时的 3–5 秒动作证明。
 3. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
@@ -151,7 +161,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v8 再把逐节拍导演 treatments 编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划和指纹，并为每对相邻镜头把叙事意图路由成不透明动画边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v9 再把逐节拍导演 treatments、统一 edit points、三画幅 composition profiles 与高级切换编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划和指纹，并为每对相邻镜头把叙事意图路由成可验证的不透明边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -163,7 +173,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
 | `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
-| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v8 节拍 treatments、意图转场、多维风格证明、可见性/组合/状态计划与证明时刻 |
+| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v9 节拍 treatments、edit points、三画幅导演计划、高级切换、多维风格证明与证明时刻 |
 | `npm run project:revise-preview-directing -- <slug> --input=<file>` | 在预览退回后保护概念/风格并按既定 motion budget 正式重编导演字段 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
@@ -185,16 +195,16 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
 | `npm run project:composition-proof -- <slug> [--force]` | 按项目、资产与 runtime-build 指纹增量生成关系/语义证明；`--force` 显式禁用全部证明缓存 |
-| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v8 校验、证明指纹与双质量门和阶段推进 |
+| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v9 校验、证明指纹与双质量门和阶段推进 |
 | `npm run project:audio-calibration -- <slug> propose` | 为当前旁白与时间线生成带指纹的响度校准草案 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |
 | `npm run project:subtitles -- <slug>` | 低层恢复命令：同步或生成字幕时间 |
 | `npm run project:quality -- <slug> record-batch --input=<file>` | 原子记录与哈希/组合指纹绑定的资产或组合语义检查 |
-| `npm run project:validate -- <slug>` | 检查 v8 组合、注册、支撑、环境边界、显隐/强调/声音事件、场景交接、字幕和时长 |
+| `npm run project:validate -- <slug>` | 检查 v9 组合、edit-point 帧映射、编辑原语、注册/支撑、场景交接、字幕和时长 |
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v8 组合生成覆盖语义、耦合关系与状态序列的 schema-v6 多目标样式证明 |
+| `npm run style:proof -- <slug>` | 用真实 v9 组合生成覆盖语义、耦合关系与状态序列的 schema-v6 多目标样式证明 |
 | `npm run sample:vox:verify` | 对 VOX 工程样片生成固定帧联系表，并校验媒体、边界、素材与 runtime 指纹 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
@@ -295,7 +305,7 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 
 ## 历史项目
 
-仓库中的旧演示成片及其旧项目数据只保留为历史制作记录，当前运行时不会迁移或执行它们。插件发行包只携带符合 v8 的独立 `starter-demo` 技术夹具。
+仓库中的旧演示成片及其旧项目数据只保留为历史制作记录，当前运行时不会迁移或执行它们。插件发行包只携带符合 v9 的独立 `starter-demo` 技术夹具。
 
 ## 贡献、支持与安全
 

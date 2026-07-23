@@ -36,6 +36,13 @@ export const storyboardConceptFingerprint = (storyboard) =>
 
 export const storyboardAuthoringFromCompiled = (storyboard) => ({
   ...storyboard,
+  editorial: storyboard.editorial
+    ? Object.fromEntries(
+        Object.entries(storyboard.editorial).filter(
+          ([key]) => !['resolvedEditPoints', 'conflicts', 'responsivePlans', 'transitionPlans', 'fingerprint'].includes(key),
+        ),
+      )
+    : storyboard.editorial,
   scenes: (storyboard.scenes ?? []).map(({compositionPlan, directing, ...scene}) => scene),
   directingSummary: undefined,
 });
@@ -80,7 +87,7 @@ export const prepareDirectingRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 8,
+    schemaVersion: 9,
     slug: currentStoryboard.slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(authored.sceneTransitions),
@@ -107,11 +114,16 @@ export const prepareDirectingRevision = ({
   const changedSceneIds = new Set(changedScenes.map(({sceneId}) => sceneId));
   const transitionsChanged = hashCompositionValue(currentStoryboard.sceneTransitions) !==
     hashCompositionValue(candidate.sceneTransitions);
+  const editorialChanged =
+    currentStoryboard.editorial?.fingerprint !== candidate.editorial?.fingerprint;
   if (transitionsChanged) {
     for (const transition of candidate.sceneTransitions ?? []) {
       changedSceneIds.add(transition.fromSceneId);
       changedSceneIds.add(transition.toSceneId);
     }
+  }
+  if (editorialChanged) {
+    for (const scene of candidate.scenes) changedSceneIds.add(scene.id);
   }
   if (changedSceneIds.size === 0) {
     throw new Error('导演重编没有产生任何实际变化。');
@@ -131,6 +143,15 @@ export const prepareDirectingRevision = ({
     changedSceneIds: [...changedSceneIds].sort(),
     changedScenes,
     transitionsChanged,
+    editorialChanged,
+    editPointChanges: {
+      before: currentStoryboard.editorial?.resolvedEditPoints ?? [],
+      after: candidate.editorial?.resolvedEditPoints ?? [],
+    },
+    responsivePlanChanges: {
+      beforeFingerprint: hashCompositionValue(currentStoryboard.editorial?.responsivePlans ?? []),
+      afterFingerprint: hashCompositionValue(candidate.editorial?.responsivePlans ?? []),
+    },
     executionSyncRequired: true,
     providerApprovalRequired: false,
     motionBudget: {

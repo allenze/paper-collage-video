@@ -41,8 +41,8 @@ export const buildVoxSampleProofReport = ({
   );
   const checks = [
     {
-      id: 'project-contract-v8',
-      passed: project.schemaVersion === 8 && storyboard.schemaVersion === 8,
+      id: 'project-contract-v9',
+      passed: project.schemaVersion === 9 && storyboard.schemaVersion === 9,
       expected: 8,
       actual: {project: project.schemaVersion, storyboard: storyboard.schemaVersion},
     },

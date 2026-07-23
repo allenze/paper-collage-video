@@ -118,6 +118,7 @@ for (const entry of [
   'scripts/provider-status.mjs',
   'scripts/production-state.mjs',
   'scripts/directing-revision-lib.mjs',
+  'scripts/editorial-system-lib.mjs',
   'scripts/project-advance.mjs',
   'scripts/project-assets-ready.mjs',
   'scripts/project-audio-preflight.mjs',
@@ -129,6 +130,8 @@ for (const entry of [
   'scripts/project-doctor.mjs',
   'scripts/project-handoff-check.mjs',
   'scripts/project-lib.mjs',
+  'scripts/phase2-proof-lib.mjs',
+  'scripts/prepare-phase2-proof.mjs',
   'scripts/project-metrics-run.mjs',
   'scripts/project-metrics.mjs',
   'scripts/project-new.mjs',
@@ -142,6 +145,9 @@ for (const entry of [
   'scripts/project-revise-preview-directing.mjs',
   'scripts/project-semantic-contracts.mjs',
   'scripts/storyboard-lib.mjs',
+  'scripts/render-phase2-proof.mjs',
+  'scripts/validate_v9_schemas.py',
+  'scripts/verify-phase2-proof.mjs',
   'scripts/verify-vox-sample.mjs',
   'scripts/vox-sample-proof-lib.mjs',
   'scripts/project-sync.mjs',
@@ -158,6 +164,9 @@ for (const entry of [
   'scripts/style-motion-proof.mjs',
   'scripts/style-proof-lib.mjs',
   'src/MainVideo.tsx',
+  'src/EditorialNodes.tsx',
+  'src/editorialPrimitives.mjs',
+  'src/editorialPrimitives.d.mts',
   'src/motion.ts',
   'src/ReplicaChapterScene.tsx',
   'src/SceneTransitionOverlay.tsx',
@@ -177,6 +186,7 @@ for (const entry of [
   'tests/audio-render-cache.test.mjs',
   'tests/creative-plan.test.mjs',
   'tests/composition-v4.test.mjs',
+  'tests/editorial-system-v9.test.mjs',
   'tests/state-sequence-v5.test.mjs',
   'tests/production-state.test.mjs',
   'tests/directing-revision.test.mjs',
@@ -192,8 +202,11 @@ for (const entry of [
   'fixtures/composition-v4',
   'fixtures/vox-primitives',
   'fixtures/directing-revision-fixture.mjs',
+  'fixtures/editorial-fixture.mjs',
+  'fixtures/phase2-proof-fixture.mjs',
   'public/fixtures/composition-v4',
   'public/fixtures/vox-primitives',
+  'public/fixtures/vox-phase2-proof',
   'public/textures/paper-grain.png',
 ]) {
   await copy(entry);
@@ -249,6 +262,11 @@ const workspacePackage = {
     doctor: 'node scripts/project-doctor.mjs',
     'sample:vox': rootPackage.scripts['sample:vox'],
     'sample:vox:verify': rootPackage.scripts['sample:vox:verify'],
+    'proof:phase2:prepare': rootPackage.scripts['proof:phase2:prepare'],
+    'proof:phase2:render': rootPackage.scripts['proof:phase2:render'],
+    'proof:phase2:verify': rootPackage.scripts['proof:phase2:verify'],
+    'proof:phase2': rootPackage.scripts['proof:phase2'],
+    'schema:v9': rootPackage.scripts['schema:v9'],
     dev: 'remotion studio src/index.ts --props=projects/starter-demo/project.json',
     check: rootPackage.scripts.check,
     bundle: rootPackage.scripts.bundle,
@@ -309,9 +327,52 @@ export const RemotionRoot = () => (
 `;
 await fs.writeFile(path.join(RUNTIME_ROOT, 'src', 'Root.tsx'), rootSource, 'utf8');
 
+const starterToneBuffer = makeTestToneWav();
+const starterToneSha256 = createHash('sha256').update(starterToneBuffer).digest('hex');
+const starterEditorial = {
+  timebase: {fps: 30, rounding: 'nearest'},
+  wordTimingPolicy: 'phrase-fallback',
+  media: [{
+    id: 'starter-narration',
+    kind: 'narration',
+    src: 'projects/starter-demo/audio/narration/01-test-tone.wav',
+    sha256: starterToneSha256,
+    durationSeconds: 1,
+    timelineMode: 'scene-local',
+    timingDataSrc: 'projects/starter-demo/audio/narration/01-test-tone.timing.json',
+  }],
+  cues: [
+    {id: 'starter-open-cue', kind: 'narration-phrase', source: 'detected', timingBasis: 'actual-audio', mediaId: 'starter-narration', sceneId: 'starter', atSeconds: 0.08, priority: 70, toleranceSeconds: 0.04},
+    {id: 'starter-action-cue', kind: 'semantic-emphasis', source: 'authored', timingBasis: 'actual-audio', mediaId: 'starter-narration', sceneId: 'starter', atSeconds: 0.5, priority: 90, toleranceSeconds: 0.04},
+    {id: 'starter-final-cue', kind: 'sentence', source: 'detected', timingBasis: 'actual-audio', mediaId: 'starter-narration', sceneId: 'starter', atSeconds: 0.9, priority: 80, toleranceSeconds: 0.04},
+  ],
+  editPoints: [
+    {id: 'starter-open', cueIds: ['starter-open-cue'], conflictPolicy: 'highest-priority'},
+    {id: 'starter-action', cueIds: ['starter-action-cue'], conflictPolicy: 'highest-priority'},
+    {id: 'starter-final', cueIds: ['starter-final-cue'], conflictPolicy: 'highest-priority'},
+  ],
+  bindings: [
+    {id: 'starter-action-binding', sceneId: 'starter', targetType: 'graphic-action', targetId: 'traveler', editPointId: 'starter-action', mode: 'element'},
+  ],
+  responsiveProfiles: [
+    {id: '16:9', width: 1920, height: 1080, safeArea: {x: 0.06, y: 0.06, width: 0.88, height: 0.88}, densityBudget: 8, typographyScale: 1, parallaxScale: 1, exclusionZones: []},
+    {id: '9:16', width: 1080, height: 1920, safeArea: {x: 0.08, y: 0.05, width: 0.84, height: 0.9}, densityBudget: 6, typographyScale: 0.92, parallaxScale: 0.72, exclusionZones: []},
+    {id: '1:1', width: 1080, height: 1080, safeArea: {x: 0.07, y: 0.07, width: 0.86, height: 0.86}, densityBudget: 7, typographyScale: 0.96, parallaxScale: 0.86, exclusionZones: []},
+  ],
+  sceneDirecting: [{
+    sceneId: 'starter',
+    compositionProfile: 'starter-balanced',
+    typographyProfile: 'editorial-default',
+    subjectFraming: {mode: 'contain', focusPoint: {x: 0.5, y: 0.5}},
+    placements: [],
+  }],
+  transitions: [],
+  activeProfile: '16:9',
+};
+
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 8,
+  schemaVersion: 9,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
@@ -425,14 +486,10 @@ const project = {
   ],
   sceneTransitions: [],
 };
-await writeJson(
-  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'project.json'),
-  project,
-);
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 8,
+  schemaVersion: 9,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',
@@ -442,6 +499,7 @@ const storyboard = compileStoryboardDirecting({
     motionLanguage: ['先建立空间，再触发主体，最后稳定锁定'],
     layerStrategy: '背景承载空间，透明主体承载动作，前景纸片负责压边。',
   },
+  editorial: starterEditorial,
   scenes: [
     {
       id: 'starter',
@@ -465,6 +523,11 @@ const storyboard = compileStoryboardDirecting({
   sceneTransitions: [],
   updatedAt: '2026-01-01T00:00:00.000Z',
 }, {plan: project.plan});
+project.editorial = storyboard.editorial;
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'project.json'),
+  project,
+);
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'storyboard.json'),
   storyboard,
@@ -561,7 +624,21 @@ const narrationFile = path.join(
   '01-test-tone.wav',
 );
 await fs.mkdir(path.dirname(narrationFile), {recursive: true});
-await fs.writeFile(narrationFile, makeTestToneWav());
+await fs.writeFile(narrationFile, starterToneBuffer);
+await fs.writeFile(
+  path.join(path.dirname(narrationFile), '01-test-tone.timing.json'),
+  `${JSON.stringify({
+    schemaVersion: 1,
+    mediaSha256: starterToneSha256,
+    durationSeconds: 1,
+    cues: starterEditorial.cues.map(({id, kind, atSeconds}) => ({
+      id,
+      kind,
+      atSeconds,
+    })),
+  }, null, 2)}\n`,
+  'utf8',
+);
 
 const fixtureQualityAssets = [
   {

@@ -24,6 +24,10 @@ import {
   resolveParallaxState,
   validateParallaxRig,
 } from '../src/parallax.mjs';
+import {
+  createEditorialFixture,
+  withCompiledEditorialFixture,
+} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const still = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]};
@@ -275,10 +279,20 @@ test('the no-provider VOX fixture compiles and executes every new primitive', ()
     path.join(ROOT, 'fixtures', 'vox-primitives', 'storyboard-input.json'),
     'utf8',
   ));
-  const project = JSON.parse(fs.readFileSync(
+  storyboardInput.editorial = createEditorialFixture({
+    sceneIds: storyboardInput.scenes.map(({id}) => id),
+    mediaSrc: 'fixtures/vox-primitives/tone.wav',
+    mediaSha256: '1c14b9f9cc430154dd3a74fc5267a83233f2e04e492444376c27dd956134177f',
+    durationSeconds: 6,
+  });
+  const project = withCompiledEditorialFixture(JSON.parse(fs.readFileSync(
     path.join(ROOT, 'fixtures', 'vox-primitives', 'project.json'),
     'utf8',
-  ));
+  )), {
+    mediaSrc: 'fixtures/vox-primitives/tone.wav',
+    mediaSha256: '1c14b9f9cc430154dd3a74fc5267a83233f2e04e492444376c27dd956134177f',
+    durationSeconds: 6,
+  });
   const storyboard = compileStoryboardDirecting(storyboardInput);
   assert.equal(project.plan.assetBudget.maxGeneratedImages, 0);
   assert.deepEqual(

@@ -25,6 +25,7 @@ import {
   validateSemanticContracts,
   validateSemanticEvidenceTargets,
 } from '../scripts/semantic-contract-lib.mjs';
+import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestFixture = (projectSlug, assets) => ({
@@ -368,15 +369,14 @@ test('diagram filters fail deterministically and semantic proof targets span sce
     await fs.mkdir(publicDirectory, {recursive: true});
     await fs.writeFile(cardFile, '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence/></filter><text filter="url(#noise)" x="5" y="50">A</text></svg>');
     await sharp({create: {width: 100, height: 100, channels: 4, background: '#806040'}}).png().toFile(castFile);
-    const project = {
-      schemaVersion: 8,
+    const project = withCompiledEditorialFixture({
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},
       audio: {narration: {volume: 1}},
       scenes: [scene('scene-a'), scene('scene-b')],
       sceneTransitions: [{id: 'a-b', fromSceneId: 'scene-a', toSceneId: 'scene-b', intent: 'impact', rationale: 'The fixture deliberately tests an abrupt semantic boundary.', treatment: {type: 'cut', motivation: 'impact', durationSeconds: 0}}],
-    };
+    });
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`);
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [{
         assetId: 'diagram-card', capability: 'image', file: path.relative(ROOT, cardFile),

@@ -4,6 +4,7 @@ import {
   MAX_MOTIF_INSTANCES_PER_FIELD,
   MAX_MOTIF_INSTANCES_PER_SCENE,
 } from '../src/motifField.mjs';
+import {compileEditorialSystem} from './editorial-system-lib.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -26,8 +27,8 @@ export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse
 export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'burst', 'orbit'];
 export const MOTIF_FIELD_DISTRIBUTIONS = ['scattered', 'grid', 'edge'];
 export const COMPOSITION_PATTERNS = ['free', 'supported-subject', 'registered-environment'];
-export const GRAPHIC_KINDS = ['text', 'shape'];
-export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp'];
+export const GRAPHIC_KINDS = ['typography', 'shape', 'annotation', 'data-graphic'];
+export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'reveal', 'route', 'data-state'];
 export const SEMANTIC_RISKS = ['decorative', 'identity', 'topology', 'mechanism', 'diagram'];
 export const RELATIONSHIP_PREDICATES = [
   'inside',
@@ -354,7 +355,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
 
   if (treatment.graphic !== null && treatment.graphic !== undefined) {
     if (!GRAPHIC_KINDS.includes(treatment.graphic?.kind)) {
-      addIssue(issues, 'treatment-graphic-kind', 'graphic.kind 必须是 text 或 shape。', `${location}.graphic.kind`);
+      addIssue(issues, 'treatment-graphic-kind', 'graphic.kind 必须是 typography、shape、annotation 或 data-graphic。', `${location}.graphic.kind`);
     }
     if (!GRAPHIC_ANIMATIONS.includes(treatment.graphic?.animation)) {
       addIssue(issues, 'treatment-graphic-animation', 'graphic.animation 无效。', `${location}.graphic.animation`);
@@ -622,6 +623,20 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     throw error;
   }
 
+  let editorial;
+  try {
+    editorial = compileEditorialSystem({
+      editorial: storyboard.editorial,
+      scenes: storyboard.scenes ?? [],
+      sceneTransitions: storyboard.sceneTransitions ?? [],
+      fps: storyboard.editorial?.timebase?.fps,
+    });
+  } catch (cause) {
+    const error = new Error(cause.message);
+    error.issues = cause.issues ?? [{code: 'editorial-compile', message: cause.message, location: 'editorial'}];
+    throw error;
+  }
+
   let scenes;
   try {
     scenes = storyboard.scenes.map(compileScene);
@@ -661,15 +676,23 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
   directingSummary.fingerprint = hashCompositionValue({
     scenes: scenes.map(({id, directing, compositionPlan}) => ({id, directing, compositionPlan})),
     sceneTransitions: storyboard.sceneTransitions,
+    editorialFingerprint: editorial.fingerprint,
     demand: {...directingSummary, budget: undefined, fingerprint: undefined},
   });
-  return {...storyboard, scenes, directingSummary};
+  return {...storyboard, editorial, scenes, directingSummary};
 };
 
 export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
   try {
     const authoring = {
       ...storyboard,
+      editorial: storyboard.editorial
+        ? Object.fromEntries(
+            Object.entries(storyboard.editorial).filter(
+              ([key]) => !['resolvedEditPoints', 'conflicts', 'responsivePlans', 'transitionPlans', 'fingerprint'].includes(key),
+            ),
+          )
+        : storyboard.editorial,
       scenes: (storyboard.scenes ?? []).map(({compositionPlan, directing, ...scene}) => scene),
       directingSummary: undefined,
     };
