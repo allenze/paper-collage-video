@@ -1,0 +1,179 @@
+{
+  "reviews": [
+    {
+      "assetId": "ocean-rear",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/vox-depth-stack-pilot-submarine/assets/environment/ocean-rear.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-alpha.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-checkerboard.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-tight.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-alpha-bands.json",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-alpha-bands.png"
+      ],
+      "note": "后景清洁板无文字、水印或人物；与潜艇及前景水草保持同一纸艺语言，轮廓和负空间连续，alpha 与运动压力证据未见背景泄漏。"
+    },
+    {
+      "assetId": "yellow-submarine",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "subject-complete",
+        "identity-consistent",
+        "edge-clean",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/vox-depth-stack-pilot-submarine/assets/environment/yellow-submarine.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-alpha.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-checkerboard.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-tight.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-alpha-bands.json",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-alpha-bands.png"
+      ],
+      "note": "潜艇完整保留螺旋桨、潜望镜和三个舷窗孔洞；身份、纸张质感与参考一致，边缘干净，透明孔洞及运动压力证据无洋红残留或矩形 alpha 带。"
+    },
+    {
+      "assetId": "seaweed-front",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "public/projects/vox-depth-stack-pilot-submarine/assets/environment/seaweed-front.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-alpha.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-checkerboard.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-tight.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-alpha-bands.json",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-alpha-bands.png"
+      ],
+      "note": "前景水草完整且无文字水印；遮挡孔隙、纸艺轮廓和负空间清楚，透明边缘及实际运动比例的压力图未见背景泄漏。"
+    },
+    {
+      "compositeId": "parallax-rig:submarine-scene",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "depth-order-readable",
+        "camera-coupling-clean",
+        "registered-groups-stable",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/parallax-rig-submarine-scene-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/parallax-rig-submarine-scene-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/parallax-rig-submarine-scene-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/parallax-rig-submarine-scene-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/parallax-rig-submarine-scene-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/parallax-rig-submarine-scene-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-motion-stress.jpg"
+      ],
+      "note": "建立、动作、收束三时刻及 debug 图显示七个深度层级响应相机视差；后景、潜艇、前景水草的相对位移清楚，registered group 无漂移或破口，画面始终可读。"
+    },
+    {
+      "compositeId": "group:submarine-scene:submarine-depth-stack",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "registration-aligned",
+        "layer-completeness-proven",
+        "depth-order-readable",
+        "neutral-reconstruction-readable",
+        "exploded-view-readable",
+        "responsive-motion-stress-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/group-submarine-scene-submarine-depth-stack-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/group-submarine-scene-submarine-depth-stack-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/group-submarine-scene-submarine-depth-stack-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/group-submarine-scene-submarine-depth-stack-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/group-submarine-scene-submarine-depth-stack-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/group-submarine-scene-submarine-depth-stack-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-submarine-depth-stack-layer-stack-neutral-reconstruction.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-submarine-depth-stack-layer-stack-reference-comparison.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-submarine-depth-stack-layer-stack-exploded-view.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-submarine-depth-stack-layer-stack-envelope-16x9.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-submarine-depth-stack-layer-stack-envelope-9x16.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-submarine-depth-stack-layer-stack-envelope-1x1.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-motion-stress.jpg"
+      ],
+      "note": "中性重建与参考比较对齐，爆炸图能明确识别后景、主体、前景三层；16:9、9:16、1:1 两端极值均为零透明像素，动作时相对运动保持完整注册关系。"
+    },
+    {
+      "compositeId": "event:submarine-scene:submarine-separation-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/event-submarine-scene-submarine-separation-event-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/event-submarine-scene-submarine-separation-event-submarine-scene-submarine-action.png"
+      ],
+      "note": "动作证明时刻清楚显示三层分离与视差增强；该事件无需独立音效，绑定的 proofTime 正确，后续收束帧恢复并保留最终构图。"
+    },
+    {
+      "compositeId": "semantic:yellow-submarine-topology:submarine-complete-silhouette",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/semantic-yellow-submarine-topology-submarine-complete-silhouette-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/semantic-yellow-submarine-topology-submarine-complete-silhouette-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/semantic-yellow-submarine-topology-submarine-complete-silhouette-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/semantic-yellow-submarine-topology-submarine-complete-silhouette-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/frames/submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/crops/semantic-yellow-submarine-topology-submarine-complete-silhouette-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/debug/semantic-yellow-submarine-topology-submarine-complete-silhouette-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-ocean-rear-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-yellow-submarine-motion-stress.jpg",
+        "dist/vox-depth-stack-pilot-submarine/style-proof/evidence/submarine-scene-seaweed-front-motion-stress.jpg"
+      ],
+      "note": "三个 proof 时刻均保留潜艇完整外形、螺旋桨、潜望镜和三个舷窗负空间；运动压力与 debug 证据无背景泄漏。"
+    }
+  ]
+}

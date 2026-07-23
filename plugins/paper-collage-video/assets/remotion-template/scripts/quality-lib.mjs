@@ -762,6 +762,29 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
   for (const responsive of (project.editorial?.responsivePlans ?? []).filter(
     (plan) => plan.scenes.some(({placements}) => placements.length > 0),
   )) {
+    const proofShots = responsive.scenes
+      .map(({sceneId}) => {
+        const scene = (project.scenes ?? []).find(
+          (candidate) => candidate.id === sceneId,
+        );
+        const proofs = scene?.motion?.proofTimes ?? [];
+        const representative =
+          proofs.find(({kind}) => kind === 'action') ??
+          [...proofs].sort(
+            (left, right) =>
+              Math.abs(Number(left.at) - 0.5) -
+              Math.abs(Number(right.at) - 0.5),
+          )[0] ??
+          null;
+        return representative
+          ? {
+              sceneId,
+              nodeId: 'scene-camera',
+              proofTimeIds: [representative.id],
+            }
+          : null;
+      })
+      .filter(Boolean);
     targets.push({
       compositeId: `responsive-directing:${responsive.profileId}`,
       sceneId: project.scenes?.[0]?.id ?? 'project',
@@ -774,8 +797,14 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         runtimeBuildFingerprint,
         editorialFingerprint: project.editorial.fingerprint,
         responsive,
+        proofShots,
       }),
-      proofTimeIds: [],
+      proofTimeIds: [
+        ...new Set(
+          proofShots.flatMap(({proofTimeIds}) => proofTimeIds),
+        ),
+      ],
+      proofShots,
       requiredChecks: COMPOSITE_PROFILES['responsive-directing'],
       responsive,
     });

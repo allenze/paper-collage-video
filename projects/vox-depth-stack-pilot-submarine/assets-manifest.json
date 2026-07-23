@@ -163,6 +163,2078 @@
         "reason": "attempt-1-baked-checkerboard-false-alpha-and-blue-ocean-leak-in-submarine-negative-spaces",
         "supersededBy": null
       }
+    },
+    {
+      "recordId": "ba8abc9d4b2b3799346e57fcc1ac6f9d49be662917eaf0a6da5b0136fa587b38",
+      "assetId": "submarine-layer-sheet",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/submarine-layer-sheet-provider-raw-attempt-2.png",
+      "provider": "gpt-image",
+      "adapter": "host",
+      "tool": "image_gen__imagegen",
+      "model": "gpt-image-built-in",
+      "externalId": null,
+      "attemptId": "img-96e9ca5e-f523-4962-a0b2-ebc2b4ed402f",
+      "recoveredFromClosedAttempt": false,
+      "recoveredFromRejectedAttempt": true,
+      "requestFingerprint": "3a27182de50985d2e0f65226d64b3dd157c7c50cf441570906b033a97385e91f",
+      "reusedFrom": null,
+      "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02",
+      "sizeBytes": 2266374,
+      "media": {
+        "width": 1254,
+        "height": 1254,
+        "format": "png",
+        "hasAlpha": false
+      },
+      "recordedAt": "2026-07-23T16:39:33.054Z",
+      "request": {
+        "$schema": "../../../schemas/asset-request.schema.json",
+        "schemaVersion": 7,
+        "projectSlug": "vox-depth-stack-pilot-submarine",
+        "assetId": "submarine-layer-sheet",
+        "capability": "image",
+        "output": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/submarine-layer-sheet-provider-raw-attempt-2.png",
+        "prompt": "Create one production-ready provider-native RGB registered 2x2 mixed-surface layer sheet in a tactile handmade torn-paper collage style. Return the complete four-cell sheet as one image; never generate an isolated member. Use four equal registered cells in this fixed order: top-left reference, top-right support-rear, bottom-left subject, bottom-right support-front. Do not add labels, text, logos, watermarks, frames, borders, checkerboards, fake transparency, white/gray transparency grids, or decorative dividers. Keep the same camera, placement, scale, paper texture, torn-edge language, shallow paper shadow, lighting, and registration across all four cells. TOP-LEFT REFERENCE (opaque): a complete bright yellow paper submarine traveling horizontally through a clean deep-blue layered paper ocean, with green paper seaweed/coral in front; the foreground may naturally occlude the lower hull only in this reference composite. TOP-RIGHT SUPPORT-REAR (opaque): the identical complete deep-blue ocean clean plate, reconstructing every pixel behind the submarine and foreground; no submarine, seaweed, coral, silhouette hole, shadow remnant, erased patch, or magenta. BOTTOM-LEFT SUBJECT (flat chroma-key surface): only the complete yellow submarine in the exact registered position and scale on one perfectly uniform solid #ff00ff background. Every background pixel and every internal negative space—including all porthole openings, the periscope opening, and clean space around the separate propeller—must be the same flat #ff00ff. Include the entire upper and lower hull, rounded bow, tail fin, propeller, periscope, and every paper edge hidden by seaweed in the reference. No ocean or foreground pixels, no cast shadow on the key plane, no gradient, texture, reflection, checkerboard, transparency grid, or non-magenta patch in the background; do not use #ff00ff in the submarine. BOTTOM-RIGHT SUPPORT-FRONT (flat chroma-key surface): only the complete green seaweed/coral foreground overlay in the exact registered position and scale on one perfectly uniform solid #ff00ff background. Every external and internal negative space between stems, fronds, holes, and torn edges must be the same flat #ff00ff. Extend the foreground naturally to the cell boundaries where it forms the front plane. No submarine or rear-ocean pixels, no cast shadow on the key plane, no gradient, texture, reflection, checkerboard, transparency grid, or non-magenta patch in the background; do not use #ff00ff in the foreground. Keep the palette restrained to deep navy/cobalt ocean, warm saturated yellow submarine, and layered kelp greens. Preserve readable paper fibers without photorealism, glossy 3D, cartoon outlines, gradients, airbrush, or procedural noise on semantic edges. Rear, subject, and front must reconstruct the reference in that order and remain complete under bounded relative motion.",
+        "model": "gpt-image-built-in",
+        "outputSurface": {
+          "mode": "layer-sheet"
+        },
+        "compositionBinding": {
+          "sceneId": "submarine-scene",
+          "nodeId": "submarine-depth-stack",
+          "pattern": "registered-depth-stack",
+          "registrationId": "submarine-depth-registration",
+          "sourceMasterAssetId": "submarine-reference",
+          "outputRole": "registered-layer-sheet",
+          "canvas": {
+            "width": 2048,
+            "height": 2048
+          },
+          "derivation": {
+            "method": "provider-generation",
+            "parentAssetId": "submarine-reference"
+          }
+        },
+        "layerPackageBinding": {
+          "sourcePackageId": "submarine-seaweed-layer-package",
+          "pattern": "registered-depth-stack",
+          "motionCapability": "bounded-relative",
+          "sourceStrategy": "registered-layer-sheet",
+          "registrationId": "submarine-depth-registration",
+          "sourceMasterAssetId": "submarine-reference",
+          "canvas": {
+            "width": 1024,
+            "height": 1024
+          },
+          "packageRole": "registered-sheet",
+          "completeness": null,
+          "memberAssetIds": [
+            "ocean-rear",
+            "yellow-submarine",
+            "seaweed-front"
+          ],
+          "referenceAssetIds": [
+            "submarine-reference"
+          ],
+          "sheetLayout": {
+            "columns": 2,
+            "rows": 2,
+            "providerSource": {
+              "canvasMode": "provider-native",
+              "minimumWidth": 1024,
+              "minimumHeight": 1024,
+              "cellExtraction": "explicit-rects"
+            },
+            "cells": [
+              {
+                "packageRole": "reference",
+                "row": 0,
+                "column": 0,
+                "outputSurface": {
+                  "mode": "opaque"
+                }
+              },
+              {
+                "packageRole": "support-rear",
+                "row": 0,
+                "column": 1,
+                "outputSurface": {
+                  "mode": "opaque"
+                }
+              },
+              {
+                "packageRole": "subject",
+                "row": 1,
+                "column": 0,
+                "outputSurface": {
+                  "mode": "chroma-key",
+                  "keyColor": "#ff00ff",
+                  "tolerance": 24
+                }
+              },
+              {
+                "packageRole": "support-front",
+                "row": 1,
+                "column": 1,
+                "outputSurface": {
+                  "mode": "chroma-key",
+                  "keyColor": "#ff00ff",
+                  "tolerance": 24
+                }
+              }
+            ]
+          },
+          "recoveryPolicy": {
+            "completeSourceContext": true,
+            "localDeterministicFixFirst": true,
+            "isolatedMemberGeneration": "forbidden",
+            "providerRepair": "masked-complete-source-edit",
+            "fallback": "full-source-regeneration"
+          }
+        },
+        "semanticBinding": {
+          "riskClass": "topology-critical",
+          "contractIds": [
+            "yellow-submarine-topology"
+          ]
+        },
+        "quality": {
+          "kind": "image",
+          "requiredChecks": [
+            "no-text",
+            "no-watermark",
+            "style-consistent",
+            "subject-complete",
+            "cell-separation",
+            "edge-clean",
+            "silhouette-fidelity",
+            "negative-space-clean",
+            "background-leak-free",
+            "reference-conformant"
+          ]
+        }
+      },
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "submarine-depth-stack",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "registered-layer-sheet",
+        "canvas": {
+          "width": 2048,
+          "height": 2048
+        },
+        "derivation": {
+          "method": "provider-generation",
+          "parentAssetId": "submarine-reference"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "providerObservation": {
+        "schemaVersion": 1,
+        "mode": "provider-native-observed",
+        "policyId": "flat-v1",
+        "policyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+        "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5",
+        "sourceAttempt": {
+          "attemptId": "img-96e9ca5e-f523-4962-a0b2-ebc2b4ed402f",
+          "status": "rejected",
+          "quotaConsumed": true,
+          "requestFingerprint": "1360f88b95c0d5b5127c2bd871a7507adbf162e819b20c3f5a2a7f50f8363375",
+          "output": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/submarine-layer-sheet-provider-raw-attempt-2.png"
+        },
+        "cells": [
+          {
+            "packageRole": "subject",
+            "schemaVersion": 1,
+            "mode": "provider-native-observed",
+            "policy": {
+              "policyId": "flat-v1",
+              "maximumRequestedDistance": 96,
+              "minimumCoverage": 0.08,
+              "minimumBoundaryCoverage": 0.4,
+              "maximumClusterP95Distance": 18,
+              "maximumClusterP99Distance": 48,
+              "minimumLargestComponentShare": 0.55,
+              "minimumForegroundP10Distance": 20,
+              "maximumInterCellObservedDistance": 16
+            },
+            "policyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa01cd",
+            "rect": {
+              "left": 0,
+              "top": 627,
+              "width": 627,
+              "height": 627
+            },
+            "metrics": {
+              "totalPixels": 393129,
+              "candidatePixels": 311506,
+              "coverage": 0.792376039417087,
+              "boundaryCoverage": 0.8746,
+              "requestedToObservedDistance": 50.25932749251625,
+              "clusterP95Distance": 4.242640687119285,
+              "clusterP99Distance": 11.575836902790225,
+              "largestComponentShare": 0.9866758409589279,
+              "foregroundP10Distance": 247.7276730605606
+            },
+            "passed": true,
+            "reasons": []
+          },
+          {
+            "packageRole": "support-front",
+            "schemaVersion": 1,
+            "mode": "provider-native-observed",
+            "policy": {
+              "policyId": "flat-v1",
+              "maximumRequestedDistance": 96,
+              "minimumCoverage": 0.08,
+              "minimumBoundaryCoverage": 0.4,
+              "maximumClusterP95Distance": 18,
+              "maximumClusterP99Distance": 48,
+              "minimumLargestComponentShare": 0.55,
+              "minimumForegroundP10Distance": 20,
+              "maximumInterCellObservedDistance": 16
+            },
+            "policyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa02cd",
+            "rect": {
+              "left": 627,
+              "top": 627,
+              "width": 627,
+              "height": 627
+            },
+            "metrics": {
+              "totalPixels": 393129,
+              "candidatePixels": 264113,
+              "coverage": 0.6718227350309949,
+              "boundaryCoverage": 0.7236,
+              "requestedToObservedDistance": 50.28916384272063,
+              "clusterP95Distance": 7.211102550927978,
+              "clusterP99Distance": 24.351591323771842,
+              "largestComponentShare": 0.8201132231436296,
+              "foregroundP10Distance": 247.38027407212564
+            },
+            "passed": true,
+            "reasons": []
+          }
+        ]
+      },
+      "familyFingerprint": null,
+      "lifecycle": {
+        "status": "recovery-source",
+        "changedAt": "2026-07-23T16:39:33.054Z",
+        "reason": "attempt-2-provider-native-observed-key-plane-recovery",
+        "supersededBy": null
+      }
+    },
+    {
+      "recordId": "6eea75e86333d057412827e5d0abcdcfe17337061d6f0ca47c8e5a38b66a10d3",
+      "assetId": "ocean-rear",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/ocean-rear.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "4b4ee5f755d9be40fff392ec6a1e800bc771082d1947150ac942167badd4985e",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "d4272eea09b641d037955e10aec49e86a0d884923f12dea94261de5477454ec4",
+      "sizeBytes": 1836685,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:40:10.530Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "ocean-rear",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-rear",
+        "slot": "support-rear",
+        "completeness": "clean-plate",
+        "nodeId": "ocean-rear",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-rear",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 627,
+            "top": 0,
+            "width": 627,
+            "height": 627
+          },
+          "sourceSurface": {
+            "mode": "opaque",
+            "keyColor": null,
+            "tolerance": null,
+            "requestedKeyColor": null,
+            "observedKeyColor": null,
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": null,
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": null,
+          "keyingMetadataSha256": null,
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "0e2d71dae93827abbeb6f2c80b1e3c58e7491f7eaebde24bc7e1898636aa498b"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "0e2d71dae93827abbeb6f2c80b1e3c58e7491f7eaebde24bc7e1898636aa498b",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:41:30.536Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "ba379be0dadf7916be848e9825e575c76eda08fbed659438cda1623e71a77214"
+      }
+    },
+    {
+      "recordId": "26c1727e3beb24a1b7880d597f79e864099ec7e4942b3c67ca134b60bcd5836a",
+      "assetId": "yellow-submarine",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/yellow-submarine.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "34b4ebfea876a6f33310b8c80d5713978ade567ab1492e6ff494fafca1338c68",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "e998fa61a2016580912c057845ef5012b659bf03163588611c23f8b503f5617e",
+      "sizeBytes": 641972,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:40:10.530Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "yellow-submarine",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "subject",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "subject",
+        "slot": "subject",
+        "completeness": "full-silhouette",
+        "nodeId": "yellow-submarine",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "subject",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 0,
+            "top": 627,
+            "width": 627,
+            "height": 627
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa01cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa01cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa01cd",
+            "transparentThreshold": 28,
+            "opaqueThreshold": 78,
+            "edgeFeather": 0.8,
+            "matteErode": 0,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "c879bc76be4243f6432b60f227425a90c24a497b510492349d8cb9eba2dee735",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "0e2d71dae93827abbeb6f2c80b1e3c58e7491f7eaebde24bc7e1898636aa498b"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "0e2d71dae93827abbeb6f2c80b1e3c58e7491f7eaebde24bc7e1898636aa498b",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:41:30.536Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "6e391b40ee2ee280b27681d633f66045aefbf38ff7226681fbdf8bbb9a78096c"
+      }
+    },
+    {
+      "recordId": "d1d727b22f25a4ac49ec14f21ce88f42d31da2de944063dd5904dfcdb05e7e38",
+      "assetId": "seaweed-front",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/seaweed-front.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "e9bfa30599fc38195aa89c211ec9169dadbc013fe0da82e409c6238528106b40",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "ee2150ada3b2dc66265a1e2be85ca1a7e4f9809d32c9a2245204239a21b6b759",
+      "sizeBytes": 1067067,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:40:10.530Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "seaweed-front",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-front",
+        "slot": "support-front",
+        "completeness": "full-overlay",
+        "nodeId": "seaweed-front",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-front",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 627,
+            "top": 627,
+            "width": 627,
+            "height": 627
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa02cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa02cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa02cd",
+            "transparentThreshold": 28,
+            "opaqueThreshold": 78,
+            "edgeFeather": 0.8,
+            "matteErode": 0,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "bd98441c0dbd68311dce5a2f4f0ba877f55a5f86b55ccfc37a67e2e671556f0a",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "0e2d71dae93827abbeb6f2c80b1e3c58e7491f7eaebde24bc7e1898636aa498b"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "0e2d71dae93827abbeb6f2c80b1e3c58e7491f7eaebde24bc7e1898636aa498b",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:41:30.536Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "ad42708f01b0674c84cbc6673b75acd421473fa42c93ca3f0a9383e7aad163b9"
+      }
+    },
+    {
+      "recordId": "ba379be0dadf7916be848e9825e575c76eda08fbed659438cda1623e71a77214",
+      "assetId": "ocean-rear",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/ocean-rear.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "58a6131127b034796e781816793d3ecb8137e2c609d66e363b016de5771bc80e",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "78a9bd7f7c7a44b50dad1bada1c4c985124d62720e3adc1babc72b1eb741eb5b",
+      "sizeBytes": 1827786,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:41:30.536Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "ocean-rear",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-rear",
+        "slot": "support-rear",
+        "completeness": "clean-plate",
+        "nodeId": "ocean-rear",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-rear",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 629,
+            "top": 2,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "opaque",
+            "keyColor": null,
+            "tolerance": null,
+            "requestedKeyColor": null,
+            "observedKeyColor": null,
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": null,
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": null,
+          "keyingMetadataSha256": null,
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:46:05.543Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "dab53e779e88a074eb93060d27c97f8e595f3ac92a841b00320265de564c2af2"
+      }
+    },
+    {
+      "recordId": "6e391b40ee2ee280b27681d633f66045aefbf38ff7226681fbdf8bbb9a78096c",
+      "assetId": "yellow-submarine",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/yellow-submarine.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "3447bec721c3bd72417d34d93c92a5edb3bf06bb1723a35dee6f58f583fa531f",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "2bcbcecf9d50ce460d5d3520a119828ab51f24fb10630b0da037cb28f933b8c0",
+      "sizeBytes": 585511,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:41:30.536Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "yellow-submarine",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "subject",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "subject",
+        "slot": "subject",
+        "completeness": "full-silhouette",
+        "nodeId": "yellow-submarine",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "subject",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 2,
+            "top": 629,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa01cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa01cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa01cd",
+            "transparentThreshold": 95,
+            "opaqueThreshold": 180,
+            "edgeFeather": 0.6,
+            "matteErode": 1,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "6428f3923e427875d1aef4a9b3ea93fdc773e7f2e8549623ad7b172c73af4f2e",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:46:05.543Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "25a3b0f035af1f94ec1051825f8c8b95f9379c3094346c86174c6548757debd6"
+      }
+    },
+    {
+      "recordId": "ad42708f01b0674c84cbc6673b75acd421473fa42c93ca3f0a9383e7aad163b9",
+      "assetId": "seaweed-front",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/seaweed-front.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "d5e4d8d688279e1a00184574b2ca919d019bac3a28a4f0041e2e5d4f9a07c395",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "86467f683175cc5211be390f090812a15efe663371f1412d301b5e95835c4384",
+      "sizeBytes": 948158,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:41:30.536Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "seaweed-front",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-front",
+        "slot": "support-front",
+        "completeness": "full-overlay",
+        "nodeId": "seaweed-front",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-front",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 629,
+            "top": 629,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa02cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa02cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa02cd",
+            "transparentThreshold": 95,
+            "opaqueThreshold": 180,
+            "edgeFeather": 0.6,
+            "matteErode": 1,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "07e69c27885d14d09a01a892f922607debe9e6898d6a40205f209be21d370855",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:46:05.543Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "2fa5b52419c338b3582566c9027b34e06920360d0bba8b9fea5c98820d861a36"
+      }
+    },
+    {
+      "recordId": "dab53e779e88a074eb93060d27c97f8e595f3ac92a841b00320265de564c2af2",
+      "assetId": "ocean-rear",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/ocean-rear.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "58a6131127b034796e781816793d3ecb8137e2c609d66e363b016de5771bc80e",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "78a9bd7f7c7a44b50dad1bada1c4c985124d62720e3adc1babc72b1eb741eb5b",
+      "sizeBytes": 1827786,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:46:05.543Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "ocean-rear",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-rear",
+        "slot": "support-rear",
+        "completeness": "clean-plate",
+        "nodeId": "ocean-rear",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-rear",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 629,
+            "top": 2,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "opaque",
+            "keyColor": null,
+            "tolerance": null,
+            "requestedKeyColor": null,
+            "observedKeyColor": null,
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": null,
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": null,
+          "keyingMetadataSha256": null,
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:49:14.061Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "b4069b90579a3214f1c9780f1af2c27cfee070af7b58e4e810caf09242bdf596"
+      }
+    },
+    {
+      "recordId": "25a3b0f035af1f94ec1051825f8c8b95f9379c3094346c86174c6548757debd6",
+      "assetId": "yellow-submarine",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/yellow-submarine.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "3447bec721c3bd72417d34d93c92a5edb3bf06bb1723a35dee6f58f583fa531f",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "2bcbcecf9d50ce460d5d3520a119828ab51f24fb10630b0da037cb28f933b8c0",
+      "sizeBytes": 585511,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:46:05.543Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "yellow-submarine",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "subject",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "subject",
+        "slot": "subject",
+        "completeness": "full-silhouette",
+        "nodeId": "yellow-submarine",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "subject",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 2,
+            "top": 629,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa01cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa01cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa01cd",
+            "transparentThreshold": 95,
+            "opaqueThreshold": 180,
+            "edgeFeather": 0.6,
+            "matteErode": 1,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "6428f3923e427875d1aef4a9b3ea93fdc773e7f2e8549623ad7b172c73af4f2e",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:49:14.061Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "4fe732593cdbf0e599d729b61207b650fe5748df907931da38c3863ef612c56d"
+      }
+    },
+    {
+      "recordId": "2fa5b52419c338b3582566c9027b34e06920360d0bba8b9fea5c98820d861a36",
+      "assetId": "seaweed-front",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/seaweed-front.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "d5e4d8d688279e1a00184574b2ca919d019bac3a28a4f0041e2e5d4f9a07c395",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "86467f683175cc5211be390f090812a15efe663371f1412d301b5e95835c4384",
+      "sizeBytes": 948158,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:46:05.543Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "seaweed-front",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-front",
+        "slot": "support-front",
+        "completeness": "full-overlay",
+        "nodeId": "seaweed-front",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-front",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 629,
+            "top": 629,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa02cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa02cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa02cd",
+            "transparentThreshold": 95,
+            "opaqueThreshold": 180,
+            "edgeFeather": 0.6,
+            "matteErode": 1,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "07e69c27885d14d09a01a892f922607debe9e6898d6a40205f209be21d370855",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "5f3b2e0c66e80e6bfefb3b54e91dc16fe5ead6c075608b65c3fadd03b7758ffe",
+      "lifecycle": {
+        "status": "superseded",
+        "changedAt": "2026-07-23T16:49:14.061Z",
+        "reason": "replaced-by-new-registered-family-derivative",
+        "supersededBy": "a06de7ae42f4aa2b45879c6c37caeffe7c16ce70b2dee356d215f2c88ae38f5b"
+      }
+    },
+    {
+      "recordId": "b4069b90579a3214f1c9780f1af2c27cfee070af7b58e4e810caf09242bdf596",
+      "assetId": "ocean-rear",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/ocean-rear.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "7435a480c70ef12360900f0e6bfd4933b4f840fe4969bb48cd6495d4a17ba80b",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "78a9bd7f7c7a44b50dad1bada1c4c985124d62720e3adc1babc72b1eb741eb5b",
+      "sizeBytes": 1827786,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:49:14.061Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "ocean-rear",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-rear",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "crop",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.09,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-rear",
+        "slot": "support-rear",
+        "completeness": "clean-plate",
+        "nodeId": "ocean-rear",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-rear",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 629,
+            "top": 2,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "opaque",
+            "keyColor": null,
+            "tolerance": null,
+            "requestedKeyColor": null,
+            "observedKeyColor": null,
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": null,
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": null,
+          "keyingMetadataSha256": null,
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "55c45beeb4432a5dc2532d31e2314f5083f8089d1abf3400bec0518a2efb1291"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "55c45beeb4432a5dc2532d31e2314f5083f8089d1abf3400bec0518a2efb1291",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-23T16:49:14.061Z",
+        "reason": "registered-family-local-derivative",
+        "supersededBy": null
+      }
+    },
+    {
+      "recordId": "4fe732593cdbf0e599d729b61207b650fe5748df907931da38c3863ef612c56d",
+      "assetId": "yellow-submarine",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/yellow-submarine.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "c8aaf781ceba63e60521625e1591f3e7f0c0e667275479568ad277ca186331fe",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "2bcbcecf9d50ce460d5d3520a119828ab51f24fb10630b0da037cb28f933b8c0",
+      "sizeBytes": 585511,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:49:14.061Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "yellow-submarine",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "subject",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.09,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "subject",
+        "slot": "subject",
+        "completeness": "full-silhouette",
+        "nodeId": "yellow-submarine",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "subject",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 2,
+            "top": 629,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa01cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa01cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa01cd",
+            "transparentThreshold": 95,
+            "opaqueThreshold": 180,
+            "edgeFeather": 0.6,
+            "matteErode": 1,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "6428f3923e427875d1aef4a9b3ea93fdc773e7f2e8549623ad7b172c73af4f2e",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "55c45beeb4432a5dc2532d31e2314f5083f8089d1abf3400bec0518a2efb1291"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "55c45beeb4432a5dc2532d31e2314f5083f8089d1abf3400bec0518a2efb1291",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-23T16:49:14.061Z",
+        "reason": "registered-family-local-derivative",
+        "supersededBy": null
+      }
+    },
+    {
+      "recordId": "a06de7ae42f4aa2b45879c6c37caeffe7c16ce70b2dee356d215f2c88ae38f5b",
+      "assetId": "seaweed-front",
+      "capability": "image",
+      "file": "public/projects/vox-depth-stack-pilot-submarine/assets/environment/seaweed-front.png",
+      "provider": "local-derivation",
+      "adapter": "registered-family-member",
+      "tool": "derive-registered-family",
+      "model": null,
+      "externalId": null,
+      "attemptId": null,
+      "requestFingerprint": "60e5b374283fb6198cbc3cdd77c4225b36e4f369d16bbc7fdd3b865cdfbdf5af",
+      "reusedFrom": "submarine-layer-sheet",
+      "sha256": "86467f683175cc5211be390f090812a15efe663371f1412d301b5e95835c4384",
+      "sizeBytes": 948158,
+      "media": {
+        "width": 1024,
+        "height": 1024,
+        "format": "png",
+        "hasAlpha": true
+      },
+      "recordedAt": "2026-07-23T16:49:14.061Z",
+      "request": {},
+      "compositionBinding": {
+        "sceneId": "submarine-scene",
+        "nodeId": "seaweed-front",
+        "pattern": "registered-depth-stack",
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "outputRole": "support-front",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "derivation": {
+          "method": "alpha-extraction",
+          "parentAssetId": "submarine-layer-sheet"
+        }
+      },
+      "stateBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "sourceSheetAssetId": "submarine-layer-sheet",
+      "registeredFamilyBinding": {
+        "schemaVersion": 2,
+        "familyId": "submarine-depth-family",
+        "pattern": "registered-depth-stack",
+        "motionCapability": "bounded-relative",
+        "sourcePackageId": "submarine-seaweed-layer-package",
+        "sourceStrategy": "registered-layer-sheet",
+        "revealEnvelope": {
+          "16:9": {
+            "x": 0.04,
+            "y": 0.02,
+            "scale": 0.09,
+            "rotationDegrees": 1
+          },
+          "9:16": {
+            "x": 0.025,
+            "y": 0.03,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          },
+          "1:1": {
+            "x": 0.03,
+            "y": 0.025,
+            "scale": 0.08,
+            "rotationDegrees": 1
+          }
+        },
+        "registrationId": "submarine-depth-registration",
+        "sourceMasterAssetId": "submarine-reference",
+        "canvas": {
+          "width": 1024,
+          "height": 1024
+        },
+        "origin": "top-left",
+        "role": "support-front",
+        "slot": "support-front",
+        "completeness": "full-overlay",
+        "nodeId": "seaweed-front",
+        "source": {
+          "kind": "registered-layer-sheet",
+          "assetId": "submarine-layer-sheet",
+          "stateId": "support-front",
+          "sourceSheetAssetId": "submarine-layer-sheet",
+          "sourceFamilyFingerprint": null,
+          "sha256": "c4cf5ecb0e9bb80ed7d0973b7b304c251188bde6df06681953e0b68360346d02"
+        },
+        "derivation": {
+          "placement": {
+            "left": 0,
+            "top": 0,
+            "width": 1024,
+            "height": 1024
+          },
+          "sourceRect": {
+            "left": 629,
+            "top": 629,
+            "width": 623,
+            "height": 623
+          },
+          "sourceSurface": {
+            "mode": "chroma-key",
+            "keyColor": "#fa02cd",
+            "tolerance": 24,
+            "requestedKeyColor": "#ff00ff",
+            "observedKeyColor": "#fa02cd",
+            "observationPolicyId": "flat-v1",
+            "observationPolicyFingerprint": "b8c60778a9e7fd012a78ecf0790be8beca1db553efebca8a1048f7b5676beab2",
+            "observationFingerprint": "0ba8a815edf8a1d07fbf6f39ee689d6dfac23a5f86f6445a450bc5090bfb98c5"
+          },
+          "keying": {
+            "keyColor": "#fa02cd",
+            "transparentThreshold": 95,
+            "opaqueThreshold": 180,
+            "edgeFeather": 0.6,
+            "matteErode": 1,
+            "edgePadding": 8
+          },
+          "keyingMetadataSha256": "07e69c27885d14d09a01a892f922607debe9e6898d6a40205f209be21d370855",
+          "maskAssetId": null,
+          "maskSha256": null,
+          "maskChannel": null,
+          "invertMask": false,
+          "clip": null,
+          "trimmed": false,
+          "outputCanvasPreserved": true
+        },
+        "recoveryPolicy": {
+          "strategy": "preserve-family-context",
+          "localDeterministicFixFirst": true,
+          "isolatedMemberGeneration": "forbidden",
+          "providerRepair": "masked-complete-source-edit",
+          "fallback": "full-source-regeneration"
+        },
+        "familyFingerprint": "55c45beeb4432a5dc2532d31e2314f5083f8089d1abf3400bec0518a2efb1291"
+      },
+      "semanticBinding": {
+        "riskClass": "topology-critical",
+        "contractIds": [
+          "yellow-submarine-topology"
+        ]
+      },
+      "familyFingerprint": "55c45beeb4432a5dc2532d31e2314f5083f8089d1abf3400bec0518a2efb1291",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-23T16:49:14.061Z",
+        "reason": "registered-family-local-derivative",
+        "supersededBy": null
+      }
     }
   ]
 }

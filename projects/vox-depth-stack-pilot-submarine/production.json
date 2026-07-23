@@ -2,9 +2,9 @@
   "$schema": "../../schemas/production.schema.json",
   "schemaVersion": 1,
   "slug": "vox-depth-stack-pilot-submarine",
-  "stage": "style-review",
+  "stage": "complete",
   "createdAt": "2026-07-23T14:39:09.982Z",
-  "updatedAt": "2026-07-23T15:08:10.619Z",
+  "updatedAt": "2026-07-23T17:21:34.523Z",
   "approvals": {
     "concept": {
       "status": "approved",
@@ -12,14 +12,14 @@
       "note": "提议批准《海草间的黄色潜水艇》单幕 registered-depth-stack 受控 production pilot：draft、内容推导 6 秒、无旁白、一个 registered 2x2 layer sheet；预计 1 次且最多 2 次图片 provider attempts，不调用 voice 或 video provider。"
     },
     "styleAndVoice": {
-      "status": "pending",
-      "decidedAt": null,
-      "note": ""
+      "status": "approved",
+      "decidedAt": "2026-07-23T17:05:46.578Z",
+      "note": "用户已授权：在 0.16.0-dev.7 当前缓存的 style/motion proof、三画幅零透明像素极值证明、三成员 alpha 证据与复杂视差样片全部通过后，批准本地纸艺风格与现有无旁白音频方案进入素材生产。"
     },
     "preview": {
-      "status": "pending",
-      "decidedAt": null,
-      "note": ""
+      "status": "approved",
+      "decidedAt": "2026-07-23T17:20:02.874Z",
+      "note": "用户已预先授权在 preview 完成并通过 human-review 后继续。实际 preview 已核验：960x540/30fps/6.058667s，音视频流齐全，-18.9 LUFS/-6.39 dBTP，continuityAnalysis passed，dead air 0s，联系表显示建立、最大层分离与最终 depth lockup 均完整可读。"
     },
     "publish": {
       "status": "pending",
@@ -34,11 +34,12 @@
     "storyboard": "projects/vox-depth-stack-pilot-submarine/storyboard.json",
     "prompts": "projects/vox-depth-stack-pilot-submarine/prompts.json",
     "review": "projects/vox-depth-stack-pilot-submarine/review.md",
-    "validationReport": null,
-    "preview": null,
-    "final": null,
-    "report": null,
-    "contactSheet": null
+    "validationReport": "dist/vox-depth-stack-pilot-submarine/validation-report.json",
+    "preview": "dist/vox-depth-stack-pilot-submarine/preview.mp4",
+    "final": "dist/vox-depth-stack-pilot-submarine/final.mp4",
+    "report": "dist/vox-depth-stack-pilot-submarine/report.json",
+    "contactSheet": "dist/vox-depth-stack-pilot-submarine/contact-sheet.jpg",
+    "styleProof": "dist/vox-depth-stack-pilot-submarine/style-motion-proof.json"
   },
   "history": [
     {
@@ -64,6 +65,36 @@
       "action": "approve-concept",
       "stage": "style-review",
       "note": "提议批准《海草间的黄色潜水艇》单幕 registered-depth-stack 受控 production pilot：draft、内容推导 6 秒、无旁白、一个 registered 2x2 layer sheet；预计 1 次且最多 2 次图片 provider attempts，不调用 voice 或 video provider。"
+    },
+    {
+      "at": "2026-07-23T17:05:46.578Z",
+      "action": "approve-style-voice",
+      "stage": "asset-production",
+      "note": "用户已授权：在 0.16.0-dev.7 当前缓存的 style/motion proof、三画幅零透明像素极值证明、三成员 alpha 证据与复杂视差样片全部通过后，批准本地纸艺风格与现有无旁白音频方案进入素材生产。"
+    },
+    {
+      "at": "2026-07-23T17:19:10.149Z",
+      "action": "assets-ready",
+      "stage": "preview",
+      "note": ""
+    },
+    {
+      "at": "2026-07-23T17:19:43.283Z",
+      "action": "preview-rendered",
+      "stage": "human-review",
+      "note": "dist/vox-depth-stack-pilot-submarine/preview.mp4"
+    },
+    {
+      "at": "2026-07-23T17:20:02.874Z",
+      "action": "approve-preview",
+      "stage": "final-render",
+      "note": "用户已预先授权在 preview 完成并通过 human-review 后继续。实际 preview 已核验：960x540/30fps/6.058667s，音视频流齐全，-18.9 LUFS/-6.39 dBTP，continuityAnalysis passed，dead air 0s，联系表显示建立、最大层分离与最终 depth lockup 均完整可读。"
+    },
+    {
+      "at": "2026-07-23T17:21:34.523Z",
+      "action": "final-rendered",
+      "stage": "complete",
+      "note": "dist/vox-depth-stack-pilot-submarine/final.mp4"
     }
   ]
 }

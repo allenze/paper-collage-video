@@ -17,6 +17,7 @@ import {
   formatValidation,
   loadProject,
   projectPaths,
+  resolvePublicFile,
   resolveRenderConcurrency,
   runCommand,
   validateProject,
@@ -35,6 +36,7 @@ import {
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
+import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
 
 const args = process.argv.slice(2);
 const [slug] = args.filter((argument) => !argument.startsWith('--'));
@@ -135,9 +137,14 @@ try {
   const frameDirectory = path.join(outputDirectory, 'frames');
   const cropDirectory = path.join(outputDirectory, 'crops');
   const debugDirectory = path.join(outputDirectory, 'debug');
+  const responsiveInputDirectory = path.join(
+    outputDirectory,
+    'responsive-inputs',
+  );
   await fs.mkdir(frameDirectory, {recursive: true});
   await fs.mkdir(cropDirectory, {recursive: true});
   await fs.mkdir(debugDirectory, {recursive: true});
+  await fs.mkdir(responsiveInputDirectory, {recursive: true});
   const evidenceDirectory = path.join(outputDirectory, 'evidence');
   await fs.mkdir(evidenceDirectory, {recursive: true});
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
@@ -147,7 +154,10 @@ try {
     ? await readJson(reportFile).catch(() => null)
     : null;
   const previousFrames = new Map(
-    (previous?.frames ?? []).map((frame) => [`${frame.sceneId}:${frame.proofTimeId}`, frame]),
+    (previous?.frames ?? []).map((frame) => [
+      `${frame.profileId ?? 'active'}:${frame.sceneId}:${frame.proofTimeId}`,
+      frame,
+    ]),
   );
   const previousComposites = new Map(
     (previous?.composites ?? []).map((entry) => [entry.compositeId, entry]),
@@ -197,7 +207,7 @@ try {
         proof,
         absoluteFrame,
       });
-      const cached = previousFrames.get(key);
+      const cached = previousFrames.get(`active:${key}`);
       const reusable =
         !force &&
         cached?.fingerprint === fingerprint &&
@@ -229,7 +239,13 @@ try {
         file: path.relative(ROOT, file),
       };
       frames.push(entry);
-      rendered.set(key, {file, absoluteFrame, fingerprint});
+      rendered.set(key, {
+        file,
+        absoluteFrame,
+        fingerprint,
+        width: project.video.width,
+        height: project.video.height,
+      });
     }
   }
 
@@ -305,6 +321,112 @@ try {
       generatedEvidence += 1;
     }
   }
+  const responsiveVariants = new Map();
+  const responsiveRendered = new Map();
+  const responsiveVariantFor = async (target) => {
+    const profileId = target.responsive.profileId;
+    const cached = responsiveVariants.get(profileId);
+    if (cached) return cached;
+    const responsiveProject = applyResponsiveDirectingPlan({
+      ...structuredClone(project),
+      video: {
+        ...project.video,
+        width: target.responsive.width,
+        height: target.responsive.height,
+      },
+      editorial: {
+        ...structuredClone(project.editorial),
+        activeProfile: profileId,
+      },
+    });
+    const responsiveTimeline = deriveTimeline(responsiveProject);
+    const inputFile = path.join(
+      responsiveInputDirectory,
+      `project-${profileId.replace(':', 'x')}.json`,
+    );
+    await writeJson(inputFile, responsiveProject);
+    const variant = {
+      project: responsiveProject,
+      timeline: responsiveTimeline,
+      inputFile,
+    };
+    responsiveVariants.set(profileId, variant);
+    return variant;
+  };
+  const renderResponsiveProof = async ({target, sceneId, proofTimeId}) => {
+    const profileId = target.responsive.profileId;
+    const key = `${profileId}:${sceneId}:${proofTimeId}`;
+    const existing = responsiveRendered.get(key);
+    if (existing) return existing;
+    const variant = await responsiveVariantFor(target);
+    const scene = variant.timeline.scenes.find(({id}) => id === sceneId);
+    const proof = scene?.motion?.proofTimes?.find(
+      ({id}) => id === proofTimeId,
+    );
+    if (!scene || !proof) {
+      throw new Error(
+        `${target.compositeId} 缺少响应式证明时刻 ${sceneId}/${proofTimeId}。`,
+      );
+    }
+    const absoluteFrame =
+      scene.from +
+      Math.round(
+        proof.at * Math.max(0, scene.durationInFrames - 1),
+      );
+    const safeProfile = profileId.replace(':', 'x');
+    const file = path.join(
+      frameDirectory,
+      `responsive-${safeProfile}-${sceneId}-${proofTimeId}.png`,
+    );
+    const fingerprint = await createSceneProofFingerprint({
+      project: variant.project,
+      scene,
+      proof,
+      absoluteFrame,
+    });
+    const cached = previousFrames.get(key);
+    const reusable =
+      !force &&
+      cached?.fingerprint === fingerprint &&
+      cached.absoluteFrame === absoluteFrame &&
+      await fileExists(file);
+    if (reusable) {
+      reusedFrames += 1;
+    } else {
+      if (!browserReady) {
+        await runCommand(remotion, ['browser', 'ensure']);
+        browserReady = true;
+      }
+      await runCommand(remotion, [
+        'still',
+        'src/index.ts',
+        'Paper-Collage',
+        file,
+        `--props=${path.relative(ROOT, variant.inputFile)}`,
+        `--frame=${absoluteFrame}`,
+        `--concurrency=${resolveRenderConcurrency()}`,
+      ]);
+      renderedFrames += 1;
+    }
+    const entry = {
+      profileId,
+      sceneId,
+      proofTimeId,
+      absoluteFrame,
+      fingerprint,
+      file: path.relative(ROOT, file),
+    };
+    frames.push(entry);
+    const renderedEntry = {
+      file,
+      absoluteFrame,
+      fingerprint,
+      width: target.responsive.width,
+      height: target.responsive.height,
+    };
+    responsiveRendered.set(key, renderedEntry);
+    return renderedEntry;
+  };
   const composites = [];
   let reusedComposites = 0;
   let generatedComposites = 0;
@@ -318,12 +440,23 @@ try {
     const expectedProofs = proofShots.flatMap((shot) =>
       shot.proofTimeIds.map((proofTimeId) => ({sceneId: shot.sceneId, proofTimeId})),
     );
+    if (target.pattern === 'responsive-directing') {
+      for (const expected of expectedProofs) {
+        await renderResponsiveProof({target, ...expected});
+      }
+    }
+    const renderedProofFor = ({sceneId, proofTimeId}) =>
+      target.pattern === 'responsive-directing'
+        ? responsiveRendered.get(
+            `${target.responsive.profileId}:${sceneId}:${proofTimeId}`,
+          )
+        : rendered.get(`${sceneId}:${proofTimeId}`);
     const reusableComposite =
       !force &&
       cached?.fingerprint === target.fingerprint &&
       cached.proofFrames?.length === expectedProofs.length &&
       (await Promise.all(expectedProofs.map(async ({sceneId, proofTimeId}) => {
-        const renderedProof = rendered.get(`${sceneId}:${proofTimeId}`);
+        const renderedProof = renderedProofFor({sceneId, proofTimeId});
         const cachedFrame = cached.proofFrames.find((entry) =>
           entry.sceneId === sceneId && entry.proofTimeId === proofTimeId,
         );
@@ -364,18 +497,43 @@ try {
       const scene = sceneById.get(shot.sceneId);
       if (!scene) continue;
       for (const proofTimeId of shot.proofTimeIds) {
-        const renderedProof = rendered.get(`${shot.sceneId}:${proofTimeId}`);
+        const renderedProof = renderedProofFor({
+          sceneId: shot.sceneId,
+          proofTimeId,
+        });
         if (!renderedProof) continue;
-        const bounds = findTargetBounds({scene, nodeId: shot.nodeId, video: project.video});
+        const bounds =
+          target.pattern === 'responsive-directing'
+            ? {
+                left: 0,
+                top: 0,
+                width: renderedProof.width,
+                height: renderedProof.height,
+              }
+            : findTargetBounds({
+                scene,
+                nodeId: shot.nodeId,
+                video: project.video,
+              });
         const safeId = target.compositeId.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
         const cropFile = path.join(cropDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.png`);
         const debugFile = path.join(debugDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.png`);
         await sharp(renderedProof.file).extract(bounds).png().toFile(cropFile);
         await sharp(renderedProof.file)
-          .composite([{input: debugOverlay({width: project.video.width, height: project.video.height, bounds, label: `${target.compositeId} · ${shot.sceneId} · ${proofTimeId}`})}])
+          .composite([{
+            input: debugOverlay({
+              width: renderedProof.width,
+              height: renderedProof.height,
+              bounds,
+              label: `${target.compositeId} · ${shot.sceneId} · ${proofTimeId}`,
+            }),
+          }])
           .png()
           .toFile(debugFile);
         proofFrames.push({
+          ...(target.pattern === 'responsive-directing'
+            ? {profileId: target.responsive.profileId}
+            : {}),
           sceneId: shot.sceneId,
           proofTimeId,
           absoluteFrame: renderedProof.absoluteFrame,

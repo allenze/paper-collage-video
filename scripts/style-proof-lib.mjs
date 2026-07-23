@@ -44,6 +44,22 @@ const assertReviewedEvidence = (entry, files, label) => {
   }
 };
 
+export const selectTargetAssetEvidence = ({report, target}) =>
+  (report.assetEvidence ?? []).filter(
+    ({sceneId, nodeId}) =>
+      sceneId === target.sceneId &&
+      target.memberNodeIds.includes(nodeId),
+  );
+
+export const selectTargetQualityAssetGroups = ({qualityReport, target}) =>
+  target.memberNodeIds
+    .map((nodeId) => ({
+      nodeId,
+      assets: qualityReport.assets.filter(({sources}) =>
+        sources.includes(`scene:${target.sceneId}:node:${nodeId}`)),
+    }))
+    .filter(({assets}) => assets.length > 0);
+
 export const assertStyleProofReady = async (slug) => {
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
   const directingTargets = selectStyleProofTargets(storyboard);
@@ -123,12 +139,8 @@ export const assertStyleProofReady = async (slug) => {
         );
       }
     }
-    const assetEvidence = report.assetEvidence ?? [];
-    for (const nodeId of target.memberNodeIds ?? []) {
-      const evidence = assetEvidence.find((candidate) =>
-        candidate.sceneId === target.sceneId && candidate.nodeId === nodeId);
-      if (!evidence) throw new Error(`${proof.compositeId} 缺少成员 ${nodeId} 的 alpha 证据。`);
-      for (const field of REQUIRED_ASSET_EVIDENCE) await assertEvidenceFile(evidence[field], `${nodeId}.${field}`);
+    for (const evidence of selectTargetAssetEvidence({report, target})) {
+      for (const field of REQUIRED_ASSET_EVIDENCE) await assertEvidenceFile(evidence[field], `${evidence.nodeId}.${field}`);
     }
     provenTargets.push(target);
   }
@@ -154,15 +166,14 @@ export const assertStyleProofReady = async (slug) => {
         ),
       );
     }
-    const targetAssetEvidence = (report.assetEvidence ?? []).filter(
-      ({sceneId, nodeId}) =>
-        sceneId === target.sceneId && target.memberNodeIds.includes(nodeId),
-    );
+    const targetAssetEvidence = selectTargetAssetEvidence({report, target});
     compositeEvidence.push(...targetAssetEvidence.map(({motionStress}) => motionStress));
     if (composite) assertReviewedEvidence(composite, compositeEvidence, target.compositeId);
-    for (const nodeId of target.memberNodeIds) {
-      const assets = quality.report.assets.filter(({sources}) => sources.includes(`scene:${target.sceneId}:node:${nodeId}`));
-      if (assets.length === 0 || assets.some((asset) => !asset.technical.passed || !allPassed(asset.semanticChecks))) {
+    for (const {nodeId, assets} of selectTargetQualityAssetGroups({
+      qualityReport: quality.report,
+      target,
+    })) {
+      if (assets.some((asset) => !asset.technical.passed || !allPassed(asset.semanticChecks))) {
         throw new Error(`${target.compositeId} 的成员 ${nodeId} 尚未通过完整素材质量检查。`);
       }
       for (const asset of assets) {

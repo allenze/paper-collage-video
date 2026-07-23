@@ -6,6 +6,8 @@ import test from 'node:test';
 import sharp from 'sharp';
 import {
   assertStyleProofReady,
+  selectTargetAssetEvidence,
+  selectTargetQualityAssetGroups,
   styleFingerprintForTarget,
   styleProofReportPath,
 } from '../scripts/style-proof-lib.mjs';
@@ -327,6 +329,34 @@ test('free directing targets still produce a structured style composite', async 
     await fs.rm(fixture.publicDirectory, {recursive: true, force: true});
     await fs.rm(fixture.distDirectory, {recursive: true, force: true});
   }
+});
+
+test('style proof asset requirements ignore non-file composite members', () => {
+  const target = {
+    sceneId: 'scene',
+    memberNodeIds: ['rig', 'subject', 'fish-field'],
+  };
+  const report = {
+    assetEvidence: [
+      {sceneId: 'scene', nodeId: 'subject'},
+      {sceneId: 'other-scene', nodeId: 'subject'},
+    ],
+  };
+  const qualityReport = {
+    assets: [{
+      assetId: 'subject',
+      sources: ['scene:scene:node:subject'],
+    }],
+  };
+
+  assert.deepEqual(
+    selectTargetAssetEvidence({report, target}).map(({nodeId}) => nodeId),
+    ['subject'],
+  );
+  assert.deepEqual(
+    selectTargetQualityAssetGroups({qualityReport, target}).map(({nodeId}) => nodeId),
+    ['subject'],
+  );
 });
 
 test('style topology gate rejects hard-alpha false confidence, unrelated evidence, and stale evidence', async () => {

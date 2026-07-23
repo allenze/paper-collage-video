@@ -29,8 +29,8 @@
       {
         "id": "pilot-local-timebase",
         "kind": "music",
-        "src": "fixtures/vox-phase2-proof/music.wav",
-        "sha256": "627f78697ff22444349c1794a0596d72a2f99425ac3d75f42d1fea5553bbf8b3",
+        "src": "projects/vox-depth-stack-pilot-submarine/audio/submarine-music-calibrated.wav",
+        "sha256": "d94368cb91d393c37181789ae3d29939d8eb3b7b97de3b9becb1bf7b30e44e83",
         "durationSeconds": 6,
         "timelineMode": "global"
       }
@@ -146,38 +146,7 @@
             "y": 0.52
           }
         },
-        "placements": [
-          {
-            "targetId": "submarine-depth-stack",
-            "role": "subject",
-            "preferredAnchor": "center",
-            "fallbackAnchors": [
-              "left",
-              "right"
-            ],
-            "densityCost": 6,
-            "profileOverrides": {
-              "16:9": {
-                "x": 0.12,
-                "y": 0.23,
-                "width": 0.76,
-                "height": 0.62
-              },
-              "9:16": {
-                "x": 0.05,
-                "y": 0.29,
-                "width": 0.9,
-                "height": 0.42
-              },
-              "1:1": {
-                "x": 0.08,
-                "y": 0.2,
-                "width": 0.84,
-                "height": 0.64
-              }
-            }
-          }
-        ]
+        "placements": []
       }
     ],
     "transitions": []

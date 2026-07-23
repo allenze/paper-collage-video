@@ -1,0 +1,46 @@
+{
+  "$schema": "../../schemas/audio-calibration.schema.json",
+  "schemaVersion": 1,
+  "projectSlug": "vox-depth-stack-pilot-submarine",
+  "status": "not-required",
+  "sourceFingerprint": "c15f6a198588d88aa523c748aa215ce58a501d9b907f7cfbbf954aebb289723a",
+  "currentNarrationVolume": 4,
+  "recommendedNarrationVolume": 4,
+  "generatedAt": "2026-07-23T17:19:09.772Z",
+  "acceptedAt": "2026-07-23T17:19:09.772Z",
+  "acceptanceNote": "当前预检已经通过，无需调节。",
+  "previousAcceptance": null,
+  "preflight": {
+    "passed": true,
+    "mastering": {
+      "targetLufs": -16,
+      "toleranceLufs": 3,
+      "truePeakDbtp": -1
+    },
+    "loudness": {
+      "integratedLufs": -18.89,
+      "truePeakDbtp": -6.38,
+      "loudnessRangeLu": 1
+    },
+    "loudnessPassed": true,
+    "truePeakPassed": true,
+    "currentNarrationVolume": 4,
+    "recommendedNarrationVolume": 4,
+    "recommendationIsApproximate": true,
+    "mix": {
+      "file": "dist/vox-depth-stack-pilot-submarine/audio-preflight.wav",
+      "durationSeconds": 6,
+      "eventCount": 1,
+      "events": [
+        {
+          "kind": "narration",
+          "id": "narration:submarine-scene",
+          "sceneId": "submarine-scene",
+          "src": "projects/vox-depth-stack-pilot-submarine/audio/submarine-music-calibrated.wav",
+          "startSeconds": 0,
+          "volume": 4
+        }
+      ]
+    }
+  }
+}

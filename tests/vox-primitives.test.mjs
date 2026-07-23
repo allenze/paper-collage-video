@@ -253,6 +253,22 @@ test('parallax and motif primitives produce fingerprinted proof targets', async 
   const project = {
     slug: 'quality-primitives',
     sceneTransitions: [],
+    editorial: {
+      fingerprint: 'f'.repeat(64),
+      responsivePlans: [
+        {profileId: '16:9', width: 1920, height: 1080},
+        {profileId: '9:16', width: 1080, height: 1920},
+        {profileId: '1:1', width: 1080, height: 1080},
+      ].map((profile) => ({
+        ...profile,
+        densityBudget: 8,
+        scenes: [{
+          sceneId: 'scene',
+          densityUsed: 1,
+          placements: [{targetId: 'background'}],
+        }],
+      })),
+    },
     scenes: [{
       id: 'scene',
       camera: {
@@ -292,8 +308,21 @@ test('parallax and motif primitives produce fingerprinted proof targets', async 
   });
   const parallax = targets.find(({pattern}) => pattern === 'parallax-rig');
   const motifs = targets.find(({pattern}) => pattern === 'motif-field');
+  const responsive = targets.filter(
+    ({pattern}) => pattern === 'responsive-directing',
+  );
   assert.ok(parallax);
   assert.ok(motifs);
+  assert.equal(responsive.length, 3);
+  assert.ok(
+    responsive.every(
+      (target) =>
+        target.proofShots.length > 0 &&
+        target.proofShots.every(
+          ({proofTimeIds}) => proofTimeIds.length === 1,
+        ),
+    ),
+  );
   assert.match(parallax.fingerprint, /^[a-f0-9]{64}$/);
   assert.match(motifs.fingerprint, /^[a-f0-9]{64}$/);
   assert.ok(parallax.requiredChecks.includes('camera-coupling-clean'));

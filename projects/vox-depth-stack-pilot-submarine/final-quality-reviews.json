@@ -1,0 +1,118 @@
+{
+  "reviews": [
+    {
+      "compositeId": "motif-field:submarine-scene:fish-school",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "field-density-readable",
+        "field-bounds-clean",
+        "field-exclusions-clean",
+        "field-motion-clean",
+        "field-loop-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-fish-school-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-fish-school-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-fish-school-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-fish-school-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-fish-school-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-fish-school-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-motion-proof-submarine-scene.mp4"
+      ],
+      "note": "13 尾三色鱼群在三时刻保持疏密层次，全部位于上半场 bounds，椭圆排除区使潜艇主体持续可读；固定 seed 与 drift 周期在 6 秒运动样片中无跳帧或突发重生，收束画面仍清楚。"
+    },
+    {
+      "compositeId": "motif-field:submarine-scene:bubble-field",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "field-density-readable",
+        "field-bounds-clean",
+        "field-exclusions-clean",
+        "field-motion-clean",
+        "field-loop-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-bubble-field-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-bubble-field-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-bubble-field-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-bubble-field-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-bubble-field-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-bubble-field-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-motion-proof-submarine-scene.mp4"
+      ],
+      "note": "24 个半透明纸泡大小与透明度分布可读，保持在全幕边界内并避开船体核心识别区；orbit 运动连续且不抢主体，建立、动作、收束及运动样片未见边界弹跳或循环断裂。"
+    },
+    {
+      "compositeId": "motif-field:submarine-scene:bubble-stream",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "field-density-readable",
+        "field-bounds-clean",
+        "field-exclusions-clean",
+        "field-motion-clean",
+        "field-loop-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-bubble-stream-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-bubble-stream-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-bubble-stream-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-bubble-stream-submarine-scene-submarine-action.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/motif-field-submarine-scene-bubble-stream-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/motif-field-submarine-scene-bubble-stream-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/style-motion-proof-submarine-scene.mp4"
+      ],
+      "note": "9 个网格气泡形成潜望镜附近的局部上升流，密度、边界和主体可读性均受控；固定 seed 的 drift 在三证明时刻及 6 秒样片中连续，无突跳、裁切或收束破坏。"
+    },
+    {
+      "compositeId": "event:submarine-scene:submarine-establish-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/event-submarine-scene-submarine-establish-event-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/event-submarine-scene-submarine-establish-event-submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-final.png"
+      ],
+      "note": "建立事件在绑定的 establish proofTime 清楚呈现完整潜艇、前景水草、鱼群与气泡层次；事件无需独立音效，最终证明帧显示其后状态被正确保留并自然收束。"
+    },
+    {
+      "compositeId": "event:submarine-scene:submarine-final-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "evidenceFiles": [
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-establish.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/frames/submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/crops/event-submarine-scene-submarine-final-event-submarine-scene-submarine-final.png",
+        "dist/vox-depth-stack-pilot-submarine/composition-proof/debug/event-submarine-scene-submarine-final-event-submarine-scene-submarine-final.png"
+      ],
+      "note": "收束事件在 final proofTime 清楚回到稳定注册构图，潜艇拓扑、三层深度、鱼群和气泡仍完整可读；无需独立音效，最终状态没有被后续动画覆盖。"
+    }
+  ]
+}
