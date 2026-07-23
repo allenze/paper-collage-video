@@ -28,6 +28,10 @@ import {
   validateSemanticEvidenceTargets,
 } from './semantic-contract-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {
+  activeManifestAssets,
+  assertAssetManifest,
+} from './asset-manifest-lib.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -218,7 +222,10 @@ export const inspectUntargetedSheetCells = async ({
 
 const readManifest = async (project) => {
   const file = path.join(ROOT, 'projects', project.slug, 'assets-manifest.json');
-  return (await fileExists(file)) ? readJson(file) : {schemaVersion: 3, projectSlug: project.slug, assets: []};
+  const manifest = (await fileExists(file))
+    ? await readJson(file)
+    : {schemaVersion: 4, projectSlug: project.slug, assets: []};
+  return assertAssetManifest(manifest, project.slug);
 };
 
 const collectQualityAssets = async (project, manifest, semanticContracts) => {
@@ -297,7 +304,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
   }
 
   const recordsByAssetId = new Map((manifest.assets ?? []).map((record) => [record.assetId, record]));
-  for (const record of manifest.assets ?? []) {
+  for (const record of activeManifestAssets(manifest)) {
     if (record.capability !== 'image') continue;
     const semanticBinding = record.semanticBinding ?? record.request?.semanticBinding ?? null;
     const boundContracts = (semanticBinding?.contractIds ?? [])
@@ -843,10 +850,19 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const timeline = deriveTimeline(project);
   const report = {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: slug,
     updatedAt: new Date().toISOString(),
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
+    assetHistory: (manifest.assets ?? [])
+      .filter(({lifecycle}) => lifecycle.status !== 'active')
+      .map(({recordId, assetId, file: assetFile, sha256, lifecycle}) => ({
+        recordId,
+        assetId,
+        file: assetFile,
+        sha256,
+        lifecycle,
+      })),
     assets: inspectedAssets,
     composites: inspectedComposites,
   };
@@ -874,11 +890,17 @@ export const recordQualityReviews = async ({slug, reviews}) => {
       if (!entry.requiredChecks.includes(check)) throw new Error(`${reviewId} 不需要质量检查 ${check}。`);
     }
     const evidenceFiles = [];
-    for (const evidenceFile of review.evidenceFiles ?? []) {
-      if (typeof evidenceFile !== 'string' || evidenceFile.trim().length === 0) throw new Error(`${reviewId} 的 evidenceFiles 必须是非空路径。`);
-      const absoluteFile = assertWorkspaceFile(evidenceFile.trim());
-      if (!(await fileExists(absoluteFile))) throw new Error(`${reviewId} 的质量证据不存在：${evidenceFile}`);
-      evidenceFiles.push({file: path.relative(ROOT, absoluteFile), sha256: await hashFile(absoluteFile)});
+    if (review.evidenceFiles === undefined) {
+      for (const evidence of entry.evidenceFiles ?? []) {
+        if (await evidenceFilesAreCurrent([evidence])) evidenceFiles.push(evidence);
+      }
+    } else {
+      for (const evidenceFile of review.evidenceFiles) {
+        if (typeof evidenceFile !== 'string' || evidenceFile.trim().length === 0) throw new Error(`${reviewId} 的 evidenceFiles 必须是非空路径。`);
+        const absoluteFile = assertWorkspaceFile(evidenceFile.trim());
+        if (!(await fileExists(absoluteFile))) throw new Error(`${reviewId} 的质量证据不存在：${evidenceFile}`);
+        evidenceFiles.push({file: path.relative(ROOT, absoluteFile), sha256: await hashFile(absoluteFile)});
+      }
     }
     if (passedChecks.some((check) => EVIDENCE_REQUIRED_CHECKS.has(check)) && evidenceFiles.length === 0) {
       throw new Error(`${reviewId} 的证据型质量检查必须提供 evidenceFiles。`);
@@ -1036,7 +1058,18 @@ export const buildQualityReviewScaffold = async ({
         }
       }))
     ).filter(Boolean);
+    const reviewId = review.assetId ?? review.compositeId;
+    const entry = [...status.report.assets, ...status.report.composites]
+      .find((candidate) => (candidate.assetId ?? candidate.compositeId) === reviewId);
+    if (entry) {
+      entry.evidenceFiles = await Promise.all(review.evidenceFiles.map(async (file) => ({
+        file,
+        sha256: await hashFile(assertWorkspaceFile(file)),
+      })));
+    }
   }
+  status.report.updatedAt = new Date().toISOString();
+  await writeJson(status.file, status.report);
   return {status, scaffold};
 };
 

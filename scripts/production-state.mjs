@@ -485,6 +485,57 @@ export const transitionWorkItem = (current, id, options = {}) => {
   return state;
 };
 
+export const transitionDirectingRevision = (current, options = {}) => {
+  const action = 'revise-preview-directing';
+  assertStage(current, ['asset-production'], action);
+  if (current.approvals?.preview?.status !== 'changes-requested') {
+    throw new Error(`${action} 只能响应已记录的 request-preview-revision。`);
+  }
+  if (!(current.history ?? []).some((entry) => entry.action === 'request-preview-revision')) {
+    throw new Error(`${action} 缺少 request-preview-revision 历史证据。`);
+  }
+  const changedSceneIds = [...new Set(options.changedSceneIds ?? [])];
+  if (changedSceneIds.length === 0) {
+    throw new Error(`${action} 必须至少包含一个实际改变的镜头。`);
+  }
+
+  const state = clone(current);
+  const at = options.at ?? new Date().toISOString();
+  const reportPath = (options.reportPath ?? '').trim();
+  if (!reportPath) throw new Error(`${action} 必须记录 directing-revision 报告路径。`);
+  assertApproved(state, 'concept', action);
+  assertApproved(state, 'styleAndVoice', action);
+
+  for (const key of ['validationReport', 'preview', 'final', 'report', 'contactSheet']) {
+    state.artifacts[key] = null;
+  }
+  if (options.invalidateStyleProof) state.artifacts.styleProof = null;
+  state.artifacts.directingRevision = reportPath;
+  const workItems = normalizeWorkItems(state);
+  for (const sceneId of changedSceneIds) {
+    const id = `directing-revision-${sceneId}`;
+    const next = {
+      id,
+      label: `同步导演重编镜头 ${sceneId}`,
+      status: 'pending',
+      updatedAt: at,
+      artifact: reportPath,
+      note: '按新 storyboard 同步 project.json 执行树并重新验证。',
+    };
+    const index = workItems.findIndex((item) => item.id === id);
+    if (index >= 0) workItems[index] = next;
+    else workItems.push(next);
+  }
+  state.updatedAt = at;
+  state.history.push({
+    at,
+    action,
+    stage: state.stage,
+    note: `${changedSceneIds.join(', ')} · ${reportPath}`,
+  });
+  return state;
+};
+
 const REVIEW_START = '<!-- production-state:start -->';
 const REVIEW_END = '<!-- production-state:end -->';
 const approvalLabels = {

@@ -93,6 +93,8 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(packageJson.scripts['provider:attempt'], 'node scripts/provider-attempt.mjs');
   assert.equal(packageJson.scripts['project:plan'], 'node scripts/project-plan.mjs');
   assert.equal(packageJson.scripts['project:storyboard'], 'node scripts/project-storyboard.mjs');
+  assert.equal(packageJson.scripts['project:revise-preview-directing'], 'node scripts/project-revise-preview-directing.mjs');
+  assert.equal(packageJson.scripts['project:asset-lifecycle'], 'node scripts/project-asset-lifecycle.mjs');
   assert.equal(packageJson.scripts['project:semantic-contracts'], 'node scripts/project-semantic-contracts.mjs');
   assert.equal(
     packageJson.scripts['project:confirm-concept'],
@@ -139,8 +141,8 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(starterProject.scenes[0].composition.nodes[1].visibility.initial, 'hidden');
   assert.deepEqual(starterProject.sceneTransitions, []);
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
-  assert.equal(starterManifest.schemaVersion, 3);
-  assert.equal(starterQuality.schemaVersion, 3);
+  assert.equal(starterManifest.schemaVersion, 4);
+  assert.equal(starterQuality.schemaVersion, 4);
   assert.equal(starterQuality.eventTimeline.length, 3);
   assert.equal(starterQuality.composites.length, 3);
   assert.ok(starterQuality.composites.every(({status}) => status === 'passed'));
@@ -153,7 +155,9 @@ test('packaged runtime is lightweight and independent from production projects',
     'remotion.config.ts',
     'runtime-build.json',
     'scripts/production-state.mjs',
+    'scripts/directing-revision-lib.mjs',
     'scripts/asset-evidence-lib.mjs',
+    'scripts/asset-manifest-lib.mjs',
     'scripts/audio-preflight-lib.mjs',
     'scripts/provider-lib.mjs',
     'scripts/generation-attempt-lib.mjs',
@@ -168,6 +172,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-metrics-run.mjs',
     'scripts/project-metrics.mjs',
     'scripts/project-audio-preflight.mjs',
+    'scripts/project-asset-lifecycle.mjs',
     'scripts/render-cache-lib.mjs',
     'scripts/runtime-build-lib.mjs',
     'scripts/subtitle-lib.mjs',
@@ -179,6 +184,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-semantic-contracts.mjs',
     'scripts/project-plan.mjs',
     'scripts/project-storyboard.mjs',
+    'scripts/project-revise-preview-directing.mjs',
     'scripts/storyboard-lib.mjs',
     'scripts/project-confirm-concept.mjs',
     'scripts/style-motion-proof.mjs',

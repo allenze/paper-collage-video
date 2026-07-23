@@ -3,6 +3,10 @@ import {spawn} from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import {
+  assertAssetManifest,
+  createAssetRecordId,
+} from './asset-manifest-lib.mjs';
 import {ROOT, SLUG_PATTERN, fileExists, probeMedia, readJson, writeJson} from './project-lib.mjs';
 import {
   SEMANTIC_RISK_CLASSES,
@@ -754,8 +758,10 @@ export const loadAssetRequest = async (requestInput) => {
   if (request.stateSheetRecoveryBinding) {
     const manifestFile = path.join(ROOT, 'projects', request.projectSlug, 'assets-manifest.json');
     if (!(await fileExists(manifestFile))) throw new Error('状态表恢复请求缺少 assets-manifest.json，无法证明完整原表上下文');
-    const manifest = await readJson(manifestFile);
-    const source = manifest.assets?.find(({assetId}) => assetId === request.stateSheetRecoveryBinding.sourceSheetAssetId);
+    const manifest = assertAssetManifest(await readJson(manifestFile), request.projectSlug);
+    const source = manifest.assets?.find(({assetId, lifecycle}) =>
+      assetId === request.stateSheetRecoveryBinding.sourceSheetAssetId &&
+      ['active', 'recovery-source'].includes(lifecycle?.status));
     const sourceBinding = source?.stateSheetBinding ?? source?.request?.stateSheetBinding ?? null;
     if (
       source?.capability !== 'image' ||
@@ -774,7 +780,8 @@ export const loadAssetRequest = async (requestInput) => {
     if (!(await fileExists(sourceFile))) throw new Error('状态表恢复来源文件不存在');
     if (source.assetId === request.assetId || sourceFile === resolveWorkspacePath(request.output, '状态表恢复输出')) throw new Error('状态表恢复必须写入新资产，不能覆盖用于一致性证明的完整原表');
     if (request.stateSheetRecoveryBinding.mode === 'masked-sheet-edit') {
-      const mask = manifest.assets?.find(({assetId}) => assetId === request.stateSheetRecoveryBinding.maskAssetId);
+      const mask = manifest.assets?.find(({assetId, lifecycle}) =>
+        assetId === request.stateSheetRecoveryBinding.maskAssetId && lifecycle?.status === 'active');
       const maskFile = mask?.file ? resolveWorkspacePath(mask.file, '状态表恢复遮罩') : null;
       if (!maskFile || mask.capability !== 'image' || !(await fileExists(maskFile))) throw new Error('masked-sheet-edit 必须引用已登记且存在的完整画布遮罩');
       const [sourceMetadata, maskMetadata] = await Promise.all([sharp(sourceFile).metadata(), sharp(maskFile).metadata()]);
@@ -920,18 +927,25 @@ export const recordAssetProvenance = async ({
       ? await readJson(manifestFile)
       : {
           $schema: '../../schemas/assets-manifest.schema.json',
-          schemaVersion: 3,
+          schemaVersion: 4,
           projectSlug: request.projectSlug,
           assets: [],
         };
-    if (manifest.projectSlug !== request.projectSlug || !Array.isArray(manifest.assets)) {
-      throw new Error(`资产清单无效：${path.relative(ROOT, manifestFile)}`);
-    }
-    if (manifest.schemaVersion !== 3) {
-      throw new Error('assets-manifest.json 必须使用 schemaVersion 3；请重新创建项目。');
-    }
+    assertAssetManifest(manifest, request.projectSlug);
     const actualModel = model || request.model || provider.model || null;
+    const recordedAt = new Date().toISOString();
+    const requestFingerprint = createRequestFingerprint({
+      request,
+      providerId: provider.id,
+      model: actualModel,
+    });
     record = {
+      recordId: createAssetRecordId({
+        assetId: request.assetId,
+        requestFingerprint,
+        sha256,
+        recordedAt,
+      }),
       assetId: request.assetId,
       capability: request.capability,
       file: path.relative(ROOT, output),
@@ -941,11 +955,7 @@ export const recordAssetProvenance = async ({
       model: actualModel,
       externalId: externalId || null,
       attemptId,
-      requestFingerprint: createRequestFingerprint({
-        request,
-        providerId: provider.id,
-        model: actualModel,
-      }),
+      requestFingerprint,
       reusedFrom,
       sha256,
       sizeBytes: stat.size,
@@ -954,7 +964,7 @@ export const recordAssetProvenance = async ({
           ? {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false}
           : metadata
         : null,
-      recordedAt: new Date().toISOString(),
+      recordedAt,
       request: {...request},
       compositionBinding: request.compositionBinding ?? null,
       stateBinding: request.stateBinding ?? null,
@@ -962,11 +972,23 @@ export const recordAssetProvenance = async ({
       stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
       semanticBinding: request.semanticBinding ?? null,
       familyFingerprint: null,
+      lifecycle: {
+        status: 'active',
+        changedAt: recordedAt,
+        reason: 'recorded',
+        supersededBy: null,
+      },
     };
-    manifest.assets = [
-      ...manifest.assets.filter(({assetId}) => assetId !== request.assetId),
-      record,
-    ];
+    for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
+      assetId === request.assetId && lifecycle.status === 'active')) {
+      previous.lifecycle = {
+        status: 'superseded',
+        changedAt: recordedAt,
+        reason: 'replaced-by-new-record',
+        supersededBy: record.recordId,
+      };
+    }
+    manifest.assets.push(record);
     const familyKey = (asset) => {
       const binding = asset.compositionBinding;
       if (!binding) return null;
@@ -978,9 +1000,10 @@ export const recordAssetProvenance = async ({
         binding.canvas?.height,
       ].join(':');
     };
-    const familyKeys = new Set(manifest.assets.map(familyKey).filter(Boolean));
+    const activeAssets = manifest.assets.filter(({lifecycle}) => lifecycle.status === 'active');
+    const familyKeys = new Set(activeAssets.map(familyKey).filter(Boolean));
     for (const key of familyKeys) {
-      const members = manifest.assets
+      const members = activeAssets
         .filter((asset) => familyKey(asset) === key)
         .sort((left, right) => left.assetId.localeCompare(right.assetId));
       const familyFingerprint = createHash('sha256')

@@ -1,9 +1,10 @@
 {
   "$schema": "../../schemas/quality-report.schema.json",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "projectSlug": "{{slug}}",
   "updatedAt": "{{createdAt}}",
   "eventTimeline": [],
+  "assetHistory": [],
   "assets": [],
   "composites": []
 }

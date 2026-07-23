@@ -3,13 +3,28 @@
   "$id": "https://local.paper-collage.dev/quality-report.schema.json",
   "title": "Paper Collage Asset and Composite Quality Report",
   "type": "object",
-  "required": ["schemaVersion", "projectSlug", "updatedAt", "eventTimeline", "assets", "composites"],
+  "required": ["schemaVersion", "projectSlug", "updatedAt", "eventTimeline", "assetHistory", "assets", "composites"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 3},
+    "schemaVersion": {"const": 4},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "updatedAt": {"type": "string", "format": "date-time"},
     "eventTimeline": {"type": "array", "items": {"type": "object"}},
+    "assetHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["recordId", "assetId", "file", "sha256", "lifecycle"],
+        "properties": {
+          "recordId": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "assetId": {"type": "string"},
+          "file": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "lifecycle": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
     "assets": {
       "type": "array",
       "items": {

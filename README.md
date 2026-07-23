@@ -155,6 +155,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
 | `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
 | `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v6 节拍 treatments、意图转场、可见性/组合/状态计划、风险与证明时刻 |
+| `npm run project:revise-preview-directing -- <slug> --input=<file>` | 在预览退回后保护概念/风格并按既定 motion budget 正式重编导演字段 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
 | `npm run project:resume -- <slug>` | 输出最小恢复状态、下一命令和未完成批次 |
@@ -168,6 +169,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run provider:attempt -- reserve --request=<file>` | 在宿主生图前原子预留一次批准额度并返回 attempt id |
 | `npm run project:handoff-check -- <slug>` | 旧客户端兼容检查；新 Skill 使用 `project:resume` 的 handoff 字段 |
 | `npm run project:checkpoint -- <slug> <id> <status>` | 记录地点、人物、旁白或质检批次的可恢复进度 |
+| `npm run project:asset-lifecycle -- <slug> --asset=<id> --status=<active|rejected|recovery-source> --reason=<原因>` | 保留溯源并明确资产是否进入当前质量分母 |
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
 | `npm run project:composition-proof -- <slug> [--force]` | 按项目、资产与 runtime-build 指纹增量生成关系/语义证明；`--force` 显式禁用全部证明缓存 |
@@ -207,7 +209,7 @@ Skill 不会只根据名称猜测能力存在：它先检查当前宿主的实�
 
 新图像请求使用 schema v3，同时声明组合绑定与语义风险。人物、复杂拓扑、功能机构和说明图先写入 `semantic-contracts.json`，再由 proof target 和证据型质量门验证；prompt 不作为验收依据。宿主生图先运行 `provider:attempt reserve`，命令 adapter 由 `provider:run` 自动预留。所有可能计费的成功、废稿、拒绝和放弃结果写入只追加账本，预算用尽时下一次调用被阻断。
 
-被接受的输出仍通过 `provider:run` 或 `provider:record` 写入 manifest v3，记录 provider、模型/任务 id、请求指纹、SHA-256、组合/语义绑定、母版/派生成员和源家族指纹。相同 provider、模型、输入、设置和完整绑定才允许 `provider:reuse`；图像仍需在当前项目通过质量检查。完整契约见 [Provider Configuration](skills/make-paper-collage-video/references/providers.md) 和 [Semantic Production Contracts](skills/make-paper-collage-video/references/semantic-contracts.md)。
+被接受的输出仍通过 `provider:run` 或 `provider:record` 写入 manifest v4，记录 provider、模型/任务 id、请求指纹、SHA-256、组合/语义绑定、母版/派生成员、源家族指纹和生命周期。替换记录保留为 `superseded`；`rejected` 与 `recovery-source` 保留审计但不进入当前质量分母。相同 provider、模型、输入、设置和完整绑定才允许 `provider:reuse`；图像仍需在当前项目通过质量检查。完整契约见 [Provider Configuration](skills/make-paper-collage-video/references/providers.md) 和 [Semantic Production Contracts](skills/make-paper-collage-video/references/semantic-contracts.md)。
 
 ## 角色素材表处理
 
@@ -263,7 +265,7 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 - 项目协议、slug、视频规格和唯一 id。
 - 递归节点、注册画布、支撑槽位/接触区、环境边界/mask、旁白、音乐、音效和纸张纹理是否存在且一致。
 - 人物 PNG 是否真的有透明区域。
-- 按透明像素推断真实色键，检查可见半透明边缘是否仍有对应溢色。
+- 优先读取清边处理报告声明的真实色键，检查可见半透明边缘是否仍有对应溢色；只有无报告且透明 RGB 明显高饱和时才回退推断。清边输出同时执行 despill 和透明 RGB edge padding，避免缩放采样把原色键混回边缘。
 - 非注册场景素材是否达到输出规格；注册成员和 mask 是否与母版画布完全一致。
 - 旁白配置时长是否等于 ffprobe 实测时长。
 - 项目逐幕蓝图、组合模式、证明 id/时刻/断言是否与已批准故事板一致。

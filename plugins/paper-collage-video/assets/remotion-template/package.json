@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video-workspace",
-  "version": "0.14.0-dev.5",
+  "version": "0.14.0-dev.8",
   "description": "Configuration-driven paper-collage video pipeline and Codex plugin built with Remotion.",
   "private": true,
   "type": "module",
@@ -37,6 +37,7 @@
     "project:new": "node scripts/project-new.mjs",
     "project:plan": "node scripts/project-plan.mjs",
     "project:storyboard": "node scripts/project-storyboard.mjs",
+    "project:revise-preview-directing": "node scripts/project-revise-preview-directing.mjs",
     "project:semantic-contracts": "node scripts/project-semantic-contracts.mjs",
     "project:confirm-concept": "node scripts/project-confirm-concept.mjs",
     "project:quality": "node scripts/project-metrics-run.mjs --category=deterministic-check --operation=quality-command --script=scripts/project-quality.mjs --slug-index=0 --",
@@ -46,6 +47,7 @@
     "project:status": "node scripts/project-status.mjs",
     "project:handoff-check": "node scripts/project-handoff-check.mjs",
     "project:checkpoint": "node scripts/project-checkpoint.mjs",
+    "project:asset-lifecycle": "node scripts/project-asset-lifecycle.mjs",
     "project:review-sync": "node scripts/project-review-sync.mjs",
     "project:advance": "node scripts/project-advance.mjs",
     "project:assets-ready": "node scripts/project-metrics-run.mjs --category=deterministic-check --operation=assets-ready --script=scripts/project-assets-ready.mjs --slug-index=0 --",

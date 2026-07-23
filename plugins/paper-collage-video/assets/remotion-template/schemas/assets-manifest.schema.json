@@ -6,14 +6,15 @@
   "required": ["schemaVersion", "projectSlug", "assets"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 3},
+    "schemaVersion": {"const": 4},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "assets": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["assetId", "capability", "file", "provider", "adapter", "requestFingerprint", "reusedFrom", "sha256", "sizeBytes", "recordedAt", "request", "compositionBinding", "familyFingerprint"],
+        "required": ["recordId", "assetId", "capability", "file", "provider", "adapter", "requestFingerprint", "reusedFrom", "sha256", "sizeBytes", "recordedAt", "request", "compositionBinding", "familyFingerprint", "lifecycle"],
         "properties": {
+          "recordId": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "assetId": {"type": "string"},
           "capability": {"enum": ["text", "image", "voice"]},
           "file": {"type": "string"},
@@ -45,7 +46,18 @@
           "stateSheetRecoveryBinding": {"type": ["object", "null"]},
           "sourceSheetAssetId": {"type": ["string", "null"]},
           "semanticBinding": {"type": ["object", "null"]},
-          "familyFingerprint": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+          "familyFingerprint": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "lifecycle": {
+            "type": "object",
+            "required": ["status", "changedAt", "reason", "supersededBy"],
+            "properties": {
+              "status": {"enum": ["active", "superseded", "rejected", "recovery-source"]},
+              "changedAt": {"type": "string", "format": "date-time"},
+              "reason": {"type": "string"},
+              "supersededBy": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }

@@ -7,6 +7,7 @@ import sharp from 'sharp';
 import {createRequestFingerprint} from '../scripts/provider-lib.mjs';
 import {
   assertQualityReady,
+  buildQualityReviewScaffold,
   collectCompositeQualityTargets,
   compositionProofReportPath,
   createQualityReviewScaffold,
@@ -18,6 +19,15 @@ import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {deriveSubtitleCues, segmentSubtitleText} from '../scripts/subtitle-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const manifestFixture = (projectSlug, assets) => ({
+  schemaVersion: 4,
+  projectSlug,
+  assets: assets.map((record, index) => ({
+    recordId: String(index + 1).padStart(64, '0'),
+    lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+    ...record,
+  })),
+});
 
 test('python resolution prefers an explicit override, then the workspace venv', () => {
   assert.equal(
@@ -371,10 +381,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
     );
     await fs.writeFile(
       path.join(projectDirectory, 'assets-manifest.json'),
-      `${JSON.stringify({
-        schemaVersion: 3,
-        projectSlug: slug,
-        assets: [
+      `${JSON.stringify(manifestFixture(slug, [
           {
             assetId: 'hero-alpha',
             capability: 'image',
@@ -383,14 +390,21 @@ test('required asset quality resets on hashes and batch reviews write atomically
               quality: {requiredChecks: ['edge-clean']},
             },
           },
-        ],
-      })}\n`,
+          {
+            assetId: 'rejected-style',
+            capability: 'image',
+            file: path.relative(ROOT, characterFile),
+            lifecycle: {status: 'rejected', changedAt: '2026-01-02T00:00:00.000Z', reason: 'human-rejected', supersededBy: null},
+          },
+        ]))}\n`,
       'utf8',
     );
 
     let status = await prepareQualityReport(slug);
     assert.equal(status.ready, false);
     assert.equal(status.pending, 2);
+    assert.equal(status.report.assetHistory.length, 1);
+    assert.equal(status.report.assetHistory[0].lifecycle.status, 'rejected');
     assert.deepEqual(
       status.report.assets.find(({kind}) => kind === 'character').requiredChecks,
       ['edge-clean'],
@@ -420,12 +434,14 @@ test('required asset quality resets on hashes and batch reviews write atomically
     );
     assert.equal(await fs.readFile(reportFile, 'utf8'), beforeInvalidBatch);
 
+    const built = await buildQualityReviewScaffold({slug, reviewer: 'test-vision'});
+    assert.ok(built.scaffold.reviews.every(({evidenceFiles}) => evidenceFiles.length > 0));
     status = await recordQualityReviews({
       slug,
-      reviews: status.report.assets.map((asset) => ({
-        assetId: asset.assetId,
-        reviewer: 'test-vision',
-        passedChecks: asset.requiredChecks,
+      reviews: built.scaffold.reviews.map(({evidenceFiles, pendingChecks, ...review}) => ({
+        ...review,
+        passedChecks: pendingChecks,
+        failedChecks: [],
         note: 'Fixture reviewed',
       })),
     });
@@ -518,15 +534,11 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
       sceneTransitions: [],
     };
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`, 'utf8');
-    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
-      schemaVersion: 3,
-      projectSlug: slug,
-      assets: [
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [
         ['boat-rear', 'support-rear'],
         ['traveler', 'subject'],
         ['boat-front', 'support-front'],
-      ].map(([assetId, outputRole]) => ({assetId, capability: 'image', file: relativeSource(assetId), compositionBinding: binding(assetId, outputRole)})),
-    }, null, 2)}\n`, 'utf8');
+      ].map(([assetId, outputRole]) => ({assetId, capability: 'image', file: relativeSource(assetId), compositionBinding: binding(assetId, outputRole)}))), null, 2)}\n`, 'utf8');
 
     const [target] = await collectCompositeQualityTargets(project);
     const proofFile = compositionProofReportPath(slug);

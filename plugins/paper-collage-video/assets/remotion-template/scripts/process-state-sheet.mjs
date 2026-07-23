@@ -12,6 +12,7 @@ import {
   stateOutputName,
   validateStateSheetSpec,
 } from './state-sheet-lib.mjs';
+import {assertAssetManifest, createAssetRecordId} from './asset-manifest-lib.mjs';
 
 const run = (command, args) => new Promise((resolve, reject) => {
   const child = spawn(command, args, {cwd: ROOT, stdio: 'inherit'});
@@ -39,9 +40,9 @@ try {
   const outputDirectory = workspacePath(spec.outputDirectory, 'state sheet outputDirectory');
   if (!(await fileExists(input))) throw new Error(`state sheet input 不存在：${spec.input}`);
   const manifestFile = path.join(ROOT, 'projects', spec.projectSlug, 'assets-manifest.json');
-  const manifest = await readJson(manifestFile);
-  if (manifest.schemaVersion !== 3 || manifest.projectSlug !== spec.projectSlug) throw new Error('assets-manifest.json 与 state sheet 项目不匹配');
-  const source = manifest.assets.find(({assetId}) => assetId === spec.sourceAssetId);
+  const manifest = assertAssetManifest(await readJson(manifestFile), spec.projectSlug);
+  const source = manifest.assets.find(({assetId, lifecycle}) =>
+    assetId === spec.sourceAssetId && lifecycle?.status === 'active');
   if (!source || path.resolve(ROOT, source.file) !== input) throw new Error('sourceAssetId 必须指向 provider 已登记的 sheet input');
   const sourceBinding = source.stateSheetBinding ?? source.request?.stateSheetBinding;
   if (!sourceBinding || sourceBinding.poseFamilyId !== spec.poseFamilyId || sourceBinding.layout.columns !== spec.layout.columns || sourceBinding.layout.rows !== spec.layout.rows) throw new Error('state sheet spec 必须匹配 source asset 的 stateSheetBinding');
@@ -65,7 +66,8 @@ try {
       await run(python, [
         'scripts/remove_chroma_key.py', '--input', cell, '--out', output,
         '--transparent-threshold', '18', '--opaque-threshold', '95', '--edge-feather', '0.6',
-        '--key-color', spec.keying.keyColor, '--matte-erode', String(spec.keying.matteErode), '--force',
+        '--key-color', spec.keying.keyColor, '--matte-erode', String(spec.keying.matteErode),
+        '--metadata', `${output}.key.json`, '--force',
       ]);
     }
   } finally {
@@ -84,42 +86,58 @@ try {
   if (dimensions.size !== 1) throw new Error(`注册状态格尺寸不一致：${[...dimensions].join(', ')}`);
   const familyFingerprint = createStateFamilyFingerprint({sourceSha256, spec, members});
   const recordedAt = new Date().toISOString();
-  const derived = members.map(({stateId, sha256: memberSha256, file, stat, metadata}) => ({
-    assetId: `${spec.poseFamilyId}-${stateId}`,
-    capability: 'image',
-    file,
-    provider: 'local-derivation',
-    adapter: 'registered-sheet-cell',
-    tool: 'process-state-sheet',
-    model: null,
-    externalId: null,
-    attemptId: source.attemptId ?? null,
-    requestFingerprint: createHash('sha256').update(`${source.requestFingerprint}:${stateId}:${familyFingerprint}`).digest('hex'),
-    reusedFrom: spec.sourceAssetId,
-    sha256: memberSha256,
-    sizeBytes: stat.size,
-    media: {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false},
-    recordedAt,
-    request: {},
-    compositionBinding: {
-      sceneId: spec.sceneId,
-      nodeId: spec.nodeId,
-      pattern: 'state-sequence',
-      registrationId: spec.registration.id,
-      sourceMasterAssetId: spec.registration.sourceMasterAssetId,
-      outputRole: 'registered-state',
-      canvas: {width: metadata.width, height: metadata.height},
-      derivation: {method: 'crop', parentAssetId: spec.sourceAssetId},
-    },
-    stateBinding: {poseFamilyId: spec.poseFamilyId, stateId, registrationId: spec.registration.id, sourceMasterAssetId: spec.registration.sourceMasterAssetId},
-    stateSheetBinding: null,
-    stateSheetRecoveryBinding: sourceRecovery,
-    sourceSheetAssetId: spec.sourceAssetId,
-    semanticBinding: source.semanticBinding ?? null,
-    familyFingerprint,
-  }));
+  const derived = members.map(({stateId, sha256: memberSha256, file, stat, metadata}) => {
+    const assetId = `${spec.poseFamilyId}-${stateId}`;
+    const requestFingerprint = createHash('sha256').update(`${source.requestFingerprint}:${stateId}:${familyFingerprint}`).digest('hex');
+    return {
+      recordId: createAssetRecordId({assetId, requestFingerprint, sha256: memberSha256, recordedAt}),
+      assetId,
+      capability: 'image',
+      file,
+      provider: 'local-derivation',
+      adapter: 'registered-sheet-cell',
+      tool: 'process-state-sheet',
+      model: null,
+      externalId: null,
+      attemptId: source.attemptId ?? null,
+      requestFingerprint,
+      reusedFrom: spec.sourceAssetId,
+      sha256: memberSha256,
+      sizeBytes: stat.size,
+      media: {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false},
+      recordedAt,
+      request: {},
+      compositionBinding: {
+        sceneId: spec.sceneId,
+        nodeId: spec.nodeId,
+        pattern: 'state-sequence',
+        registrationId: spec.registration.id,
+        sourceMasterAssetId: spec.registration.sourceMasterAssetId,
+        outputRole: 'registered-state',
+        canvas: {width: metadata.width, height: metadata.height},
+        derivation: {method: 'crop', parentAssetId: spec.sourceAssetId},
+      },
+      stateBinding: {poseFamilyId: spec.poseFamilyId, stateId, registrationId: spec.registration.id, sourceMasterAssetId: spec.registration.sourceMasterAssetId},
+      stateSheetBinding: null,
+      stateSheetRecoveryBinding: sourceRecovery,
+      sourceSheetAssetId: spec.sourceAssetId,
+      semanticBinding: source.semanticBinding ?? null,
+      familyFingerprint,
+      lifecycle: {status: 'active', changedAt: recordedAt, reason: 'registered-sheet-cell-derived', supersededBy: null},
+    };
+  });
   const derivedIds = new Set(derived.map(({assetId}) => assetId));
-  manifest.assets = [...manifest.assets.filter(({assetId}) => !derivedIds.has(assetId)), ...derived];
+  const replacementByAssetId = new Map(derived.map((record) => [record.assetId, record]));
+  for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
+    derivedIds.has(assetId) && lifecycle?.status === 'active')) {
+    previous.lifecycle = {
+      status: 'superseded',
+      changedAt: recordedAt,
+      reason: 'replaced-by-new-registered-cell',
+      supersededBy: replacementByAssetId.get(previous.assetId).recordId,
+    };
+  }
+  manifest.assets.push(...derived);
   await writeJson(manifestFile, manifest);
   const providerImageCalls = ['host', 'command'].includes(source.adapter) ? 1 : 0;
   const recoveryTargetCount = sourceRecovery?.targetStateIds?.length ?? derived.length;

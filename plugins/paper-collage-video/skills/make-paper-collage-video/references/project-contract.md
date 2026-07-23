@@ -14,8 +14,8 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `requests/*.json` | Per-output generation/import request plus composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
-| `assets-manifest.json` | Provider provenance, source families, fingerprints, and hashes |
-| `quality-report.json` | Hash-bound asset and composite quality |
+| `assets-manifest.json` | Provider provenance, source families, fingerprints, hashes, and active/superseded/rejected/recovery-source lifecycle |
+| `quality-report.json` | Hash-bound current asset/composite quality plus non-current asset history |
 | `review.md` | Generated approval summary plus natural-language revision history |
 
 Never ask the human to edit machine JSON. Paths in `project.json` are relative to `public/`; production artifacts are relative to the workspace root.
@@ -34,6 +34,8 @@ Never ask the human to edit machine JSON. Paths in `project.json` are relative t
 | `final-render` | successful `project:render` | `complete` |
 
 The combined confirmation is the normal path. Composition proof is machine evidence inside the existing style or asset stage, not a fourth human gate.
+
+After `request-preview-revision`, a directing-only change uses `project:revise-preview-directing`. It preserves approved concept/style semantics, recompiles the edited authoring fields against the existing motion budget, records `directing-revision.json`, invalidates old render/proof artifacts, and creates execution-sync work items. Concept, factual, provider, or production-profile changes still require their owning approval path.
 
 `approve-style-voice` requires a current schema-v5 `style-motion-proof.json` with `scope=style`, bound to the compiler-selected highest-risk scene, treatment id, and directing fingerprint. Every selected target, including `free`, must have at least one structured composite with current full-resolution frame/crop/debug evidence. Registered or semantic targets additionally bind member hashes, timing/proof inputs, runtime build, and source family; per-member alpha/checkerboard/tight/motion-stress evidence must exist, and participating asset/composite semantic checks must already be recorded. This is an executable precondition inside `style-review`, not another approval state.
 
@@ -76,7 +78,7 @@ Every adjacent scene pair has one top-level `sceneTransitions[]` record with `in
 - `scene.events` is the only visual/sound event source. Every storyboard beat has one or more ordered events; event drift is at most `0.035` normalized units.
 - A visibility event targets an existing composition node and persists after its window. A first `show` requires `visibility.initial=hidden`; a first `hide` requires an initially visible node. Supported transitions are `cut`, `fade-rise`, and `fade-scale`.
 - Emphasis events are transient and use the bounded actions from `schemas/composition.schema.json`, including `drop-impact` and `carve`. They do not control persistent visibility.
-- Bind a critical event to `proofTimeId`; the proof must fall inside its action window. If the approved beat names audio, at least one matching event owns both that proof id and the sound.
+- Bind a critical event to `proofTimeId`. Transient emphasis/hold proof remains inside its action window; visibility proof may show the settled persistent state after the action starts and before the same target's next visibility change. If the approved beat names audio, at least one matching event owns both that proof id and the sound.
 - Use a `hold` event only for an approved quiet observation beat: target `scene`, bind a proof inside the window, and keep it within the runtime maximum. Never encode an unexplained wait as a long `tailSeconds`.
 
 ## Validation and Failure Routing

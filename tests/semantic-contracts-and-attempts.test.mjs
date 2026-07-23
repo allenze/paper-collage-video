@@ -22,6 +22,15 @@ import {
 import {validateSemanticContracts} from '../scripts/semantic-contract-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const manifestFixture = (projectSlug, assets) => ({
+  schemaVersion: 4,
+  projectSlug,
+  assets: assets.map((record, index) => ({
+    recordId: String(index + 1).padStart(64, '0'),
+    lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+    ...record,
+  })),
+});
 
 const fingerprint = ({face, body, head, detail, palette}) => ({
   faceOrFront: face,
@@ -256,7 +265,7 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
       scenes: [],
     }, null, 2)}\n`);
     await fs.writeFile(path.join(projectDirectory, 'generation-attempts.jsonl'), '');
-    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({schemaVersion: 3, projectSlug: slug, assets: []})}\n`);
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, []))}\n`);
     const reserved = await reserveGenerationAttempt({request, provider});
     await assert.rejects(() => reserveGenerationAttempt({request: {...request, assetId: 'second-card'}, provider}), /预算已用尽/);
 
@@ -320,15 +329,11 @@ test('diagram filters fail deterministically and semantic proof targets span sce
       sceneTransitions: [{id: 'a-b', fromSceneId: 'scene-a', toSceneId: 'scene-b', intent: 'impact-cut', rationale: 'The fixture deliberately tests an abrupt semantic boundary.', type: 'cut', durationSeconds: 0}],
     };
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`);
-    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
-      schemaVersion: 3,
-      projectSlug: slug,
-      assets: [{
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [{
         assetId: 'diagram-card', capability: 'image', file: path.relative(ROOT, cardFile),
         request: {quality: {kind: 'diagram'}, semanticBinding: {riskClass: 'diagram-critical', contractIds: ['diagram-contract']}},
         semanticBinding: {riskClass: 'diagram-critical', contractIds: ['diagram-contract']},
-      }],
-    }, null, 2)}\n`);
+      }]), null, 2)}\n`);
     await fs.writeFile(path.join(projectDirectory, 'semantic-contracts.json'), `${JSON.stringify({
       schemaVersion: 1,
       projectSlug: slug,

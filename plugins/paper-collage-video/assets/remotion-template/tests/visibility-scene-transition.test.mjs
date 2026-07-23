@@ -11,9 +11,31 @@ import {
   validateSceneTransitionSequence,
 } from '../src/sceneTimeline.mjs';
 import {
+  resolveEventProofWindow,
+} from '../scripts/project-lib.mjs';
+import {
   resolveVisibilityState,
   validateVisibilityLifecycle,
 } from '../src/visibilityLifecycle.mjs';
+
+test('visibility proof window includes the settled state until the next visibility change', () => {
+  const events = [
+    visibilityEvent({id: 'show', at: 0.2, action: 'show', durationSeconds: 1}),
+    visibilityEvent({id: 'hide', at: 0.8, action: 'hide', durationSeconds: 1}),
+  ];
+  assert.deepEqual(resolveEventProofWindow({
+    event: events[0],
+    eventIndex: 0,
+    events,
+    sceneDurationSeconds: 10,
+  }), {start: 0.2, end: 0.8, mode: 'persistent-visibility'});
+  assert.deepEqual(resolveEventProofWindow({
+    event: {at: 0.4, targetId: 'subject', visual: {kind: 'emphasis', durationSeconds: 1}},
+    eventIndex: 0,
+    events: [],
+    sceneDurationSeconds: 10,
+  }), {start: 0.4, end: 0.5, mode: 'action-window'});
+});
 
 const visibilityEvent = ({id, at, action, transition = 'fade-rise', durationSeconds = 1}) => ({
   id,

@@ -274,9 +274,10 @@ test('state sheet processor turns one recorded provider image into registered lo
       },
     };
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: 4,
       projectSlug: slug,
       assets: [{
+        recordId: '1'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
         assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
         requestFingerprint: 'a'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
         recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,

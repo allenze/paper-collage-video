@@ -54,6 +54,7 @@ export const resolveRenderConcurrency = (
 
 export const countProviderGeneratedImages = (assets = []) =>
   assets.filter((asset) => {
+    if (asset.lifecycle && asset.lifecycle.status !== 'active') return false;
     if (asset.capability !== 'image') return false;
     const derivationMethod =
       asset.request?.compositionBinding?.derivation?.method ??
@@ -113,6 +114,34 @@ export const proofOverlapsTransition = ({
 }) => {
   const duration = Math.max(1, durationInFrames);
   return at < enterTransitionFrames / duration || at > 1 - exitTransitionFrames / duration;
+};
+
+export const resolveEventProofWindow = ({
+  event,
+  eventIndex,
+  events,
+  sceneDurationSeconds,
+}) => {
+  const start = event.at;
+  if (event.visual?.kind === 'visibility') {
+    const nextVisibility = (events ?? [])
+      .slice(eventIndex + 1)
+      .find((candidate) =>
+        candidate.targetId === event.targetId &&
+        candidate.visual?.kind === 'visibility',
+      );
+    return {
+      start,
+      end: nextVisibility?.at ?? 1,
+      mode: 'persistent-visibility',
+    };
+  }
+  const duration = event.visual?.durationSeconds ?? 0.1;
+  return {
+    start,
+    end: start + duration / Math.max(0.001, sceneDurationSeconds),
+    mode: 'action-window',
+  };
 };
 
 export const deriveContactSheetSamples = ({
@@ -231,13 +260,26 @@ export const inspectCharacterPng = async (file) => {
   }
 
   const keySampleCount = transparentPixels || lowAlphaPixels;
-  const keyColor = keySampleCount
+  const inferredKeyColor = keySampleCount
     ? [
         (transparentPixels ? transparentRed : lowAlphaRed) / keySampleCount,
         (transparentPixels ? transparentGreen : lowAlphaGreen) / keySampleCount,
         (transparentPixels ? transparentBlue : lowAlphaBlue) / keySampleCount,
       ]
     : null;
+  let keyMetadata = null;
+  try {
+    keyMetadata = JSON.parse(await fs.readFile(`${file}.key.json`, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  const declaredKeyColor = /^#[0-9a-f]{6}$/i.test(keyMetadata?.keyColor ?? '')
+    ? [1, 3, 5].map((index) => Number.parseInt(keyMetadata.keyColor.slice(index, index + 2), 16))
+    : null;
+  const inferredSaturation = inferredKeyColor
+    ? Math.max(...inferredKeyColor) - Math.min(...inferredKeyColor)
+    : 0;
+  const keyColor = declaredKeyColor ?? (inferredSaturation >= 80 ? inferredKeyColor : null);
   const keyMean = keyColor
     ? (keyColor[0] + keyColor[1] + keyColor[2]) / 3
     : 0;
@@ -285,6 +327,7 @@ export const inspectCharacterPng = async (file) => {
     partialPixels,
     visiblePixels,
     keyColor: keyChromaMagnitude >= 18 ? keyColorHex : null,
+    keyColorSource: declaredKeyColor ? 'metadata' : keyColor ? 'transparent-rgb-fallback' : null,
     keyEdgePixels,
     keyEdgeRatio:
       partialAlphaWeight === 0 ? 0 : keyEdgeAlphaWeight / partialAlphaWeight,
@@ -828,10 +871,17 @@ export const validateProject = async (project, options = {}) => {
         if (!proof) {
           add('error', 'scene-event-proof-missing', `event 绑定的证明时刻不存在：${event.proofTimeId}`, `${eventLocation}.proofTimeId`);
         } else {
-          const visualDuration = visual?.durationSeconds ?? 0.1;
-          const eventWindowEnd = event.at + visualDuration / Math.max(0.001, scene.durationInFrames / project.video.fps);
-          if (proof.at < event.at - 0.01 || proof.at > eventWindowEnd + 0.01) {
-            add('error', 'scene-event-proof-window', '绑定的证明时刻必须落在 event 动作窗口内。', `${eventLocation}.proofTimeId`);
+          const proofWindow = resolveEventProofWindow({
+            event,
+            eventIndex,
+            events: scene.events ?? [],
+            sceneDurationSeconds: scene.durationInFrames / project.video.fps,
+          });
+          if (proof.at < proofWindow.start - 0.01 || proof.at > proofWindow.end + 0.01) {
+            const message = proofWindow.mode === 'persistent-visibility'
+              ? 'visibility 证明时刻必须位于动作开始后、同一目标下一次显隐变化前。'
+              : '绑定的证明时刻必须落在 event 动作窗口内。';
+            add('error', 'scene-event-proof-window', message, `${eventLocation}.proofTimeId`);
           }
         }
       }

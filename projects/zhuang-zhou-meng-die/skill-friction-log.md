@@ -486,3 +486,11 @@
 - 影响：Skill/runtime 全量测试和打包一致性通过，但官方 validator 不能在标准 bootstrap 环境直接执行；若把手工 frontmatter 检查称为官方验证会造成错误口径。
 - 本次处理：明确保留该失败记录，不临时污染全局 Python；使用 package test 的源码/打包 Skill 逐字节一致性与确定性 frontmatter 检查作为补充证据。
 - 候选改进：让 validator 使用标准库可完成的受限 YAML 解析，或把 PyYAML 明确加入可复现的 Skill 验证环境与 doctor 检查。
+
+## F058：新增 runtime 测试错误引用仓库生产项目，源码通过但全新插件工作区失败（修复进入 dev.7）
+
+- 阶段：`0.14.0-dev.6` 实际安装缓存 / 全新工作区验证
+- 实际错误：源码中的 `directing-revision.test.mjs` 直接读取 `projects/zhuang-zhou-meng-die/{storyboard,project,production}.json`；仓库测试通过，但轻量插件按设计不携带生产项目，fresh workspace 因 `ENOENT` 连续失败 3 项。
+- 根因：新测试复用了现成生产数据，没有遵守“打包 runtime 独立于 production projects”的既有边界；package test 只确认测试文件被复制，没有执行安装缓存中的完整测试集。
+- 本次处理：新增自包含 `fixtures/directing-revision-fixture.mjs`，让源码与打包测试使用同一最小 plan/storyboard/production fixture；将该 fixture 纳入 `plugin:sync`，不把任何庄周项目内容打入插件。
+- 验收要求：安装缓存引导的全新工作区必须运行完整 `npm test`，不能只依赖源码测试和 starter 单项冒烟。

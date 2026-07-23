@@ -20,6 +20,15 @@ import {createRuntimeBuildFingerprint} from '../scripts/runtime-build-lib.mjs';
 
 const relativePublicSource = (file) => path.relative(path.join(ROOT, 'public'), file);
 const relativeWorkspaceFile = (file) => path.relative(ROOT, file);
+const manifestFixture = (projectSlug, assets) => ({
+  schemaVersion: 4,
+  projectSlug,
+  assets: assets.map((record, index) => ({
+    recordId: String(index + 1).padStart(64, '0'),
+    lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+    ...record,
+  })),
+});
 
 const writeFixture = async (slug) => {
   const projectDirectory = path.join(ROOT, 'projects', slug);
@@ -140,16 +149,12 @@ const writeFixture = async (slug) => {
       compositionPlan: {patterns: ['supported-subject'], relationships: [], stateSequences: [], continuousMotions: [], visibilityEvents: [], graphics: []},
     }],
   };
-  const manifest = {
-    schemaVersion: 3,
-    projectSlug: slug,
-    assets: [
+  const manifest = manifestFixture(slug, [
       {assetId: 'master', capability: 'image', file: relativeWorkspaceFile(files.master), request: {quality: {kind: 'style-sample'}}},
       {assetId: 'rear', capability: 'image', file: relativeWorkspaceFile(files.rear), compositionBinding: binding('rear', 'support-rear')},
       {assetId: 'subject', capability: 'image', file: relativeWorkspaceFile(files.subject), compositionBinding: binding('subject', 'subject')},
       {assetId: 'front', capability: 'image', file: relativeWorkspaceFile(files.front), compositionBinding: binding('front', 'support-front')},
-    ],
-  };
+    ]);
   const production = {
     $schema: '../../schemas/production.schema.json',
     schemaVersion: 1,

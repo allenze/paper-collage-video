@@ -47,10 +47,12 @@ export const createStateFamilyFingerprint = ({sourceSha256, spec, members}) =>
     .digest('hex');
 
 export const summarizeActualPoseSheets = (manifest) => {
-  const assets = manifest?.assets ?? [];
+  const assets = (manifest?.assets ?? []).filter(({lifecycle}) =>
+    !lifecycle || ['active', 'recovery-source'].includes(lifecycle.status));
   const assetsById = new Map(assets.map((asset) => [asset.assetId, asset]));
   const families = new Map();
-  for (const asset of assets.filter(({stateBinding}) => Boolean(stateBinding))) {
+  for (const asset of assets.filter(({stateBinding, lifecycle}) =>
+    Boolean(stateBinding) && lifecycle?.status !== 'recovery-source')) {
     const poseFamilyId = asset.stateBinding.poseFamilyId;
     const family = families.get(poseFamilyId) ?? {
       poseFamilyId,

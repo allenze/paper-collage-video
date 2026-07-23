@@ -8,6 +8,10 @@ import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {
+  assertAssetManifest,
+  transitionAssetLifecycle,
+} from '../scripts/asset-manifest-lib.mjs';
+import {
   deepMerge,
   expandCommandTemplate,
   recordAssetProvenance,
@@ -25,6 +29,26 @@ import {
 } from '../scripts/project-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('asset lifecycle preserves audit records and enforces one active record', () => {
+  const record = (recordId, status) => ({
+    recordId,
+    assetId: 'hero',
+    lifecycle: {status, changedAt: '2026-07-23T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+  });
+  const manifest = {
+    schemaVersion: 4,
+    projectSlug: 'lifecycle-fixture',
+    assets: [record('1'.repeat(64), 'active')],
+  };
+  assert.doesNotThrow(() => assertAssetManifest(manifest, 'lifecycle-fixture'));
+  transitionAssetLifecycle(manifest, 'hero', 'rejected', {reason: 'human rejected'});
+  assert.equal(manifest.assets[0].lifecycle.status, 'rejected');
+  transitionAssetLifecycle(manifest, 'hero', 'active', {reason: 'human restored'});
+  assert.equal(manifest.assets[0].lifecycle.status, 'active');
+  manifest.assets.push(record('2'.repeat(64), 'active'));
+  assert.throws(() => assertAssetManifest(manifest, 'lifecycle-fixture'), /多个 active/);
+});
 
 const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
   arc: 'A concise progression from setup through action to resolution.',
@@ -237,6 +261,19 @@ test('command adapters write a local output and provenance records its hash', as
     assert.equal(recorded.record.familyFingerprint, null);
     const manifest = JSON.parse(await fsp.readFile(recorded.manifestFile, 'utf8'));
     assert.equal(manifest.assets[0].assetId, 'draft-script');
+    assert.equal(manifest.assets[0].lifecycle.status, 'active');
+    await fsp.writeFile(output, 'replacement output');
+    await recordAssetProvenance({
+      request: recorded.record.request,
+      output,
+      provider: {id: 'test-command', adapter: 'command', model: 'test-model'},
+    });
+    const replaced = JSON.parse(await fsp.readFile(recorded.manifestFile, 'utf8'));
+    assert.equal(replaced.schemaVersion, 4);
+    assert.equal(replaced.assets.length, 2);
+    assert.equal(replaced.assets[0].lifecycle.status, 'superseded');
+    assert.equal(replaced.assets[0].lifecycle.supersededBy, replaced.assets[1].recordId);
+    assert.equal(replaced.assets[1].lifecycle.status, 'active');
   } finally {
     await fsp.rm(projectDirectory, {recursive: true, force: true});
   }
@@ -353,7 +390,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.equal(project.plan.schemaVersion, 2);
     assert.equal(project.plan.motionBudget, null);
     assert.equal(manifest.projectSlug, slug);
-    assert.equal(manifest.schemaVersion, 3);
+    assert.equal(manifest.schemaVersion, 4);
     assert.deepEqual(manifest.assets, []);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
@@ -718,7 +755,7 @@ test('generic chroma key removes magenta while preserving an opaque green subjec
   const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'paper-key-test-'));
   const input = path.join(directory, 'magenta.png');
   const output = path.join(directory, 'alpha.png');
-  const metadata = path.join(directory, 'alpha.key.json');
+  const metadata = `${output}.key.json`;
   try {
     const subject = await sharp({
       create: {width: 40, height: 40, channels: 3, background: '#00cc33'},
@@ -764,8 +801,41 @@ test('generic chroma key removes magenta while preserving an opaque green subjec
     assert.ok(center[3] > 250, `center alpha was eroded: ${center}`);
     const inspection = await inspectCharacterPng(output);
     assert.match(inspection.keyColor, /^#f[0-9a-f]0[0-9a-f]f[0-9a-f]$/i);
+    assert.equal(inspection.keyColorSource, 'metadata');
+    const transparentRgb = pixel(0, 0).slice(0, 3);
+    assert.ok(transparentRgb.every((channel) => channel !== 255 || transparentRgb[1] !== 0));
+    const resized = await sharp(output)
+      .resize(24, 24)
+      .flatten({background: '#777777'})
+      .raw()
+      .toBuffer();
+    let magentaPixels = 0;
+    for (let index = 0; index < resized.length; index += 3) {
+      if (resized[index] > 180 && resized[index + 2] > 180 && resized[index + 1] < 100) magentaPixels += 1;
+    }
+    assert.equal(magentaPixels, 0);
     assert.ok(inspection.keyEdgeRatio < 0.2, inspection);
     assert.ok(fs.existsSync(metadata));
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('neutral transparent RGB is not mistaken for a chroma key without metadata', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'paper-neutral-key-test-'));
+  const output = path.join(directory, 'neutral.png');
+  try {
+    const pixels = Buffer.alloc(8 * 8 * 4);
+    for (let index = 0; index < pixels.length; index += 4) {
+      pixels[index] = 243;
+      pixels[index + 1] = 235;
+      pixels[index + 2] = 216;
+      pixels[index + 3] = 0;
+    }
+    await sharp(pixels, {raw: {width: 8, height: 8, channels: 4}}).png().toFile(output);
+    const inspection = await inspectCharacterPng(output);
+    assert.equal(inspection.keyColor, null);
+    assert.equal(inspection.keyColorSource, null);
   } finally {
     await fsp.rm(directory, {recursive: true, force: true});
   }

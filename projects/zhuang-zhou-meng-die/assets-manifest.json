@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/assets-manifest.schema.json",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "projectSlug": "zhuang-zhou-meng-die",
   "assets": [
     {
@@ -45,7 +45,14 @@
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "semanticBinding": null,
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "e4d9dfb18d59c4f6fc7162d3680da3a994fc1d575ed15add88c271b46502b656",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T12:32:59.887Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "zhuang-style-background-clean",
@@ -133,7 +140,14 @@
           "zhuang-background-topology"
         ]
       },
-      "familyFingerprint": "3fc08b2808fcfaf16032f041739c8c3dc158789606126356820d351623759413"
+      "familyFingerprint": "3fc08b2808fcfaf16032f041739c8c3dc158789606126356820d351623759413",
+      "recordId": "77fe5cc9ffb88d3c490152385aad192ee83f5951b5692b15bb586ab87ef549a6",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T12:59:57.516Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flight-sheet-v3",
@@ -321,7 +335,14 @@
           "referenceAssetIds": []
         }
       },
-      "familyFingerprint": "3d4752d4255e3f1eafd7a11937dfe4b81dee503b3efd2b3b2e47e290aaaf6b4b"
+      "familyFingerprint": "3d4752d4255e3f1eafd7a11937dfe4b81dee503b3efd2b3b2e47e290aaaf6b4b",
+      "recordId": "089e9bb8e5d59a07fdb0068b13f6219e2a17b5a5962505cc78c59236d201b0ef",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T13:04:19.882Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "reality-room-empty",
@@ -408,7 +429,14 @@
         "riskClass": "decorative",
         "contractIds": []
       },
-      "familyFingerprint": "1ec8bd83f5321bd374d705cfcde410d47cdca3f646f3096a1ff4b6e7cef70256"
+      "familyFingerprint": "1ec8bd83f5321bd374d705cfcde410d47cdca3f646f3096a1ff4b6e7cef70256",
+      "recordId": "68b6f0d3c56938ac994d0df4bdca4a7e41646aa36d171dea473f1f7cfab8e2b6",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T13:34:16.114Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "dream-flight",
@@ -491,7 +519,14 @@
         "riskClass": "decorative",
         "contractIds": []
       },
-      "familyFingerprint": "1cdf6f3b400d21105e4ac7c7610e138ce0e34babd79bcba15feb53ff8c69c644"
+      "familyFingerprint": "1cdf6f3b400d21105e4ac7c7610e138ce0e34babd79bcba15feb53ff8c69c644",
+      "recordId": "a456c0496a2796725b96764ab0105f5c19aac26fcab804857fce2fc3149bb514",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T13:36:51.559Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "dream-flower-journey",
@@ -578,7 +613,14 @@
         "riskClass": "decorative",
         "contractIds": []
       },
-      "familyFingerprint": "f53bbef7389fba6176ca60b8c1e3739db4fc743683509bf2f36cdc32d58739c2"
+      "familyFingerprint": "f53bbef7389fba6176ca60b8c1e3739db4fc743683509bf2f36cdc32d58739c2",
+      "recordId": "750474481b02a8888490e24bc60da92b660f8c396b2234881d151ed50ddd82a6",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T13:38:47.288Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "zhuang-awakening-sheet",
@@ -771,7 +813,14 @@
           ]
         }
       },
-      "familyFingerprint": "a77b3b8c5f112c72607a9115536062ea319f99bccddd8a013c6228ed01c03eb7"
+      "familyFingerprint": "a77b3b8c5f112c72607a9115536062ea319f99bccddd8a013c6228ed01c03eb7",
+      "recordId": "e67bca0386ac27d22ad3eefb49c8e241079ba57858e2da2591a54400c6d509bc",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T13:40:41.974Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "voice-scene-01",
@@ -819,7 +868,14 @@
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "semanticBinding": null,
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "a39a06125bf5837fc04a0e759e5a59dbcd89c0b98792495468fa50009ed20cb4",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:00:30.252Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "voice-scene-02",
@@ -867,7 +923,14 @@
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "semanticBinding": null,
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "27604e8150e764373f8f324a761d37ace29589ea3dc3980275b5075bb90f1bd0",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:00:30.462Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "voice-scene-03",
@@ -915,7 +978,14 @@
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "semanticBinding": null,
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "5b6974d8c2f91e687129c091dcb0390a2aa6dd83215e9d20242cd5943ed01dee",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:00:30.596Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "voice-scene-04",
@@ -963,7 +1033,14 @@
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "semanticBinding": null,
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "48df9a028ca7ad341812359daa79838549a4299fd9d8c1247415edf111d010cf",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:00:30.715Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "voice-scene-05",
@@ -1011,7 +1088,14 @@
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "semanticBinding": null,
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "d4d82301cd58c450d38e440ccb95927cb1f1ce2cb012379b7c31a0b074a9716c",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:00:30.827Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flight-states-wings-folded",
@@ -1088,7 +1172,14 @@
           ]
         }
       },
-      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253",
+      "recordId": "7536295908c434925928cac7cf55d78e66630bd1c5114ecc31fb0915c49a763c",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:16:19.993Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flight-states-wings-open",
@@ -1165,7 +1256,14 @@
           ]
         }
       },
-      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253",
+      "recordId": "8abbcbeef651a4b49c8168a11afc6bb94be4ea3a48b42f95031079f3de746224",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:16:19.993Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flight-states-wings-up",
@@ -1242,7 +1340,14 @@
           ]
         }
       },
-      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253",
+      "recordId": "bf9ee2f032fc0cdecd909c45fd599f596379f27f7146b472c605a70e9f897494",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:16:19.993Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flight-states-hover-level",
@@ -1319,7 +1424,14 @@
           ]
         }
       },
-      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253"
+      "familyFingerprint": "6ab023f00f4dad412b6eebdcee0d55da882dfe16e0694eb009d15a476411d253",
+      "recordId": "1a33198797407a6722f0cafe8087a074ddce52d9b42da59ac3ca95d36b654d70",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T14:16:19.993Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "zhuang-awakening-states-sleeping",
@@ -1386,7 +1498,14 @@
           ]
         }
       },
-      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161",
+      "recordId": "e1c33e7e1ede98ce4e1c7b3cf398f8f823676c382c399617ecc33d353e8e06d8",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "zhuang-awakening-states-reclining-awake",
@@ -1453,7 +1572,14 @@
           ]
         }
       },
-      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161",
+      "recordId": "58c8f7cad3f30959402f0232366018a2ff4a0038128b795c980d00ae2de85e35",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "zhuang-awakening-states-sitting-hands",
@@ -1520,7 +1646,14 @@
           ]
         }
       },
-      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161",
+      "recordId": "5a7847fe87138feadbb1d86836e7618a694092bc3cb062c950bfe76a867eaaa2",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "zhuang-awakening-states-seated-questioning",
@@ -1587,7 +1720,14 @@
           ]
         }
       },
-      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161"
+      "familyFingerprint": "eb5e5073ccfc8dcd9e0e234e4cf2acea7d6c9a19c93ef019a1aa98a3083bc161",
+      "recordId": "80badde9340e225cb21f25c7aa18f2d85ed6f8e79deb37d97b26b797f7aaeb02",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "reality-room-support-rear",
@@ -1634,7 +1774,14 @@
         "riskClass": "decorative",
         "contractIds": []
       },
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "a815588f089114d3a02ebe47a96510756a155b6b22c86ac3967ceeab8ca131b0",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "zhuang-sleeping-registered",
@@ -1695,7 +1842,14 @@
           ]
         }
       },
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "f1054c6c67d639c1552985d10c476733f481be09d505f3e8b0f0a0871f302f92",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "reality-room-support-front",
@@ -1742,7 +1896,14 @@
         "riskClass": "decorative",
         "contractIds": []
       },
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "826e288e9f982b24153b84438ddf31f5869b3a493c2fa15a35ea085e17c8e19e",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "flower-journey-support-rear",
@@ -1789,7 +1950,14 @@
         "riskClass": "decorative",
         "contractIds": []
       },
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "b590f425102216e6c462b7ee5c8f564f8841927187dffcfae06a219aa09095e3",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flower-wings-open",
@@ -1865,7 +2033,14 @@
           ]
         }
       },
-      "familyFingerprint": "5dcbbd07db769cf15ef6f690c4092ac46c20093b4efd4345a080212968636695"
+      "familyFingerprint": "5dcbbd07db769cf15ef6f690c4092ac46c20093b4efd4345a080212968636695",
+      "recordId": "01aaacc9df1ccdad24926df20fd2e01bf344f1e0ab932aa3c863b4430ce5fc18",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flower-wings-folded",
@@ -1941,7 +2116,14 @@
           ]
         }
       },
-      "familyFingerprint": "2de40cfde581eb9eaf84ad029957605706f8eaa3844519e50b5c651be24b0469"
+      "familyFingerprint": "2de40cfde581eb9eaf84ad029957605706f8eaa3844519e50b5c651be24b0469",
+      "recordId": "26d7b7b93eac536527cc1c37a9280cfc6311c00da6f1edd7b080867a669ca796",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flower-wings-up",
@@ -2017,7 +2199,14 @@
           ]
         }
       },
-      "familyFingerprint": "c3c51287272e1e46d8f8c1220dadfefbffcd3fd8d60c4bf2fe443a86e98e9eff"
+      "familyFingerprint": "c3c51287272e1e46d8f8c1220dadfefbffcd3fd8d60c4bf2fe443a86e98e9eff",
+      "recordId": "ee3904590aabec32372d34d959693325c0c5d0b69a69f3c2ab0953fdae4c2ff6",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "butterfly-flower-hover-level",
@@ -2093,7 +2282,14 @@
           ]
         }
       },
-      "familyFingerprint": "61ba344cd4829168989b3fb5d8f06ad6301b698afc27fc5a7e53a59d70fba814"
+      "familyFingerprint": "61ba344cd4829168989b3fb5d8f06ad6301b698afc27fc5a7e53a59d70fba814",
+      "recordId": "f21df9341a0ecca91bb356cf3d7615c840e4def1c62a42f9b01e7b0d3d8a8a94",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     },
     {
       "assetId": "flower-journey-support-front",
@@ -2140,7 +2336,14 @@
         "riskClass": "decorative",
         "contractIds": []
       },
-      "familyFingerprint": null
+      "familyFingerprint": null,
+      "recordId": "0eea267d976e79369db61e3ab44e7711b9d66beb2595f86c2b1c2829045d1038",
+      "lifecycle": {
+        "status": "active",
+        "changedAt": "2026-07-22T15:59:29.037Z",
+        "reason": "existing-active-record",
+        "supersededBy": null
+      }
     }
   ]
 }

@@ -69,7 +69,7 @@ npm run project:assets-ready -- <slug>
 
 ## 4. 预览、修改与正式交付
 
-人查看预览并批准或用自然语言提出修改。修改会回到 `asset-production`，只重做受影响的批次和 hash 失效素材。
+人查看预览并批准或用自然语言提出修改。修改会回到 `asset-production`。纯导演调整使用 `project:revise-preview-directing -- <slug> --input=<storyboard.json>`：只允许改节奏、treatments、证明时刻和合法场景边界，重新校验既定 motion budget，保护已批准概念/风格，并自动使旧预览、报告和受影响工作项失效。概念或制作档位变化仍走各自审批路径。
 
 预览批准后运行 `project:render`。正式 MP4、报告、联系表和校验报告通过后，状态直接进入 `complete`。这只表示本地制作完成，不授权任何外部发布。
 
