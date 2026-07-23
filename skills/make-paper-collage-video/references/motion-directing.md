@@ -11,6 +11,7 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `static-hold` | `motion.kind=static` | readable tableau, deliberate ending hold |
 | `ambient-motion` | `continuous-transform` | breathing, paper drift, floating question mark |
 | `camera-change` | `continuous-transform` on `scene-camera` | push, pull, pan |
+| `depth-parallax` | `continuous-transform` with `parallax-camera` on `scene-camera` | camera-coupled paper planes at authored depth |
 | `pose-change` | `state-sequence` | hand moves from chest to pointing at a board |
 | `prop-state-change` | `state-sequence` | page turns, cards change, book lowers |
 | `contact-change` | `supported-subject` | person stands on a boat, book remains in hand |
@@ -18,8 +19,13 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `graphic-emphasis` | editable `text` or `shape` node plus `continuous-transform` | question marks, circles, arrows, highlights |
 | `mechanism-state` | proof-bound treatment with `mechanism` or `diagram` risk | scale balance, force path, causal diagram |
 | `visibility-change` | `visibility-transition` plus node `visibility.initial` | a question mark first appears, a card is removed, a label remains after entering |
+| `decorative-field` | `motion.kind=motif-field` | bounded petals, dots, fragments, confetti, diagram accents |
 
-A treatment has orthogonal dimensions. Motion (`static`, continuous transform, state sequence, or persistent visibility transition), composition (`free`, supported subject, or registered environment), graphic mechanism, and semantic risk can coexist. A pointing child standing on a boat is both a state sequence and a supported subject; do not collapse it into one exclusive effect label.
+A treatment has orthogonal dimensions. Motion (`static`, continuous transform, state sequence, persistent visibility transition, or deterministic motif field), composition (`free`, supported subject, or registered environment), graphic mechanism, and semantic risk can coexist. A pointing child standing on a boat is both a state sequence and a supported subject; do not collapse it into one exclusive effect label.
+
+`depth-parallax` is not generic drift. It targets `scene-camera`, uses `parallax-camera`, and requires visible camera movement plus at least two distinct runtime `depth` values in `-1..1`. `0` is the focal plane. A coupled group owns one depth; its registered children must not repeat the world-space parallax path. A free group may add deliberate local depth only when that nested separation is part of the approved design.
+
+`motif-field` is decorative only. Author one target with preset (`drift`, `fall-drift`, `burst`, or `orbit`), distribution (`scattered`, `grid`, or `edge`), bounded `count<=64`, and cycles. Runtime supplies a fixed integer seed, 1–8 reviewed motif sources, a safe area, base size, and bounded scale/rotation/opacity variation. The renderer expands the instances deterministically; do not author a large array of individual asset nodes.
 
 ## Author Intent, Compile Execution
 
@@ -59,7 +65,7 @@ All related states for one identity/prop family stay on one provider-generated s
 
 For a story such as 《曹冲称象》:
 
-- opening paper texture and slow parallax: continuous transforms;
+- opening paper texture and slow parallax: `depth-parallax` on the scene camera with authored background/focal/foreground depths;
 - Cao Chong changes from holding a book to pointing: one `cao-actions` state family;
 - question marks and a bouncing circle: editable shape/text nodes with continuous motion, not new character poses;
 - elephant boards the boat: an elephant state family plus `supported-subject` contact;
@@ -80,12 +86,12 @@ Scene boundaries are whole-film editorial decisions, not node reveal effects. De
 | `time-passage` | `page-turn`, 0.7s | A later moment or summarized interval begins |
 | `focus-reveal` | `paper-iris`, 0.55s | Attention narrows onto a newly important subject |
 | `chapter-reset` | `paper-shutters`, 0.65s | A chapter or tonal unit closes before the next opens |
-| `impact-cut` | `cut`, 0s | A deliberately abrupt shock, reveal, or comic hit |
+| `impact` | `cut` with `motivation=impact`, 0s | A deliberately abrupt shock, reveal, or comic hit |
 
-Legal motivated overrides are `paper-slide`, `paper-wipe`, or `torn-wipe` for spatial movement; `page-turn`, `torn-wipe`, or `paper-wipe` for elapsed time; `paper-iris` for focus; and `paper-shutters`, `dip-to-paper`, or `page-turn` for a chapter reset. `cut` is forbidden outside `impact-cut`. Spatial types reveal a fully opaque incoming scene through a hard clip or translation; cover types swap scenes only during a guaranteed fully opaque plateau. Never alpha-crossfade semantic scenes: it can combine an outgoing foreground with an incoming background into a false image. Budget the complete animated duration in both the outgoing tail and incoming narration lead.
+Narrative intent and execution treatment are separate. Legal paper overrides are `paper-slide`, `paper-wipe`, or `torn-wipe` for spatial movement; `page-turn`, `torn-wipe`, or `paper-wipe` for elapsed time; `paper-iris` for focus; and `paper-shutters`, `dip-to-paper`, or `page-turn` for a chapter reset. Any ordinary intent may instead use `type=cut`, `motivation=rhythmic`, `durationSeconds=0`, and a `beatId` that resolves to the outgoing final 20% or incoming first 20%. Impact cuts use the `impact` intent and `motivation=impact`; do not mislabel a rhythmic edit as semantic impact. Spatial types reveal a fully opaque incoming scene through a hard clip or translation; cover types swap scenes only during a guaranteed fully opaque plateau. Never alpha-crossfade semantic scenes: it can combine an outgoing foreground with an incoming background into a false image. Budget the complete animated duration in both the outgoing tail and incoming narration lead.
 
 ## Proof and Review
 
-The compiler ranks treatments by semantic risk, discrete-state complexity, composition coupling, importance, and necessity, then compiles a `styleProofPlan`. The plan requires coverage for the highest semantic-risk classes, each concrete coupled relationship, and state-sequence behavior, and greedily reuses one source family where it can prove multiple facets. If a film has no such high-risk facet, the highest-ranked treatment becomes one `baseline:representative` target so the style gate never becomes empty. `style:proof` renders every selected target and binds the report to the plan fingerprint. A changed treatment invalidates the plan even if the scene id stays the same.
+The compiler ranks treatments by semantic risk, discrete-state complexity, composition coupling, importance, and necessity, then compiles a `styleProofPlan`. The plan requires coverage for the highest semantic-risk classes, each concrete coupled relationship, state-sequence behavior, and motif-field behavior, and greedily reuses one source family where it can prove multiple facets. If a film has no such high-risk facet, the highest-ranked treatment becomes one `baseline:representative` target so the style gate never becomes empty. `style:proof` renders every selected target and binds the report to the plan fingerprint. Parallax rigs and motif fields also become fingerprinted composite quality targets. A changed treatment, camera rig, depth map, seed, field source, density, safe area, or runtime implementation invalidates the relevant evidence.
 
 Final reports state the number of pose-sheet provider calls, deterministic state derivatives, and isolated calls avoided. Savings count only when provenance proves that one provider result produced multiple local derivatives.

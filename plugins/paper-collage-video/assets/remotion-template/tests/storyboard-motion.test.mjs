@@ -311,6 +311,93 @@ test('visibility changes compile to persistent events with an explicit initial s
     .some(({code}) => code === 'directing-visibility-initial'));
 });
 
+test('parallax rigs and motif fields compile into first-class directing plans', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[0].proofTimeId = 'proof-establish';
+  authored.scenes[0].beats[0].treatments = [{
+    id: 'camera-depth-rig',
+    targetId: 'scene-camera',
+    importance: 'supporting',
+    necessity: 'required',
+    changeClass: 'depth-parallax',
+    motion: {kind: 'continuous-transform', preset: 'parallax-camera'},
+    composition: {pattern: 'free'},
+    graphic: null,
+    semanticRisk: 'decorative',
+    proofTimeId: 'proof-establish',
+    rationale: 'The camera must reveal deterministic depth between the paper planes.',
+  }];
+  authored.scenes[0].beats[1].treatments = [{
+    id: 'petal-field-motion',
+    targetId: 'petal-field',
+    importance: 'ambient',
+    necessity: 'enhancement',
+    changeClass: 'decorative-field',
+    motion: {
+      kind: 'motif-field',
+      preset: 'fall-drift',
+      distribution: 'scattered',
+      count: 18,
+      cycles: 2,
+    },
+    composition: {pattern: 'free'},
+    graphic: null,
+    semanticRisk: 'decorative',
+    proofTimeId: 'proof-action',
+    rationale: 'A bounded repeated field supplies editorial energy without generated video.',
+  }];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
+  assert.deepEqual(storyboard.scenes[0].compositionPlan.continuousMotions, [{
+    id: 'camera-depth-rig',
+    nodeId: 'scene-camera',
+    preset: 'parallax-camera',
+    at: 0,
+    proofTimeId: 'proof-establish',
+  }]);
+  assert.deepEqual(storyboard.scenes[0].compositionPlan.motifFields, [{
+    id: 'petal-field-motion',
+    nodeId: 'petal-field',
+    preset: 'fall-drift',
+    distribution: 'scattered',
+    count: 18,
+    cycles: 2,
+    at: 0.48,
+    proofTimeId: 'proof-action',
+  }]);
+  assert.equal(storyboard.directingSummary.motifFieldTargets, 1);
+  assert.ok(storyboard.directingSummary.styleProofPlan.requiredCoverage.includes('motion:motif-field'));
+
+  const runtimeScene = {
+    camera: {
+      preset: 'pan-right',
+      parallax: {enabled: true, strength: 0.8, focalDepth: 0},
+    },
+    composition: {
+      nodes: [
+        {id: 'background', kind: 'asset', depth: -1, motion: {keyframes: [{at: 0}, {at: 1}]}},
+        {
+          id: 'petal-field',
+          kind: 'motif-field',
+          depth: 0.7,
+          count: 18,
+          distribution: 'scattered',
+          fieldMotion: {preset: 'fall-drift', cycles: 2},
+          motion: {keyframes: [{at: 0}, {at: 1}]},
+        },
+      ],
+    },
+  };
+  assert.deepEqual(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }), []);
+  runtimeScene.composition.nodes[1].count = 19;
+  assert.ok(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }).some(({code}) => code === 'directing-motif-drift'));
+});
+
 test('Cao Chong-style hero actions compile to one context-preserving pose sheet', () => {
   const authored = authoredStoryboard();
   const scene = authored.scenes[0];

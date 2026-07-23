@@ -15,6 +15,14 @@
 
 Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v7 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
 
+当前 v7 还附带一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、固定种子的 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
+
+```bash
+npm run sample:vox
+```
+
+输入位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
+
 ## 从 GitHub 安装 Plugin
 
 面向普通用户的推荐路径是安装 Codex Plugin，不需要手动 clone 本仓库。仓库包含机器可读的 marketplace、插件清单、Skill、工作区初始化器和轻量 Remotion 模板。
@@ -248,7 +256,9 @@ python3 scripts/remove_chroma_key.py --input KEY.png --out ALPHA.png --key-color
 - `voice`：虚构音色或后续可选的克隆音色元数据。
 - `audio`：旁白、背景音乐和必填 LUFS/true-peak 交付规格。
 - `scenes`：故事板蓝图、带断言的证明时刻、递归 `composition` 树、本地 keyframe、旁白、逐节拍持久/短暂/声音事件和字幕。
-- `sceneTransitions`：每对相邻场景唯一的交接契约。先声明 `continuity | location-change | time-passage | focus-reveal | chapter-reset | impact-cut` 编辑意图，再由编译器默认路由到 `paper-slide | paper-wipe | page-turn | paper-iris | paper-shutters | cut`；还可在合法映射内选用 `torn-wipe` 或 `dip-to-paper`。
+- `sceneTransitions`：每对相邻场景唯一的交接契约。`intent` 只声明 `continuity | location-change | time-passage | focus-reveal | chapter-reset | impact` 叙事意图，`treatment` 独立声明执行方式。普通意图默认路由到注册纸张转场，也可用绑定边界节拍的 `motivation=rhythmic` 硬切；`impact` 则使用 `motivation=impact` 硬切。
+- `camera.parallax` 与节点 `depth=-1..1`：由同一镜头运动确定性驱动背景/焦平面/前景差速，不接受没有实际镜头运动或没有景深层次的伪视差。
+- `motif-field`：用一个带固定 `seed`、安全区、数量上限、分布和内部运动的节点展开重复装饰素材，无需手写几十个图片节点。
 
 镜头时长不是人工填写的常量，而是：
 
@@ -256,7 +266,7 @@ python3 scripts/remove_chroma_key.py --input KEY.png --out ALPHA.png --key-color
 round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部留白秒数 × fps)
 ```
 
-动画边界按顶层 `sceneTransitions[].durationSeconds` 交叠，且只能在硬裁剪、完整不透明入场画面或完全不透明的纸色遮罩下交接。`cut` 仅允许用于 `impact-cut`。项目作者只写秒数和归一化的节拍/关键帧位置；帧数由渲染器根据 fps 推导。旧字段不会被迁移或猜测。
+动画边界按 `sceneTransitions[].treatment.durationSeconds` 交叠，且只能在硬裁剪、完整不透明入场画面或完全不透明的纸色遮罩下交接。`cut` 必须明确为 `rhythmic` 或 `impact`；rhythmic cut 还必须绑定出场末段或入场开段的 `beatId`。项目作者只写秒数和归一化的节拍/关键帧位置；帧数由渲染器根据 fps 推导。旧字段不会被迁移或猜测。
 
 生产状态遵循 [schemas/production.schema.json](schemas/production.schema.json)。它是断点恢复协议，不是创意配置：记录 `stage`、审批、粗粒度生产批次、产物和追加式事件历史。默认路径用组合故事板/概念/provider 确认、风格确认和预览确认。不要直接改状态 JSON。
 
@@ -274,7 +284,8 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 - 旁白配置时长是否等于 ffprobe 实测时长。
 - 项目逐幕蓝图、组合模式、证明 id/时刻/断言是否与已批准故事板一致。
 - 组与子节点关键帧是否覆盖完整镜头，每个故事节拍是否有有效事件目标、正确显隐生命周期和证明窗口。
-- 每对相邻场景是否恰好有一条边界，意图与类型是否合法，硬切是否只用于 `impact-cut`，动画边界的出场 tail/入场旁白 lead 是否覆盖完整转场。
+- 每对相邻场景是否恰好有一条边界，叙事意图与执行 treatment 是否正交且合法，rhythmic cut 是否绑定边界节拍，动画边界的出场 tail/入场旁白 lead 是否覆盖完整转场。
+- 启用视差的镜头是否有可见 camera 运动、至少两个 depth 层级且耦合组仅由 group 承载景深；motif-field 是否有固定 seed、受限数量、合法变化范围与画布内安全区。
 - 字幕范围、重叠、越界、单条长度和阅读速度。
 - 支撑主体在各证明时刻是否仍位于接触区，注册环境是否只声明一次语义区域。
 

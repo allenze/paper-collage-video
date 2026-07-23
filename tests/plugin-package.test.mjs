@@ -113,6 +113,10 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.match(packageJson.scripts['project:audio-calibration'], /category=deterministic-check/);
   assert.equal(packageJson.scripts['project:subtitles'], 'node scripts/project-subtitles.mjs');
   assert.match(packageJson.scripts['style:proof'], /category=evidence-render/);
+  assert.equal(
+    packageJson.scripts['sample:vox'],
+    'remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264',
+  );
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'ASSET_LICENSES.md')));

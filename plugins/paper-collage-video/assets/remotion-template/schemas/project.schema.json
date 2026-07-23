@@ -244,26 +244,38 @@
     },
     "sceneBoundaryTransition": {
       "type": "object",
-      "required": ["id", "fromSceneId", "toSceneId", "intent", "rationale", "type", "durationSeconds"],
+      "required": ["id", "fromSceneId", "toSceneId", "intent", "rationale", "treatment"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "fromSceneId": {"type": "string", "minLength": 1},
         "toSceneId": {"type": "string", "minLength": 1},
-        "intent": {"enum": ["continuity", "location-change", "time-passage", "focus-reveal", "chapter-reset", "impact-cut"]},
+        "intent": {"enum": ["continuity", "location-change", "time-passage", "focus-reveal", "chapter-reset", "impact"]},
         "rationale": {"type": "string", "minLength": 1},
+        "treatment": {"$ref": "#/$defs/sceneBoundaryTreatment"}
+      },
+      "additionalProperties": false
+    },
+    "sceneBoundaryTreatment": {
+      "type": "object",
+      "required": ["type", "motivation", "durationSeconds"],
+      "properties": {
         "type": {"enum": ["cut", "paper-wipe", "dip-to-paper", "paper-slide", "torn-wipe", "paper-iris", "page-turn", "paper-shutters"]},
+        "motivation": {"enum": ["semantic-default", "authored", "rhythmic", "impact"]},
         "durationSeconds": {"type": "number", "minimum": 0, "maximum": 1.5},
-        "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]}
+        "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]},
+        "beatId": {"type": "string", "minLength": 1}
       },
       "allOf": [
-        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"intent": {"const": "impact-cut"}, "durationSeconds": {"const": 0}}, "not": {"required": ["direction"]}}},
-        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["continuity", "location-change", "time-passage"]}, "durationSeconds": {"minimum": 0.2}}}},
-        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"intent": {"const": "chapter-reset"}, "durationSeconds": {"minimum": 0.3}}, "not": {"required": ["direction"]}}},
-        {"if": {"properties": {"type": {"const": "paper-slide"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["continuity", "location-change"]}, "durationSeconds": {"minimum": 0.25}}}},
-        {"if": {"properties": {"type": {"const": "torn-wipe"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["location-change", "time-passage"]}, "durationSeconds": {"minimum": 0.3}}}},
-        {"if": {"properties": {"type": {"const": "paper-iris"}}}, "then": {"properties": {"intent": {"const": "focus-reveal"}, "durationSeconds": {"minimum": 0.3}}, "not": {"required": ["direction"]}}},
-        {"if": {"properties": {"type": {"const": "page-turn"}}}, "then": {"required": ["direction"], "properties": {"intent": {"enum": ["time-passage", "chapter-reset"]}, "durationSeconds": {"minimum": 0.4}, "direction": {"enum": ["left-to-right", "right-to-left"]}}}},
-        {"if": {"properties": {"type": {"const": "paper-shutters"}}}, "then": {"properties": {"intent": {"const": "chapter-reset"}, "durationSeconds": {"minimum": 0.4}}, "not": {"required": ["direction"]}}}
+        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}, "motivation": {"enum": ["rhythmic", "impact"]}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"motivation": {"const": "rhythmic"}}}, "then": {"required": ["beatId"], "properties": {"type": {"const": "cut"}}}},
+        {"if": {"properties": {"motivation": {"const": "impact"}}}, "then": {"properties": {"type": {"const": "cut"}}}},
+        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.2}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "paper-slide"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.25}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "torn-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "paper-iris"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "page-turn"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.4}, "direction": {"enum": ["left-to-right", "right-to-left"]}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "paper-shutters"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.4}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}}
       ],
       "additionalProperties": false
     },
@@ -331,7 +343,17 @@
           "properties": {
             "preset": {"enum": ["push", "pull", "pan-left", "pan-right", "static"]},
             "intensity": {"type": "number", "minimum": 0, "maximum": 3},
-            "keyframes": {"type": "array", "minItems": 2, "items": {"type": "object"}}
+            "keyframes": {"type": "array", "minItems": 2, "items": {"type": "object"}},
+            "parallax": {
+              "type": "object",
+              "required": ["enabled", "strength", "focalDepth"],
+              "properties": {
+                "enabled": {"const": true},
+                "strength": {"type": "number", "exclusiveMinimum": 0, "maximum": 2},
+                "focalDepth": {"type": "number", "minimum": -1, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
           },
           "additionalProperties": false
         },

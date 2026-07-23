@@ -6,6 +6,7 @@ import {
   collectCompositionAssets,
   collectCompositionVisualSources,
   collectCompositionGroups,
+  collectMotifFields,
   collectStateSequences,
   deriveEventTimeline,
   flattenCompositionNodes,
@@ -81,6 +82,13 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'pose-registration-stable',
   'state-identity-consistent',
   'transition-clean',
+  'depth-order-readable',
+  'camera-coupling-clean',
+  'registered-groups-stable',
+  'field-density-readable',
+  'field-safe-area-clean',
+  'field-motion-clean',
+  'field-loop-clean',
 ];
 
 export const QUALITY_CHECKS = [
@@ -106,6 +114,8 @@ const COMPOSITE_PROFILES = {
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
   event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
   'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
+  'parallax-rig': ['depth-order-readable', 'camera-coupling-clean', 'registered-groups-stable', 'final-composition-readable'],
+  'motif-field': ['field-density-readable', 'field-safe-area-clean', 'field-motion-clean', 'field-loop-clean', 'final-composition-readable'],
 };
 
 const requiredChecksForGroup = (group) => {
@@ -402,6 +412,15 @@ const inspectTechnicalQuality = async ({asset, project}) => {
 
 const descendants = (group) => flattenCompositionNodes(group.children ?? []).map(({node}) => node);
 
+const visualSourcesForNode = (node) => {
+  if (!node) return [];
+  if (node.kind === 'asset') return [node.src];
+  if (node.kind === 'state-sequence') return node.states.map(({src}) => src);
+  if (node.kind === 'motif-field') return node.motifs.map(({src}) => src);
+  if (node.kind === 'group') return descendants(node).flatMap(visualSourcesForNode);
+  return [];
+};
+
 const hashReferencedFiles = async (sources) => {
   const hashes = {};
   for (const source of [...new Set(sources.filter(Boolean))].sort()) {
@@ -422,6 +441,63 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
     const sceneTransitions = (project.sceneTransitions ?? []).filter(
       ({fromSceneId, toSceneId}) => fromSceneId === scene.id || toSceneId === scene.id,
     );
+    if (scene.camera?.parallax?.enabled) {
+      const nodes = flattenCompositionNodes(scene.composition?.nodes).map(({node}) => node);
+      const memberHashes = await hashReferencedFiles(collectCompositionVisualSources(scene.composition));
+      const proofTimes = scene.motion?.proofTimes ?? [];
+      const depthMap = nodes.map(({id, kind, depth = 0}) => ({id, kind, depth}));
+      const fingerprint = hashCompositionValue({
+        runtimeBuildFingerprint,
+        sceneId: scene.id,
+        parallax: scene.camera.parallax,
+        camera: scene.camera,
+        depthMap,
+        proofTimes,
+        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        memberHashes,
+      });
+      targets.push({
+        compositeId: `parallax-rig:${scene.id}`,
+        sceneId: scene.id,
+        pattern: 'parallax-rig',
+        nodeId: 'scene-camera',
+        memberNodeIds: nodes.map(({id}) => id),
+        memberHashes,
+        compositionHash: hashCompositionValue({camera: scene.camera, depthMap}),
+        fingerprint,
+        proofTimeIds: proofTimes.map(({id}) => id),
+        requiredChecks: COMPOSITE_PROFILES['parallax-rig'],
+        parallax: scene.camera.parallax,
+        depthMap,
+      });
+    }
+    for (const {node} of collectMotifFields(scene.composition)) {
+      const proofTimes = scene.motion?.proofTimes ?? [];
+      const memberHashes = await hashReferencedFiles(node.motifs.map(({src}) => src));
+      const fingerprint = hashCompositionValue({
+        runtimeBuildFingerprint,
+        sceneId: scene.id,
+        node,
+        proofTimes,
+        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        camera: scene.camera,
+        affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === node.id),
+        memberHashes,
+      });
+      targets.push({
+        compositeId: `motif-field:${scene.id}:${node.id}`,
+        sceneId: scene.id,
+        pattern: 'motif-field',
+        nodeId: node.id,
+        memberNodeIds: [node.id],
+        memberHashes,
+        compositionHash: hashCompositionValue(node),
+        fingerprint,
+        proofTimeIds: proofTimes.map(({id}) => id),
+        requiredChecks: COMPOSITE_PROFILES['motif-field'],
+        motifField: node,
+      });
+    }
     for (const {node} of collectStateSequences(scene.composition)) {
       const proofTimes = (scene.motion?.proofTimes ?? []).filter((proof) =>
         (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
@@ -509,7 +585,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       const targetSources = targetNode
         ? targetNode.kind === 'state-sequence'
           ? targetNode.states.map(({src}) => src)
-          : descendants(targetNode.kind === 'group' ? targetNode : {children: [targetNode]}).flatMap((node) => node.kind === 'asset' ? [node.src] : node.kind === 'state-sequence' ? node.states.map(({src}) => src) : [])
+          : visualSourcesForNode(targetNode)
         : collectCompositionVisualSources(scene.composition);
       const memberHashes = await hashReferencedFiles(targetSources);
       const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === event.proofTimeId) ?? null;
@@ -615,13 +691,11 @@ export const collectStyleProofTargets = async (project, directingTarget) => {
     ? findNode(scene, directingTarget.targetId)
     : null;
   const nodes = targetNode
-    ? (['asset', 'state-sequence'].includes(targetNode.kind)
+    ? (['asset', 'state-sequence', 'motif-field'].includes(targetNode.kind)
         ? [targetNode]
-        : descendants(targetNode).filter(({kind}) => ['asset', 'state-sequence'].includes(kind)))
+        : descendants(targetNode).filter(({kind}) => ['asset', 'state-sequence', 'motif-field'].includes(kind)))
     : [];
-  const sources = nodes.flatMap((node) =>
-    node.kind === 'asset' ? [node.src] : node.states.map(({src}) => src),
-  );
+  const sources = nodes.flatMap(visualSourcesForNode);
   const memberHashes = await hashReferencedFiles(sources);
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   const proofTimes = scene?.motion?.proofTimes ?? [];
@@ -733,6 +807,29 @@ const inspectCompositeTechnical = async ({target, proofReport}) => {
       {id: 'state-proofs-complete', passed: proofStateIds.size === target.proofTimeIds.length, expected: target.proofTimeIds.length, actual: proofStateIds.size},
       {id: 'registered-state-family', passed: registrationsBound, actual: registrationsBound},
       {id: 'registered-state-dimensions', passed: registeredDimensions.size === 1 && registeredDimensions.has(expectedDimensions), expected: expectedDimensions, actual: [...registeredDimensions].join(', ')},
+    );
+  }
+  if (target.pattern === 'parallax-rig') {
+    const depthLevels = new Set(target.depthMap.map(({depth}) => depth));
+    checks.push(
+      {id: 'parallax-enabled', passed: target.parallax?.enabled === true, expected: true, actual: target.parallax?.enabled ?? false},
+      {id: 'parallax-depth-levels', passed: depthLevels.size >= 2, expected: '>= 2', actual: depthLevels.size},
+    );
+  }
+  if (target.pattern === 'motif-field') {
+    const field = target.motifField;
+    const safe = field.safeArea ?? {x: 0, y: 0, width: 1, height: 1};
+    const safeWithinBounds =
+      safe.x >= 0 &&
+      safe.y >= 0 &&
+      safe.width > 0 &&
+      safe.height > 0 &&
+      safe.x + safe.width <= 1 &&
+      safe.y + safe.height <= 1;
+    checks.push(
+      {id: 'motif-count-bounded', passed: Number.isInteger(field.count) && field.count >= 1 && field.count <= 64, expected: '1..64', actual: field.count},
+      {id: 'motif-seed-fixed', passed: Number.isInteger(field.seed), expected: 'integer', actual: field.seed},
+      {id: 'motif-safe-area-bounded', passed: safeWithinBounds, expected: 'inside 0..1', actual: safe},
     );
   }
   return {passed: checks.every(({passed}) => passed), checks, proofFrames};

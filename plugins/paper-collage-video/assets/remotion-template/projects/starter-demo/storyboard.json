@@ -160,10 +160,11 @@
             "proofTimeId": "proof-action"
           }
         ],
+        "motifFields": [],
         "graphics": []
       },
       "directing": {
-        "fingerprint": "c046e2af0e2c444af91af08ea3378369e36ad7c3f376c0fcf88386ac36bf8935",
+        "fingerprint": "de3cb06708588515ba3f207dc14024159216c3db72740fe1a115b73ff944cf89",
         "treatmentCount": 3,
         "riskScore": 13,
         "highestRiskTreatmentId": "show-traveler"
@@ -182,6 +183,7 @@
     "maxStatesInFamily": 0,
     "continuousTargets": 0,
     "visibilityTargets": 1,
+    "motifFieldTargets": 0,
     "graphicTreatments": 0,
     "coupledRelationships": 0,
     "avoidedIsolatedStateCalls": 0,
@@ -202,7 +204,7 @@
           "targetId": "traveler",
           "proofTimeId": "proof-action",
           "riskScore": 13,
-          "directingFingerprint": "c046e2af0e2c444af91af08ea3378369e36ad7c3f376c0fcf88386ac36bf8935",
+          "directingFingerprint": "de3cb06708588515ba3f207dc14024159216c3db72740fe1a115b73ff944cf89",
           "sourceFamilyKey": "target:traveler",
           "coverage": [
             "baseline:representative"
@@ -212,8 +214,8 @@
       "sourceFamilyKeys": [
         "target:traveler"
       ],
-      "fingerprint": "be2a3c963da2cf12eab97a77d2f853c48b1b50c0d9981faf22372bfa74747aac"
+      "fingerprint": "c95aaad72ca03ea91d3e4cd4728e1bc6919764b765aa333d4ca9d07a2d2535c2"
     },
-    "fingerprint": "b9a8a8d630c537c9abc3887183cbff5b2c2b3610fb14aacd44746336c21e1c5f"
+    "fingerprint": "28b09f30551d7e944f8bc7ffee60f8b49122b108c2b76cb95d8e0fe8d8ffa23f"
   }
 }

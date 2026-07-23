@@ -599,7 +599,8 @@ test('new projects require a locked storyboard before concept approval', async (
     );
     assert.equal(compiledStoryboard.schemaVersion, 7);
     assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
-    assert.ok(compiledStoryboard.sceneTransitions.every(({type}) => type === 'paper-slide'));
+    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'paper-slide'));
+    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.motivation === 'semantic-default'));
 
     const compactStatus = spawnSync(
       process.execPath,

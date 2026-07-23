@@ -119,6 +119,7 @@ export type CompositionTextNode = {
     fontFamily?: string;
   };
   z: number;
+  depth?: number;
   transform: NodeTransform;
   motion: NodeMotion;
   visibility?: NodeVisibility;
@@ -130,6 +131,7 @@ export type CompositionShapeNode = {
   shape: 'rectangle' | 'ellipse' | 'line';
   style: {fill: string; stroke: string; strokeWidth: number; radius: number};
   z: number;
+  depth?: number;
   transform: NodeTransform;
   motion: NodeMotion;
   visibility?: NodeVisibility;
@@ -149,6 +151,7 @@ export type CompositionGroupNode = {
   kind: 'group';
   pattern: 'free' | 'supported-subject' | 'registered-environment';
   z: number;
+  depth?: number;
   coordinateSpace: CoordinateSpace;
   transform: NodeTransform;
   motion: NodeMotion;
@@ -166,11 +169,37 @@ export type CompositionGroupNode = {
   children: CompositionNode[];
 };
 
+export type CompositionMotifFieldNode = {
+  id: string;
+  kind: 'motif-field';
+  motifs: Array<{id: string; src: string}>;
+  count: number;
+  seed: number;
+  distribution: 'scattered' | 'grid' | 'edge';
+  fieldMotion: {
+    preset: 'drift' | 'fall-drift' | 'burst' | 'orbit';
+    cycles: number;
+  };
+  baseSize: number;
+  variation: {
+    scale: [number, number];
+    rotation: [number, number];
+    opacity: [number, number];
+  };
+  safeArea?: {x: number; y: number; width: number; height: number};
+  z: number;
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
 export type CompositionNode =
   | CompositionAssetNode
   | CompositionStateSequenceNode
   | CompositionTextNode
   | CompositionShapeNode
+  | CompositionMotifFieldNode
   | CompositionGroupNode;
 
 export type SceneComposition = {
@@ -186,6 +215,11 @@ export type SceneCamera = {
   preset: 'push' | 'pull' | 'pan-left' | 'pan-right' | 'static';
   intensity: number;
   keyframes?: CameraKeyframe[];
+  parallax?: {
+    enabled: boolean;
+    strength: number;
+    focalDepth: number;
+  };
 };
 
 export type EmphasisAction =
@@ -237,23 +271,27 @@ export type SceneBoundaryTransition = {
     | 'time-passage'
     | 'focus-reveal'
     | 'chapter-reset'
-    | 'impact-cut';
+    | 'impact';
   rationale: string;
-  type:
-    | 'cut'
-    | 'paper-wipe'
-    | 'dip-to-paper'
-    | 'paper-slide'
-    | 'torn-wipe'
-    | 'paper-iris'
-    | 'page-turn'
-    | 'paper-shutters';
-  durationSeconds: number;
-  direction?:
-    | 'left-to-right'
-    | 'right-to-left'
-    | 'top-to-bottom'
-    | 'bottom-to-top';
+  treatment: {
+    type:
+      | 'cut'
+      | 'paper-wipe'
+      | 'dip-to-paper'
+      | 'paper-slide'
+      | 'torn-wipe'
+      | 'paper-iris'
+      | 'page-turn'
+      | 'paper-shutters';
+    motivation: 'semantic-default' | 'authored' | 'rhythmic' | 'impact';
+    durationSeconds: number;
+    direction?:
+      | 'left-to-right'
+      | 'right-to-left'
+      | 'top-to-bottom'
+      | 'bottom-to-top';
+    beatId?: string;
+  };
 };
 
 export type ProofTime = {

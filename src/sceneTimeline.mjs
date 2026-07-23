@@ -19,7 +19,14 @@ export const SCENE_TRANSITION_INTENTS = Object.freeze([
   'time-passage',
   'focus-reveal',
   'chapter-reset',
-  'impact-cut',
+  'impact',
+]);
+
+export const SCENE_TRANSITION_MOTIVATIONS = Object.freeze([
+  'semantic-default',
+  'authored',
+  'rhythmic',
+  'impact',
 ]);
 
 export const PAPER_MOTION_DIRECTIONS = Object.freeze([
@@ -30,41 +37,39 @@ export const PAPER_MOTION_DIRECTIONS = Object.freeze([
 ]);
 
 export const TRANSITION_RECIPES = Object.freeze({
-  continuity: Object.freeze({type: 'paper-slide', durationSeconds: 0.45, direction: 'right-to-left'}),
-  'location-change': Object.freeze({type: 'paper-wipe', durationSeconds: 0.5, direction: 'left-to-right'}),
-  'time-passage': Object.freeze({type: 'page-turn', durationSeconds: 0.7, direction: 'right-to-left'}),
-  'focus-reveal': Object.freeze({type: 'paper-iris', durationSeconds: 0.55}),
-  'chapter-reset': Object.freeze({type: 'paper-shutters', durationSeconds: 0.65}),
-  'impact-cut': Object.freeze({type: 'cut', durationSeconds: 0}),
+  continuity: Object.freeze({treatment: Object.freeze({type: 'paper-slide', motivation: 'semantic-default', durationSeconds: 0.45, direction: 'right-to-left'})}),
+  'location-change': Object.freeze({treatment: Object.freeze({type: 'paper-wipe', motivation: 'semantic-default', durationSeconds: 0.5, direction: 'left-to-right'})}),
+  'time-passage': Object.freeze({treatment: Object.freeze({type: 'page-turn', motivation: 'semantic-default', durationSeconds: 0.7, direction: 'right-to-left'})}),
+  'focus-reveal': Object.freeze({treatment: Object.freeze({type: 'paper-iris', motivation: 'semantic-default', durationSeconds: 0.55})}),
+  'chapter-reset': Object.freeze({treatment: Object.freeze({type: 'paper-shutters', motivation: 'semantic-default', durationSeconds: 0.65})}),
+  impact: Object.freeze({treatment: Object.freeze({type: 'cut', motivation: 'impact', durationSeconds: 0})}),
 });
 
 export const materializeSceneTransitionRecipes = (sceneTransitions = []) =>
   sceneTransitions.map((transition) => {
-    if (
-      transition?.type !== undefined ||
-      transition?.durationSeconds !== undefined ||
-      transition?.direction !== undefined
-    ) {
-      return transition;
-    }
+    if (transition?.treatment !== undefined) return transition;
     const recipe = TRANSITION_RECIPES[transition?.intent];
-    return recipe ? {...transition, ...recipe} : transition;
+    return recipe
+      ? {...transition, treatment: {...recipe.treatment}}
+      : transition;
   });
 
 export const summarizeSceneTransitions = (sceneTransitions = []) => {
-  const countBy = (key) => Object.fromEntries(
-    [...new Set(sceneTransitions.map((transition) => transition[key]))]
+  const countBy = (selector) => Object.fromEntries(
+    [...new Set(sceneTransitions.map(selector))]
+      .filter((value) => value !== undefined)
       .sort()
-      .map((value) => [value, sceneTransitions.filter((transition) => transition[key] === value).length]),
+      .map((value) => [value, sceneTransitions.filter((transition) => selector(transition) === value).length]),
   );
-  const cutCount = sceneTransitions.filter(({type}) => type === 'cut').length;
+  const cutCount = sceneTransitions.filter(({treatment}) => treatment?.type === 'cut').length;
   return {
     total: sceneTransitions.length,
     animatedCount: sceneTransitions.length - cutCount,
     cutCount,
     cutRatio: sceneTransitions.length === 0 ? 0 : cutCount / sceneTransitions.length,
-    typeCounts: countBy('type'),
-    intentCounts: countBy('intent'),
+    typeCounts: countBy((transition) => transition.treatment?.type),
+    intentCounts: countBy((transition) => transition.intent),
+    motivationCounts: countBy((transition) => transition.treatment?.motivation),
   };
 };
 
@@ -87,15 +92,19 @@ const TYPES_BY_INTENT = Object.freeze({
   'time-passage': new Set(['page-turn', 'torn-wipe', 'paper-wipe']),
   'focus-reveal': new Set(['paper-iris']),
   'chapter-reset': new Set(['paper-shutters', 'dip-to-paper', 'page-turn']),
-  'impact-cut': new Set(['cut']),
+  impact: new Set(['cut']),
 });
 
 const durationFramesFor = (transition, fps) =>
-  transition?.type === 'cut'
+  transition?.treatment?.type === 'cut'
     ? 0
-    : Math.max(1, Math.round(Number(transition?.durationSeconds ?? 0) * fps));
+    : Math.max(1, Math.round(Number(transition?.treatment?.durationSeconds ?? 0) * fps));
 
-export const validateSceneTransitionSequence = ({scenes = [], sceneTransitions = []} = {}) => {
+export const validateSceneTransitionSequence = ({
+  scenes = [],
+  beatScenes = scenes,
+  sceneTransitions = [],
+} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
   if (!Array.isArray(sceneTransitions)) {
@@ -115,6 +124,8 @@ export const validateSceneTransitionSequence = ({scenes = [], sceneTransitions =
     const location = `sceneTransitions[${index}]`;
     const outgoing = scenes[index];
     const incoming = scenes[index + 1];
+    const outgoingBeatScene = beatScenes[index];
+    const incomingBeatScene = beatScenes[index + 1];
     if (!transition?.id || ids.has(transition.id)) {
       add('scene-transition-id', '场景边界 id 缺失或重复。', `${location}.id`);
     }
@@ -126,66 +137,127 @@ export const validateSceneTransitionSequence = ({scenes = [], sceneTransitions =
         location,
       );
     }
-    if (!SCENE_TRANSITION_TYPES.includes(transition?.type)) {
-      add('scene-transition-type', `未知场景转场：${transition?.type}`, `${location}.type`);
-      continue;
-    }
     if (!SCENE_TRANSITION_INTENTS.includes(transition?.intent)) {
       add('scene-transition-intent', `未知转场意图：${transition?.intent}`, `${location}.intent`);
-    } else if (!TYPES_BY_INTENT[transition.intent].has(transition.type)) {
+    }
+    const treatment = transition?.treatment;
+    if (!treatment || typeof treatment !== 'object') {
+      add('scene-transition-treatment', '每个场景边界都必须声明独立的 treatment。', `${location}.treatment`);
+      continue;
+    }
+    if (!SCENE_TRANSITION_TYPES.includes(treatment.type)) {
+      add('scene-transition-type', `未知场景转场：${treatment.type}`, `${location}.treatment.type`);
+      continue;
+    }
+    if (!SCENE_TRANSITION_MOTIVATIONS.includes(treatment.motivation)) {
+      add('scene-transition-motivation', `未知剪辑动机：${treatment.motivation}`, `${location}.treatment.motivation`);
+    }
+    const isRhythmicCut = treatment.type === 'cut' && treatment.motivation === 'rhythmic';
+    const isImpactCut = treatment.type === 'cut' && treatment.motivation === 'impact';
+    if (
+      SCENE_TRANSITION_INTENTS.includes(transition?.intent) &&
+      !isRhythmicCut &&
+      !TYPES_BY_INTENT[transition.intent].has(treatment.type)
+    ) {
       add(
         'scene-transition-intent-type',
-        `${transition.intent} 不应使用 ${transition.type}；请按编辑意图选择纸张转场。`,
-        `${location}.type`,
+        `${transition.intent} 不应使用 ${treatment.type}；请让叙事意图与执行处理保持一致。`,
+        `${location}.treatment.type`,
+      );
+    }
+    if (transition.intent === 'impact' && !isImpactCut) {
+      add(
+        'scene-transition-impact-treatment',
+        'impact 意图必须使用 motivation=impact 的 cut。',
+        `${location}.treatment`,
+      );
+    }
+    if (transition.intent !== 'impact' && isImpactCut) {
+      add(
+        'scene-transition-impact-intent',
+        'motivation=impact 的 cut 必须配合 impact 意图。',
+        `${location}.intent`,
+      );
+    }
+    if (treatment.type === 'cut' && !['rhythmic', 'impact'].includes(treatment.motivation)) {
+      add(
+        'scene-transition-cut-motivation',
+        'cut 必须明确由 rhythmic 或 impact 驱动。',
+        `${location}.treatment.motivation`,
+      );
+    }
+    if (treatment.type !== 'cut' && ['rhythmic', 'impact'].includes(treatment.motivation)) {
+      add(
+        'scene-transition-paper-motivation',
+        '纸张转场的 motivation 必须为 semantic-default 或 authored。',
+        `${location}.treatment.motivation`,
       );
     }
     if (!nonEmpty(transition?.rationale)) {
       add('scene-transition-rationale', '每个场景边界都必须说明转场理由。', `${location}.rationale`);
     }
-    if (!finite(transition.durationSeconds) || transition.durationSeconds < 0) {
-      add('scene-transition-duration', '场景转场 durationSeconds 必须是非负数。', `${location}.durationSeconds`);
+    if (!finite(treatment.durationSeconds) || treatment.durationSeconds < 0) {
+      add('scene-transition-duration', '场景转场 durationSeconds 必须是非负数。', `${location}.treatment.durationSeconds`);
       continue;
     }
-    if (transition.type === 'cut') {
-      if (transition.durationSeconds !== 0) {
-        add('scene-transition-cut-duration', 'cut 的 durationSeconds 必须为 0。', `${location}.durationSeconds`);
+    if (treatment.type === 'cut') {
+      if (treatment.durationSeconds !== 0) {
+        add('scene-transition-cut-duration', 'cut 的 durationSeconds 必须为 0。', `${location}.treatment.durationSeconds`);
       }
     } else {
-      const minimum = MINIMUM_DURATION[transition.type];
-      if (transition.durationSeconds < minimum || transition.durationSeconds > 1.5) {
+      const minimum = MINIMUM_DURATION[treatment.type];
+      if (treatment.durationSeconds < minimum || treatment.durationSeconds > 1.5) {
         add(
           'scene-transition-duration-bounds',
-          `${transition.type} 必须位于 ${minimum}–1.5 秒，避免难以辨认的闪烁或拖沓遮挡。`,
-          `${location}.durationSeconds`,
+          `${treatment.type} 必须位于 ${minimum}–1.5 秒，避免难以辨认的闪烁或拖沓遮挡。`,
+          `${location}.treatment.durationSeconds`,
         );
       }
     }
-    if (DIRECTIONAL_TYPES.has(transition.type)) {
-      if (!PAPER_MOTION_DIRECTIONS.includes(transition.direction)) {
-        add('scene-transition-direction', `${transition.type} 必须声明受支持的 direction。`, `${location}.direction`);
+    if (DIRECTIONAL_TYPES.has(treatment.type)) {
+      if (!PAPER_MOTION_DIRECTIONS.includes(treatment.direction)) {
+        add('scene-transition-direction', `${treatment.type} 必须声明受支持的 direction。`, `${location}.treatment.direction`);
       }
-    } else if (HORIZONTAL_TYPES.has(transition.type)) {
-      if (!HORIZONTAL_DIRECTIONS.has(transition.direction)) {
-        add('scene-transition-direction', 'page-turn 只支持水平翻页方向。', `${location}.direction`);
+    } else if (HORIZONTAL_TYPES.has(treatment.type)) {
+      if (!HORIZONTAL_DIRECTIONS.has(treatment.direction)) {
+        add('scene-transition-direction', 'page-turn 只支持水平翻页方向。', `${location}.treatment.direction`);
       }
-    } else if (NON_DIRECTIONAL_TYPES.has(transition.type) && transition.direction !== undefined) {
-      add('scene-transition-direction-forbidden', `${transition.type} 不得声明 direction。`, `${location}.direction`);
+    } else if (NON_DIRECTIONAL_TYPES.has(treatment.type) && treatment.direction !== undefined) {
+      add('scene-transition-direction-forbidden', `${treatment.type} 不得声明 direction。`, `${location}.treatment.direction`);
     }
-    if (transition.type === 'cut') continue;
-    if (finite(outgoing?.tailSeconds) && outgoing.tailSeconds + 1e-6 < transition.durationSeconds) {
+    if (isRhythmicCut) {
+      if (!nonEmpty(treatment.beatId)) {
+        add('scene-transition-rhythmic-beat', 'rhythmic cut 必须声明 beatId。', `${location}.treatment.beatId`);
+      } else {
+        const outgoingBeat = outgoingBeatScene?.beats?.find(({id}) => id === treatment.beatId);
+        const incomingBeat = incomingBeatScene?.beats?.find(({id}) => id === treatment.beatId);
+        const aligned = (outgoingBeat && outgoingBeat.at >= 0.8) || (incomingBeat && incomingBeat.at <= 0.2);
+        if (!aligned) {
+          add(
+            'scene-transition-rhythmic-alignment',
+            'rhythmic cut 的 beatId 必须指向出场末段（at≥0.8）或入场开段（at≤0.2）的节拍。',
+            `${location}.treatment.beatId`,
+          );
+        }
+      }
+    } else if (treatment.beatId !== undefined) {
+      add('scene-transition-beat-forbidden', '只有 rhythmic cut 可以声明 beatId。', `${location}.treatment.beatId`);
+    }
+    if (treatment.type === 'cut') continue;
+    if (finite(outgoing?.tailSeconds) && outgoing.tailSeconds + 1e-6 < treatment.durationSeconds) {
       add(
         'scene-transition-tail-budget',
-        `出场镜头 tailSeconds 必须至少覆盖 ${transition.durationSeconds}s 转场。`,
+        `出场镜头 tailSeconds 必须至少覆盖 ${treatment.durationSeconds}s 转场。`,
         `scenes[${index}].tailSeconds`,
       );
     }
     if (
       finite(incoming?.narration?.startSeconds) &&
-      incoming.narration.startSeconds + 1e-6 < transition.durationSeconds
+      incoming.narration.startSeconds + 1e-6 < treatment.durationSeconds
     ) {
       add(
         'scene-transition-narration-lead',
-        `入场镜头 narration.startSeconds 必须至少为 ${transition.durationSeconds}s，避免旁白在转场完成前开始。`,
+        `入场镜头 narration.startSeconds 必须至少为 ${treatment.durationSeconds}s，避免旁白在转场完成前开始。`,
         `scenes[${index + 1}].narration.startSeconds`,
       );
     }
@@ -315,40 +387,40 @@ const basePresentation = ({rawProgress = 1, progress = 1} = {}) => ({
 });
 
 export const resolveSceneTransitionPresentation = ({transition, frame}) => {
-  if (!transition || transition.type === 'cut' || transition.durationInFrames <= 0) {
+  if (!transition || transition.treatment?.type === 'cut' || transition.durationInFrames <= 0) {
     return basePresentation();
   }
   const rawProgress = clamp01(frame / Math.max(1, transition.durationInFrames - 1));
   const progress = smoothstep(rawProgress);
   const base = basePresentation({rawProgress, progress});
-  if (transition.type === 'paper-wipe') {
-    return {...base, incomingClipPath: wipeClipPath(transition.direction, progress), edgeProgress: progress};
+  if (transition.treatment.type === 'paper-wipe') {
+    return {...base, incomingClipPath: wipeClipPath(transition.treatment.direction, progress), edgeProgress: progress};
   }
-  if (transition.type === 'paper-slide') {
-    return {...base, incomingTransform: slideTransform(transition.direction, progress), edgeProgress: progress};
+  if (transition.treatment.type === 'paper-slide') {
+    return {...base, incomingTransform: slideTransform(transition.treatment.direction, progress), edgeProgress: progress};
   }
-  if (transition.type === 'torn-wipe') {
-    const tornEdgePoints = resolveTornEdgePoints(transition.direction, progress);
+  if (transition.treatment.type === 'torn-wipe') {
+    const tornEdgePoints = resolveTornEdgePoints(transition.treatment.direction, progress);
     return {
       ...base,
-      incomingClipPath: tornClipPath(transition.direction, tornEdgePoints),
+      incomingClipPath: tornClipPath(transition.treatment.direction, tornEdgePoints),
       edgeProgress: progress,
       tornEdgePoints,
     };
   }
-  if (transition.type === 'paper-iris') {
+  if (transition.treatment.type === 'paper-iris') {
     const irisRadius = progress * 72;
     return {...base, incomingClipPath: `circle(${irisRadius}% at 50% 50%)`, irisRadius};
   }
-  if (transition.type === 'page-turn') {
+  if (transition.treatment.type === 'page-turn') {
     return {
       ...base,
-      incomingClipPath: wipeClipPath(transition.direction, progress),
+      incomingClipPath: wipeClipPath(transition.treatment.direction, progress),
       edgeProgress: progress,
       pageTurnFold: Math.sin(progress * Math.PI),
     };
   }
-  if (transition.type === 'paper-shutters') {
+  if (transition.treatment.type === 'paper-shutters') {
     return {
       ...base,
       incomingVisible: rawProgress >= 0.5,
@@ -364,7 +436,7 @@ export const resolveSceneTransitionPresentation = ({transition, frame}) => {
 
 export const deriveTransitionProofSamples = ({timeline, fps, durationSeconds}) =>
   (timeline.transitions ?? []).flatMap((transition) => {
-    if (transition.type === 'cut') {
+    if (transition.treatment.type === 'cut') {
       const before = Math.max(0, transition.from - 1);
       const after = Math.min(timeline.durationInFrames - 1, transition.from);
       return [
@@ -388,7 +460,7 @@ export const deriveTransitionProofSamples = ({timeline, fps, durationSeconds}) =
       );
       return {
         time: Math.max(0, Math.min(durationSeconds - 0.04, absoluteFrame / fps)),
-        label: `${transition.fromSceneId} → ${transition.toSceneId} · ${transition.intent} · ${transition.type} ${Math.round(sampleProgress * 100)}%`,
+        label: `${transition.fromSceneId} → ${transition.toSceneId} · ${transition.intent} · ${transition.treatment.type} ${Math.round(sampleProgress * 100)}%`,
         transitionId: transition.id,
         progress: sampleProgress,
       };

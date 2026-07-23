@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video-workspace",
-  "version": "0.14.0-dev.10",
+  "version": "0.15.0-dev.1",
   "description": "Configuration-driven paper-collage video pipeline and Codex plugin built with Remotion.",
   "private": true,
   "type": "module",
@@ -63,6 +63,7 @@
     "project:report": "node scripts/project-metrics-run.mjs --category=deterministic-check --operation=report --script=scripts/project-report.mjs --slug-index=0 --",
     "style:proof": "node scripts/project-metrics-run.mjs --category=evidence-render --operation=style-proof --script=scripts/style-motion-proof.mjs --slug-index=0 --",
     "doctor": "node scripts/project-doctor.mjs",
+    "sample:vox": "remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264",
     "dev": "remotion studio src/index.ts --props=projects/starter-demo/project.json",
     "check": "tsc --noEmit",
     "bundle": "remotion bundle src/index.ts",

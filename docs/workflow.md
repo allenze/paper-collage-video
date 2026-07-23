@@ -43,7 +43,7 @@ capability-review
 
 `project:plan --json` 会针对当前幕数返回三个档位的准确生图尝试上限、姿态母版调用/格数、连续动效目标上限、成片影响和时长权威。首次规划时同时传入时长、幕数等写入参数；已有已解析计划时，只传 slug 与 `--json` 即可只读重显选项而不改写项目。概念确认卡与“修改后再继续”路径都直接显示这些结构化选项；批准文件用 `planDecision` 回填档位、时长、幕数和 `human-target` / `content-derived`，避免自然语言备注与机器计划漂移。
 
-计划完成后，Codex 先为每个节拍判断可见变化，并用 `project:storyboard` 锁定 schema-v7 `treatments` 与相邻场景边界。边界先声明 `continuity`、地点变化、时间流逝、焦点揭示、章节重置或冲击剪辑意图，编译器再路由注册纸张动画；只有 `impact-cut` 能生成硬切。动作、持久显隐、组合关系、图形机制和语义风险是正交维度：姿态/道具状态变化路由到 `state-sequence`，环境呼吸和镜头变化路由到连续变换，show/hide 路由到持久可见性事件，接触与共享边界分别路由到注册组合，问号/圆圈/箭头路由到可编辑图形。命令确定性编译 `compositionPlan`、多维风格证明计划、姿态母版网格、成本摘要、转场 recipe 和指纹；输入不能手写其他派生字段。每个节拍显式声明 proof 绑定或 null；必需动作超出档位时阻断并要求提高档位或缩小故事范围，不会偷偷降级为位移。它不增加审批次数，而是与叙事、事实、制作档位/预算和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入 provider 选择并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
+计划完成后，Codex 先为每个节拍判断可见变化，并用 `project:storyboard` 锁定 schema-v7 `treatments` 与相邻场景边界。边界的 `intent` 只表达连续、地点、时间、焦点、章节或冲击等叙事目的，独立 `treatment` 表达纸张转场、节奏硬切或冲击硬切；普通意图的 rhythmic cut 必须绑定边界附近的 `beatId`。动作、持久显隐、组合关系、图形机制和语义风险是正交维度：姿态/道具状态变化路由到 `state-sequence`，环境呼吸和镜头变化路由到连续变换，真实景深差速路由到 `depth-parallax`，重复装饰路由到确定性 `motif-field`，show/hide 路由到持久可见性事件，接触与共享边界分别路由到注册组合，问号/圆圈/箭头路由到可编辑图形。命令确定性编译 `compositionPlan`、多维风格证明计划、姿态母版网格、成本摘要、转场 recipe 和指纹；输入不能手写其他派生字段。每个节拍显式声明 proof 绑定或 null；必需动作超出档位时阻断并要求提高档位或缩小故事范围，不会偷偷降级为位移。它不增加审批次数，而是与叙事、事实、制作档位/预算和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入 provider 选择并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
 
 ## 2. 风格与虚构音色确认
 

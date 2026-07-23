@@ -91,12 +91,12 @@
     }
   ],
   "sceneTransitions": [
-    {"id": "slide-wipe", "fromSceneId": "slide", "toSceneId": "wipe", "intent": "continuity", "rationale": "Continue the gallery with an incoming paper panel.", "type": "paper-slide", "direction": "right-to-left", "durationSeconds": 0.45},
-    {"id": "wipe-torn", "fromSceneId": "wipe", "toSceneId": "torn", "intent": "location-change", "rationale": "A clean paper edge moves to another visual location.", "type": "paper-wipe", "direction": "left-to-right", "durationSeconds": 0.5},
-    {"id": "torn-iris", "fromSceneId": "torn", "toSceneId": "iris", "intent": "location-change", "rationale": "A rough paper edge demonstrates a more tactile location change.", "type": "torn-wipe", "direction": "top-to-bottom", "durationSeconds": 0.5},
-    {"id": "iris-page", "fromSceneId": "iris", "toSceneId": "page", "intent": "focus-reveal", "rationale": "The circular opening focuses attention on the next card.", "type": "paper-iris", "durationSeconds": 0.55},
-    {"id": "page-shutters", "fromSceneId": "page", "toSceneId": "shutters", "intent": "time-passage", "rationale": "A page turn signals elapsed time.", "type": "page-turn", "direction": "right-to-left", "durationSeconds": 0.7},
-    {"id": "shutters-dip", "fromSceneId": "shutters", "toSceneId": "dip", "intent": "chapter-reset", "rationale": "Two opaque paper shutters close one chapter.", "type": "paper-shutters", "durationSeconds": 0.65},
-    {"id": "dip-complete", "fromSceneId": "dip", "toSceneId": "complete", "intent": "chapter-reset", "rationale": "An opaque paper field resets the final lockup.", "type": "dip-to-paper", "durationSeconds": 0.6}
+    {"id": "slide-wipe", "fromSceneId": "slide", "toSceneId": "wipe", "intent": "continuity", "rationale": "Continue the gallery with an incoming paper panel.", "treatment": {"type": "paper-slide", "motivation": "authored", "direction": "right-to-left", "durationSeconds": 0.45}},
+    {"id": "wipe-torn", "fromSceneId": "wipe", "toSceneId": "torn", "intent": "location-change", "rationale": "A clean paper edge moves to another visual location.", "treatment": {"type": "paper-wipe", "motivation": "authored", "direction": "left-to-right", "durationSeconds": 0.5}},
+    {"id": "torn-iris", "fromSceneId": "torn", "toSceneId": "iris", "intent": "location-change", "rationale": "A rough paper edge demonstrates a more tactile location change.", "treatment": {"type": "torn-wipe", "motivation": "authored", "direction": "top-to-bottom", "durationSeconds": 0.5}},
+    {"id": "iris-page", "fromSceneId": "iris", "toSceneId": "page", "intent": "focus-reveal", "rationale": "The circular opening focuses attention on the next card.", "treatment": {"type": "paper-iris", "motivation": "authored", "durationSeconds": 0.55}},
+    {"id": "page-shutters", "fromSceneId": "page", "toSceneId": "shutters", "intent": "time-passage", "rationale": "A page turn signals elapsed time.", "treatment": {"type": "page-turn", "motivation": "authored", "direction": "right-to-left", "durationSeconds": 0.7}},
+    {"id": "shutters-dip", "fromSceneId": "shutters", "toSceneId": "dip", "intent": "chapter-reset", "rationale": "Two opaque paper shutters close one chapter.", "treatment": {"type": "paper-shutters", "motivation": "authored", "durationSeconds": 0.65}},
+    {"id": "dip-complete", "fromSceneId": "dip", "toSceneId": "complete", "intent": "chapter-reset", "rationale": "An opaque paper field resets the final lockup.", "treatment": {"type": "dip-to-paper", "motivation": "authored", "durationSeconds": 0.6}}
   ]
 }

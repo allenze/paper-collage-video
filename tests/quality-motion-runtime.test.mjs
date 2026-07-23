@@ -182,8 +182,8 @@ test('v7 scene transitions use one seconds-based intent-routed opaque-boundary p
       },
     ],
     sceneTransitions: [
-      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', type: 'paper-wipe', direction: 'left-to-right', durationSeconds: 0.4},
-      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', type: 'dip-to-paper', durationSeconds: 0.4},
+      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', treatment: {type: 'paper-wipe', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.4}},
+      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', treatment: {type: 'dip-to-paper', motivation: 'authored', durationSeconds: 0.4}},
     ],
   });
   assert.equal(timeline.scenes[0].from, 0);

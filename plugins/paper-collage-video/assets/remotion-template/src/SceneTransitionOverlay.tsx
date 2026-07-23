@@ -9,7 +9,7 @@ const paperSurface = (theme: ProjectTheme): React.CSSProperties => ({
 });
 
 const edgeStyle = (
-  direction: NormalizedSceneBoundaryTransition['direction'],
+  direction: NormalizedSceneBoundaryTransition['treatment']['direction'],
   progress: number,
 ): React.CSSProperties => {
   const position = `${progress * 100}%`;
@@ -46,7 +46,7 @@ const PaperEdge = ({
   progress,
   color,
 }: {
-  direction: NormalizedSceneBoundaryTransition['direction'];
+  direction: NormalizedSceneBoundaryTransition['treatment']['direction'];
   progress: number;
   color: string;
 }) => (
@@ -65,17 +65,17 @@ export const SceneTransitionOverlay = ({
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const presentation = resolveSceneTransitionPresentation({transition, frame});
-  if (transition.type === 'cut') return null;
-  if (transition.type === 'paper-wipe' || transition.type === 'paper-slide') {
+  if (transition.treatment.type === 'cut') return null;
+  if (transition.treatment.type === 'paper-wipe' || transition.treatment.type === 'paper-slide') {
     return (
       <PaperEdge
-        direction={transition.direction}
+        direction={transition.treatment.direction}
         progress={presentation.edgeProgress ?? 1}
         color={theme.paperEdge}
       />
     );
   }
-  if (transition.type === 'torn-wipe') {
+  if (transition.treatment.type === 'torn-wipe') {
     const points = (presentation.tornEdgePoints ?? [])
       .map(({x, y}) => `${x},${y}`)
       .join(' ');
@@ -94,7 +94,7 @@ export const SceneTransitionOverlay = ({
       </AbsoluteFill>
     );
   }
-  if (transition.type === 'paper-iris') {
+  if (transition.treatment.type === 'paper-iris') {
     const basis = Math.sqrt(width ** 2 + height ** 2) / Math.sqrt(2);
     const radius = ((presentation.irisRadius ?? 0) / 100) * basis;
     return (
@@ -117,10 +117,10 @@ export const SceneTransitionOverlay = ({
       </AbsoluteFill>
     );
   }
-  if (transition.type === 'page-turn') {
+  if (transition.treatment.type === 'page-turn') {
     const fold = presentation.pageTurnFold ?? 0;
     const position = `${(presentation.edgeProgress ?? 0) * 100}%`;
-    const leftToRight = transition.direction === 'left-to-right';
+    const leftToRight = transition.treatment.direction === 'left-to-right';
     return (
       <AbsoluteFill style={{zIndex: 1000, pointerEvents: 'none', perspective: 1200}}>
         <div
@@ -143,7 +143,7 @@ export const SceneTransitionOverlay = ({
       </AbsoluteFill>
     );
   }
-  if (transition.type === 'paper-shutters') {
+  if (transition.treatment.type === 'paper-shutters') {
     const closure = presentation.shutterClosure ?? 0;
     const surface = paperSurface(theme);
     return (

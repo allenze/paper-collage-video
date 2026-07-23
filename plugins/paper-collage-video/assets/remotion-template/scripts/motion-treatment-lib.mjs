@@ -1,4 +1,5 @@
 import {flattenCompositionNodes, hashCompositionValue} from './composition-lib.mjs';
+import {collectParallaxDepths} from '../src/parallax.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -13,9 +14,13 @@ export const CHANGE_CLASSES = [
   'mechanism-state',
   'static-hold',
   'visibility-change',
+  'depth-parallax',
+  'decorative-field',
 ];
-export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition'];
-export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle'];
+export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field'];
+export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'parallax-camera'];
+export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'burst', 'orbit'];
+export const MOTIF_FIELD_DISTRIBUTIONS = ['scattered', 'grid', 'edge'];
 export const COMPOSITION_PATTERNS = ['free', 'supported-subject', 'registered-environment'];
 export const GRAPHIC_KINDS = ['text', 'shape'];
 export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp'];
@@ -66,6 +71,8 @@ const routeForChangeClass = {
   'mechanism-state': {proof: true},
   'static-hold': {motion: 'static'},
   'visibility-change': {motion: 'visibility-transition'},
+  'depth-parallax': {motion: 'continuous-transform', proof: true},
+  'decorative-field': {motion: 'motif-field', proof: true},
 };
 
 const addIssue = (issues, code, message, location) =>
@@ -82,6 +89,8 @@ export const treatmentRiskScore = (treatment) =>
 const styleSourceFamilyKey = (treatment) =>
   treatment?.motion?.kind === 'state-sequence'
     ? `pose-family:${treatment.motion.poseFamilyId}`
+    : treatment?.motion?.kind === 'motif-field'
+      ? `motif-field:${treatment.targetId}`
     : `target:${treatment?.targetId}`;
 
 const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
@@ -93,6 +102,7 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
     coverage.push(`relationship:${treatment.composition.pattern}`);
   }
   if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
+  if (treatment.motion?.kind === 'motif-field') coverage.push('motion:motif-field');
   return coverage;
 };
 
@@ -228,7 +238,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
 
   const motion = treatment.motion;
   if (!motion || typeof motion !== 'object' || !MOTION_KINDS.includes(motion.kind)) {
-    addIssue(issues, 'treatment-motion-kind', 'motion.kind 必须是 static、continuous-transform 或 state-sequence。', `${location}.motion.kind`);
+    addIssue(issues, 'treatment-motion-kind', 'motion.kind 必须使用受支持的确定性运动原语。', `${location}.motion.kind`);
   } else if (motion.kind === 'continuous-transform') {
     if (!CONTINUOUS_PRESETS.includes(motion.preset)) {
       addIssue(issues, 'treatment-motion-preset', `未知 continuous preset：${motion.preset}`, `${location}.motion.preset`);
@@ -264,6 +274,22 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     }
     if (['preset', 'poseFamilyId', 'stateId', 'visualChange', 'playback'].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'visibility-transition 不得夹带连续或状态序列字段。', `${location}.motion`);
+    }
+  } else if (motion.kind === 'motif-field') {
+    if (!MOTIF_FIELD_PRESETS.includes(motion.preset)) {
+      addIssue(issues, 'treatment-motif-preset', `未知 motif-field preset：${motion.preset}`, `${location}.motion.preset`);
+    }
+    if (!MOTIF_FIELD_DISTRIBUTIONS.includes(motion.distribution)) {
+      addIssue(issues, 'treatment-motif-distribution', `未知 motif-field distribution：${motion.distribution}`, `${location}.motion.distribution`);
+    }
+    if (!(Number.isInteger(motion.count) && motion.count >= 1 && motion.count <= 64)) {
+      addIssue(issues, 'treatment-motif-count', 'motif-field count 必须是 1..64 的整数。', `${location}.motion.count`);
+    }
+    if (!(Number.isFinite(motion.cycles) && motion.cycles > 0 && motion.cycles <= 12)) {
+      addIssue(issues, 'treatment-motif-cycles', 'motif-field cycles 必须位于 0..12。', `${location}.motion.cycles`);
+    }
+    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds'].some((key) => motion[key] !== undefined)) {
+      addIssue(issues, 'treatment-motion-mixed', 'motif-field 不得夹带状态或显隐字段。', `${location}.motion`);
     }
   } else if (motion && Object.keys(motion).some((key) => key !== 'kind')) {
     addIssue(issues, 'treatment-static-fields', 'static motion 只能声明 kind。', `${location}.motion`);
@@ -312,6 +338,15 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   if (route?.proof && !nonEmpty(treatment.proofTimeId)) {
     addIssue(issues, 'treatment-routing-proof', `${treatment.changeClass} 必须绑定 proofTimeId。`, `${location}.proofTimeId`);
   }
+  if (
+    treatment.changeClass === 'depth-parallax' &&
+    (treatment.targetId !== 'scene-camera' || motion?.preset !== 'parallax-camera')
+  ) {
+    addIssue(issues, 'treatment-parallax-route', 'depth-parallax 必须以 scene-camera 为目标并使用 parallax-camera preset。', `${location}.motion`);
+  }
+  if (treatment.changeClass === 'decorative-field' && treatment.semanticRisk !== 'decorative') {
+    addIssue(issues, 'treatment-motif-risk', 'decorative-field 的 semanticRisk 必须为 decorative。', `${location}.semanticRisk`);
+  }
   if (['identity', 'topology', 'mechanism', 'diagram'].includes(treatment.semanticRisk) && !nonEmpty(treatment.proofTimeId)) {
     addIssue(issues, 'treatment-risk-proof', `semanticRisk=${treatment.semanticRisk} 必须绑定 proofTimeId。`, `${location}.proofTimeId`);
   }
@@ -324,6 +359,7 @@ const compileScene = (scene) => {
   const stateFamilies = new Map();
   const continuousMotions = [];
   const visibilityEvents = [];
+  const motifFields = [];
   const graphics = [];
   const treatments = [];
 
@@ -390,6 +426,18 @@ const compileScene = (scene) => {
           proofTimeId: treatment.proofTimeId ?? null,
         });
       }
+      if (treatment.motion.kind === 'motif-field') {
+        motifFields.push({
+          id: treatment.id,
+          nodeId: treatment.targetId,
+          preset: treatment.motion.preset,
+          distribution: treatment.motion.distribution,
+          count: treatment.motion.count,
+          cycles: treatment.motion.cycles,
+          at: beat.at,
+          proofTimeId: treatment.proofTimeId ?? null,
+        });
+      }
       if (treatment.graphic) {
         graphics.push({
           id: treatment.id,
@@ -414,6 +462,7 @@ const compileScene = (scene) => {
       .sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
     continuousMotions: continuousMotions.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     visibilityEvents: visibilityEvents.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
+    motifFields: motifFields.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     graphics: graphics.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
   };
   const directing = {
@@ -472,6 +521,9 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
     continuousTargets: uniqueContinuousTargets.size,
     visibilityTargets: new Set(
       treatments.filter(({motion}) => motion.kind === 'visibility-transition').map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
+    ).size,
+    motifFieldTargets: new Set(
+      treatments.filter(({motion}) => motion.kind === 'motif-field').map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
     ).size,
     graphicTreatments: treatments.filter(({graphic}) => Boolean(graphic)).length,
     coupledRelationships: scenes.reduce((sum, scene) => sum + scene.compositionPlan.relationships.length, 0),
@@ -600,6 +652,17 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
     flattenCompositionNodes(scene?.composition?.nodes).map(({node}) => [node.id, node]),
   );
   for (const planned of storyboardScene?.compositionPlan?.continuousMotions ?? []) {
+    if (planned.preset === 'parallax-camera') {
+      const depths = new Set(collectParallaxDepths(scene?.composition?.nodes ?? []).map(({depth}) => depth));
+      if (
+        planned.nodeId !== 'scene-camera' ||
+        !scene?.camera?.parallax?.enabled ||
+        depths.size < 2
+      ) {
+        addIssue(issues, 'directing-parallax-drift', `导演计划要求确定性景深视差 ${planned.id}，但 camera.parallax 或 depth 层级未按计划实现。`, `${location}.camera.parallax`);
+      }
+      continue;
+    }
     if (planned.nodeId === 'scene-camera') {
       const cameraMoves = scene?.camera?.preset !== 'static' || (scene?.camera?.keyframes?.length ?? 0) >= 2;
       if (!cameraMoves) {
@@ -612,6 +675,20 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       addIssue(issues, 'directing-target-missing', `导演计划的连续动效目标不存在：${planned.nodeId}。`, `${location}.composition`);
     } else if (!hasVisibleNodeMotion(node)) {
       addIssue(issues, 'directing-continuous-drift', `导演计划要求 ${planned.nodeId} 执行 ${planned.preset}，但节点没有可见关键帧或 idle。`, `${location}.composition.nodes#${planned.nodeId}.motion`);
+    }
+  }
+  for (const planned of storyboardScene?.compositionPlan?.motifFields ?? []) {
+    const node = nodes.get(planned.nodeId);
+    if (!node) {
+      addIssue(issues, 'directing-motif-missing', `导演计划的 motif-field 目标不存在：${planned.nodeId}。`, `${location}.composition`);
+    } else if (
+      node.kind !== 'motif-field' ||
+      node.fieldMotion?.preset !== planned.preset ||
+      node.fieldMotion?.cycles !== planned.cycles ||
+      node.distribution !== planned.distribution ||
+      node.count !== planned.count
+    ) {
+      addIssue(issues, 'directing-motif-drift', `motif-field ${planned.nodeId} 与故事板计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
     }
   }
   for (const planned of storyboardScene?.compositionPlan?.visibilityEvents ?? []) {

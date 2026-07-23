@@ -291,7 +291,7 @@ try {
       id: 'scene-transition-contract',
       passed: !(validation.issues ?? []).some(({code}) => String(code).startsWith('scene-transition')),
       expected: 'intent-routed adjacent boundaries with no alpha-blended semantic scenes',
-      actual: (project.sceneTransitions ?? []).map(({intent, type}) => `${intent}:${type}`).join(', ') || 'single scene',
+      actual: (project.sceneTransitions ?? []).map(({intent, treatment}) => `${intent}:${treatment?.type}:${treatment?.motivation}`).join(', ') || 'single scene',
     },
     {
       id: 'audiovisual-coverage',

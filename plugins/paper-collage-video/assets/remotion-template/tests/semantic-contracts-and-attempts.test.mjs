@@ -375,7 +375,7 @@ test('diagram filters fail deterministically and semantic proof targets span sce
       video: {width: 100, height: 100, fps: 30},
       audio: {narration: {volume: 1}},
       scenes: [scene('scene-a'), scene('scene-b')],
-      sceneTransitions: [{id: 'a-b', fromSceneId: 'scene-a', toSceneId: 'scene-b', intent: 'impact-cut', rationale: 'The fixture deliberately tests an abrupt semantic boundary.', type: 'cut', durationSeconds: 0}],
+      sceneTransitions: [{id: 'a-b', fromSceneId: 'scene-a', toSceneId: 'scene-b', intent: 'impact', rationale: 'The fixture deliberately tests an abrupt semantic boundary.', treatment: {type: 'cut', motivation: 'impact', durationSeconds: 0}}],
     };
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`);
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [{

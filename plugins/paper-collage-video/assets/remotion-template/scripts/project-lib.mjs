@@ -24,6 +24,7 @@ import {
   deriveSceneTimeline,
   validateSceneTransitionSequence,
 } from '../src/sceneTimeline.mjs';
+import {validateParallaxRig} from '../src/parallax.mjs';
 import {validateVisibilityLifecycle} from '../src/visibilityLifecycle.mjs';
 import {assessTimelineContinuity} from './timeline-continuity-lib.mjs';
 import {
@@ -443,12 +444,6 @@ export const validateProject = async (project, options = {}) => {
   if (!Array.isArray(project.scenes) || project.scenes.length === 0) {
     add('error', 'scenes-empty', '项目至少需要一个镜头。', 'scenes');
   }
-  for (const issue of validateSceneTransitionSequence({
-    scenes: project.scenes,
-    sceneTransitions: project.sceneTransitions,
-  })) {
-    add('error', issue.code, issue.message, issue.location);
-  }
   if (project.plan !== undefined) {
     for (const issue of validateCreativePlan(project.plan, {slug: project.slug})) {
       add('error', issue.code, issue.message, issue.location);
@@ -476,6 +471,13 @@ export const validateProject = async (project, options = {}) => {
     if (JSON.stringify(project.sceneTransitions ?? []) !== JSON.stringify(storyboard.sceneTransitions ?? [])) {
       add('error', 'scene-transitions-drift', 'project.sceneTransitions 必须与已批准故事板完全一致。', 'sceneTransitions');
     }
+  }
+  for (const issue of validateSceneTransitionSequence({
+    scenes: project.scenes,
+    beatScenes: storyboard?.scenes ?? project.scenes,
+    sceneTransitions: project.sceneTransitions,
+  })) {
+    add('error', issue.code, issue.message, issue.location);
   }
 
   const structuralErrors = issues.some(({level}) => level === 'error');
@@ -768,6 +770,35 @@ export const validateProject = async (project, options = {}) => {
       }
     }
 
+    for (const {node, parent} of compositionResult.motifFields) {
+      const nodeLocation = `${sceneLocation}.composition.nodes#${node.id}`;
+      for (const motif of node.motifs ?? []) {
+        try {
+          const assetFile = resolvePublicFile(motif.src);
+          if (!(await fileExists(assetFile))) {
+            add('error', 'composition-motif-missing', `缺少 motif 素材：${motif.src}`, `${nodeLocation}.motifs#${motif.id}.src`);
+            continue;
+          }
+          const inspection = await memoize(
+            backgroundInspectionCache,
+            assetFile,
+            () => inspectBackground(assetFile),
+          );
+          assets.push({
+            kind: 'decorative',
+            src: motif.src,
+            sceneId: scene.id,
+            nodeId: node.id,
+            motifId: motif.id,
+            parentId: parent?.id ?? null,
+            ...inspection,
+          });
+        } catch (error) {
+          add('error', 'composition-motif-inspect', error.message, `${nodeLocation}.motifs#${motif.id}.src`);
+        }
+      }
+    }
+
     for (const {node} of compositionResult.groups) {
       for (const boundary of node.boundaries ?? []) {
         for (const [side, maskSrc] of [
@@ -805,6 +836,13 @@ export const validateProject = async (project, options = {}) => {
       if (index > 0 && keyframe.at <= cameraKeyframes[index - 1].at) {
         add('error', 'camera-keyframe-order', 'camera keyframes 必须按 at 严格递增。', `${sceneLocation}.camera.keyframes[${index}].at`);
       }
+    }
+    for (const issue of validateParallaxRig({
+      camera: scene.camera,
+      composition: scene.composition,
+      location: `${sceneLocation}.camera.parallax`,
+    })) {
+      add(issue.level, issue.code, issue.message, issue.location);
     }
 
     if (!Array.isArray(scene.events) || scene.events.length === 0) {

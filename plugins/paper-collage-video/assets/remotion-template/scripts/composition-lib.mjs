@@ -53,9 +53,13 @@ export const collectCompositionAssets = (composition) =>
 export const collectStateSequences = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'state-sequence');
 
+export const collectMotifFields = (composition) =>
+  flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'motif-field');
+
 export const collectCompositionVisualSources = (composition) => [
   ...collectCompositionAssets(composition).map(({node}) => node.src),
   ...collectStateSequences(composition).flatMap(({node}) => node.states.map(({src}) => src)),
+  ...collectMotifFields(composition).flatMap(({node}) => node.motifs.map(({src}) => src)),
 ];
 
 export const pointInPolygon = ([x, y], polygon = []) => {
@@ -132,7 +136,7 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
   const add = (level, code, message, issueLocation) => issues.push({level, code, message, location: issueLocation});
   if (!composition || typeof composition !== 'object') {
     add('error', 'composition-required', '每个镜头必须声明 composition。', location);
-    return {issues, nodeIds: new Set(), groups: [], assets: [], sequences: [], freeNodes: []};
+    return {issues, nodeIds: new Set(), groups: [], assets: [], sequences: [], motifFields: [], freeNodes: []};
   }
   if (
     composition.coordinateSpace?.width !== video?.width ||
@@ -148,15 +152,19 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
   const groups = [];
   const assets = [];
   const sequences = [];
+  const motifFields = [];
   for (const {node, parent} of flat) {
     const nodeLocation = `${location}.nodes#${node?.id ?? 'missing'}`;
     if (!nonEmpty(node?.id) || nodeIds.has(node.id)) add('error', 'composition-node-id', '组合节点 id 缺失或重复。', `${nodeLocation}.id`);
     nodeIds.add(node?.id);
-    if (!['asset', 'state-sequence', 'text', 'shape', 'group'].includes(node?.kind)) {
+    if (!['asset', 'state-sequence', 'text', 'shape', 'motif-field', 'group'].includes(node?.kind)) {
       add('error', 'composition-node-kind', `未知组合节点 kind：${node?.kind}`, `${nodeLocation}.kind`);
       continue;
     }
     if (!Number.isInteger(node.z)) add('error', 'composition-node-z', '节点 z 必须是整数。', `${nodeLocation}.z`);
+    if (node.depth !== undefined && !(finite(node.depth) && node.depth >= -1 && node.depth <= 1)) {
+      add('error', 'composition-node-depth', '节点 depth 必须位于 -1..1。', `${nodeLocation}.depth`);
+    }
     validateTransform(node.transform, `${nodeLocation}.transform`, add);
     validateMotionKeyframes(node.motion?.keyframes, `${nodeLocation}.motion.keyframes`, add);
     if (node.visibility !== undefined && !['visible', 'hidden'].includes(node.visibility?.initial)) {
@@ -221,6 +229,75 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       if (typeof node.text !== 'string') add('error', 'composition-text-value', 'text 节点必须声明字符串内容。', `${nodeLocation}.text`);
       if (!(finite(node.style?.fontSize) && node.style.fontSize > 0 && finite(node.style?.lineHeight) && node.style.lineHeight > 0)) add('error', 'composition-text-style', 'text 节点必须声明有效字号与行高。', `${nodeLocation}.style`);
       if (!finite(node.transform?.height) || node.transform.height <= 0) add('error', 'composition-text-height', 'text 节点必须声明 transform.height。', `${nodeLocation}.transform.height`);
+      continue;
+    }
+
+    if (node.kind === 'motif-field') {
+      motifFields.push({node, parent});
+      if (!Array.isArray(node.motifs) || node.motifs.length < 1 || node.motifs.length > 8) {
+        add('error', 'composition-motif-sources', 'motif-field 必须包含 1..8 个 motif 素材。', `${nodeLocation}.motifs`);
+      } else {
+        const motifIds = new Set();
+        for (const [index, motif] of node.motifs.entries()) {
+          if (!nonEmpty(motif?.id) || motifIds.has(motif.id)) {
+            add('error', 'composition-motif-id', 'motif id 缺失或重复。', `${nodeLocation}.motifs[${index}].id`);
+          }
+          motifIds.add(motif?.id);
+          if (!nonEmpty(motif?.src)) add('error', 'composition-motif-src', 'motif 必须声明 src。', `${nodeLocation}.motifs[${index}].src`);
+        }
+      }
+      if (!(Number.isInteger(node.count) && node.count >= 1 && node.count <= 64)) {
+        add('error', 'composition-motif-count', 'motif-field count 必须是 1..64 的整数。', `${nodeLocation}.count`);
+      }
+      if (!Number.isInteger(node.seed)) add('error', 'composition-motif-seed', 'motif-field seed 必须是整数。', `${nodeLocation}.seed`);
+      if (!['scattered', 'grid', 'edge'].includes(node.distribution)) {
+        add('error', 'composition-motif-distribution', `未知 motif-field distribution：${node.distribution}`, `${nodeLocation}.distribution`);
+      }
+      if (!['drift', 'fall-drift', 'burst', 'orbit'].includes(node.fieldMotion?.preset)) {
+        add('error', 'composition-motif-motion', `未知 motif-field motion：${node.fieldMotion?.preset}`, `${nodeLocation}.fieldMotion.preset`);
+      }
+      if (!(finite(node.fieldMotion?.cycles) && node.fieldMotion.cycles > 0 && node.fieldMotion.cycles <= 12)) {
+        add('error', 'composition-motif-cycles', 'motif-field cycles 必须位于 0..12。', `${nodeLocation}.fieldMotion.cycles`);
+      }
+      if (!(finite(node.baseSize) && node.baseSize > 0 && node.baseSize <= 1)) {
+        add('error', 'composition-motif-base-size', 'motif-field baseSize 必须位于 0..1。', `${nodeLocation}.baseSize`);
+      }
+      for (const property of ['scale', 'rotation', 'opacity']) {
+        const range = node.variation?.[property];
+        if (
+          !Array.isArray(range) ||
+          range.length !== 2 ||
+          !range.every(finite) ||
+          range[0] > range[1]
+        ) {
+          add('error', 'composition-motif-variation', `${property} 必须是递增的双值范围。`, `${nodeLocation}.variation.${property}`);
+        }
+      }
+      if (
+        Array.isArray(node.variation?.scale) &&
+        !(node.variation.scale[0] > 0)
+      ) add('error', 'composition-motif-scale', 'motif scale 下界必须大于 0。', `${nodeLocation}.variation.scale`);
+      if (
+        Array.isArray(node.variation?.opacity) &&
+        !node.variation.opacity.every((value) => value >= 0 && value <= 1)
+      ) add('error', 'composition-motif-opacity', 'motif opacity 必须位于 0..1。', `${nodeLocation}.variation.opacity`);
+      if (node.safeArea !== undefined) {
+        const {x, y, width, height} = node.safeArea ?? {};
+        if (
+          ![x, y, width, height].every(finite) ||
+          x < 0 ||
+          y < 0 ||
+          width <= 0 ||
+          height <= 0 ||
+          x + width > 1 ||
+          y + height > 1
+        ) {
+          add('error', 'composition-motif-safe-area', 'motif-field safeArea 必须完整位于节点画布 0..1 内。', `${nodeLocation}.safeArea`);
+        }
+      }
+      if (!finite(node.transform?.height) || node.transform.height <= 0) {
+        add('error', 'composition-motif-height', 'motif-field 必须声明 transform.height。', `${nodeLocation}.transform.height`);
+      }
       continue;
     }
 
@@ -319,7 +396,7 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
       }
     }
   }
-  return {issues, nodeIds, groups, assets, sequences, freeNodes};
+  return {issues, nodeIds, groups, assets, sequences, motifFields, freeNodes};
 };
 
 export const deriveEventTimeline = ({scene, sceneFrom = 0, fps}) =>
