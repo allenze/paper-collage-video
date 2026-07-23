@@ -278,17 +278,30 @@ export const validateRegisteredFamilySpec = (spec) => {
   return errors;
 };
 
-const activeRecord = (manifest, assetId) =>
+const manifestRecord = (manifest, assetId, allowedStatuses = ['active']) =>
   [...(manifest.assets ?? [])].reverse().find(
     (record) =>
       record.assetId === assetId &&
-      record.lifecycle?.status === 'active',
+      allowedStatuses.includes(record.lifecycle?.status),
   ) ?? null;
 
-const assertImageRecord = (manifest, assetId, label) => {
-  const record = activeRecord(manifest, assetId);
+const activeRecord = (manifest, assetId) =>
+  manifestRecord(manifest, assetId);
+
+const assertImageRecord = (
+  manifest,
+  assetId,
+  label,
+  {allowRecoverySource = false} = {},
+) => {
+  const allowedStatuses = allowRecoverySource
+    ? ['active', 'recovery-source']
+    : ['active'];
+  const record = manifestRecord(manifest, assetId, allowedStatuses);
   if (!record || record.capability !== 'image') {
-    throw new Error(`${label} 必须指向 active image manifest 记录：${assetId}`);
+    throw new Error(
+      `${label} 必须指向 ${allowedStatuses.join('/')} image manifest 记录：${assetId}`,
+    );
   }
   return record;
 };
@@ -402,6 +415,9 @@ const layerSheetCell = async ({
     .png()
     .toBuffer();
   const surface = cell.outputSurface ?? null;
+  const providerObservation = record.providerObservation?.cells?.find(
+    (candidate) => candidate.packageRole === packageRole,
+  ) ?? null;
   let buffer = extracted;
   let keyingMetadata = null;
   if (surface?.mode === 'chroma-key') {
@@ -411,17 +427,45 @@ const layerSheetCell = async ({
       );
     }
     if (
-      derivation.keying.keyColor.toLowerCase() !==
-      surface.keyColor.toLowerCase()
+      record.lifecycle?.status === 'recovery-source' &&
+      (
+        record.providerObservation?.mode !== 'provider-native-observed' ||
+        !providerObservation?.passed ||
+        !providerObservation?.observedKeyColor
+      )
     ) {
       throw new Error(
-        `registered-sheet ${record.assetId} 的 ${packageRole} keying 颜色必须匹配 provider request`,
+        `recovery-source ${record.assetId} 的 ${packageRole} 缺少通过的 observed key plane provenance`,
+      );
+    }
+    const effectiveKeyColor =
+      providerObservation?.observedKeyColor ?? surface.keyColor;
+    if (
+      derivation.keying.keyColor.toLowerCase() !==
+      effectiveKeyColor.toLowerCase()
+    ) {
+      throw new Error(
+        `registered-sheet ${record.assetId} 的 ${packageRole} keying 颜色必须匹配 ` +
+        `${providerObservation ? 'provider observed key plane' : 'provider request'}`,
       );
     }
     ({buffer, metadata: keyingMetadata} = await chromaKeyCell({
       input: extracted,
       keying: derivation.keying,
     }));
+    if (providerObservation) {
+      keyingMetadata = {
+        ...keyingMetadata,
+        providerObservation: {
+          requestedKeyColor: providerObservation.requestedKeyColor,
+          observedKeyColor: providerObservation.observedKeyColor,
+          policyFingerprint: providerObservation.policyFingerprint,
+          observationFingerprint:
+            record.providerObservation.observationFingerprint,
+          metrics: providerObservation.metrics,
+        },
+      };
+    }
   } else if (derivation?.keying) {
     throw new Error(
       `registered-sheet ${record.assetId} 的 ${packageRole} 非色键格不得声明 keying`,
@@ -452,8 +496,20 @@ const layerSheetCell = async ({
     sourceSurface: surface
       ? {
           mode: surface.mode,
-          keyColor: surface.keyColor ?? null,
+          keyColor:
+            providerObservation?.observedKeyColor ??
+            surface.keyColor ??
+            null,
           tolerance: surface.tolerance ?? null,
+          requestedKeyColor: surface.keyColor ?? null,
+          observedKeyColor:
+            providerObservation?.observedKeyColor ?? null,
+          observationPolicyId:
+            record.providerObservation?.policyId ?? null,
+          observationPolicyFingerprint:
+            providerObservation?.policyFingerprint ?? null,
+          observationFingerprint:
+            record.providerObservation?.observationFingerprint ?? null,
         }
       : null,
     keying: derivation?.keying ?? null,
@@ -476,7 +532,12 @@ const sourceImage = async ({
   registration,
   sourcePackage,
 }) => {
-  const record = assertImageRecord(manifest, source.assetId, source.kind);
+  const record = assertImageRecord(
+    manifest,
+    source.assetId,
+    source.kind,
+    {allowRecoverySource: source.kind === 'registered-layer-sheet'},
+  );
   const file = workspacePath(root, record.file, `${source.kind} source`);
   const actualSha256 = await sha256File(file);
   if (record.sha256 !== actualSha256) {
@@ -782,14 +843,12 @@ export const createRegisteredFamilyFingerprint = ({
 })));
 
 const providerRootsFor = (manifest, derivedMembers) => {
-  const ids = new Set();
+  const records = new Map();
   for (const member of derivedMembers) {
     const record = member.source.record;
-    ids.add(record.assetId);
+    records.set(record.recordId, record);
   }
-  return [...ids]
-    .map((assetId) => activeRecord(manifest, assetId))
-    .filter(Boolean);
+  return [...records.values()];
 };
 
 const providerPackageRootsFor = (manifest, spec, derivedMembers) => {
@@ -1125,6 +1184,22 @@ export const assertRegisteredFamilyRecords = ({
       )
     ) {
       errors.push(`${record.assetId} 色键来源缺少正式 keying provenance`);
+    }
+    if (
+      binding.derivation?.sourceSurface?.observedKeyColor &&
+      (
+        !binding.derivation.sourceSurface.observationPolicyId ||
+        !/^[a-f0-9]{64}$/.test(
+          binding.derivation.sourceSurface.observationPolicyFingerprint ?? '',
+        ) ||
+        !/^[a-f0-9]{64}$/.test(
+          binding.derivation.sourceSurface.observationFingerprint ?? '',
+        ) ||
+        binding.derivation.keying?.keyColor?.toLowerCase() !==
+          binding.derivation.sourceSurface.observedKeyColor.toLowerCase()
+      )
+    ) {
+      errors.push(`${record.assetId} observed key plane provenance 不完整或与 keying 不一致`);
     }
     if (
       binding.derivation?.sourceSurface?.mode !== 'chroma-key' &&

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.paper-collage.dev/rejected-output-recovery.schema.json",
+  "title": "Rejected Provider Output Recovery Source",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "projectSlug",
+    "attemptId",
+    "historicalRequest",
+    "source",
+    "recoveryAssetId",
+    "reason",
+    "cells"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "attemptId": {"type": "string", "pattern": "^img-[0-9a-f-]+$"},
+    "historicalRequest": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "recoveryAssetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "reason": {"type": "string", "minLength": 1},
+    "cells": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["packageRole", "sourceRect", "keyPlane"],
+        "properties": {
+          "packageRole": {"enum": ["subject", "support-front"]},
+          "sourceRect": {
+            "type": "object",
+            "required": ["left", "top", "width", "height"],
+            "properties": {
+              "left": {"type": "integer", "minimum": 0},
+              "top": {"type": "integer", "minimum": 0},
+              "width": {"type": "integer", "minimum": 2},
+              "height": {"type": "integer", "minimum": 2}
+            },
+            "additionalProperties": false
+          },
+          "keyPlane": {
+            "type": "object",
+            "required": ["mode", "policyId"],
+            "properties": {
+              "mode": {"const": "provider-native-observed"},
+              "policyId": {"const": "flat-v1"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

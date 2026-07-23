@@ -36,6 +36,19 @@ export const assertAssetManifest = (manifest, projectSlug) => {
       if (activeIds.has(record.assetId)) throw new Error(`资产 ${record.assetId} 存在多个 active 记录。`);
       activeIds.add(record.assetId);
     }
+    if (record.recoveredFromRejectedAttempt === true) {
+      if (
+        record.lifecycle.status !== 'recovery-source' ||
+        record.providerObservation?.sourceAttempt?.status !== 'rejected' ||
+        record.providerObservation?.sourceAttempt?.quotaConsumed !== true ||
+        record.providerObservation?.sourceAttempt?.attemptId !== record.attemptId ||
+        record.reusedFrom !== null
+      ) {
+        throw new Error(
+          `资产 ${record.assetId} 的 rejected-output recovery-source provenance 不完整。`,
+        );
+      }
+    }
   }
   return manifest;
 };

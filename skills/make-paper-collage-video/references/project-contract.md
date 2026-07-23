@@ -60,6 +60,14 @@ registration-canvas scaling, key metadata, and the three local member records.
 A resized/keyed project copy must never be recorded as though it were the raw
 provider result.
 
+Provider-native chroma cells use an observed key-plane contract. The request
+declares `provider-native-observed/flat-v1`; the manifest records the requested
+color separately from the accepted observed color and binds the observation
+statistics to the source SHA. A historical rejected output can enter derivation
+only as a `recovery-source` record produced by
+`provider:recover-rejected-source`, never by hand-editing the manifest or
+ledger. Its original attempt stays rejected and consumed.
+
 ## v10 Project, v9 Editorial, Composition, and Boundary Tree
 
 Schema v10 is the only supported Project, Storyboard Authoring, and Compiled

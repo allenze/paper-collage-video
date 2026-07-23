@@ -7,7 +7,7 @@
 
 当前开发协议为 project/storyboard v10（editorial subsystem 仍为 v9）；旧项目不会自动迁移或回退。v10 保留递归组合、注册源家族、camera-coupled parallax、节奏硬切、确定性 `motif-field`、统一 edit point、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级编辑切换，并新增生图前的 layer-complete source package、`registered-depth-stack`、responsive reveal envelope 和精确 provider/local/avoided 调用账目。所有这些行为都由 authoring、compiled plan、运行时、质量报告和正式证明共同约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
 
-当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.6`。新协议加入节奏故事板、注册组合模式、完整图层源包、逐格 opaque/chroma-key registered sheet、人工批准的精确图片 attempt 上限、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
+当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.7`。新协议加入节奏故事板、注册组合模式、完整图层源包、provider-native observed key plane、逐格 opaque/chroma-key registered sheet、rejected-output recovery-source、人工批准的精确图片 attempt 上限、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
 
 ## 完整演示
 
@@ -186,6 +186,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run provider:record -- --request=<file>` | 登记宿主工具或手工导入的本地输出 |
 | `npm run provider:request -- validate --request=<file>` | 只读校验请求并输出规范 provider/model invocation |
 | `npm run provider:recover-record -- --request=<file> --attempt-id=<id>` | 从已计费成功但未落 manifest 的关闭尝试恢复一次登记 |
+| `npm run provider:recover-rejected-source -- --spec=<file> [--check]` | 验证或登记 rejected 原始输出为只读 `recovery-source`；不改 attempt ledger、不增加额度 |
 | `npm run provider:reuse -- --request=<file>` | 按 provider/model/输入指纹复用哈希有效的已有资产 |
 | `npm run provider:attempt -- reserve --request=<file>` | 在宿主生图前原子预留一次批准额度并返回 attempt id |
 | `npm run provider:attempt -- summary --project=<slug>` | 只读汇总生成尝试与计费状态 |
@@ -231,9 +232,9 @@ Skill 不会只根据名称猜测能力存在：它先检查当前宿主的实�
 
 复制 `providers.local.example.json` 为 `providers.local.json`，即可把任意 CLI、SDK 包装脚本或私有 API 接到 `command` adapter。配置只保存 `requiredEnv` 的变量名，API key 仍放在环境变量中。异步服务由用户的 adapter 自行提交和轮询；稳定接口是“读取请求 JSON、写入指定输出、退出码为 0”。
 
-新图像请求使用 schema v7，同时声明组合绑定、语义风险和可验证输出面；layer-aware 请求还必须携带与故事板完全一致的 `layerPackageBinding`。人物、复杂拓扑、功能机构和说明图先写入 `semantic-contracts.json`，再由 proof target 和证据型质量门验证；prompt 不作为验收依据。宿主生图先只读校验请求，再运行 `provider:attempt reserve` 并使用返回的规范 invocation；命令 adapter 由 `provider:run` 自动预留。所有可能计费的成功、废稿、拒绝和放弃结果写入只追加账本，预算用尽时下一次调用被阻断。
+新图像请求使用 schema v7，同时声明组合绑定、语义风险和可验证输出面；layer-aware 请求还必须携带与故事板完全一致的 `layerPackageBinding`。provider-native sheet 的 chroma 格使用 `keyPlane={mode:"provider-native-observed",policyId:"flat-v1"}`：运行时先证明近似请求色形成单一、连续、边界覆盖充分且与前景分离的平面，再把观测色和统计指纹传给本地抠图。人物、复杂拓扑、功能机构和说明图先写入 `semantic-contracts.json`，再由 proof target 和证据型质量门验证；prompt 不作为验收依据。宿主生图先只读校验请求，再运行 `provider:attempt reserve` 并使用返回的规范 invocation；命令 adapter 由 `provider:run` 自动预留。所有可能计费的成功、废稿、拒绝和放弃结果写入只追加账本，预算用尽时下一次调用被阻断。
 
-被接受的输出仍通过 `provider:run` 或 `provider:record` 写入 manifest v4，记录 provider、模型/任务 id、请求指纹、SHA-256、组合/语义绑定、母版/派生成员、源家族指纹和生命周期。替换记录保留为 `superseded`；`rejected` 与 `recovery-source` 保留审计但不进入当前质量分母。相同 provider、模型、输入、设置和完整绑定才允许 `provider:reuse`；图像仍需在当前项目通过质量检查。完整契约见 [Provider Configuration](skills/make-paper-collage-video/references/providers.md) 和 [Semantic Production Contracts](skills/make-paper-collage-video/references/semantic-contracts.md)。
+被接受的输出仍通过 `provider:run` 或 `provider:record` 写入 manifest v4，记录 provider、模型/任务 id、请求指纹、SHA-256、组合/语义绑定、母版/派生成员、源家族指纹和生命周期。未来被正式验证拒绝的输出同时记录文件哈希；已有 rejected 输出可由独立 recovery spec 核对原请求、账本、文件哈希和 observed key plane，并作为 `recovery-source` 登记。该操作不重写/追加 ledger，也不把 rejected attempt 改成 succeeded。替换记录保留为 `superseded`；`rejected` 与 `recovery-source` 保留审计但不进入当前质量分母。相同 provider、模型、输入、设置和完整绑定才允许 `provider:reuse`；图像仍需在当前项目通过质量检查。完整契约见 [Provider Configuration](skills/make-paper-collage-video/references/providers.md) 和 [Semantic Production Contracts](skills/make-paper-collage-video/references/semantic-contracts.md)。
 
 ## 角色素材表处理
 

@@ -31,6 +31,14 @@ spaces as well as the outer silhouette; a clean outer edge does not excuse
 ocean/background pixels trapped inside a window, handle, propeller, or foliage
 hole.
 
+When the source uses a provider-native observed plane, quality additionally
+requires `observed-key-plane-current`. The `.key.json`, registered-family
+binding, and source observation must agree on observed key color, policy
+fingerprint, and source-bound observation fingerprint. This deterministic
+check proves provenance freshness, not semantic cutout correctness; the
+checkerboard, tight crop, negative spaces, reconstruction, and motion-stress
+evidence still require human review.
+
 Semantic risk adds evidence-backed checks:
 
 - identity: `identity-family-consistent`, `identity-distinct-within-frame`, `cross-scene-identity-continuity`;

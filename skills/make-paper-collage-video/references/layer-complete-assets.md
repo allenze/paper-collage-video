@@ -75,13 +75,22 @@ Use one schema-v7 image request with:
 - opaque `reference`/`support-rear` cells and alpha or flat chroma-key
   `subject`/`support-front` cells; default to a declared chroma key when the
   selected host model does not reliably emit native alpha;
+- for provider-native chroma cells,
+  `keyPlane={mode:"provider-native-observed",policyId:"flat-v1"}`. The
+  requested color is prompt intent, not an exact-output assertion. The output
+  must instead form one stable, connected, boundary-covering color plane with
+  bounded cluster spread, adequate foreground separation, and mutually
+  consistent observed colors across keyed cells;
 - optional `providerSource` when provider-native dimensions or separators
   require explicit post-generation cell rectangles;
 - all three `memberAssetIds`;
 - the complete source master in `referenceAssetIds`;
 - the formal recovery policy.
 
-The provider root remains byte-for-byte unchanged. The registered-family spec
+The provider root remains byte-for-byte unchanged. The provider observation
+records requested/observed colors, cell rectangles, coverage, boundary,
+cluster, connectivity, foreground-separation metrics, the policy fingerprint,
+and one source-bound observation fingerprint. The registered-family spec
 declares explicit `sourceRect`, destination placement, and keying parameters
 when needed; the CLI performs separator removal, keying, and scaling as part of
 the same three fingerprinted local members. This costs one expected provider
@@ -101,6 +110,15 @@ repair, try deterministic local processing first. If new pixels are required,
 use a mask against the complete original source context; otherwise regenerate
 the complete source package.
 
+A provider output already closed as `rejected` is never edited back into the
+ledger. A schema-v1 rejected-output recovery spec may name the historical
+request, exact raw file/SHA, attempt id, keyed cell rectangles, and `flat-v1`
+policy. `provider:recover-rejected-source --check` is read-only. Without
+`--check`, it may append one manifest record with lifecycle `recovery-source`
+only after the attempt remains `rejected`, quota remains consumed, request and
+output identity match, and every observed plane passes. It never reserves or
+spends quota and never writes `generation-attempts.jsonl`.
+
 ## Runtime and Provenance
 
 `assets:derive-registered-family` consumes only schema-v2 family specs. Every
@@ -111,7 +129,8 @@ member must:
   policy, and family fingerprint;
 - record role, completeness, source lineage, hash, lifecycle, and
   `trimmed=false`;
-- for chroma cells, record the source surface, source rectangle, exact keying
+- for chroma cells, record the source surface, source rectangle, requested and
+  observed key colors, observation/policy fingerprints, exact keying
   parameters, and current key-metadata SHA;
 - remain an active `registered-family-member` manifest record.
 

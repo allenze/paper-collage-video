@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
@@ -16,6 +17,13 @@ import {
   deriveRegisteredFamily,
   sha256File,
 } from './registered-family-lib.mjs';
+import {
+  assertObservedKeyPlaneSet,
+  inspectObservedKeyPlaneFile,
+  OBSERVED_KEY_PLANE_MODE,
+  OBSERVED_KEY_PLANE_POLICY_ID,
+  observedKeyPlanePolicyFingerprint,
+} from './observed-key-plane-lib.mjs';
 import {ROOT, writeJson} from './project-lib.mjs';
 
 export const ASSET_HARDENING_PROOF_DIR = path.join(
@@ -40,6 +48,7 @@ const manualImageRecord = async ({
   index,
   compositionBinding = null,
   request = {},
+  extra = {},
 }) => {
   const metadata = await sharp(file).metadata();
   const relative = path.relative(ROOT, file);
@@ -80,6 +89,7 @@ const manualImageRecord = async ({
       reason: 'deterministic-local-proof-fixture',
       supersededBy: null,
     },
+    ...extra,
   };
 };
 
@@ -123,19 +133,29 @@ const prepareRegisteredSource = async () => {
     'registered-layer-sheet.png',
   );
   const gutter = 4;
-  const magenta = await sharp({
+  const subjectKey = '#fa02ce';
+  const frontKey = '#fa03cd';
+  const subjectKeyPlane = await sharp({
     create: {
       width,
       height,
       channels: 3,
-      background: '#ff00ff',
+      background: subjectKey,
     },
   }).png().toBuffer();
-  const subjectOnKey = await sharp(magenta)
+  const frontKeyPlane = await sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: frontKey,
+    },
+  }).png().toBuffer();
+  const subjectOnKey = await sharp(subjectKeyPlane)
     .composite([{input: subject}])
     .png()
     .toBuffer();
-  const frontOnKey = await sharp(magenta)
+  const frontOnKey = await sharp(frontKeyPlane)
     .composite([{input: front}])
     .png()
     .toBuffer();
@@ -155,10 +175,13 @@ const prepareRegisteredSource = async () => {
     ])
     .png()
     .toFile(layerSheetFile);
-  return {masterFile, layerSheetFile, gutter};
+  return {masterFile, layerSheetFile, gutter, subjectKey, frontKey};
 };
 
-const createRegisteredFamilySpec = () => ({
+const createRegisteredFamilySpec = ({
+  subjectKey = '#ff00ff',
+  frontKey = '#ff00ff',
+} = {}) => ({
   $schema: '../../../../../schemas/registered-family.schema.json',
   schemaVersion: 2,
   projectSlug: 'vox-phase2-proof',
@@ -208,7 +231,8 @@ const createRegisteredFamilySpec = () => ({
       ...(['subject', 'support-front'].includes(member.role)
         ? {
             keying: {
-              keyColor: '#ff00ff',
+              keyColor:
+                member.role === 'subject' ? subjectKey : frontKey,
               transparentThreshold: 18,
               opaqueThreshold: 95,
               edgeFeather: 0.6,
@@ -235,7 +259,13 @@ const checkerboard = ({width, height, cell = 24}) => Buffer.from(`
 `);
 
 export const prepareRegisteredFamilyProof = async () => {
-  const {masterFile, layerSheetFile} = await prepareRegisteredSource();
+  const {
+    masterFile,
+    layerSheetFile,
+    gutter,
+    subjectKey,
+    frontKey,
+  } = await prepareRegisteredSource();
   const registration = PHASE2_REGISTERED_FAMILY.registration;
   const sourceBinding = {
     sceneId: 'phase2-scene-1',
@@ -257,7 +287,7 @@ export const prepareRegisteredFamilyProof = async () => {
       compositionBinding: sourceBinding,
     }),
   ];
-  const spec = createRegisteredFamilySpec();
+  const spec = createRegisteredFamilySpec({subjectKey, frontKey});
   const layerPackageBinding = {
     sourcePackageId: spec.sourcePackageId,
     pattern: spec.pattern,
@@ -282,8 +312,34 @@ export const prepareRegisteredFamilyProof = async () => {
       cells: [
         {packageRole: 'reference', row: 0, column: 0, outputSurface: {mode: 'opaque'}},
         {packageRole: 'support-rear', row: 0, column: 1, outputSurface: {mode: 'opaque'}},
-        {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
-        {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
+        {
+          packageRole: 'subject',
+          row: 1,
+          column: 0,
+          outputSurface: {
+            mode: 'chroma-key',
+            keyColor: '#ff00ff',
+            tolerance: 8,
+            keyPlane: {
+              mode: 'provider-native-observed',
+              policyId: 'flat-v1',
+            },
+          },
+        },
+        {
+          packageRole: 'support-front',
+          row: 1,
+          column: 1,
+          outputSurface: {
+            mode: 'chroma-key',
+            keyColor: '#ff00ff',
+            tolerance: 8,
+            keyPlane: {
+              mode: 'provider-native-observed',
+              policyId: 'flat-v1',
+            },
+          },
+        },
       ],
     },
     recoveryPolicy: {
@@ -294,6 +350,42 @@ export const prepareRegisteredFamilyProof = async () => {
       fallback: 'full-source-regeneration',
     },
   };
+  const observedCells = [
+    {
+      packageRole: 'subject',
+      ...await inspectObservedKeyPlaneFile({
+        file: layerSheetFile,
+        rect: {
+          left: 0,
+          top: registration.canvas.height + gutter,
+          ...registration.canvas,
+        },
+        requestedKeyColor: '#ff00ff',
+      }),
+    },
+    {
+      packageRole: 'support-front',
+      ...await inspectObservedKeyPlaneFile({
+        file: layerSheetFile,
+        rect: {
+          left: registration.canvas.width + gutter,
+          top: registration.canvas.height + gutter,
+          ...registration.canvas,
+        },
+        requestedKeyColor: '#ff00ff',
+      }),
+    },
+  ];
+  assertObservedKeyPlaneSet({observations: observedCells});
+  const sourceSha256 = await sha256File(layerSheetFile);
+  const policyFingerprint = observedKeyPlanePolicyFingerprint();
+  const observationFingerprint = createHash('sha256')
+    .update(JSON.stringify({
+      policyFingerprint,
+      sourceSha256,
+      cells: observedCells,
+    }))
+    .digest('hex');
   records.push(await manualImageRecord({
     assetId: 'phase2-registered-layer-sheet',
     file: layerSheetFile,
@@ -317,6 +409,23 @@ export const prepareRegisteredFamilyProof = async () => {
     request: {
       outputSurface: {mode: 'layer-sheet'},
       layerPackageBinding,
+    },
+    extra: {
+      providerObservation: {
+        schemaVersion: 1,
+        mode: OBSERVED_KEY_PLANE_MODE,
+        policyId: OBSERVED_KEY_PLANE_POLICY_ID,
+        policyFingerprint,
+        observationFingerprint,
+        sourceAttempt: {
+          attemptId: 'fixture-observed-key-plane',
+          status: 'succeeded',
+          quotaConsumed: true,
+          requestFingerprint: '0'.repeat(64),
+          output: path.relative(ROOT, layerSheetFile),
+        },
+        cells: observedCells,
+      },
     },
   }));
   const derived = await deriveRegisteredFamily({
@@ -408,6 +517,29 @@ export const prepareRegisteredFamilyProof = async () => {
   await Promise.all([
     writeJson(path.join(inputDirectory, 'registered-family.json'), spec),
     writeJson(path.join(inputDirectory, 'assets-manifest.json'), derived.manifest),
+    writeJson(path.join(inputDirectory, 'rejected-output-recovery.json'), {
+      $schema:
+        '../../../../../schemas/rejected-output-recovery.schema.json',
+      schemaVersion: 1,
+      projectSlug: 'vox-phase2-proof',
+      attemptId: 'img-11111111-1111-4111-8111-111111111111',
+      historicalRequest:
+        'projects/vox-phase2-proof/requests/registered-layer-sheet.json',
+      source: {
+        file: path.relative(ROOT, layerSheetFile),
+        sha256: sourceSha256,
+      },
+      recoveryAssetId: 'phase2-registered-layer-sheet',
+      reason: 'deterministic-schema-proof-only',
+      cells: observedCells.map(({packageRole, rect}) => ({
+        packageRole,
+        sourceRect: rect,
+        keyPlane: {
+          mode: OBSERVED_KEY_PLANE_MODE,
+          policyId: OBSERVED_KEY_PLANE_POLICY_ID,
+        },
+      })),
+    }),
   ]);
   const proof = {
     ...derived.report,
@@ -416,6 +548,15 @@ export const prepareRegisteredFamilyProof = async () => {
     localDerivatives: 3,
     avoidedCalls: 3,
     assertion,
+    observedKeyPlane: {
+      passed: true,
+      policyId: OBSERVED_KEY_PLANE_POLICY_ID,
+      policyFingerprint,
+      observationFingerprint,
+      requestedKeyColor: '#ff00ff',
+      observedKeyColors: {subject: subjectKey, 'support-front': frontKey},
+      cells: observedCells,
+    },
     runtimeConsumption: {
       pattern: 'supported-subject',
       sceneId: 'phase2-scene-1',
@@ -454,6 +595,20 @@ export const prepareRegisteredFamilyProof = async () => {
             passed: alphaBandInspection.passed,
             scales: alphaBandInspection.scales.map(({label}) => label),
           })),
+        },
+        {
+          id: 'provider-native-observed-key-plane',
+          passed: true,
+          policyFingerprint,
+          observationFingerprint,
+          cells: observedCells.map(
+            ({packageRole, requestedKeyColor, observedKeyColor, metrics}) => ({
+              packageRole,
+              requestedKeyColor,
+              observedKeyColor,
+              metrics,
+            }),
+          ),
         },
       ],
     },

@@ -75,11 +75,16 @@ try:
         ASSET_HARDENING_INPUT_DIRECTORY / "registered-family.json",
         "registered-family.schema.json",
     )
+    validate(
+        ASSET_HARDENING_INPUT_DIRECTORY / "rejected-output-recovery.json",
+        "rejected-output-recovery.schema.json",
+    )
 except (FileNotFoundError, KeyError, ValueError) as error:
     print(f"v10 schema validation failed:\n{error}", file=sys.stderr)
     raise SystemExit(1)
 
 print(
     "✓ v10 authoring, compiled storyboard, three project contracts, "
-    "asset manifest, and registered-family derivation are schema-valid"
+    "asset manifest, registered-family derivation, and rejected-output "
+    "recovery are schema-valid"
 )

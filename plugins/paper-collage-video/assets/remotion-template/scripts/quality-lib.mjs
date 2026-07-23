@@ -427,6 +427,9 @@ const inspectTechnicalQuality = async ({asset, project}) => {
       const metadataHash = await fileExists(metadataFile)
         ? await hashFile(metadataFile)
         : null;
+      const keyingMetadata = await fileExists(metadataFile)
+        ? await readJson(metadataFile)
+        : null;
       checks.push({
         id: 'keying-provenance-current',
         passed:
@@ -436,6 +439,28 @@ const inspectTechnicalQuality = async ({asset, project}) => {
           asset.registeredFamilyBinding.derivation.keyingMetadataSha256,
         actual: metadataHash,
       });
+      const sourceSurface =
+        asset.registeredFamilyBinding.derivation.sourceSurface;
+      if (sourceSurface?.observedKeyColor) {
+        checks.push({
+          id: 'observed-key-plane-current',
+          passed:
+            keyingMetadata?.providerObservation?.observationFingerprint ===
+              sourceSurface.observationFingerprint &&
+            keyingMetadata?.providerObservation?.policyFingerprint ===
+              sourceSurface.observationPolicyFingerprint &&
+            keyingMetadata?.providerObservation?.observedKeyColor ===
+              sourceSurface.observedKeyColor &&
+            asset.registeredFamilyBinding.derivation.keying?.keyColor
+              ?.toLowerCase() === sourceSurface.observedKeyColor.toLowerCase(),
+          expected: {
+            observationFingerprint: sourceSurface.observationFingerprint,
+            policyFingerprint: sourceSurface.observationPolicyFingerprint,
+            observedKeyColor: sourceSurface.observedKeyColor,
+          },
+          actual: keyingMetadata?.providerObservation ?? null,
+        });
+      }
     }
   }
   if (metadata.hasAlpha === true) {

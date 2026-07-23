@@ -100,11 +100,31 @@
             {"type": "null"},
             {
               "type": "object",
-              "required": ["mode", "keyColor", "tolerance"],
+              "required": [
+                "mode",
+                "keyColor",
+                "tolerance",
+                "requestedKeyColor",
+                "observedKeyColor",
+                "observationPolicyId",
+                "observationPolicyFingerprint",
+                "observationFingerprint"
+              ],
               "properties": {
                 "mode": {"enum": ["alpha", "chroma-key", "opaque"]},
                 "keyColor": {"type": ["string", "null"], "pattern": "^#[0-9a-fA-F]{6}$"},
-                "tolerance": {"type": ["integer", "null"], "minimum": 0, "maximum": 255}
+                "tolerance": {"type": ["integer", "null"], "minimum": 0, "maximum": 255},
+                "requestedKeyColor": {"type": ["string", "null"], "pattern": "^#[0-9a-fA-F]{6}$"},
+                "observedKeyColor": {"type": ["string", "null"], "pattern": "^#[0-9a-fA-F]{6}$"},
+                "observationPolicyId": {"enum": ["flat-v1", null]},
+                "observationPolicyFingerprint": {
+                  "type": ["string", "null"],
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "observationFingerprint": {
+                  "type": ["string", "null"],
+                  "pattern": "^[a-f0-9]{64}$"
+                }
               },
               "additionalProperties": false
             }

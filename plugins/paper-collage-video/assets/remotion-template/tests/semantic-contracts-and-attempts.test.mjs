@@ -333,6 +333,10 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
     assert.equal(summary.used, 1);
     assert.equal(summary.reserved, 0);
     assert.equal(summary.byStatus.rejected, 1);
+    assert.equal(
+      summary.attempts[0].outputSha256,
+      createHash('sha256').update(await fs.readFile(output)).digest('hex'),
+    );
     await assert.rejects(() => reserveGenerationAttempt({request: {...request, assetId: 'third-card'}, provider}), /预算已用尽/);
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});

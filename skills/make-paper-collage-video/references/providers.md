@@ -174,9 +174,28 @@ npm run provider:attempt -- summary --project=<slug> --json
 npm run provider:run -- --request=projects/<slug>/requests/<asset>.json --provider=<id>
 npm run provider:record -- --request=projects/<slug>/requests/<asset>.json --attempt-id=<attemptId>
 npm run provider:recover-record -- --request=projects/<slug>/requests/<asset>.json --attempt-id=<closedSucceededAttemptId>
+npm run provider:recover-rejected-source -- --spec=projects/<slug>/recovery/<asset>.json --check
+npm run provider:recover-rejected-source -- --spec=projects/<slug>/recovery/<asset>.json
 ```
 
 Try exact reuse before reserving an attempt. Validate the request first. `provider:attempt reserve --json` returns the canonical provider/model invocation mapping plus its fingerprint, so the host handoff does not need to guess connector ids. `provider:record` inherits provider/model from the attempt and rejects conflicting overrides. `provider:run` reserves automatically; a host tool call must use the explicit reserve command first. If a host result is abandoned instead of recorded, close it with `provider:attempt close` and state whether quota was consumed. When the ledger already says `succeeded` but manifest recording was interrupted, `provider:recover-record` verifies request/output identity and creates exactly one provenance record without consuming quota twice. Never delete or rewrite `generation-attempts.jsonl`.
+
+Provider-native chroma output is allowed to approximate the requested prompt
+color. New provider-native sheet requests must declare
+`keyPlane={mode:"provider-native-observed",policyId:"flat-v1"}` for every
+chroma cell. Verification rejects absent, gradient, checkerboard,
+multi-cluster, disconnected, boundary-poor, or foreground-confusable planes;
+accepted records retain requested/observed colors and all policy/statistics
+fingerprints. Future rejected records retain the raw output SHA.
+
+`provider:recover-rejected-source` is distinct from `recover-record`. It
+requires a consumed `rejected` attempt, the unchanged historical request and
+raw output, an explicit expected SHA, two keyed cell rectangles, and passing
+observed-plane evidence. `--check` writes nothing. Recording appends one
+manifest `recovery-source` record but performs zero provider calls, does not
+reserve budget, does not append/rewrite the ledger, and does not change the
+attempt status. Derivation may consume that full sheet; isolated member
+recovery remains forbidden.
 
 Creative Plan v4 distinguishes the selected profile's
 `assetBudget.maxGeneratedImages` planning ceiling from

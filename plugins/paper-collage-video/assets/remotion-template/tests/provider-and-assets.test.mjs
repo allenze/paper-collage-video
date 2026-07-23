@@ -398,8 +398,8 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
           cells: [
             {packageRole: 'reference', row: 0, column: 0, outputSurface: {mode: 'opaque'}},
             {packageRole: 'support-rear', row: 0, column: 1, outputSurface: {mode: 'opaque'}},
-            {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
-            {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
+            {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8, keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'}}},
+            {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8, keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'}}},
           ],
         },
       },
@@ -409,21 +409,25 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
         <rect width="66" height="66" fill="#ffffff"/>
         <rect x="0" y="0" width="32" height="32" fill="#173f72"/>
         <rect x="34" y="0" width="32" height="32" fill="#173f72"/>
-        <rect x="0" y="34" width="32" height="32" fill="#ff00ff"/>
+        <rect x="0" y="34" width="32" height="32" fill="#fa02ce"/>
         <ellipse cx="16" cy="50" rx="9" ry="6" fill="#f5bd20"/>
-        <rect x="34" y="34" width="32" height="32" fill="#ff00ff"/>
+        <rect x="34" y="34" width="32" height="32" fill="#fa03cd"/>
         <path d="M34 60 Q50 42 66 60 V66 H34 Z" fill="#2f733f"/>
       </svg>
     `)).png().toFile(mixedSheet);
-    await assert.doesNotReject(
-      verifyOutputFile(mixedSheet, sheetRequest),
+    const observed = await verifyOutputFile(mixedSheet, sheetRequest);
+    assert.deepEqual(
+      observed.keyPlaneObservation.cells.map(
+        ({packageRole, observedKeyColor}) => [packageRole, observedKeyColor],
+      ),
+      [['subject', '#fa02ce'], ['support-front', '#fa03cd']],
     );
     await sharp({
       create: {width: 66, height: 66, channels: 3, background: '#dddddd'},
     }).png().toFile(checkerSheet);
     await assert.rejects(
       verifyOutputFile(checkerSheet, sheetRequest),
-      /没有形成声明的纯色色键面/,
+      /observed key plane 不合格/,
     );
   } finally {
     await fsp.rm(directory, {recursive: true, force: true});

@@ -165,6 +165,11 @@ export type RegisteredFamilyBinding = {
       mode: 'alpha' | 'chroma-key' | 'opaque';
       keyColor: string | null;
       tolerance: number | null;
+      requestedKeyColor: string | null;
+      observedKeyColor: string | null;
+      observationPolicyId: 'flat-v1' | null;
+      observationPolicyFingerprint: string | null;
+      observationFingerprint: string | null;
     } | null;
     keying: RegisteredFamilyDerivation['keying'] | null;
     keyingMetadataSha256: string | null;

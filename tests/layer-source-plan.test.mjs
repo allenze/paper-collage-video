@@ -205,6 +205,26 @@ test('schema-v7 rejects isolated depth members and accepts one complete 2x2 laye
     },
   };
   assert.equal(validateAssetRequest(request), request);
+  const providerNative = structuredClone(request);
+  providerNative.layerPackageBinding.sheetLayout.providerSource = {
+    canvasMode: 'provider-native',
+    minimumWidth: 1024,
+    minimumHeight: 1024,
+    cellExtraction: 'explicit-rects',
+  };
+  assert.throws(
+    () => validateAssetRequest(providerNative),
+    /provider-native-observed keyPlane/,
+  );
+  for (const cell of providerNative.layerPackageBinding.sheetLayout.cells) {
+    if (cell.outputSurface.mode === 'chroma-key') {
+      cell.outputSurface.keyPlane = {
+        mode: 'provider-native-observed',
+        policyId: 'flat-v1',
+      };
+    }
+  }
+  assert.equal(validateAssetRequest(providerNative), providerNative);
 
   const isolated = structuredClone(request);
   isolated.assetId = 'boat-subject';

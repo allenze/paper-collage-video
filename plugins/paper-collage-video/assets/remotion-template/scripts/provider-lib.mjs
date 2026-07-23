@@ -17,9 +17,18 @@ import {
   assertRecoverableGenerationAttempt,
   assertReservedGenerationAttempt,
   closeGenerationAttempt,
+  generationRequestFingerprint,
   generationAttemptsPath,
   isQuotaConsumingImageRequest,
 } from './generation-attempt-lib.mjs';
+import {
+  assertObservedKeyPlaneSet,
+  inspectObservedKeyPlanePixels,
+  OBSERVED_KEY_PLANE_MODE,
+  OBSERVED_KEY_PLANE_POLICY_ID,
+  observedKeyPlanePolicyFingerprint,
+  validateObservedKeyPlaneDeclaration,
+} from './observed-key-plane-lib.mjs';
 
 export const PROVIDER_CAPABILITIES = ['text', 'image', 'voice'];
 export const PROVIDER_ADAPTERS = ['host', 'command', 'manual'];
@@ -688,9 +697,24 @@ export const validateAssetRequest = (request) => {
       ) {
         errors.push('outputSurface.tolerance 必须是 0–255 的整数');
       }
+      if (surface.keyPlane !== undefined) {
+        if (surface.mode !== 'chroma-key') {
+          errors.push('只有 chroma-key outputSurface 可以声明 keyPlane');
+        } else {
+          try {
+            validateObservedKeyPlaneDeclaration(surface.keyPlane);
+          } catch (error) {
+            errors.push(error.message);
+          }
+        }
+      }
       if (
         surface.mode === 'layer-sheet' &&
-        (surface.keyColor !== undefined || surface.tolerance !== undefined)
+        (
+          surface.keyColor !== undefined ||
+          surface.tolerance !== undefined ||
+          surface.keyPlane !== undefined
+        )
       ) {
         errors.push('layer-sheet outputSurface 的色键必须逐格声明');
       }
@@ -973,6 +997,17 @@ export const validateAssetRequest = (request) => {
           ) {
             errors.push(`registered-layer-sheet ${cell.packageRole} tolerance 必须是 0–255 的整数`);
           }
+          if (surface.keyPlane !== undefined) {
+            if (surface.mode !== 'chroma-key') {
+              errors.push(`registered-layer-sheet ${cell.packageRole} 非色键格不得声明 keyPlane`);
+            } else {
+              try {
+                validateObservedKeyPlaneDeclaration(surface.keyPlane);
+              } catch (error) {
+                errors.push(`registered-layer-sheet ${cell.packageRole} ${error.message}`);
+              }
+            }
+          }
           if (
             ['reference', 'support-rear'].includes(cell.packageRole) &&
             surface.mode !== 'opaque'
@@ -1000,6 +1035,18 @@ export const validateAssetRequest = (request) => {
           )
         ) {
           errors.push('registered-layer-sheet providerSource 必须声明 provider-native、最小画布与 explicit-rects');
+        }
+        if (
+          providerSource?.canvasMode === 'provider-native' &&
+          cells.some(
+            ({outputSurface}) =>
+              outputSurface?.mode === 'chroma-key' &&
+              outputSurface?.keyPlane?.mode !== OBSERVED_KEY_PLANE_MODE,
+          )
+        ) {
+          errors.push(
+            'provider-native registered-layer-sheet 的 chroma-key 格必须声明 provider-native-observed keyPlane',
+          );
         }
       } else if (binding.sheetLayout !== null) {
         errors.push('context-preserving-layer-edits 的 sheetLayout 必须为 null');
@@ -1198,6 +1245,7 @@ export const verifyOutputFile = async (file, request = null) => {
     throw new Error(`provider 未生成有效输出：${path.relative(ROOT, file)}`);
   }
   let metadata = null;
+  let keyPlaneObservation = null;
   if (request?.capability === 'image') {
     metadata = await sharp(file).metadata().catch(() => null);
     if (!metadata?.width || !metadata?.height) {
@@ -1251,25 +1299,44 @@ export const verifyOutputFile = async (file, request = null) => {
       }
     } else if (surface?.mode === 'chroma-key') {
       const pixels = await sharp(file).removeAlpha().raw().toBuffer({resolveWithObject: true});
-      const rgb = surface.keyColor.slice(1).match(/.{2}/g).map((part) => Number.parseInt(part, 16));
-      const tolerance = surface.tolerance ?? 24;
       const {width, height, channels} = pixels.info;
-      const boundary = [];
-      for (let x = 0; x < width; x += 1) {
-        boundary.push([x, 0], [x, height - 1]);
-      }
-      for (let y = 1; y < height - 1; y += 1) {
-        boundary.push([0, y], [width - 1, y]);
-      }
-      const matches = boundary.filter(([x, y]) => {
-        const offset = (y * width + x) * channels;
-        return rgb.every((value, channel) =>
-          Math.abs(pixels.data[offset + channel] - value) <= tolerance);
-      }).length;
-      if (matches / boundary.length < 0.8) {
-        throw new Error(
-          `provider 图像边界未形成可靠色键面：仅 ${matches}/${boundary.length} 像素匹配 ${surface.keyColor}。`,
-        );
+      if (surface.keyPlane?.mode === OBSERVED_KEY_PLANE_MODE) {
+        const observation = inspectObservedKeyPlanePixels({
+          data: pixels.data,
+          imageWidth: width,
+          imageHeight: height,
+          channels,
+          requestedKeyColor: surface.keyColor,
+        });
+        assertObservedKeyPlaneSet({
+          observations: [{packageRole: 'image', ...observation}],
+        });
+        keyPlaneObservation = {
+          mode: OBSERVED_KEY_PLANE_MODE,
+          policyId: OBSERVED_KEY_PLANE_POLICY_ID,
+          policyFingerprint: observedKeyPlanePolicyFingerprint(),
+          cells: [{packageRole: 'image', ...observation}],
+        };
+      } else {
+        const rgb = surface.keyColor.slice(1).match(/.{2}/g).map((part) => Number.parseInt(part, 16));
+        const tolerance = surface.tolerance ?? 24;
+        const boundary = [];
+        for (let x = 0; x < width; x += 1) {
+          boundary.push([x, 0], [x, height - 1]);
+        }
+        for (let y = 1; y < height - 1; y += 1) {
+          boundary.push([0, y], [width - 1, y]);
+        }
+        const matches = boundary.filter(([x, y]) => {
+          const offset = (y * width + x) * channels;
+          return rgb.every((value, channel) =>
+            Math.abs(pixels.data[offset + channel] - value) <= tolerance);
+        }).length;
+        if (matches / boundary.length < 0.8) {
+          throw new Error(
+            `provider 图像边界未形成可靠色键面：仅 ${matches}/${boundary.length} 像素匹配 ${surface.keyColor}。`,
+          );
+        }
       }
     } else if (surface?.mode === 'layer-sheet') {
       const layout = request.layerPackageBinding?.sheetLayout;
@@ -1281,6 +1348,7 @@ export const verifyOutputFile = async (file, request = null) => {
         .raw()
         .toBuffer({resolveWithObject: true});
       const {width, height, channels} = pixels.info;
+      const observedCells = [];
       for (const cell of layout.cells ?? []) {
         const cellSurface = cell.outputSurface;
         const left = Math.floor(cell.column * width / layout.columns);
@@ -1316,12 +1384,44 @@ export const verifyOutputFile = async (file, request = null) => {
             `registered-layer-sheet ${cell.packageRole} 格未提供足够真实透明像素。`,
           );
         }
-        if (cellSurface?.mode === 'chroma-key' && keyed / total < 0.08) {
-          throw new Error(
-            `registered-layer-sheet ${cell.packageRole} 格没有形成声明的纯色色键面 ` +
-            `${cellSurface.keyColor}；匹配比例 ${(keyed / total).toFixed(4)}。`,
-          );
+        if (cellSurface?.mode === 'chroma-key') {
+          if (cellSurface.keyPlane?.mode === OBSERVED_KEY_PLANE_MODE) {
+            observedCells.push({
+              packageRole: cell.packageRole,
+              ...inspectObservedKeyPlanePixels({
+                data: pixels.data,
+                imageWidth: width,
+                imageHeight: height,
+                channels,
+                rect: {
+                  left,
+                  top,
+                  width: right - left,
+                  height: bottom - top,
+                },
+                requestedKeyColor: cellSurface.keyColor,
+              }),
+            });
+          } else if (keyed / total < 0.08) {
+            throw new Error(
+              `registered-layer-sheet ${cell.packageRole} 格没有形成声明的纯色色键面 ` +
+              `${cellSurface.keyColor}；匹配比例 ${(keyed / total).toFixed(4)}。`,
+            );
+          }
         }
+      }
+      if (observedCells.length > 0) {
+        try {
+          assertObservedKeyPlaneSet({observations: observedCells});
+        } catch (error) {
+          throw new Error(`provider-native observed key plane 不合格：${error.message}`);
+        }
+        keyPlaneObservation = {
+          mode: OBSERVED_KEY_PLANE_MODE,
+          policyId: OBSERVED_KEY_PLANE_POLICY_ID,
+          policyFingerprint: observedKeyPlanePolicyFingerprint(),
+          cells: observedCells,
+        };
       }
     }
   } else if (request?.capability === 'voice') {
@@ -1350,7 +1450,7 @@ export const verifyOutputFile = async (file, request = null) => {
       channels: audio.channels ?? null,
     };
   }
-  return {stat, metadata};
+  return {stat, metadata, keyPlaneObservation};
 };
 
 export const recordAssetProvenance = async ({
@@ -1372,10 +1472,11 @@ export const recordAssetProvenance = async ({
   }
   let stat;
   let metadata;
+  let keyPlaneObservation;
   let sha256;
   try {
-    ({stat, metadata} = await verifyOutputFile(output, request));
     sha256 = createHash('sha256').update(await fs.readFile(output)).digest('hex');
+    ({stat, metadata, keyPlaneObservation} = await verifyOutputFile(output, request));
   } catch (error) {
     if (trackedAttempt && !recoverClosedAttempt) {
       await closeGenerationAttempt({
@@ -1384,6 +1485,7 @@ export const recordAssetProvenance = async ({
         status: 'rejected',
         quotaConsumed: true,
         output: path.relative(ROOT, output),
+        outputSha256: sha256 ?? null,
         note: error.message,
       });
     }
@@ -1423,6 +1525,26 @@ export const recordAssetProvenance = async ({
       providerId: provider.id,
       model: actualModel,
     });
+    const providerObservation = keyPlaneObservation
+      ? {
+          schemaVersion: 1,
+          ...keyPlaneObservation,
+          observationFingerprint: createHash('sha256')
+            .update(JSON.stringify(stableValue({
+              policyFingerprint: keyPlaneObservation.policyFingerprint,
+              sourceSha256: sha256,
+              cells: keyPlaneObservation.cells,
+            })))
+            .digest('hex'),
+          sourceAttempt: {
+            attemptId,
+            status: 'succeeded',
+            quotaConsumed: true,
+            requestFingerprint: generationRequestFingerprint(request),
+            output: path.relative(ROOT, output),
+          },
+        }
+      : null;
     record = {
       recordId: createAssetRecordId({
         assetId: request.assetId,
@@ -1456,6 +1578,7 @@ export const recordAssetProvenance = async ({
       stateSheetBinding: request.stateSheetBinding ?? null,
       stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
       semanticBinding: request.semanticBinding ?? null,
+      providerObservation,
       familyFingerprint: null,
       lifecycle: {
         status: 'active',

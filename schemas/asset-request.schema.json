@@ -22,7 +22,8 @@
       "properties": {
         "mode": {"enum": ["alpha", "chroma-key", "opaque", "layer-sheet"]},
         "keyColor": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
-        "tolerance": {"type": "integer", "minimum": 0, "maximum": 255}
+        "tolerance": {"type": "integer", "minimum": 0, "maximum": 255},
+        "keyPlane": {"$ref": "#/$defs/observedKeyPlane"}
       },
       "allOf": [
         {
@@ -159,7 +160,8 @@
                         "properties": {
                           "mode": {"enum": ["alpha", "chroma-key", "opaque"]},
                           "keyColor": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
-                          "tolerance": {"type": "integer", "minimum": 0, "maximum": 255}
+                          "tolerance": {"type": "integer", "minimum": 0, "maximum": 255},
+                          "keyPlane": {"$ref": "#/$defs/observedKeyPlane"}
                         },
                         "allOf": [
                           {
@@ -333,5 +335,16 @@
     {"if": {"required": ["stateSheetRecoveryBinding"]}, "then": {"required": ["stateSheetBinding", "quality", "compositionBinding"], "properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}},
     {"if": {"properties": {"capability": {"const": "voice"}}}, "then": {"required": ["text"]}},
     {"if": {"required": ["timingBinding"]}, "then": {"properties": {"capability": {"const": "voice"}}}}
-  ]
+  ],
+  "$defs": {
+    "observedKeyPlane": {
+      "type": "object",
+      "required": ["mode", "policyId"],
+      "properties": {
+        "mode": {"const": "provider-native-observed"},
+        "policyId": {"const": "flat-v1"}
+      },
+      "additionalProperties": false
+    }
+  }
 }

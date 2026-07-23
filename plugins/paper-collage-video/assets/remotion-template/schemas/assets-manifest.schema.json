@@ -24,6 +24,8 @@
           "model": {"type": ["string", "null"]},
           "externalId": {"type": ["string", "null"]},
           "attemptId": {"type": ["string", "null"]},
+          "recoveredFromClosedAttempt": {"type": "boolean"},
+          "recoveredFromRejectedAttempt": {"type": "boolean"},
           "requestFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "reusedFrom": {"type": ["string", "null"]},
           "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
@@ -52,6 +54,12 @@
             ]
           },
           "semanticBinding": {"type": ["object", "null"]},
+          "providerObservation": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/provider-observation.schema.json"}
+            ]
+          },
           "familyFingerprint": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
           "lifecycle": {
             "type": "object",
