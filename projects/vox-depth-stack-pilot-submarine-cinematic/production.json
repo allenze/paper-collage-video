@@ -1,0 +1,100 @@
+{
+  "$schema": "../../schemas/production.schema.json",
+  "schemaVersion": 1,
+  "slug": "vox-depth-stack-pilot-submarine-cinematic",
+  "stage": "complete",
+  "createdAt": "2026-07-23T19:36:27.143Z",
+  "updatedAt": "2026-07-23T20:17:29.135Z",
+  "approvals": {
+    "concept": {
+      "status": "approved",
+      "decidedAt": "2026-07-23T19:41:21.809Z",
+      "note": "用户要求再生成一个更长的《黄色潜艇穿过海草》单幕视频，并授权对当前素材自由发挥；采用内容推导 18 秒、full-depth、多段焦距式推拉、潜艇反向运动与尺度变化、前后景鱼群及气泡。全部使用当前已审核素材，不追加 provider 调用；图片尝试上限 1 仅覆盖 registered source-package 的契约容量，实际计划调用为 0。"
+    },
+    "styleAndVoice": {
+      "status": "approved",
+      "decidedAt": "2026-07-23T20:02:32.809Z",
+      "note": "用户授权沿用当前素材并自由发挥；v6 style/motion proof 与 1536 registered depth stack 全量证据通过，音乐沿用本地确定性衍生版本。"
+    },
+    "preview": {
+      "status": "approved",
+      "decidedAt": "2026-07-23T20:12:44.132Z",
+      "note": "依据用户此前明确授权在 preview 完成并通过后代为通过 human-review；已检查完整 preview、六格联系表和验收报告，18 秒多焦距、潜艇折返/尺度变化、前后景鱼群、气泡、水草和三层视差符合本次要求。"
+    },
+    "publish": {
+      "status": "pending",
+      "decidedAt": null,
+      "note": ""
+    }
+  },
+  "workItems": [],
+  "artifacts": {
+    "brief": "projects/vox-depth-stack-pilot-submarine-cinematic/brief.md",
+    "project": "projects/vox-depth-stack-pilot-submarine-cinematic/project.json",
+    "storyboard": "projects/vox-depth-stack-pilot-submarine-cinematic/storyboard.json",
+    "prompts": "projects/vox-depth-stack-pilot-submarine-cinematic/prompts.json",
+    "review": "projects/vox-depth-stack-pilot-submarine-cinematic/review.md",
+    "validationReport": "dist/vox-depth-stack-pilot-submarine-cinematic/validation-report.json",
+    "preview": "dist/vox-depth-stack-pilot-submarine-cinematic/preview.mp4",
+    "final": "dist/vox-depth-stack-pilot-submarine-cinematic/final.mp4",
+    "report": "dist/vox-depth-stack-pilot-submarine-cinematic/report.json",
+    "contactSheet": "dist/vox-depth-stack-pilot-submarine-cinematic/contact-sheet.jpg",
+    "styleProof": "dist/vox-depth-stack-pilot-submarine-cinematic/style-motion-proof.json"
+  },
+  "history": [
+    {
+      "at": "2026-07-23T19:36:27.143Z",
+      "action": "project-created",
+      "stage": "capability-review",
+      "note": ""
+    },
+    {
+      "at": "2026-07-23T19:41:21.809Z",
+      "action": "capabilities-ready",
+      "stage": "brief",
+      "note": "用户要求再生成一个更长的《黄色潜艇穿过海草》单幕视频，并授权对当前素材自由发挥；采用内容推导 18 秒、full-depth、多段焦距式推拉、潜艇反向运动与尺度变化、前后景鱼群及气泡。全部使用当前已审核素材，不追加 provider 调用；图片尝试上限 1 仅覆盖 registered source-package 的契约容量，实际计划调用为 0。"
+    },
+    {
+      "at": "2026-07-23T19:41:21.809Z",
+      "action": "brief-ready",
+      "stage": "concept-review",
+      "note": ""
+    },
+    {
+      "at": "2026-07-23T19:41:21.809Z",
+      "action": "approve-concept",
+      "stage": "style-review",
+      "note": "用户要求再生成一个更长的《黄色潜艇穿过海草》单幕视频，并授权对当前素材自由发挥；采用内容推导 18 秒、full-depth、多段焦距式推拉、潜艇反向运动与尺度变化、前后景鱼群及气泡。全部使用当前已审核素材，不追加 provider 调用；图片尝试上限 1 仅覆盖 registered source-package 的契约容量，实际计划调用为 0。"
+    },
+    {
+      "at": "2026-07-23T20:02:32.809Z",
+      "action": "approve-style-voice",
+      "stage": "asset-production",
+      "note": "用户授权沿用当前素材并自由发挥；v6 style/motion proof 与 1536 registered depth stack 全量证据通过，音乐沿用本地确定性衍生版本。"
+    },
+    {
+      "at": "2026-07-23T20:10:35.093Z",
+      "action": "assets-ready",
+      "stage": "preview",
+      "note": ""
+    },
+    {
+      "at": "2026-07-23T20:12:12.588Z",
+      "action": "preview-rendered",
+      "stage": "human-review",
+      "note": "dist/vox-depth-stack-pilot-submarine-cinematic/preview.mp4"
+    },
+    {
+      "at": "2026-07-23T20:12:44.132Z",
+      "action": "approve-preview",
+      "stage": "final-render",
+      "note": "依据用户此前明确授权在 preview 完成并通过后代为通过 human-review；已检查完整 preview、六格联系表和验收报告，18 秒多焦距、潜艇折返/尺度变化、前后景鱼群、气泡、水草和三层视差符合本次要求。"
+    },
+    {
+      "at": "2026-07-23T20:17:29.135Z",
+      "action": "final-rendered",
+      "stage": "complete",
+      "note": "dist/vox-depth-stack-pilot-submarine-cinematic/final.mp4"
+    }
+  ]
+}

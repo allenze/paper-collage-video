@@ -1,0 +1,127 @@
+{
+  "$schema": "../../../schemas/asset-request.schema.json",
+  "schemaVersion": 7,
+  "projectSlug": "vox-depth-stack-pilot-submarine-cinematic",
+  "assetId": "submarine-layer-sheet",
+  "capability": "image",
+  "output": "public/projects/vox-depth-stack-pilot-submarine-cinematic/assets/environment/submarine-layer-sheet-provider-source.png",
+  "prompt": "Create one production-ready provider-native RGB registered 2x2 mixed-surface layer sheet in a tactile handmade torn-paper collage style. Return the complete four-cell sheet as one image; never generate an isolated member. Use four equal registered cells in this fixed order: top-left reference, top-right support-rear, bottom-left subject, bottom-right support-front. Do not add labels, text, logos, watermarks, frames, borders, checkerboards, fake transparency, white/gray transparency grids, or decorative dividers. Keep the same camera, placement, scale, paper texture, torn-edge language, shallow paper shadow, lighting, and registration across all four cells. TOP-LEFT REFERENCE (opaque): a complete bright yellow paper submarine traveling horizontally through a clean deep-blue layered paper ocean, with green paper seaweed/coral in front; the foreground may naturally occlude the lower hull only in this reference composite. TOP-RIGHT SUPPORT-REAR (opaque): the identical complete deep-blue ocean clean plate, reconstructing every pixel behind the submarine and foreground; no submarine, seaweed, coral, silhouette hole, shadow remnant, erased patch, or magenta. BOTTOM-LEFT SUBJECT (flat chroma-key surface): only the complete yellow submarine in the exact registered position and scale on one perfectly uniform solid #ff00ff background. Every background pixel and every internal negative space—including all porthole openings, the periscope opening, and clean space around the separate propeller—must be the same flat #ff00ff. Include the entire upper and lower hull, rounded bow, tail fin, propeller, periscope, and every paper edge hidden by seaweed in the reference. No ocean or foreground pixels, no cast shadow on the key plane, no gradient, texture, reflection, checkerboard, transparency grid, or non-magenta patch in the background; do not use #ff00ff in the submarine. BOTTOM-RIGHT SUPPORT-FRONT (flat chroma-key surface): only the complete green seaweed/coral foreground overlay in the exact registered position and scale on one perfectly uniform solid #ff00ff background. Every external and internal negative space between stems, fronds, holes, and torn edges must be the same flat #ff00ff. Extend the foreground naturally to the cell boundaries where it forms the front plane. No submarine or rear-ocean pixels, no cast shadow on the key plane, no gradient, texture, reflection, checkerboard, transparency grid, or non-magenta patch in the background; do not use #ff00ff in the foreground. Keep the palette restrained to deep navy/cobalt ocean, warm saturated yellow submarine, and layered kelp greens. Preserve readable paper fibers without photorealism, glossy 3D, cartoon outlines, gradients, airbrush, or procedural noise on semantic edges. Rear, subject, and front must reconstruct the reference in that order and remain complete under bounded relative motion.",
+  "model": "gpt-image-built-in",
+  "outputSurface": {
+    "mode": "layer-sheet"
+  },
+  "compositionBinding": {
+    "sceneId": "submarine-scene",
+    "nodeId": "submarine-depth-stack",
+    "pattern": "registered-depth-stack",
+    "registrationId": "submarine-depth-registration",
+    "sourceMasterAssetId": "submarine-reference",
+    "outputRole": "registered-layer-sheet",
+    "canvas": {
+      "width": 2048,
+      "height": 2048
+    },
+    "derivation": {
+      "method": "manual-import",
+      "parentAssetId": "submarine-reference"
+    }
+  },
+  "layerPackageBinding": {
+    "sourcePackageId": "submarine-seaweed-layer-package",
+    "pattern": "registered-depth-stack",
+    "motionCapability": "bounded-relative",
+    "sourceStrategy": "registered-layer-sheet",
+    "registrationId": "submarine-depth-registration",
+    "sourceMasterAssetId": "submarine-reference",
+    "canvas": {
+      "width": 1024,
+      "height": 1024
+    },
+    "packageRole": "registered-sheet",
+    "completeness": null,
+    "memberAssetIds": [
+      "ocean-rear",
+      "yellow-submarine",
+      "seaweed-front"
+    ],
+    "referenceAssetIds": [
+      "submarine-reference"
+    ],
+    "sheetLayout": {
+      "columns": 2,
+      "rows": 2,
+      "providerSource": {
+        "canvasMode": "provider-native",
+        "minimumWidth": 1024,
+        "minimumHeight": 1024,
+        "cellExtraction": "explicit-rects"
+      },
+      "cells": [
+        {
+          "packageRole": "reference",
+          "row": 0,
+          "column": 0,
+          "outputSurface": {
+            "mode": "opaque"
+          }
+        },
+        {
+          "packageRole": "support-rear",
+          "row": 0,
+          "column": 1,
+          "outputSurface": {
+            "mode": "opaque"
+          }
+        },
+        {
+          "packageRole": "subject",
+          "row": 1,
+          "column": 0,
+              "outputSurface": {
+                "mode": "chroma-key",
+                "keyColor": "#fa01cd",
+                "tolerance": 24
+              }
+        },
+        {
+          "packageRole": "support-front",
+          "row": 1,
+          "column": 1,
+              "outputSurface": {
+                "mode": "chroma-key",
+                "keyColor": "#fa02cd",
+                "tolerance": 24
+              }
+        }
+      ]
+    },
+    "recoveryPolicy": {
+      "completeSourceContext": true,
+      "localDeterministicFixFirst": true,
+      "isolatedMemberGeneration": "forbidden",
+      "providerRepair": "masked-complete-source-edit",
+      "fallback": "full-source-regeneration"
+    }
+  },
+  "semanticBinding": {
+    "riskClass": "topology-critical",
+    "contractIds": [
+      "yellow-submarine-topology"
+    ]
+  },
+  "quality": {
+    "kind": "image",
+    "requiredChecks": [
+      "no-text",
+      "no-watermark",
+      "style-consistent",
+      "subject-complete",
+      "cell-separation",
+      "edge-clean",
+      "silhouette-fidelity",
+      "negative-space-clean",
+      "background-leak-free",
+      "reference-conformant"
+    ]
+  }
+}

@@ -1038,6 +1038,7 @@ export const validateAssetRequest = (request) => {
         }
         if (
           providerSource?.canvasMode === 'provider-native' &&
+          request.compositionBinding?.derivation?.method !== 'manual-import' &&
           cells.some(
             ({outputSurface}) =>
               outputSurface?.mode === 'chroma-key' &&
@@ -1045,7 +1046,7 @@ export const validateAssetRequest = (request) => {
           )
         ) {
           errors.push(
-            'provider-native registered-layer-sheet 的 chroma-key 格必须声明 provider-native-observed keyPlane',
+            'provider 生成的 provider-native registered-layer-sheet 色键格必须声明 provider-native-observed keyPlane',
           );
         }
       } else if (binding.sheetLayout !== null) {
@@ -1466,6 +1467,7 @@ export const recordAssetProvenance = async ({
   const trackedAttempt =
     request.schemaVersion >= 3 &&
     isQuotaConsumingImageRequest(request) &&
+    provider.adapter !== 'manual' &&
     !reusedFrom;
   if (trackedAttempt && !recoverClosedAttempt) {
     await assertReservedGenerationAttempt({request, provider, attemptId});

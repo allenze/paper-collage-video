@@ -51,6 +51,66 @@ test('asset lifecycle preserves audit records and enforces one active record', (
   assert.throws(() => assertAssetManifest(manifest, 'lifecycle-fixture'), /多个 active/);
 });
 
+test('manual image imports record provenance without a generation attempt', async () => {
+  const slug = `manual-image-import-${process.pid}-${Date.now()}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const output = path.join(publicDirectory, 'manual.png');
+  try {
+    await fsp.mkdir(projectDirectory, {recursive: true});
+    await fsp.mkdir(publicDirectory, {recursive: true});
+    await sharp({
+      create: {
+        width: 8,
+        height: 8,
+        channels: 4,
+        background: {r: 18, g: 42, b: 73, alpha: 1},
+      },
+    }).png().toFile(output);
+    const result = await recordAssetProvenance({
+      request: {
+        schemaVersion: 7,
+        projectSlug: slug,
+        assetId: 'manual-source',
+        capability: 'image',
+        output: path.relative(ROOT, output),
+        prompt: 'Import the already-authorized local source.',
+        outputSurface: {mode: 'opaque'},
+        compositionBinding: {
+          sceneId: 'scene-01',
+          nodeId: 'manual-source',
+          pattern: 'free',
+          canvas: {width: 8, height: 8},
+          derivation: {
+            method: 'manual-import',
+            parentAssetId: 'authorized-source',
+          },
+        },
+      },
+      output,
+      provider: {
+        id: 'manual-image',
+        label: 'Authorized local image',
+        adapter: 'manual',
+        tool: null,
+        model: null,
+      },
+      externalId: 'local-source-fixture',
+    });
+    assert.equal(result.record.adapter, 'manual');
+    assert.equal(result.record.attemptId, null);
+    assert.equal(result.record.externalId, 'local-source-fixture');
+    const manifest = JSON.parse(
+      await fsp.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'),
+    );
+    assert.equal(manifest.assets.length, 1);
+    assert.equal(manifest.assets[0].lifecycle.status, 'active');
+  } finally {
+    await fsp.rm(projectDirectory, {recursive: true, force: true});
+    await fsp.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
 const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
   schemaVersion: 10,
   slug,
