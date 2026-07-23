@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",

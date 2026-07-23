@@ -14,8 +14,11 @@ import {
 } from '../scripts/motion-treatment-lib.mjs';
 import {validateSceneTransitionSequence} from '../src/sceneTimeline.mjs';
 import {
+  MAX_MOTIF_INSTANCES_PER_SCENE,
+  isPointInsideMotifExclusion,
   resolveMotifFieldInstances,
   resolveMotifFieldMotion,
+  verifyMotifFieldLoop,
 } from '../src/motifField.mjs';
 import {
   resolveParallaxState,
@@ -43,7 +46,16 @@ const motifField = (overrides = {}) => ({
     rotation: [-24, 24],
     opacity: [0.45, 0.9],
   },
-  safeArea: {x: 0.05, y: 0.08, width: 0.9, height: 0.82},
+  bounds: {x: 0.05, y: 0.08, width: 0.9, height: 0.82},
+  exclusionZones: [{
+    id: 'title-zone',
+    shape: 'rectangle',
+    x: 0.3,
+    y: 0.3,
+    width: 0.4,
+    height: 0.35,
+    padding: 0.02,
+  }],
   z: 3,
   depth: 0.7,
   transform,
@@ -62,6 +74,15 @@ test('motif fields expand deterministically without authoring one node per parti
     first,
     resolveMotifFieldInstances(motifField({seed: 43})),
   );
+  assert.ok(first.every((point) =>
+    !node.exclusionZones.some((zone) =>
+      isPointInsideMotifExclusion(
+        point,
+        zone,
+        node.baseSize * node.variation.scale[1],
+      )
+    )
+  ));
   const motion = resolveMotifFieldMotion({
     instance: first[0],
     preset: node.fieldMotion.preset,
@@ -75,7 +96,7 @@ test('motif fields expand deterministically without authoring one node per parti
   );
 });
 
-test('motif fields enforce bounded density, variation, and safe area', () => {
+test('motif fields enforce bounded density, exclusions, placement, and scene budget', () => {
   const valid = validateCompositionStructure({
     composition: {coordinateSpace: {width: 1920, height: 1080}, nodes: [motifField()]},
     video: {width: 1920, height: 1080},
@@ -87,7 +108,11 @@ test('motif fields enforce bounded density, variation, and safe area', () => {
   const invalid = motifField({
     count: 65,
     variation: {scale: [1, 0.5], rotation: [-10, 10], opacity: [-0.1, 1]},
-    safeArea: {x: 0.8, y: 0, width: 0.4, height: 1},
+    bounds: {x: 0.8, y: 0, width: 0.4, height: 1},
+    exclusionZones: [
+      {id: 'duplicate', shape: 'rectangle', x: 0, y: 0, width: 1, height: 1},
+      {id: 'duplicate', shape: 'triangle', x: 0, y: 0, width: 1, height: 1},
+    ],
   });
   const codes = new Set(validateCompositionStructure({
     composition: {coordinateSpace: {width: 1920, height: 1080}, nodes: [invalid]},
@@ -96,7 +121,48 @@ test('motif fields enforce bounded density, variation, and safe area', () => {
   assert.ok(codes.has('composition-motif-count'));
   assert.ok(codes.has('composition-motif-variation'));
   assert.ok(codes.has('composition-motif-opacity'));
-  assert.ok(codes.has('composition-motif-safe-area'));
+  assert.ok(codes.has('composition-motif-bounds'));
+  assert.ok(codes.has('composition-motif-exclusion-id'));
+  assert.ok(codes.has('composition-motif-exclusion-shape'));
+
+  const denseFields = Array.from({length: 4}, (_, index) =>
+    motifField({
+      id: `field-${index}`,
+      count: MAX_MOTIF_INSTANCES_PER_SCENE / 3,
+      exclusionZones: [],
+    })
+  );
+  assert.ok(validateCompositionStructure({
+    composition: {coordinateSpace: {width: 1920, height: 1080}, nodes: denseFields},
+    video: {width: 1920, height: 1080},
+  }).issues.some(({code}) => code === 'composition-motif-scene-budget'));
+});
+
+test('fall and burst fields hide deterministic respawns while cycles affect burst timing', () => {
+  for (const preset of ['drift', 'fall-drift', 'burst', 'orbit']) {
+    assert.equal(verifyMotifFieldLoop({preset, cycles: 2}).passed, true);
+  }
+  const instance = {...resolveMotifFieldInstances(motifField({exclusionZones: []}))[0], phase: 0};
+  const oneCycle = resolveMotifFieldMotion({
+    instance,
+    preset: 'burst',
+    progress: 0.25,
+    cycles: 1,
+  });
+  const twoCycles = resolveMotifFieldMotion({
+    instance,
+    preset: 'burst',
+    progress: 0.25,
+    cycles: 2,
+  });
+  assert.notDeepEqual(oneCycle, twoCycles);
+  const respawn = resolveMotifFieldMotion({
+    instance,
+    preset: 'fall-drift',
+    progress: 0.5,
+    cycles: 2,
+  });
+  assert.equal(respawn.opacity, 0);
 });
 
 test('camera-coupled parallax separates depth while keeping the focal plane stable', () => {

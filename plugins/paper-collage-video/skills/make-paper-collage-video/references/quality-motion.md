@@ -1,6 +1,6 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v7 composition authoring, proof review, or delivery tuning.
+Read this before style sampling, bulk images, v8 composition authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
@@ -48,7 +48,7 @@ The schema-v6 report uses `scope=style`, binds the complete `styleProofPlan`, an
 }
 ```
 
-After narration files and real v7 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only project-, asset-, and runtime-fingerprint-current frames/targets):
+After narration files and real v8 groups/state sequences exist, run (the proof command synchronizes measured narration duration first and reuses only project-, asset-, and runtime-fingerprint-current frames/targets):
 
 ```bash
 npm run project:composition-proof -- <slug>
@@ -89,7 +89,7 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
 - `state-sequence`: state order correct, pose registration stable, identity consistent, transition clean, every state bound to a current proof frame.
 - `parallax-rig`: depth order readable, camera coupling clean, registered groups stable, final composition readable.
-- `motif-field`: density readable, safe area clean, motion clean, loop clean, final composition readable.
+- `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable.
 - bound event: visual event visible, sound event bound when required, proof time bound, final state preserved.
 - semantic contract: every requested check is visible in its exact target shots; cross-scene checks compare all bound scenes rather than one attractive frame.
 
@@ -97,17 +97,17 @@ Deterministic checks already block missing slots, mismatched canvases, duplicate
 
 ## Motion, Visibility, and Event Authoring
 
-The scene camera, camera-coupled depth offset, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship. `motif-field` then expands its fixed-seed instances inside its node-local safe area.
+The scene camera, camera-coupled depth offset, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship. `motif-field` then expands its fixed-seed instances inside node-local bounds, deterministically rejects protected zones, and proves a closed or invisible loop edge.
 
 Map every approved beat to one or more ordered events. Target the group when the entire registered assembly reacts, or a child for a genuinely local action. `scene.events` schedules both visuals and sound; do not create a second audio event list. A visibility event persists after its window and requires a truthful initial state; an emphasis event is transient. Bind critical events to authored proof ids.
 
-The normal contact sheet and final report reuse the authored proof moments and event timeline. A separate transition contact sheet samples every cut or opaque boundary; inspect it for false foreground/background combinations, edge gaps, uncovered midpoint swaps, spatial-direction errors, and cuts that miss the declared beat. The report must expose transition intent/type/motivation counts and cut ratio; any cut without valid rhythmic or impact motivation is a contract failure. Inspect establish, action/peak, and final states for relationship readability, subtitle safety, depth order, motif density/safe area, and preserved consequences.
+The normal contact sheet and final report reuse the authored proof moments and event timeline. A separate transition contact sheet samples every cut or opaque boundary; inspect it for false foreground/background combinations, edge gaps, uncovered midpoint swaps, spatial-direction errors, and cuts that miss the declared beat. The report must expose transition intent/type/motivation counts and cut ratio; any cut without valid rhythmic or impact motivation is a contract failure. Inspect establish, action/peak, and final states for relationship readability, subtitle safety, depth order, motif density/bounds/exclusions/loop edge, and preserved consequences.
 
 Do not count imperceptible camera drift as story activity. Use `static` when stillness is intentional; non-static presets have a minimum visible movement floor. The rendered continuity report remains authoritative because authored motion can still disappear after compositing or encoding.
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v7 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
+`project:assets-ready` owns narration synchronization, subtitle derivation, v8 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
 
 After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds an audio-only timeline mix, and measures LUFS/true peak. A passing mix needs no decision. A failing mix writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns preflight. Changed source audio or timing invalidates the decision. The final artifact report remains authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 

@@ -142,6 +142,8 @@ for (const entry of [
   'scripts/project-revise-preview-directing.mjs',
   'scripts/project-semantic-contracts.mjs',
   'scripts/storyboard-lib.mjs',
+  'scripts/verify-vox-sample.mjs',
+  'scripts/vox-sample-proof-lib.mjs',
   'scripts/project-sync.mjs',
   'scripts/project-subtitles.mjs',
   'scripts/project-validate.mjs',
@@ -181,6 +183,7 @@ for (const entry of [
   'tests/quality-motion-runtime.test.mjs',
   'tests/storyboard-motion.test.mjs',
   'tests/vox-primitives.test.mjs',
+  'tests/vox-sample-proof.test.mjs',
   'tests/style-proof-gate.test.mjs',
   'tests/semantic-contracts-and-attempts.test.mjs',
   'tests/timeline-continuity.test.mjs',
@@ -245,6 +248,7 @@ const workspacePackage = {
     'style:proof': rootPackage.scripts['style:proof'],
     doctor: 'node scripts/project-doctor.mjs',
     'sample:vox': rootPackage.scripts['sample:vox'],
+    'sample:vox:verify': rootPackage.scripts['sample:vox:verify'],
     dev: 'remotion studio src/index.ts --props=projects/starter-demo/project.json',
     check: rootPackage.scripts.check,
     bundle: rootPackage.scripts.bundle,
@@ -307,7 +311,7 @@ await fs.writeFile(path.join(RUNTIME_ROOT, 'src', 'Root.tsx'), rootSource, 'utf8
 
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 7,
+  schemaVersion: 8,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
@@ -428,7 +432,7 @@ await writeJson(
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 7,
+  schemaVersion: 8,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',

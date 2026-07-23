@@ -404,7 +404,7 @@ test('bundled provider status is valid and defers host capability selection', ()
 });
 
 test('new projects require a locked storyboard before concept approval', async () => {
-  const slug = `v7-smoke-${process.pid}`;
+  const slug = `v8-smoke-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
   try {
@@ -424,7 +424,7 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 7);
+    assert.equal(project.schemaVersion, 8);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
@@ -436,7 +436,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 7);
+    assert.equal(storyboardTemplate.schemaVersion, 8);
     assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
@@ -597,7 +597,7 @@ test('new projects require a locked storyboard before concept approval', async (
     const compiledStoryboard = JSON.parse(
       await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
     );
-    assert.equal(compiledStoryboard.schemaVersion, 7);
+    assert.equal(compiledStoryboard.schemaVersion, 8);
     assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'paper-slide'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.motivation === 'semantic-default'));

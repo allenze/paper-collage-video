@@ -186,7 +186,16 @@ export type CompositionMotifFieldNode = {
     rotation: [number, number];
     opacity: [number, number];
   };
-  safeArea?: {x: number; y: number; width: number; height: number};
+  bounds: {x: number; y: number; width: number; height: number};
+  exclusionZones: Array<{
+    id: string;
+    shape: 'rectangle' | 'ellipse';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    padding?: number;
+  }>;
   z: number;
   depth?: number;
   transform: NodeTransform;
@@ -372,7 +381,7 @@ export type ProjectScene = {
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 7;
+  schemaVersion: 8;
   slug: string;
   title: string;
   plan: {

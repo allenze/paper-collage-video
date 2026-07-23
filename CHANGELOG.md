@@ -4,6 +4,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- project/storyboard v8 的一等 `motif-field` 契约：确定性 bounds、矩形/椭圆排除区、素材占位净空、单场 192 实例总预算。
+- `fall-drift` 与 `burst` 隐藏式重生、全部 preset 的可验证循环闭合，以及真正受 `cycles` 控制的 burst 节奏。
+- 6 秒零生图 VOX 工程样片的正式证明命令：绑定媒体规格、固定 proof frames、第 90 帧 rhythmic cut、runtime build、项目/故事板与全部素材 SHA-256。
+
+### Changed
+
+- 项目、故事板 authoring/compiled schema、类型、编译器、执行校验、质量门、fixture、模板与 Skill 文档统一升级到 v8；不保留 v7 加载或迁移分支。
+- `motif-field` 的故事板计划现在包含 bounds 与 exclusion zones；运行时实现必须逐字段与编译计划一致。
+- 组合质量检查把含混的 safe-area 检查拆成 bounds、exclusions、placement 与 loop 的确定性证据。
+
+### Fixed
+
+- 消除 `fall-drift` 跨循环的可见位置跳变。
+- 修复 `burst` 忽略 `cycles` 的问题。
+- 防止多个合法单字段叠加后产生无上限 DOM 实例。
+
 ## [0.8.0] - 2026-07-21
 
 ### Added

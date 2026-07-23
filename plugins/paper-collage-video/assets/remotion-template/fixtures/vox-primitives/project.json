@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
   "plan": {
@@ -90,7 +90,10 @@
             "fieldMotion": {"preset": "fall-drift", "cycles": 1.5},
             "baseSize": 0.06,
             "variation": {"scale": [0.65, 1.2], "rotation": [-28, 28], "opacity": [0.45, 0.85]},
-            "safeArea": {"x": 0.03, "y": 0.05, "width": 0.94, "height": 0.88},
+            "bounds": {"x": 0.03, "y": 0.05, "width": 0.94, "height": 0.88},
+            "exclusionZones": [
+              {"id": "world-title-zone", "shape": "rectangle", "x": 0.14, "y": 0.34, "width": 0.64, "height": 0.4, "padding": 0.025}
+            ],
             "z": 2,
             "depth": 0.3,
             "transform": {"x": 0, "y": 0, "width": 1, "height": 1, "anchorX": 0, "anchorY": 0},
@@ -186,7 +189,10 @@
             "fieldMotion": {"preset": "burst", "cycles": 1},
             "baseSize": 0.065,
             "variation": {"scale": [0.7, 1.25], "rotation": [-18, 18], "opacity": [0.55, 0.95]},
-            "safeArea": {"x": 0.06, "y": 0.08, "width": 0.88, "height": 0.82},
+            "bounds": {"x": 0.06, "y": 0.08, "width": 0.88, "height": 0.82},
+            "exclusionZones": [
+              {"id": "cut-title-zone", "shape": "rectangle", "x": 0.14, "y": 0.35, "width": 0.72, "height": 0.42, "padding": 0.02}
+            ],
             "z": 2,
             "depth": 0.35,
             "transform": {"x": 0, "y": 0, "width": 1, "height": 1, "anchorX": 0, "anchorY": 0},

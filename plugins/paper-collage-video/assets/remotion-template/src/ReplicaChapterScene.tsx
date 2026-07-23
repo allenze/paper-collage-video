@@ -458,7 +458,7 @@ const MotifFieldView = ({
               width: size,
               height: size,
               objectFit: 'contain',
-              opacity: instance.opacity,
+              opacity: instance.opacity * field.opacity,
               transform: `translate(-50%, -50%) translate3d(${field.x * resolved.width}px, ${field.y * height}px, 0) scale(${instance.scale * field.scale}) rotate(${instance.rotation + field.rotation}deg)`,
               transformOrigin: '50% 50%',
             }}

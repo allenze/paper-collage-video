@@ -39,8 +39,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 7) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 7。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 8) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 8。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');

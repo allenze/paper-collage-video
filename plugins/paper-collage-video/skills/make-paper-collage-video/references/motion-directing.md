@@ -25,11 +25,11 @@ A treatment has orthogonal dimensions. Motion (`static`, continuous transform, s
 
 `depth-parallax` is not generic drift. It targets `scene-camera`, uses `parallax-camera`, and requires visible camera movement plus at least two distinct runtime `depth` values in `-1..1`. `0` is the focal plane. A coupled group owns one depth; its registered children must not repeat the world-space parallax path. A free group may add deliberate local depth only when that nested separation is part of the approved design.
 
-`motif-field` is decorative only. Author one target with preset (`drift`, `fall-drift`, `burst`, or `orbit`), distribution (`scattered`, `grid`, or `edge`), bounded `count<=64`, and cycles. Runtime supplies a fixed integer seed, 1–8 reviewed motif sources, a safe area, base size, and bounded scale/rotation/opacity variation. The renderer expands the instances deterministically; do not author a large array of individual asset nodes.
+`motif-field` is decorative only. Author one target with preset (`drift`, `fall-drift`, `burst`, or `orbit`), distribution (`scattered`, `grid`, or `edge`), bounded `count<=64`, cycles, normalized placement `bounds`, and explicit rectangle/ellipse `exclusionZones` around titles, faces, labels, and explanatory data. Keep all fields in one scene at or below 192 instances. Runtime supplies a fixed integer seed, 1–8 reviewed motif sources, base size, and bounded scale/rotation/opacity variation. Placement uses deterministic bounded rejection with motif-footprint clearance; loop presets either close geometrically or hide the respawn edge. The renderer expands the instances deterministically; do not author a large array of individual asset nodes.
 
 ## Author Intent, Compile Execution
 
-Storyboard v7 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, style-proof planning, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
+Storyboard v8 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, style-proof planning, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
 
 Every treatment declares:
 
@@ -92,6 +92,6 @@ Narrative intent and execution treatment are separate. Legal paper overrides are
 
 ## Proof and Review
 
-The compiler ranks treatments by semantic risk, discrete-state complexity, composition coupling, importance, and necessity, then compiles a `styleProofPlan`. The plan requires coverage for the highest semantic-risk classes, each concrete coupled relationship, state-sequence behavior, and motif-field behavior, and greedily reuses one source family where it can prove multiple facets. If a film has no such high-risk facet, the highest-ranked treatment becomes one `baseline:representative` target so the style gate never becomes empty. `style:proof` renders every selected target and binds the report to the plan fingerprint. Parallax rigs and motif fields also become fingerprinted composite quality targets. A changed treatment, camera rig, depth map, seed, field source, density, safe area, or runtime implementation invalidates the relevant evidence.
+The compiler ranks treatments by semantic risk, discrete-state complexity, composition coupling, importance, and necessity, then compiles a `styleProofPlan`. The plan requires coverage for the highest semantic-risk classes, each concrete coupled relationship, state-sequence behavior, and motif-field behavior, and greedily reuses one source family where it can prove multiple facets. If a film has no such high-risk facet, the highest-ranked treatment becomes one `baseline:representative` target so the style gate never becomes empty. `style:proof` renders every selected target and binds the report to the plan fingerprint. Parallax rigs and motif fields also become fingerprinted composite quality targets. A changed treatment, camera rig, depth map, seed, field source, density, bounds, exclusions, or runtime implementation invalidates the relevant evidence.
 
 Final reports state the number of pose-sheet provider calls, deterministic state derivatives, and isolated calls avoided. Savings count only when provenance proves that one provider result produced multiple local derivatives.

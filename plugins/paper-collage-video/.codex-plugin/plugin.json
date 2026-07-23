@@ -14,8 +14,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "纸片分层视频制作",
-    "shortDescription": "用意图纸张转场、持久可见性和注册状态动画制作纸片视频",
-    "longDescription": "初始化独立的 Remotion 工作区，用 Storyboard v7 逐节拍导演 treatments、多维风格证明、叙事意图路由的不透明动画转场、图片与动作双预算、注册式有限动画、可验证 provider 输出面、语义契约、增量合成证据与带指纹的旁白响度校准，完成可恢复的纸片拼贴与手绘解释视频制作。",
+    "shortDescription": "用意图转场、景深视差和确定性装饰场制作纸片视频",
+    "longDescription": "初始化独立的 Remotion 工作区，用 Storyboard v8 逐节拍导演 treatments、多维风格证明、叙事意图路由的不透明动画或节奏硬切、camera-coupled parallax、带排除区和循环证明的 motif-field、图片与动作双预算、注册式有限动画、可验证 provider 输出面、语义契约、增量合成证据与带指纹的旁白响度校准，完成可恢复的纸片拼贴与手绘解释视频制作。",
     "developerName": "Paper Collage Video Contributors",
     "category": "Creativity",
     "capabilities": [

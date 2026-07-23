@@ -80,7 +80,7 @@ export const prepareDirectingRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 7,
+    schemaVersion: 8,
     slug: currentStoryboard.slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(authored.sceneTransitions),

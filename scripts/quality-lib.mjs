@@ -33,6 +33,11 @@ import {
   activeManifestAssets,
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
+import {
+  MAX_MOTIF_INSTANCES_PER_FIELD,
+  resolveMotifFieldInstances,
+  verifyMotifFieldLoop,
+} from '../src/motifField.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -86,7 +91,8 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'camera-coupling-clean',
   'registered-groups-stable',
   'field-density-readable',
-  'field-safe-area-clean',
+  'field-bounds-clean',
+  'field-exclusions-clean',
   'field-motion-clean',
   'field-loop-clean',
 ];
@@ -115,7 +121,7 @@ const COMPOSITE_PROFILES = {
   event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
   'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
   'parallax-rig': ['depth-order-readable', 'camera-coupling-clean', 'registered-groups-stable', 'final-composition-readable'],
-  'motif-field': ['field-density-readable', 'field-safe-area-clean', 'field-motion-clean', 'field-loop-clean', 'final-composition-readable'],
+  'motif-field': ['field-density-readable', 'field-bounds-clean', 'field-exclusions-clean', 'field-motion-clean', 'field-loop-clean', 'final-composition-readable'],
 };
 
 const requiredChecksForGroup = (group) => {
@@ -818,18 +824,48 @@ const inspectCompositeTechnical = async ({target, proofReport}) => {
   }
   if (target.pattern === 'motif-field') {
     const field = target.motifField;
-    const safe = field.safeArea ?? {x: 0, y: 0, width: 1, height: 1};
-    const safeWithinBounds =
-      safe.x >= 0 &&
-      safe.y >= 0 &&
-      safe.width > 0 &&
-      safe.height > 0 &&
-      safe.x + safe.width <= 1 &&
-      safe.y + safe.height <= 1;
+    const bounds = field.bounds;
+    const boundsWithinCanvas =
+      bounds?.x >= 0 &&
+      bounds?.y >= 0 &&
+      bounds?.width > 0 &&
+      bounds?.height > 0 &&
+      bounds.x + bounds.width <= 1 &&
+      bounds.y + bounds.height <= 1;
+    const exclusionIds = new Set();
+    const exclusionsValid =
+      Array.isArray(field.exclusionZones) &&
+      field.exclusionZones.length <= 12 &&
+      field.exclusionZones.every((zone) => {
+        const uniqueId = typeof zone.id === 'string' && zone.id.length > 0 && !exclusionIds.has(zone.id);
+        exclusionIds.add(zone.id);
+        return (
+          uniqueId &&
+          ['rectangle', 'ellipse'].includes(zone.shape) &&
+          zone.x >= 0 &&
+          zone.y >= 0 &&
+          zone.width > 0 &&
+          zone.height > 0 &&
+          zone.x + zone.width <= 1 &&
+          zone.y + zone.height <= 1 &&
+          (zone.padding === undefined || (zone.padding >= 0 && zone.padding <= 0.25))
+        );
+      });
+    let placementError = null;
+    let placedCount = 0;
+    try {
+      placedCount = resolveMotifFieldInstances(field).length;
+    } catch (error) {
+      placementError = error.message;
+    }
+    const loop = verifyMotifFieldLoop(field.fieldMotion);
     checks.push(
-      {id: 'motif-count-bounded', passed: Number.isInteger(field.count) && field.count >= 1 && field.count <= 64, expected: '1..64', actual: field.count},
+      {id: 'motif-count-bounded', passed: Number.isInteger(field.count) && field.count >= 1 && field.count <= MAX_MOTIF_INSTANCES_PER_FIELD, expected: `1..${MAX_MOTIF_INSTANCES_PER_FIELD}`, actual: field.count},
       {id: 'motif-seed-fixed', passed: Number.isInteger(field.seed), expected: 'integer', actual: field.seed},
-      {id: 'motif-safe-area-bounded', passed: safeWithinBounds, expected: 'inside 0..1', actual: safe},
+      {id: 'motif-bounds-contained', passed: boundsWithinCanvas, expected: 'inside 0..1', actual: bounds},
+      {id: 'motif-exclusions-valid', passed: exclusionsValid, expected: '<= 12 unique normalized zones', actual: field.exclusionZones},
+      {id: 'motif-placement-complete', passed: placementError === null && placedCount === field.count, expected: field.count, actual: placementError ?? placedCount},
+      {id: 'motif-loop-continuous', passed: loop.passed, expected: 'continuous transform or invisible respawn', actual: loop},
     );
   }
   return {passed: checks.every(({passed}) => passed), checks, proofFrames};

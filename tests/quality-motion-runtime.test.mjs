@@ -161,7 +161,7 @@ test('quality scaffold exposes pending checks and current proof evidence without
   assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
 });
 
-test('v7 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {
+test('v8 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {
   const timeline = deriveTimeline({
     video: {fps: 30},
     scenes: [
@@ -192,7 +192,7 @@ test('v7 scene transitions use one seconds-based intent-routed opaque-boundary p
   assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v7 projects are rejected instead of migrated', async () => {
+test('pre-v8 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -206,14 +206,14 @@ test('pre-v7 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 7'),
+          code === 'schema-version' && message.includes('必须为 8'),
     ),
   );
 });
 
-test('v7 projects require an explicit bounded narration gain', async () => {
+test('v8 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -337,7 +337,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
       path.join(projectDirectory, 'project.json'),
       `${JSON.stringify(
         {
-          schemaVersion: 7,
+          schemaVersion: 8,
           slug,
           title: 'Quality Gate',
           quality: {minimumAssetScale: 1},
@@ -506,7 +506,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
         .toFile(file);
     }
     const project = {
-      schemaVersion: 7,
+      schemaVersion: 8,
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},

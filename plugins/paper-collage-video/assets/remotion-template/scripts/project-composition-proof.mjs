@@ -87,7 +87,7 @@ try {
   const {project} = await loadProject(slug);
   const validation = await validateProject(project);
   console.log(formatValidation(validation));
-  if (!validation.passed) throw new Error('v7 组合结构未通过，不能生成证明帧。');
+  if (!validation.passed) throw new Error('v8 组合结构未通过，不能生成证明帧。');
 
   const timeline = deriveTimeline(project);
   const paths = projectPaths(slug);

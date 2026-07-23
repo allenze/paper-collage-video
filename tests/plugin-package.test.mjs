@@ -117,6 +117,10 @@ test('packaged runtime is lightweight and independent from production projects',
     packageJson.scripts['sample:vox'],
     'remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264',
   );
+  assert.equal(
+    packageJson.scripts['sample:vox:verify'],
+    'node scripts/verify-vox-sample.mjs',
+  );
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'ASSET_LICENSES.md')));
@@ -137,7 +141,7 @@ test('packaged runtime is lightweight and independent from production projects',
   const starterMetrics = readJson(
     path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
   );
-  assert.equal(starterProject.schemaVersion, 7);
+  assert.equal(starterProject.schemaVersion, 8);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
   assert.equal(starterProject.scenes[0].events.length, 3);
@@ -197,6 +201,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-storyboard.mjs',
     'scripts/project-revise-preview-directing.mjs',
     'scripts/storyboard-lib.mjs',
+    'scripts/verify-vox-sample.mjs',
+    'scripts/vox-sample-proof-lib.mjs',
     'scripts/project-confirm-concept.mjs',
     'scripts/style-motion-proof.mjs',
     'scripts/style-proof-lib.mjs',

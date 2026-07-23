@@ -99,8 +99,8 @@ export const loadProject = async (slug) => {
   assertSlug(slug);
   const paths = projectPaths(slug);
   const project = await readJson(paths.projectFile);
-  if (project.schemaVersion !== 7) {
-    throw new Error('project.json 必须使用 schemaVersion 7；旧项目不会自动迁移。');
+  if (project.schemaVersion !== 8) {
+    throw new Error('project.json 必须使用 schemaVersion 8；旧项目不会自动迁移。');
   }
   return {paths, project};
 };
@@ -368,8 +368,8 @@ export const validateProject = async (project, options = {}) => {
   const add = (level, code, message, location) =>
     issues.push(makeIssue(level, code, message, location));
 
-  if (project.schemaVersion !== 7) {
-    add('error', 'schema-version', 'schemaVersion 必须为 7。', 'schemaVersion');
+  if (project.schemaVersion !== 8) {
+    add('error', 'schema-version', 'schemaVersion 必须为 8。', 'schemaVersion');
   }
   if (!SLUG_PATTERN.test(project.slug ?? '')) {
     add('error', 'slug', 'slug 格式无效。', 'slug');
@@ -395,13 +395,13 @@ export const validateProject = async (project, options = {}) => {
     );
   }
   if (project.plan === undefined) {
-    add('error', 'plan-required', 'v7 项目必须包含 plan。', 'plan');
+    add('error', 'plan-required', 'v8 项目必须包含 plan。', 'plan');
   }
   if (!project.voice || typeof project.voice !== 'object') {
-    add('error', 'voice-required', 'v7 项目必须包含 voice。', 'voice');
+    add('error', 'voice-required', 'v8 项目必须包含 voice。', 'voice');
   }
   if (project.audio?.sfx !== undefined) {
-    add('error', 'unsupported-audio-sfx', 'v7 不支持 audio.sfx；请用逐节拍 event.sound。', 'audio.sfx');
+    add('error', 'unsupported-audio-sfx', 'v8 不支持 audio.sfx；请用逐节拍 event.sound。', 'audio.sfx');
   }
   if (!isPositiveNumber(project.quality?.minimumAssetScale)) {
     add(
@@ -437,7 +437,7 @@ export const validateProject = async (project, options = {}) => {
     add(
       'error',
       'audio-mastering-required',
-      'audio.mastering 是 v7 项目的必填交付规格。',
+      'audio.mastering 是 v8 项目的必填交付规格。',
       'audio.mastering',
     );
   }
@@ -849,7 +849,7 @@ export const validateProject = async (project, options = {}) => {
       add('error', 'scene-events-required', '每个镜头必须包含与故事节拍对应的 events。', `${sceneLocation}.events`);
     }
     if (scene.audioEvents !== undefined) {
-      add('error', 'unsupported-audio-events', 'v7 只允许 scene.events 作为视听事件源。', `${sceneLocation}.audioEvents`);
+      add('error', 'unsupported-audio-events', 'v8 只允许 scene.events 作为视听事件源。', `${sceneLocation}.audioEvents`);
     }
     const eventIds = new Set();
     const eventBeatIds = new Set();

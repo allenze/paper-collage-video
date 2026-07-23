@@ -8,6 +8,11 @@ import {
   resolveSequencePhase,
   resolveSequenceState,
 } from './state-sequence-lib.mjs';
+import {
+  MAX_MOTIF_INSTANCES_PER_FIELD,
+  MAX_MOTIF_INSTANCES_PER_SCENE,
+  resolveMotifFieldInstances,
+} from '../src/motifField.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -21,6 +26,14 @@ export const MOTION_EASES = schema.$defs.motionEase.enum;
 
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
+const normalizedRectangleWithinCanvas = ({x, y, width, height} = {}) =>
+  [x, y, width, height].every(finite) &&
+  x >= 0 &&
+  y >= 0 &&
+  width > 0 &&
+  height > 0 &&
+  x + width <= 1 &&
+  y + height <= 1;
 
 export const stableStringify = (value) => {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -233,6 +246,7 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
     }
 
     if (node.kind === 'motif-field') {
+      const motifIssueCount = issues.length;
       motifFields.push({node, parent});
       if (!Array.isArray(node.motifs) || node.motifs.length < 1 || node.motifs.length > 8) {
         add('error', 'composition-motif-sources', 'motif-field 必须包含 1..8 个 motif 素材。', `${nodeLocation}.motifs`);
@@ -246,8 +260,8 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
           if (!nonEmpty(motif?.src)) add('error', 'composition-motif-src', 'motif 必须声明 src。', `${nodeLocation}.motifs[${index}].src`);
         }
       }
-      if (!(Number.isInteger(node.count) && node.count >= 1 && node.count <= 64)) {
-        add('error', 'composition-motif-count', 'motif-field count 必须是 1..64 的整数。', `${nodeLocation}.count`);
+      if (!(Number.isInteger(node.count) && node.count >= 1 && node.count <= MAX_MOTIF_INSTANCES_PER_FIELD)) {
+        add('error', 'composition-motif-count', `motif-field count 必须是 1..${MAX_MOTIF_INSTANCES_PER_FIELD} 的整数。`, `${nodeLocation}.count`);
       }
       if (!Number.isInteger(node.seed)) add('error', 'composition-motif-seed', 'motif-field seed 必须是整数。', `${nodeLocation}.seed`);
       if (!['scattered', 'grid', 'edge'].includes(node.distribution)) {
@@ -281,22 +295,39 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
         Array.isArray(node.variation?.opacity) &&
         !node.variation.opacity.every((value) => value >= 0 && value <= 1)
       ) add('error', 'composition-motif-opacity', 'motif opacity 必须位于 0..1。', `${nodeLocation}.variation.opacity`);
-      if (node.safeArea !== undefined) {
-        const {x, y, width, height} = node.safeArea ?? {};
-        if (
-          ![x, y, width, height].every(finite) ||
-          x < 0 ||
-          y < 0 ||
-          width <= 0 ||
-          height <= 0 ||
-          x + width > 1 ||
-          y + height > 1
-        ) {
-          add('error', 'composition-motif-safe-area', 'motif-field safeArea 必须完整位于节点画布 0..1 内。', `${nodeLocation}.safeArea`);
+      if (!normalizedRectangleWithinCanvas(node.bounds)) {
+        add('error', 'composition-motif-bounds', 'motif-field bounds 必须完整位于节点画布 0..1 内。', `${nodeLocation}.bounds`);
+      }
+      if (!Array.isArray(node.exclusionZones) || node.exclusionZones.length > 12) {
+        add('error', 'composition-motif-exclusions', 'motif-field exclusionZones 必须是最多 12 项的数组。', `${nodeLocation}.exclusionZones`);
+      } else {
+        const exclusionIds = new Set();
+        for (const [index, zone] of node.exclusionZones.entries()) {
+          const zoneLocation = `${nodeLocation}.exclusionZones[${index}]`;
+          if (!nonEmpty(zone?.id) || exclusionIds.has(zone.id)) {
+            add('error', 'composition-motif-exclusion-id', 'motif 排除区 id 缺失或重复。', `${zoneLocation}.id`);
+          }
+          exclusionIds.add(zone?.id);
+          if (!['rectangle', 'ellipse'].includes(zone?.shape)) {
+            add('error', 'composition-motif-exclusion-shape', 'motif 排除区 shape 必须是 rectangle 或 ellipse。', `${zoneLocation}.shape`);
+          }
+          if (!normalizedRectangleWithinCanvas(zone)) {
+            add('error', 'composition-motif-exclusion-bounds', 'motif 排除区必须完整位于节点画布 0..1 内。', zoneLocation);
+          }
+          if (zone?.padding !== undefined && !(finite(zone.padding) && zone.padding >= 0 && zone.padding <= 0.25)) {
+            add('error', 'composition-motif-exclusion-padding', 'motif 排除区 padding 必须位于 0..0.25。', `${zoneLocation}.padding`);
+          }
         }
       }
       if (!finite(node.transform?.height) || node.transform.height <= 0) {
         add('error', 'composition-motif-height', 'motif-field 必须声明 transform.height。', `${nodeLocation}.transform.height`);
+      }
+      if (issues.length === motifIssueCount) {
+        try {
+          resolveMotifFieldInstances(node);
+        } catch (error) {
+          add('error', 'composition-motif-placement', error.message, nodeLocation);
+        }
       }
       continue;
     }
@@ -365,6 +396,19 @@ export const validateCompositionStructure = ({composition, video, proofTimes = [
         }
       }
     }
+  }
+  const motifInstanceCount = motifFields.reduce(
+    (total, {node}) =>
+      total + (Number.isInteger(node.count) && node.count > 0 ? node.count : 0),
+    0,
+  );
+  if (motifInstanceCount > MAX_MOTIF_INSTANCES_PER_SCENE) {
+    add(
+      'error',
+      'composition-motif-scene-budget',
+      `单镜头 motif-field 总实例数必须不超过 ${MAX_MOTIF_INSTANCES_PER_SCENE}，当前为 ${motifInstanceCount}。`,
+      `${location}.nodes`,
+    );
   }
   for (const proof of proofTimes) {
     for (const assertion of proof.stateAssertions ?? []) {

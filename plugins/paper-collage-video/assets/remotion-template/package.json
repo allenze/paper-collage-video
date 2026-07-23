@@ -64,6 +64,7 @@
     "style:proof": "node scripts/project-metrics-run.mjs --category=evidence-render --operation=style-proof --script=scripts/style-motion-proof.mjs --slug-index=0 --",
     "doctor": "node scripts/project-doctor.mjs",
     "sample:vox": "remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264",
+    "sample:vox:verify": "node scripts/verify-vox-sample.mjs",
     "dev": "remotion studio src/index.ts --props=projects/starter-demo/project.json",
     "check": "tsc --noEmit",
     "bundle": "remotion bundle src/index.ts",

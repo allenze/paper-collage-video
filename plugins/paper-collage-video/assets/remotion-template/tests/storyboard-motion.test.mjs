@@ -34,7 +34,7 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
 });
 
 const authoredStoryboard = () => ({
-  schemaVersion: 7,
+  schemaVersion: 8,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
@@ -108,7 +108,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v7 compiles treatments into composition plans, risk selection, and cost evidence', () => {
+test('v8 compiles treatments into composition plans, risk selection, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);
@@ -339,6 +339,16 @@ test('parallax rigs and motif fields compile into first-class directing plans', 
       distribution: 'scattered',
       count: 18,
       cycles: 2,
+      bounds: {x: 0.05, y: 0.08, width: 0.9, height: 0.82},
+      exclusionZones: [{
+        id: 'title-zone',
+        shape: 'rectangle',
+        x: 0.25,
+        y: 0.3,
+        width: 0.5,
+        height: 0.4,
+        padding: 0.02,
+      }],
     },
     composition: {pattern: 'free'},
     graphic: null,
@@ -361,6 +371,16 @@ test('parallax rigs and motif fields compile into first-class directing plans', 
     distribution: 'scattered',
     count: 18,
     cycles: 2,
+    bounds: {x: 0.05, y: 0.08, width: 0.9, height: 0.82},
+    exclusionZones: [{
+      id: 'title-zone',
+      shape: 'rectangle',
+      x: 0.25,
+      y: 0.3,
+      width: 0.5,
+      height: 0.4,
+      padding: 0.02,
+    }],
     at: 0.48,
     proofTimeId: 'proof-action',
   }]);
@@ -382,6 +402,16 @@ test('parallax rigs and motif fields compile into first-class directing plans', 
           count: 18,
           distribution: 'scattered',
           fieldMotion: {preset: 'fall-drift', cycles: 2},
+          bounds: {x: 0.05, y: 0.08, width: 0.9, height: 0.82},
+          exclusionZones: [{
+            id: 'title-zone',
+            shape: 'rectangle',
+            x: 0.25,
+            y: 0.3,
+            width: 0.5,
+            height: 0.4,
+            padding: 0.02,
+          }],
           motion: {keyframes: [{at: 0}, {at: 1}]},
         },
       ],
@@ -469,7 +499,7 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v7 storyboard audio beats require an approved event-level proof', () => {
+test('v8 storyboard audio beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
   storyboard.scenes[0].beats[1].proofTimeId = null;
   assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})

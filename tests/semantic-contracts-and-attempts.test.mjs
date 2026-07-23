@@ -369,7 +369,7 @@ test('diagram filters fail deterministically and semantic proof targets span sce
     await fs.writeFile(cardFile, '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence/></filter><text filter="url(#noise)" x="5" y="50">A</text></svg>');
     await sharp({create: {width: 100, height: 100, channels: 4, background: '#806040'}}).png().toFile(castFile);
     const project = {
-      schemaVersion: 7,
+      schemaVersion: 8,
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},

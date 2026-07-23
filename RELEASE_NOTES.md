@@ -1,43 +1,37 @@
-# Paper Collage Video v0.8.0
+# Paper Collage Video 0.15.0-dev.1
 
-This release makes semantic correctness and composition relationships explicit
-parts of the editable Remotion production contract instead of leaving them to
-image-generation prompts.
+This development release closes the reusable VOX-style editorial primitive
+slice without requiring a text-to-video provider. It upgrades the current
+project and storyboard contract to v8 and binds authoring, compilation,
+runtime, validation, proof, packaging, and documentation to the same behavior.
 
 ## Highlights
 
-- Installable Codex Plugin that bootstraps an independent Remotion workspace.
-- Rhythmic storyboards with authored scene blueprints, beats, cues, keyframes,
-  and proof times.
-- Composition Contract v4 with registered `supported-subject` and
-  `registered-environment` groups, shared canvases, source masters, relationship
-  proofs, and stale-review invalidation.
-- Reusable identity, topology, mechanism, and diagram contracts. Coexisting
-  characters require structural differences; working objects require complete
-  parts, connections, load paths, motion constraints, and reference evidence.
-- Schema-v3 image requests with semantic bindings that combine every applicable
-  contract instead of checking only one dominant risk.
-- An append-only image-generation attempt ledger with atomic budget reservation,
-  truthful rejected/abandoned accounting, exact reuse, and final-canvas size
-  validation.
-- Deterministic rejection of procedural SVG filters on diagram text, arrows,
-  icons, and borders.
-- Three default human decisions: concept/provider/budget, style/fictional voice,
-  and rendered preview. Local final delivery remains separate from publication.
-- A lightweight two-second fixture used only for installation smoke tests;
-  production projects and media are not bundled into the Plugin package.
+- One intent-routed scene boundary protocol with authored rhythmic and impact
+  cuts, while normal narrative boundaries keep deterministic opaque animation.
+- Camera-coupled parallax that applies the global camera once and separates
+  authored depth planes without breaking registered relationships.
+- First-class deterministic `motif-field` nodes with explicit bounds,
+  title/face/data exclusion zones, footprint clearance, 64 instances per field,
+  and a 192-instance aggregate scene ceiling.
+- Seamless drift/orbit loops and invisible respawn edges for fall/burst fields;
+  `cycles` now controls every preset.
+- A six-second, no-provider VOX engineering sample plus
+  `npm run sample:vox:verify`, which produces a fixed-frame contact sheet and a
+  fingerprinted proof report.
+- Source and packaged plugin validation share the same runtime-build identity.
 
 ## Compatibility
 
-- New projects use project schema v4; v3 and earlier projects are intentionally
-  not migrated or silently downgraded.
-- Ledger-enabled projects require schema-v3 image requests.
-- Start a new Codex task after upgrading so the v0.8.0 Skill snapshot is loaded.
+- New projects use project and storyboard schema v8. Older projects are
+  intentionally not migrated or silently downgraded.
+- A v8 motif field must declare `bounds` and `exclusionZones`; the compiler and
+  runtime must match preset, distribution, count, cycles, bounds, and zones.
+- Start a new Codex task after upgrading so the new Skill snapshot is loaded.
 
 This release contains reusable source, the packaged Plugin, and technical test
-fixtures only. It does not publish production project media or add a new manual
-Release attachment. The older v0.5.0 repository demo remains available under
-the limited terms in `ASSET_LICENSES.md`.
+fixtures only. The generated VOX MP4 and proof artifacts remain local build
+outputs and are not bundled as production media.
 
 ## Install
 

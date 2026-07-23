@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v7",
+  "title": "Paper Collage Project v8",
   "type": "object",
   "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 7},
+    "schemaVersion": {"const": 8},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "plan": {"$ref": "#/$defs/plan"},

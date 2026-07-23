@@ -40,6 +40,8 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/style-motion-proof.mjs',
   'scripts/style-proof-lib.mjs',
   'scripts/storyboard-lib.mjs',
+  'scripts/verify-vox-sample.mjs',
+  'scripts/vox-sample-proof-lib.mjs',
   'src/MainVideo.tsx',
   'src/ReplicaChapterScene.tsx',
   'src/SceneTransitionOverlay.tsx',

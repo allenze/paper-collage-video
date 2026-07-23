@@ -1,5 +1,9 @@
 import {flattenCompositionNodes, hashCompositionValue} from './composition-lib.mjs';
 import {collectParallaxDepths} from '../src/parallax.mjs';
+import {
+  MAX_MOTIF_INSTANCES_PER_FIELD,
+  MAX_MOTIF_INSTANCES_PER_SCENE,
+} from '../src/motifField.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -54,6 +58,14 @@ const IMPORTANCE_SCORE = {ambient: 0, supporting: 1, hero: 2};
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 const normalizedTime = (value) =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
+const normalizedRectangleWithinCanvas = ({x, y, width, height} = {}) =>
+  [x, y, width, height].every((value) => Number.isFinite(value)) &&
+  x >= 0 &&
+  y >= 0 &&
+  width > 0 &&
+  height > 0 &&
+  x + width <= 1 &&
+  y + height <= 1;
 
 const requiredPatternForPredicate = (predicate) =>
   ['inside', 'on', 'held-by', 'worn-by'].includes(predicate)
@@ -282,11 +294,35 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (!MOTIF_FIELD_DISTRIBUTIONS.includes(motion.distribution)) {
       addIssue(issues, 'treatment-motif-distribution', `未知 motif-field distribution：${motion.distribution}`, `${location}.motion.distribution`);
     }
-    if (!(Number.isInteger(motion.count) && motion.count >= 1 && motion.count <= 64)) {
-      addIssue(issues, 'treatment-motif-count', 'motif-field count 必须是 1..64 的整数。', `${location}.motion.count`);
+    if (!(Number.isInteger(motion.count) && motion.count >= 1 && motion.count <= MAX_MOTIF_INSTANCES_PER_FIELD)) {
+      addIssue(issues, 'treatment-motif-count', `motif-field count 必须是 1..${MAX_MOTIF_INSTANCES_PER_FIELD} 的整数。`, `${location}.motion.count`);
     }
     if (!(Number.isFinite(motion.cycles) && motion.cycles > 0 && motion.cycles <= 12)) {
       addIssue(issues, 'treatment-motif-cycles', 'motif-field cycles 必须位于 0..12。', `${location}.motion.cycles`);
+    }
+    if (!normalizedRectangleWithinCanvas(motion.bounds)) {
+      addIssue(issues, 'treatment-motif-bounds', 'motif-field bounds 必须完整位于 0..1。', `${location}.motion.bounds`);
+    }
+    if (!Array.isArray(motion.exclusionZones) || motion.exclusionZones.length > 12) {
+      addIssue(issues, 'treatment-motif-exclusions', 'motif-field exclusionZones 必须是最多 12 项的数组。', `${location}.motion.exclusionZones`);
+    } else {
+      const exclusionIds = new Set();
+      for (const [index, zone] of motion.exclusionZones.entries()) {
+        const zoneLocation = `${location}.motion.exclusionZones[${index}]`;
+        if (!nonEmpty(zone?.id) || exclusionIds.has(zone.id)) {
+          addIssue(issues, 'treatment-motif-exclusion-id', 'motif 排除区 id 缺失或重复。', `${zoneLocation}.id`);
+        }
+        exclusionIds.add(zone?.id);
+        if (!['rectangle', 'ellipse'].includes(zone?.shape)) {
+          addIssue(issues, 'treatment-motif-exclusion-shape', 'motif 排除区 shape 必须是 rectangle 或 ellipse。', `${zoneLocation}.shape`);
+        }
+        if (!normalizedRectangleWithinCanvas(zone)) {
+          addIssue(issues, 'treatment-motif-exclusion-bounds', 'motif 排除区必须完整位于 0..1。', zoneLocation);
+        }
+        if (zone?.padding !== undefined && !(Number.isFinite(zone.padding) && zone.padding >= 0 && zone.padding <= 0.25)) {
+          addIssue(issues, 'treatment-motif-exclusion-padding', 'motif 排除区 padding 必须位于 0..0.25。', `${zoneLocation}.padding`);
+        }
+      }
     }
     if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds'].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'motif-field 不得夹带状态或显隐字段。', `${location}.motion`);
@@ -434,6 +470,8 @@ const compileScene = (scene) => {
           distribution: treatment.motion.distribution,
           count: treatment.motion.count,
           cycles: treatment.motion.cycles,
+          bounds: treatment.motion.bounds,
+          exclusionZones: treatment.motion.exclusionZones,
           at: beat.at,
           proofTimeId: treatment.proofTimeId ?? null,
         });
@@ -543,6 +581,7 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     if (scene.compositionPlan !== undefined || scene.directing !== undefined) {
       addIssue(issues, 'storyboard-derived-fields', '输入不得手写 compositionPlan 或 directing；它们由编译器生成。', `scenes[${sceneIndex}]`);
     }
+    const motifTargets = new Map();
     for (const [beatIndex, beat] of (scene.beats ?? []).entries()) {
       const beatLocation = `scenes[${sceneIndex}].beats[${beatIndex}]`;
       if (!Array.isArray(beat.treatments) || beat.treatments.length === 0) {
@@ -551,12 +590,30 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
       for (const [treatmentIndex, treatment] of (beat.treatments ?? []).entries()) {
         const location = `${beatLocation}.treatments[${treatmentIndex}]`;
         issues.push(...validateTreatment(treatment, {location, beatAt: beat.at}));
+        if (treatment.motion?.kind === 'motif-field') {
+          if (motifTargets.has(treatment.targetId)) {
+            addIssue(issues, 'treatment-motif-target-duplicate', `单镜头 motif-field 目标只能编排一次：${treatment.targetId}。`, `${location}.targetId`);
+          }
+          motifTargets.set(treatment.targetId, treatment.motion.count);
+        }
         if (treatmentIds.has(treatment.id)) addIssue(issues, 'treatment-id-duplicate', `treatment id 重复：${treatment.id}`, `${location}.id`);
         treatmentIds.add(treatment.id);
         if (treatment.proofTimeId !== null && treatment.proofTimeId !== undefined && treatment.proofTimeId !== beat.proofTimeId) {
           addIssue(issues, 'treatment-proof-drift', 'treatment.proofTimeId 必须与所属 beat.proofTimeId 一致。', `${location}.proofTimeId`);
         }
       }
+    }
+    const motifInstanceCount = [...motifTargets.values()].reduce(
+      (total, count) => total + (Number.isInteger(count) && count > 0 ? count : 0),
+      0,
+    );
+    if (motifInstanceCount > MAX_MOTIF_INSTANCES_PER_SCENE) {
+      addIssue(
+        issues,
+        'treatment-motif-scene-budget',
+        `单镜头 motif-field 总实例数必须不超过 ${MAX_MOTIF_INSTANCES_PER_SCENE}，当前为 ${motifInstanceCount}。`,
+        `scenes[${sceneIndex}].beats`,
+      );
     }
   }
   if (issues.length > 0) {
@@ -686,7 +743,9 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       node.fieldMotion?.preset !== planned.preset ||
       node.fieldMotion?.cycles !== planned.cycles ||
       node.distribution !== planned.distribution ||
-      node.count !== planned.count
+      node.count !== planned.count ||
+      JSON.stringify(node.bounds) !== JSON.stringify(planned.bounds) ||
+      JSON.stringify(node.exclusionZones) !== JSON.stringify(planned.exclusionZones)
     ) {
       addIssue(issues, 'directing-motif-drift', `motif-field ${planned.nodeId} 与故事板计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
     }

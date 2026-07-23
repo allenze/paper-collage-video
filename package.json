@@ -65,6 +65,7 @@
     "doctor": "node scripts/project-doctor.mjs",
     "plugin:sync": "node scripts/sync-plugin-package.mjs",
     "sample:vox": "remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264",
+    "sample:vox:verify": "node scripts/verify-vox-sample.mjs",
     "dev": "remotion studio src/index.ts",
     "check": "tsc --noEmit",
     "bundle": "remotion bundle src/index.ts",

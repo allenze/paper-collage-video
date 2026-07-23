@@ -5,23 +5,24 @@
 
 一个配置驱动的本地纸片分层视频生产系统。人负责内容意图、审美选择和最终批准；Codex 与本地工具负责节奏故事板、素材组织、分层关键帧、持久显隐与视听事件、旁白同步、渲染和技术验收。
 
-当前开发协议为 project v7 / storyboard v6；旧项目不会自动迁移或回退。v7 在递归组合、注册源家族和组合证明之上，把节点显隐建模为持久状态，并用编辑意图为每个相邻场景路由唯一、不透明的交接边界：普通连续叙事默认使用动画，只有明确的冲击剪辑才允许硬切，同时防止“人物站在船外”、节点闪现和跨幕前景/背景混帧。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
+当前开发协议为 project/storyboard v8；旧项目不会自动迁移或回退。v8 在递归组合、注册源家族、持久显隐与意图路由边界之上，把 camera-coupled parallax、节奏硬切和确定性 `motif-field` 收成可编译、可验证、可证明的一等原语。`motif-field` 显式声明放置边界、标题/人脸/数据排除区、闭合或隐藏重生循环，并受单场景总预算约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
 
-当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.14.0-dev.2`。新协议加入节奏故事板、注册组合模式、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本，以及资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
+当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.15.0-dev.1`。新协议加入节奏故事板、注册组合模式、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX 编辑原语与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
 
 ## 完整演示
 
 [观看或下载唯一完整演示：《铁杵磨针》77.7 秒 1080p 纸片故事](https://github.com/cyberlesterr/paper-collage-video/releases/download/v0.5.0/tie-chu-mo-zhen-final.mp4)
 
-Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v7 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
+Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v8 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
 
-当前 v7 还附带一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、固定种子的 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
+当前 v8 还附带一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、带排除区与循环证明的固定种子 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
 
 ```bash
 npm run sample:vox
+npm run sample:vox:verify
 ```
 
-输入位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
+输入与正式证明合同位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`，证明报告与固定帧联系表位于 `dist/vox-primitives/proof/`。验证命令会绑定 v8 项目/故事板、runtime build、全部夹具素材、编码规格、六个 proof time 与第 90 帧 rhythmic cut。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
 
 ## 从 GitHub 安装 Plugin
 
@@ -77,7 +78,7 @@ Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于
 
 正常制作一条新视频时，人参与三个内容节点：
 
-1. 口述主题后，一次确认概念、Storyboard v7 导演节拍与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
+1. 口述主题后，一次确认概念、Storyboard v8 导演节拍与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
 2. 确认一张风格样张、短试听和必要时的 3–5 秒动作证明。
 3. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
@@ -150,7 +151,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v7 再把逐节拍导演 treatments 编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划和指纹，并为每对相邻镜头把叙事意图路由成不透明动画边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v8 再把逐节拍导演 treatments 编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划和指纹，并为每对相邻镜头把叙事意图路由成不透明动画边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -162,7 +163,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
 | `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
-| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v7 节拍 treatments、意图转场、多维风格证明、可见性/组合/状态计划与证明时刻 |
+| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v8 节拍 treatments、意图转场、多维风格证明、可见性/组合/状态计划与证明时刻 |
 | `npm run project:revise-preview-directing -- <slug> --input=<file>` | 在预览退回后保护概念/风格并按既定 motion budget 正式重编导演字段 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
@@ -184,16 +185,17 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
 | `npm run project:composition-proof -- <slug> [--force]` | 按项目、资产与 runtime-build 指纹增量生成关系/语义证明；`--force` 显式禁用全部证明缓存 |
-| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v7 校验、证明指纹与双质量门和阶段推进 |
+| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v8 校验、证明指纹与双质量门和阶段推进 |
 | `npm run project:audio-calibration -- <slug> propose` | 为当前旁白与时间线生成带指纹的响度校准草案 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |
 | `npm run project:subtitles -- <slug>` | 低层恢复命令：同步或生成字幕时间 |
 | `npm run project:quality -- <slug> record-batch --input=<file>` | 原子记录与哈希/组合指纹绑定的资产或组合语义检查 |
-| `npm run project:validate -- <slug>` | 检查 v7 组合、注册、支撑、环境边界、显隐/强调/声音事件、场景交接、字幕和时长 |
+| `npm run project:validate -- <slug>` | 检查 v8 组合、注册、支撑、环境边界、显隐/强调/声音事件、场景交接、字幕和时长 |
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v7 组合生成覆盖语义、耦合关系与状态序列的 schema-v6 多目标样式证明 |
+| `npm run style:proof -- <slug>` | 用真实 v8 组合生成覆盖语义、耦合关系与状态序列的 schema-v6 多目标样式证明 |
+| `npm run sample:vox:verify` | 对 VOX 工程样片生成固定帧联系表，并校验媒体、边界、素材与 runtime 指纹 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
 | `npm run dev` | 在 Remotion Studio 中打开通用开发 composition |
@@ -285,7 +287,7 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 - 项目逐幕蓝图、组合模式、证明 id/时刻/断言是否与已批准故事板一致。
 - 组与子节点关键帧是否覆盖完整镜头，每个故事节拍是否有有效事件目标、正确显隐生命周期和证明窗口。
 - 每对相邻场景是否恰好有一条边界，叙事意图与执行 treatment 是否正交且合法，rhythmic cut 是否绑定边界节拍，动画边界的出场 tail/入场旁白 lead 是否覆盖完整转场。
-- 启用视差的镜头是否有可见 camera 运动、至少两个 depth 层级且耦合组仅由 group 承载景深；motif-field 是否有固定 seed、受限数量、合法变化范围与画布内安全区。
+- 启用视差的镜头是否有可见 camera 运动、至少两个 depth 层级且耦合组仅由 group 承载景深；motif-field 是否有固定 seed、受限数量、合法变化范围、画布内 bounds、标题/人脸/数据排除区、闭合循环与单镜头总预算。
 - 字幕范围、重叠、越界、单条长度和阅读速度。
 - 支撑主体在各证明时刻是否仍位于接触区，注册环境是否只声明一次语义区域。
 
@@ -293,7 +295,7 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 
 ## 历史项目
 
-仓库中的旧演示成片及其旧项目数据只保留为历史制作记录，当前运行时不会迁移或执行它们。插件发行包只携带符合 v7 的独立 `starter-demo` 技术夹具。
+仓库中的旧演示成片及其旧项目数据只保留为历史制作记录，当前运行时不会迁移或执行它们。插件发行包只携带符合 v8 的独立 `starter-demo` 技术夹具。
 
 ## 贡献、支持与安全
 
