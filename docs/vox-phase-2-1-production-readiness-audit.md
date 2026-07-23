@@ -25,6 +25,11 @@ pilot。源码、打包插件和 fresh installed-cache 必须保持同一 runtim
 审计后没有未处理的仓库可控 P0/P1。仍有两个 P2 工程增强项和三个 connector/host 外部
 限制；它们不阻断受控 pilot，但应在涉及对应能力时显式纳入制作计划。
 
+后续状态说明：Phase 2.2 已完成 F035 与 F037 的正式纵向切片；下表中这两项的 Phase
+2.1 历史状态已标注为被
+[`vox-phase-2-2-asset-family-hardening.md`](vox-phase-2-2-asset-family-hardening.md)
+supersede，production pilot 应按 Phase 2.2 当前契约执行。
+
 ## 审计口径
 
 “关闭”只表示现行一等契约、实现、验证和打包路径已提供对应保障，不表示任何新项目的
@@ -82,9 +87,9 @@ pilot。源码、打包插件和 fresh installed-cache 必须保持同一 runtim
 | F032 | 关闭 | 仓库 | visibility proof window 包含动作后的 persistent settled state，直到下一次可见性变化。 |
 | F033 | 关闭 | 仓库 | `project:revise-preview-directing` 正式重编合法的 proof timing/directing 修订。 |
 | F034 | 受控 P2 | Production | 编译、Schema 和 project validator 已前置；仍需在首个真实 provider pilot 记录“首次校验错误数/修复轮次”。 |
-| F035 | P2 待增强 | 仓库 | state sheet 有正式派生器；supported-subject 三层共享画布仍缺少同等直接的 registered-family 派生命令。涉及该模式的 pilot 应先补此纵向切片或明确限制范围。 |
+| F035 | 已被 Phase 2.2 supersede（历史：P2 待增强） | 仓库 | Phase 2.2 已提供 `registered-family` schema/binding、`assets:derive-registered-family`、manifest provenance/lifecycle、proof、quality、tests 与 packaged-plugin 验证；pilot 继续用真实 provider source 验证 production 行为。 |
 | F036 | 关闭 | 仓库 | chroma-key despill、matte、缩放合成回归和 proof evidence 已覆盖洋红污染。 |
-| F037 | 受控 P2 | 仓库/人审 | checkerboard、tight crop、motion-stress 与 `background-leak-free` 门可拦截；仍缺少专门的低 alpha 矩形裁切带自动检测器。 |
+| F037 | 已被 Phase 2.2 supersede（历史：受控 P2） | 仓库/人审 | Phase 2.2 已加入原始分辨率与实际 proof/render 缩放下的低 alpha 矩形裁切带检测、JSON/overlay evidence、validation/quality gate 与 fixtures；checkerboard、tight crop、motion-stress 人审仍为必要语义证据。 |
 | F038 | 关闭 | 仓库 | runtime 不再对注册 support 画布统一施加会显出边界的投影。 |
 | F039 | 关闭 | 仓库 | proof fingerprint 绑定 runtime；本轮 `--force` 实测 0 帧/0 composite 复用。 |
 | F040 | 关闭 | 仓库 | transparent RGB 使用 edge-pad/neutral 策略，缩放回归未出现色键渗色。 |
@@ -161,10 +166,12 @@ pilot。源码、打包插件和 fresh installed-cache 必须保持同一 runtim
 1. pilot 不是最终参考样片，不发布、不 push、不 tag。
 2. 在任何 provider 调用前，仍需明确概念、production profile、provider/model、预算和
    generation attempt 上限。
-3. 如 pilot 使用 `supported-subject` 三层共享画布，先完成 F035 的正式 registered-family
-   派生器；否则限制 pilot 不使用该模式。
-4. 任何 alpha/foreground family 都必须看 checkerboard、tight crop 和 motion-stress；
-   F037 在自动检测器落地前不能只靠 `key-edge-clean`。
+3. F035 的 Phase 2.1 前置条件已被 Phase 2.2 supersede。pilot 使用
+   `supported-subject` 三层共享画布时，必须通过正式 `registered-family` spec 与
+   `assets:derive-registered-family` 路径执行，并保留完整 source lineage。
+4. F037 的 Phase 2.1 自动检测缺口已被 Phase 2.2 supersede。任何 alpha/foreground
+   family 都必须同时通过原始分辨率与实际 proof/render 缩放的 alpha-band 检测，并人工
+   检查 checkerboard、tight crop 和 motion-stress；`key-edge-clean` 仍不得替代二者。
 5. 记录首次 full project validation 的错误数量、错误出现阶段和修复轮次，用真实数据决定
    F034 是否可以完全关闭。
 6. 本地音频及其实际 timing data 是 edit-point 证明权威；不得以 TTS token latency 或估算
