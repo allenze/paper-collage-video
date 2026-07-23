@@ -54,6 +54,7 @@
         "scene:starter:node:background"
       ],
       "semanticBinding": null,
+      "registeredFamilyBinding": null,
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "recoverySourceFile": null,
@@ -87,6 +88,45 @@
             "passed": true,
             "expected": "960x540",
             "actual": "1920x1080"
+          },
+          {
+            "id": "rectangular-alpha-band-free",
+            "passed": true,
+            "expected": "no error-severity low-alpha rectangular band",
+            "actual": {
+              "schemaVersion": 1,
+              "thresholds": {
+                "lowAlphaMinimum": 4,
+                "lowAlphaMaximum": 96,
+                "minimumRunPixels": 24,
+                "minimumRunRatio": 0.42,
+                "warningRunRatio": 0.75,
+                "maximumBandThicknessRatio": 0.025,
+                "boundaryToleranceRatio": 0.012,
+                "rectangleMinimumSeparationRatio": 0.08
+              },
+              "derivationRegions": [],
+              "sourceSize": {
+                "width": 1920,
+                "height": 1080
+              },
+              "renderSize": null,
+              "passed": true,
+              "severity": "info",
+              "scales": [
+                {
+                  "label": "original",
+                  "width": 1920,
+                  "height": 1080,
+                  "passed": true,
+                  "severity": "info",
+                  "diagnostics": [],
+                  "failures": []
+                }
+              ],
+              "failures": [],
+              "failureMessage": null
+            }
           }
         ]
       },
@@ -111,6 +151,7 @@
         "scene:starter:node:traveler"
       ],
       "semanticBinding": null,
+      "registeredFamilyBinding": null,
       "stateSheetBinding": null,
       "stateSheetRecoveryBinding": null,
       "recoverySourceFile": null,
@@ -148,6 +189,45 @@
             "passed": true,
             "expected": "<= 0.12",
             "actual": 0
+          },
+          {
+            "id": "rectangular-alpha-band-free",
+            "passed": true,
+            "expected": "no error-severity low-alpha rectangular band",
+            "actual": {
+              "schemaVersion": 1,
+              "thresholds": {
+                "lowAlphaMinimum": 4,
+                "lowAlphaMaximum": 96,
+                "minimumRunPixels": 24,
+                "minimumRunRatio": 0.42,
+                "warningRunRatio": 0.75,
+                "maximumBandThicknessRatio": 0.025,
+                "boundaryToleranceRatio": 0.012,
+                "rectangleMinimumSeparationRatio": 0.08
+              },
+              "derivationRegions": [],
+              "sourceSize": {
+                "width": 1920,
+                "height": 1080
+              },
+              "renderSize": null,
+              "passed": true,
+              "severity": "info",
+              "scales": [
+                {
+                  "label": "original",
+                  "width": 1920,
+                  "height": 1080,
+                  "passed": true,
+                  "severity": "info",
+                  "diagnostics": [],
+                  "failures": []
+                }
+              ],
+              "failures": [],
+              "failureMessage": null
+            }
           }
         ]
       },
@@ -177,7 +257,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
-      "fingerprint": "84f9552783d7b3d468a9decca09b0c28fa4fb4f95e38a4b6bc922135d61cfb85",
+      "fingerprint": "3074f2e03be74acbe5da17a003c647e8524acf5d230c7510d28935cc88e14d4b",
       "proofTimeIds": [
         "proof-establish"
       ],
@@ -210,8 +290,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "84f9552783d7b3d468a9decca09b0c28fa4fb4f95e38a4b6bc922135d61cfb85",
-            "actual": "84f9552783d7b3d468a9decca09b0c28fa4fb4f95e38a4b6bc922135d61cfb85"
+            "expected": "3074f2e03be74acbe5da17a003c647e8524acf5d230c7510d28935cc88e14d4b",
+            "actual": "3074f2e03be74acbe5da17a003c647e8524acf5d230c7510d28935cc88e14d4b"
           },
           {
             "id": "proof-artifacts-present",
@@ -259,7 +339,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "fa68dd4364ec2771470f7fc185f31cb023bd33736f0066df4044339ddeaea941",
-      "fingerprint": "a796619ae33b5c979d028c09d48e83d294368c229a921ed4f8afb21f553d2c32",
+      "fingerprint": "9bdcde51d333b98f0c31ed6a90e33da1e5785a89939abd26188aee9b6e7a4977",
       "proofTimeIds": [
         "proof-action"
       ],
@@ -292,8 +372,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "a796619ae33b5c979d028c09d48e83d294368c229a921ed4f8afb21f553d2c32",
-            "actual": "a796619ae33b5c979d028c09d48e83d294368c229a921ed4f8afb21f553d2c32"
+            "expected": "9bdcde51d333b98f0c31ed6a90e33da1e5785a89939abd26188aee9b6e7a4977",
+            "actual": "9bdcde51d333b98f0c31ed6a90e33da1e5785a89939abd26188aee9b6e7a4977"
           },
           {
             "id": "proof-artifacts-present",
@@ -341,7 +421,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "2fd24fa9491ccc0c2497848473aad57bcaf7b25b24fed12aba11410e8117968e",
-      "fingerprint": "84e7bde50212909b93c66bd02dfb4ebf5734036fd7dd30e209d6da719b7bd7ea",
+      "fingerprint": "43172e4173d1426b9849982615eb06217660a70273000c0d52bb3b6894b2bf2a",
       "proofTimeIds": [
         "proof-final"
       ],
@@ -374,8 +454,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "84e7bde50212909b93c66bd02dfb4ebf5734036fd7dd30e209d6da719b7bd7ea",
-            "actual": "84e7bde50212909b93c66bd02dfb4ebf5734036fd7dd30e209d6da719b7bd7ea"
+            "expected": "43172e4173d1426b9849982615eb06217660a70273000c0d52bb3b6894b2bf2a",
+            "actual": "43172e4173d1426b9849982615eb06217660a70273000c0d52bb3b6894b2bf2a"
           },
           {
             "id": "proof-artifacts-present",

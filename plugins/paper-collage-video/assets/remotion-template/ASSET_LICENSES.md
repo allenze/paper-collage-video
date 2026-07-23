@@ -15,6 +15,7 @@ the limited permission in this section:
 
 - `public/projects/tie-chu-mo-zhen/**`
 - `fixtures/starter-demo/*.png`
+- `public/fixtures/vox-phase2-proof/**`
 - `public/textures/**`
 - copies of those fixture and texture assets generated inside
   `plugins/paper-collage-video/assets/remotion-template/**`

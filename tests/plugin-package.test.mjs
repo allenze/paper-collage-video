@@ -97,6 +97,18 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(packageJson.scripts['provider:attempt'], 'node scripts/provider-attempt.mjs');
   assert.equal(packageJson.scripts['provider:request'], 'node scripts/provider-request.mjs');
   assert.equal(packageJson.scripts['provider:recover-record'], 'node scripts/provider-recover-record.mjs');
+  assert.equal(
+    packageJson.scripts['assets:derive-registered-family'],
+    'node scripts/derive-registered-family.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['proof:registered-family'],
+    'node scripts/prove-registered-family.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['proof:alpha-bands'],
+    'node scripts/prove-alpha-bands.mjs',
+  );
   assert.equal(packageJson.scripts['project:plan'], 'node scripts/project-plan.mjs');
   assert.equal(packageJson.scripts['project:storyboard'], 'node scripts/project-storyboard.mjs');
   assert.equal(packageJson.scripts['project:revise-preview-directing'], 'node scripts/project-revise-preview-directing.mjs');
@@ -188,6 +200,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/production-state.mjs',
     'scripts/directing-revision-lib.mjs',
     'scripts/editorial-system-lib.mjs',
+    'scripts/alpha-band-lib.mjs',
+    'scripts/asset-hardening-proof-lib.mjs',
     'scripts/asset-evidence-lib.mjs',
     'scripts/asset-manifest-lib.mjs',
     'scripts/audio-preflight-lib.mjs',
@@ -215,6 +229,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-subtitles.mjs',
     'scripts/creative-plan-lib.mjs',
     'scripts/composition-lib.mjs',
+    'scripts/derive-registered-family.mjs',
+    'scripts/registered-family-lib.mjs',
     'scripts/motion-treatment-lib.mjs',
     'scripts/project-composition-proof.mjs',
     'scripts/phase2-proof-lib.mjs',
@@ -229,6 +245,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/validate_v9_schemas.py',
     'scripts/verify-phase2-proof.mjs',
     'scripts/verify-vox-sample.mjs',
+    'scripts/prove-alpha-bands.mjs',
+    'scripts/prove-registered-family.mjs',
     'scripts/vox-sample-proof-lib.mjs',
     'scripts/project-confirm-concept.mjs',
     'scripts/style-motion-proof.mjs',
@@ -252,6 +270,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/storyboard-authoring.schema.json',
     'schemas/providers.schema.json',
     'schemas/quality-report.schema.json',
+    'schemas/registered-family.schema.json',
+    'schemas/registered-family-binding.schema.json',
     'templates/project/production.json',
     'templates/project/production-metrics.json',
     'templates/project/semantic-contracts.json',

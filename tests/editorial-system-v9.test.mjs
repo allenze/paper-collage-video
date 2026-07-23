@@ -17,6 +17,11 @@ import {
 import {validateProject} from '../scripts/project-lib.mjs';
 import {preparePhase2Media} from '../scripts/phase2-proof-lib.mjs';
 import {
+  ASSET_HARDENING_PROOF_DIR,
+  prepareAlphaBandProof,
+  prepareRegisteredFamilyProof,
+} from '../scripts/asset-hardening-proof-lib.mjs';
+import {
   applyResponsiveDirectingPlan,
   fitEditorialTypography,
   resolveAnnotationRoute,
@@ -27,6 +32,7 @@ import {
 } from '../src/editorialPrimitives.mjs';
 
 const media = await preparePhase2Media();
+const registeredFamily = await prepareRegisteredFamilyProof();
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 test('browser-compatible editorial fingerprints are standard SHA-256', () => {
@@ -279,11 +285,17 @@ test('advanced transitions prove declared dimensions and reject disguised fades 
 test('project validation binds final local audio, timing evidence, fonts, and compiled v9 editorial', async () => {
   const storyboard = compilePhase2Storyboard({media});
   const project = createPhase2Project({media, profileId: '1:1'});
-  const result = await validateProject(project, {storyboard});
+  const result = await validateProject(project, {
+    storyboard,
+    manifest: registeredFamily.manifest,
+  });
   assert.ok(!result.issues.some(({level}) => level === 'error'));
   const missingFont = structuredClone(project);
   missingFont.theme.fontFile = 'fixtures/vox-phase2-proof/missing-font.woff2';
-  const missingFontResult = await validateProject(missingFont, {storyboard});
+  const missingFontResult = await validateProject(missingFont, {
+    storyboard,
+    manifest: registeredFamily.manifest,
+  });
   assert.ok(
     missingFontResult.issues.some(
       ({code}) => code === 'shared-asset-missing',
@@ -300,7 +312,10 @@ test('project validation binds final local audio, timing evidence, fonts, and co
     await fs.writeFile(invalidFontFile, 'not-a-font');
     const invalidFont = structuredClone(project);
     invalidFont.theme.fontFile = 'fixtures/vox-phase2-proof/invalid-font.woff2';
-    const invalidFontResult = await validateProject(invalidFont, {storyboard});
+    const invalidFontResult = await validateProject(invalidFont, {
+      storyboard,
+      manifest: registeredFamily.manifest,
+    });
     assert.ok(
       invalidFontResult.issues.some(
         ({code}) => code === 'font-load-invalid',
@@ -308,5 +323,80 @@ test('project validation binds final local audio, timing evidence, fonts, and co
     );
   } finally {
     await fs.rm(invalidFontFile, {force: true});
+  }
+});
+
+test('project validation reports low-alpha rectangular residue independently from key-edge checks', async () => {
+  await prepareAlphaBandProof();
+  const storyboard = compilePhase2Storyboard({media});
+  const project = createPhase2Project({media, profileId: '16:9'});
+  const source = path.join(
+    ASSET_HARDENING_PROOF_DIR,
+    'alpha-bands',
+    'positive.png',
+  );
+  const destination = path.join(
+    ROOT,
+    'public',
+    'fixtures',
+    'vox-phase2-proof',
+    'registered-family',
+    'project-validation-positive.png',
+  );
+  try {
+    await fs.copyFile(source, destination);
+    const group = project.scenes[0].composition.nodes.find(
+      ({id}) => id === 'phase2-supported-rig',
+    );
+    group.children.find(({id}) => id === 'phase2-subject').src =
+      'fixtures/vox-phase2-proof/registered-family/project-validation-positive.png';
+    const manifest = structuredClone(registeredFamily.manifest);
+    const original = manifest.assets.find(
+      ({assetId, lifecycle}) =>
+        assetId === 'phase2-subject' && lifecycle.status === 'active',
+    );
+    original.lifecycle = {
+      status: 'superseded',
+      changedAt: '2026-07-23T00:00:01.000Z',
+      reason: 'project-validation-positive-fixture',
+      supersededBy: 'b'.repeat(64),
+    };
+    manifest.assets.push({
+      ...structuredClone(original),
+      recordId: 'b'.repeat(64),
+      file: path.relative(ROOT, destination),
+      lifecycle: {
+        status: 'active',
+        changedAt: '2026-07-23T00:00:01.000Z',
+        reason: 'project-validation-positive-fixture',
+        supersededBy: null,
+      },
+      registeredFamilyBinding: {
+        ...structuredClone(original.registeredFamilyBinding),
+        derivation: {
+          ...structuredClone(original.registeredFamilyBinding.derivation),
+          clip: {
+            kind: 'rectangle',
+            rect: {left: 92, top: 58, width: 296, height: 214},
+          },
+        },
+      },
+    });
+    const result = await validateProject(project, {
+      storyboard,
+      manifest,
+    });
+    assert.ok(
+      result.issues.some(
+        ({code}) => code === 'composition-rectangular-alpha-band',
+      ),
+    );
+    assert.ok(
+      !result.issues
+        .filter(({code}) => code === 'composition-key-edge')
+        .some(({message}) => message.includes('矩形裁切带')),
+    );
+  } finally {
+    await fs.rm(destination, {force: true});
   }
 });

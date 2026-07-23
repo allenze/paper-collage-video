@@ -488,6 +488,44 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     canvas: {width: 100, height: 100},
     derivation: {method: 'alpha-extraction', parentAssetId: 'boat-master'},
   });
+  const registeredFamilyBinding = (nodeId, role) => ({
+    schemaVersion: 1,
+    familyId: 'boat-family-members',
+    pattern: 'supported-subject',
+    registrationId: 'boat-family',
+    sourceMasterAssetId: 'boat-master',
+    canvas: {width: 100, height: 100},
+    origin: 'top-left',
+    role,
+    slot: role,
+    nodeId,
+    source: {
+      kind: 'source-master',
+      assetId: 'boat-master',
+      stateId: null,
+      sourceSheetAssetId: null,
+      sourceFamilyFingerprint: null,
+      sha256: 'a'.repeat(64),
+    },
+    derivation: {
+      placement: {left: 0, top: 0, width: 100, height: 100},
+      maskAssetId: null,
+      maskSha256: null,
+      maskChannel: null,
+      invertMask: false,
+      clip: null,
+      trimmed: false,
+      outputCanvasPreserved: true,
+    },
+    recoveryPolicy: {
+      strategy: 'preserve-family-context',
+      localDeterministicFixFirst: true,
+      isolatedMemberGeneration: 'forbidden',
+      providerRepair: 'masked-complete-source-edit',
+      fallback: 'full-source-regeneration',
+    },
+    familyFingerprint: 'f'.repeat(64),
+  });
   const node = (id, slot, role = 'prop') => ({
     id,
     kind: 'asset',
@@ -540,8 +578,17 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [
         ['boat-rear', 'support-rear'],
         ['traveler', 'subject'],
-        ['boat-front', 'support-front'],
-      ].map(([assetId, outputRole]) => ({assetId, capability: 'image', file: relativeSource(assetId), compositionBinding: binding(assetId, outputRole)}))), null, 2)}\n`, 'utf8');
+      ['boat-front', 'support-front'],
+      ].map(([assetId, outputRole]) => ({
+        assetId,
+        capability: 'image',
+        adapter: 'registered-family-member',
+        file: relativeSource(assetId),
+        media: {width: 100, height: 100, format: 'png', hasAlpha: true},
+        compositionBinding: binding(assetId, outputRole),
+        registeredFamilyBinding: registeredFamilyBinding(assetId, outputRole),
+        familyFingerprint: 'f'.repeat(64),
+      }))), null, 2)}\n`, 'utf8');
 
     const [target] = await collectCompositeQualityTargets(project);
     const proofFile = compositionProofReportPath(slug);
@@ -550,7 +597,25 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     await fs.mkdir(path.dirname(proofFile), {recursive: true});
     await fs.copyFile(sources['boat-front'], frame);
     await fs.copyFile(sources['boat-front'], crop);
-    await fs.writeFile(proofFile, `${JSON.stringify({schemaVersion: 1, projectSlug: slug, composites: [{compositeId: target.compositeId, fingerprint: target.fingerprint, proofFrames: [{proofTimeId: 'final', fullFrame: path.relative(ROOT, frame), crop: path.relative(ROOT, crop)}]}]}, null, 2)}\n`, 'utf8');
+    await fs.writeFile(proofFile, `${JSON.stringify({
+      schemaVersion: 1,
+      projectSlug: slug,
+      composites: [{
+        compositeId: target.compositeId,
+        fingerprint: target.fingerprint,
+        proofFrames: [{proofTimeId: 'final', fullFrame: path.relative(ROOT, frame), crop: path.relative(ROOT, crop)}],
+      }],
+      assetEvidence: ['boat-rear', 'traveler', 'boat-front'].map((nodeId) => ({
+        sceneId: 'scene',
+        nodeId,
+        renderSize: {width: 1, height: 1},
+        alphaBandInspection: {
+          passed: true,
+          sourceSize: {width: 100, height: 100},
+          scales: [{label: 'original'}, {label: 'render-scale'}],
+        },
+      })),
+    }, null, 2)}\n`, 'utf8');
 
     let status = await prepareQualityReport(slug);
     assert.equal(status.scopes.composites.pending, 1);

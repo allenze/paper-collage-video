@@ -30,6 +30,10 @@ import {
 } from './quality-lib.mjs';
 import {createSceneProofFingerprint} from './render-cache-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {
+  activeManifestAssets,
+  assertAssetManifest,
+} from './asset-manifest-lib.mjs';
 
 const args = process.argv.slice(2);
 const [slug] = args.filter((argument) => !argument.startsWith('--'));
@@ -73,6 +77,41 @@ const findTargetBounds = ({scene, nodeId, video}) => {
   };
 };
 
+const findNodeRenderSize = ({scene, nodeId, video}) => {
+  let result = null;
+  const visit = (nodes, parentRect) => {
+    for (const node of nodes ?? []) {
+      const transform = node.transform ?? {};
+      const width = Number(transform.width ?? 1) * parentRect.width;
+      const height = node.kind === 'group'
+        ? (transform.height === undefined
+            ? width * node.coordinateSpace.height / node.coordinateSpace.width
+            : Number(transform.height) * parentRect.height)
+        : node.kind === 'state-sequence' && transform.height === undefined
+          ? width * node.registration.canvas.height / node.registration.canvas.width
+          : Number(transform.height ?? 1) * parentRect.height;
+      const rect = {
+        left: parentRect.left + Number(transform.x ?? 0) * parentRect.width -
+          Number(transform.anchorX ?? 0) * width,
+        top: parentRect.top + Number(transform.y ?? 0) * parentRect.height -
+          Number(transform.anchorY ?? 0) * height,
+        width,
+        height,
+      };
+      if (node.id === nodeId) result = {
+        width: Math.max(1, Math.round(width)),
+        height: Math.max(1, Math.round(height)),
+      };
+      if (node.kind === 'group') visit(node.children, rect);
+    }
+  };
+  visit(
+    scene.composition?.nodes,
+    {left: 0, top: 0, width: video.width, height: video.height},
+  );
+  return result;
+};
+
 const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
   <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <rect x="${bounds.left}" y="${bounds.top}" width="${bounds.width}" height="${bounds.height}" fill="none" stroke="#ff3b30" stroke-width="6"/>
@@ -113,7 +152,25 @@ try {
     (previous?.composites ?? []).map((entry) => [entry.compositeId, entry]),
   );
   const previousEvidence = new Map(
-    (previous?.assetEvidence ?? []).map((entry) => [`${entry.nodeId}:${entry.source}`, entry]),
+    (previous?.assetEvidence ?? []).map((entry) => [
+      `${entry.sceneId ?? ''}:${entry.nodeId}:${entry.source}`,
+      entry,
+    ]),
+  );
+  const manifestFile = path.join(
+    ROOT,
+    'projects',
+    slug,
+    'assets-manifest.json',
+  );
+  const manifest = (await fileExists(manifestFile))
+    ? assertAssetManifest(await readJson(manifestFile), slug)
+    : {schemaVersion: 4, projectSlug: slug, assets: []};
+  const recordsByFile = new Map(
+    activeManifestAssets(manifest).map((record) => [
+      path.normalize(record.file),
+      record,
+    ]),
   );
 
   const remotion = path.join(ROOT, 'node_modules', '.bin', 'remotion');
@@ -175,7 +232,15 @@ try {
   for (const scene of project.scenes ?? []) {
     for (const {node, parent} of collectCompositionAssets(scene.composition)) {
       if (!parent || !['supported-subject', 'registered-environment'].includes(parent.pattern)) continue;
-      coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {sceneId: scene.id, node});
+      coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {
+        sceneId: scene.id,
+        node,
+        renderSize: findNodeRenderSize({
+          scene,
+          nodeId: node.id,
+          video: project.video,
+        }),
+      });
     }
     for (const {node} of collectStateSequences(scene.composition)) {
       for (const state of node.states) {
@@ -183,6 +248,11 @@ try {
           sceneId: scene.id,
           stateId: state.id,
           node: {...node, kind: 'asset', src: state.src},
+          renderSize: findNodeRenderSize({
+            scene,
+            nodeId: node.id,
+            video: project.video,
+          }),
         });
       }
     }
@@ -190,17 +260,34 @@ try {
   const assetEvidence = [];
   let reusedEvidence = 0;
   let generatedEvidence = 0;
-  for (const {sceneId, node, stateId = null} of coupledNodes.values()) {
-    const cached = previousEvidence.get(`${node.id}:${node.src}`);
-    if (!force && await assetEvidenceIsCurrent(cached, node)) {
+  for (const {
+    sceneId,
+    node,
+    stateId = null,
+    renderSize,
+  } of coupledNodes.values()) {
+    const record = recordsByFile.get(
+      path.normalize(path.join('public', node.src)),
+    ) ?? null;
+    const registeredFamilyBinding = record?.registeredFamilyBinding ?? null;
+    const cached = previousEvidence.get(`${sceneId}:${node.id}:${node.src}`);
+    if (!force && await assetEvidenceIsCurrent(cached, node, {
+      renderSize,
+      registeredFamilyBinding,
+    })) {
       assetEvidence.push(cached);
       reusedEvidence += 1;
     } else {
-      assetEvidence.push(await buildAssetEvidence({
-        node,
-        directory: evidenceDirectory,
-        evidenceId: `${sceneId}-${node.id}${stateId ? `-${stateId}` : ''}`,
-      }));
+      assetEvidence.push({
+        ...await buildAssetEvidence({
+          node,
+          directory: evidenceDirectory,
+          evidenceId: `${sceneId}-${node.id}${stateId ? `-${stateId}` : ''}`,
+          renderSize,
+          registeredFamilyBinding,
+        }),
+        sceneId,
+      });
       generatedEvidence += 1;
     }
   }

@@ -13,7 +13,14 @@ import {loadStoryboard} from './storyboard-lib.mjs';
 import {selectStyleProofTargets} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
-const REQUIRED_ASSET_EVIDENCE = ['alphaMask', 'checkerboard', 'tightCrop', 'motionStress'];
+const REQUIRED_ASSET_EVIDENCE = [
+  'alphaMask',
+  'checkerboard',
+  'tightCrop',
+  'motionStress',
+  'alphaBandReport',
+  'alphaBandOverlay',
+];
 const REQUIRED_FRAME_EVIDENCE = ['fullFrame', 'crop', 'debugFrame'];
 
 export const styleProofReportPath = (slug) => path.join(ROOT, 'dist', slug, 'style-motion-proof.json');

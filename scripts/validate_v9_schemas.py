@@ -12,6 +12,14 @@ from referencing import Registry, Resource
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIRECTORY = ROOT / "schemas"
 PROOF_INPUT_DIRECTORY = ROOT / "dist" / "vox-phase2-proof" / "inputs"
+ASSET_HARDENING_INPUT_DIRECTORY = (
+    ROOT
+    / "dist"
+    / "vox-phase2-proof"
+    / "asset-hardening"
+    / "registered-family"
+    / "inputs"
+)
 
 
 def load_json(file: Path) -> dict:
@@ -59,8 +67,19 @@ try:
     validate(PROOF_INPUT_DIRECTORY / "storyboard.json", "storyboard.schema.json")
     for project in sorted(PROOF_INPUT_DIRECTORY.glob("project-*.json")):
         validate(project, "project.schema.json")
+    validate(
+        PROOF_INPUT_DIRECTORY / "assets-manifest.json",
+        "assets-manifest.schema.json",
+    )
+    validate(
+        ASSET_HARDENING_INPUT_DIRECTORY / "registered-family.json",
+        "registered-family.schema.json",
+    )
 except (FileNotFoundError, KeyError, ValueError) as error:
     print(f"v9 schema validation failed:\n{error}", file=sys.stderr)
     raise SystemExit(1)
 
-print("✓ v9 authoring, compiled storyboard, and three project contracts are schema-valid")
+print(
+    "✓ v9 authoring, compiled storyboard, three project contracts, "
+    "asset manifest, and registered-family derivation are schema-valid"
+)

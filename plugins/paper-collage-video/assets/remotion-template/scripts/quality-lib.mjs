@@ -43,6 +43,11 @@ import {
   resolveAnnotationRoute,
   validateDataGraphicNode,
 } from '../src/editorialPrimitives.mjs';
+import {
+  derivationRegionsFromBinding,
+  inspectAlphaBands,
+} from './alpha-band-lib.mjs';
+import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -271,6 +276,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     source,
     requiredChecks,
     semanticBinding = null,
+    registeredFamilyBinding = null,
     stateSheetBinding = null,
     stateSheetRecoveryBinding = null,
     recoverySourceFile = null,
@@ -285,6 +291,9 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       if (requiredChecks?.length) existing.requiredChecks = [...new Set([...(existing.requiredChecks ?? []), ...requiredChecks])];
       if (assetId) existing.assetId = assetId;
       if (semanticBinding) existing.semanticBinding = semanticBinding;
+      if (registeredFamilyBinding) {
+        existing.registeredFamilyBinding = registeredFamilyBinding;
+      }
       if (stateSheetBinding) existing.stateSheetBinding = stateSheetBinding;
       if (stateSheetRecoveryBinding) existing.stateSheetRecoveryBinding = stateSheetRecoveryBinding;
       if (recoverySourceFile) existing.recoverySourceFile = recoverySourceFile;
@@ -298,6 +307,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       kind,
       sources: [source],
       semanticBinding,
+      registeredFamilyBinding,
       stateSheetBinding,
       stateSheetRecoveryBinding,
       recoverySourceFile,
@@ -341,6 +351,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
   for (const record of activeManifestAssets(manifest)) {
     if (record.capability !== 'image') continue;
     const semanticBinding = record.semanticBinding ?? record.request?.semanticBinding ?? null;
+    const registeredFamilyBinding = record.registeredFamilyBinding ?? null;
     const boundContracts = (semanticBinding?.contractIds ?? [])
       .map((id) => semanticContracts.contracts.get(id))
       .filter(Boolean);
@@ -360,6 +371,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       source: `manifest:${record.assetId}`,
       requiredChecks: [...new Set([...(record.request?.quality?.requiredChecks ?? []), ...semanticChecks])],
       semanticBinding,
+      registeredFamilyBinding,
       stateSheetBinding,
       stateSheetRecoveryBinding,
       recoverySourceFile: recoverySource?.file ?? null,
@@ -402,6 +414,20 @@ const inspectTechnicalQuality = async ({asset, project}) => {
       {id: 'alpha-present', passed: inspection.hasAlpha && inspection.transparentPixels > 0, actual: inspection.hasAlpha},
       {id: 'key-edge-clean', passed: inspection.keyEdgeRatio <= 0.12, expected: '<= 0.12', actual: inspection.keyEdgeRatio},
     );
+  }
+  if (metadata.hasAlpha === true) {
+    const inspection = await inspectAlphaBands({
+      file,
+      derivationRegions: derivationRegionsFromBinding(
+        asset.registeredFamilyBinding,
+      ),
+    });
+    checks.push({
+      id: 'rectangular-alpha-band-free',
+      passed: inspection.passed,
+      expected: 'no error-severity low-alpha rectangular band',
+      actual: inspection,
+    });
   }
   if (asset.semanticBinding?.riskClass === 'diagram-critical' && path.extname(file).toLowerCase() === '.svg') {
     const svg = await fs.readFile(file, 'utf8');
@@ -608,6 +634,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       const familyProvenance = familyRecords.map((record) => record ? {
         assetId: record.assetId,
         compositionBinding: record.compositionBinding ?? record.request?.compositionBinding ?? null,
+        registeredFamilyBinding: record.registeredFamilyBinding ?? null,
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
       const fingerprint = hashCompositionValue({
@@ -863,12 +890,66 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       const binding = record?.compositionBinding ?? record?.request?.compositionBinding;
       return binding?.registrationId === registration?.id && binding?.sourceMasterAssetId === registration?.sourceMasterAssetId;
     });
+    const registeredFamily = assertRegisteredFamilyRecords({
+      records: target.familyRecords,
+      registration,
+    });
+    const rolesMatchNodes = target.familyRecords.every((record) => {
+      const binding = record?.registeredFamilyBinding;
+      return target.group.children.some(
+        (node) =>
+          node.id === binding?.nodeId &&
+          node.slot === binding?.slot &&
+          binding.role === binding.slot,
+      );
+    });
     if (target.group.support?.layering === 'subject-front') {
       checks.push({id: 'subject-front-layering', passed: true, expected: 'subject-front', actual: 'subject-front'});
     } else {
       checks.push({id: 'front-alpha-in-occlusion-zone', passed: alphaCoverage > 0.002, expected: '> 0.002', actual: alphaCoverage});
     }
-    checks.push({id: 'registered-source-family', passed: familyBound, actual: familyBound});
+    checks.push(
+      {id: 'registered-source-family', passed: familyBound, actual: familyBound},
+      {
+        id: 'registered-family-derivation',
+        passed: registeredFamily.passed && rolesMatchNodes,
+        expected: 'three full-canvas registered-family members with matching roles',
+        actual: {
+          passed: registeredFamily.passed && rolesMatchNodes,
+          errors: registeredFamily.errors,
+          rolesMatchNodes,
+        },
+      },
+    );
+    const alphaEvidence = (proofReport?.assetEvidence ?? []).filter(
+      (entry) =>
+        entry.sceneId === target.sceneId &&
+        target.memberNodeIds.includes(entry.nodeId),
+    );
+    const alphaEvidenceCurrent =
+      alphaEvidence.length === target.memberNodeIds.length &&
+      alphaEvidence.every((entry) => {
+        const inspection = entry.alphaBandInspection;
+        if (!inspection?.passed || !entry.renderSize) return false;
+        const renderScaleCovered =
+          inspection.scales?.some(({label}) => label === 'render-scale') ||
+          (
+            inspection.sourceSize?.width === Math.round(entry.renderSize.width) &&
+            inspection.sourceSize?.height === Math.round(entry.renderSize.height)
+          );
+        return renderScaleCovered;
+      });
+    checks.push({
+      id: 'alpha-band-proof-evidence',
+      passed: alphaEvidenceCurrent,
+      expected: 'all three members pass original and actual proof/render scale alpha-band inspection',
+      actual: alphaEvidence.map((entry) => ({
+        nodeId: entry.nodeId,
+        passed: entry.alphaBandInspection?.passed ?? false,
+        renderSize: entry.renderSize ?? null,
+        scales: entry.alphaBandInspection?.scales?.map(({label}) => label) ?? [],
+      })),
+    });
   }
   if (target.pattern === 'registered-environment') {
     const children = target.group.children.filter(({kind}) => kind === 'asset');
@@ -1099,13 +1180,16 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
     const requiredChecks = [...new Set(asset.requiredChecks?.length ? asset.requiredChecks : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image)];
     const unknownChecks = requiredChecks.filter((check) => !ASSET_QUALITY_CHECKS.includes(check));
     if (unknownChecks.length) throw new Error(`${asset.assetId} 含未知资产质量检查：${unknownChecks.join(', ')}`);
-    const fingerprint = asset.semanticBinding || asset.stateSheetRecoveryBinding
+    const fingerprint = asset.semanticBinding ||
+      asset.stateSheetRecoveryBinding ||
+      asset.registeredFamilyBinding
       ? hashCompositionValue({
           sha256,
           semanticBinding: asset.semanticBinding,
           semanticContractFingerprints: asset.semanticContractFingerprints,
           stateSheetBinding: asset.stateSheetBinding,
           stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
+          registeredFamilyBinding: asset.registeredFamilyBinding,
           recoverySourceSha256: asset.recoverySourceSha256,
         })
       : sha256;
@@ -1122,10 +1206,16 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const targets = await collectCompositeQualityTargets(project, {manifest});
   const inspectedComposites = await Promise.all(targets.map(async (target) => {
     const review = await preservedReview({previous: previousComposites.get(target.compositeId), fingerprint: target.fingerprint, requiredChecks: target.requiredChecks});
-    const currentProof = proofReports
-      .map((report) => report.composites?.find(({compositeId, fingerprint}) => compositeId === target.compositeId && fingerprint === target.fingerprint))
-      .find(Boolean);
-    const technical = await inspectCompositeTechnical({target, proofReport: currentProof ? {composites: [currentProof]} : null});
+    const currentProofReport = proofReports.find((report) =>
+      report.composites?.some(
+        ({compositeId, fingerprint}) =>
+          compositeId === target.compositeId &&
+          fingerprint === target.fingerprint,
+      ));
+    const technical = await inspectCompositeTechnical({
+      target,
+      proofReport: currentProofReport ?? null,
+    });
     return {
       compositeId: target.compositeId,
       sceneId: target.sceneId,
@@ -1243,7 +1333,14 @@ const proofEvidenceFiles = (proofFrame) =>
   [proofFrame?.fullFrame, proofFrame?.crop, proofFrame?.debugFrame].filter(Boolean);
 
 const assetEvidenceFiles = (entry) =>
-  [entry?.alphaMask, entry?.checkerboard, entry?.tightCrop, entry?.motionStress]
+  [
+    entry?.alphaMask,
+    entry?.checkerboard,
+    entry?.tightCrop,
+    entry?.motionStress,
+    entry?.alphaBandReport,
+    entry?.alphaBandOverlay,
+  ]
     .filter(Boolean);
 
 export const createQualityReviewScaffold = ({

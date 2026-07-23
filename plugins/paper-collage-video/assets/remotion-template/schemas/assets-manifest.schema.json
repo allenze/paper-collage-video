@@ -19,7 +19,7 @@
           "capability": {"enum": ["text", "image", "voice"]},
           "file": {"type": "string"},
           "provider": {"type": "string"},
-          "adapter": {"enum": ["host", "command", "manual", "registered-sheet-cell"]},
+          "adapter": {"enum": ["host", "command", "manual", "registered-sheet-cell", "registered-family-member"]},
           "tool": {"type": ["string", "null"]},
           "model": {"type": ["string", "null"]},
           "externalId": {"type": ["string", "null"]},
@@ -45,6 +45,12 @@
           "stateSheetBinding": {"type": ["object", "null"]},
           "stateSheetRecoveryBinding": {"type": ["object", "null"]},
           "sourceSheetAssetId": {"type": ["string", "null"]},
+          "registeredFamilyBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/registered-family-binding.schema.json"}
+            ]
+          },
           "semanticBinding": {"type": ["object", "null"]},
           "familyFingerprint": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
           "lifecycle": {

@@ -12,6 +12,7 @@ import {
   collectCompositeQualityTargets,
   inspectCompositeTechnical,
 } from './quality-lib.mjs';
+import {buildAssetEvidence} from './asset-evidence-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 import {
   lifecycleOpacity,
@@ -138,6 +139,9 @@ const contactSheet = async ({files, output, title, columns = 3}) => {
 
 const storyboard = await readJson(
   path.join(PHASE2_PROOF_DIR, 'inputs', 'storyboard.json'),
+);
+const assetManifest = await readJson(
+  path.join(PHASE2_PROOF_DIR, 'inputs', 'assets-manifest.json'),
 );
 const projects = {};
 for (const profile of PHASE2_PROOF_PROFILES) {
@@ -507,11 +511,12 @@ if (
 }
 
 const qualityEntries = [];
+const registeredFamilyArtifacts = [];
 for (const profile of PHASE2_PROOF_PROFILES) {
   const suffix = profile.id.replace(':', 'x');
   const project = projects[profile.id];
   const targets = await collectCompositeQualityTargets(project, {
-    manifest: {schemaVersion: 1, assets: []},
+    manifest: assetManifest,
   });
   for (const target of targets) {
     let artifact;
@@ -536,6 +541,62 @@ for (const profile of PHASE2_PROOF_PROFILES) {
       )?.file;
     }
     if (!artifact) throw new Error(`质量目标 ${target.compositeId} 缺少 proof frame。`);
+    let cropArtifact = artifact;
+    let assetEvidence = [];
+    if (target.pattern === 'supported-subject') {
+      const sourceFile = path.join(PHASE2_ROOT, artifact);
+      const bounds = {
+        left: Math.max(0, Math.floor(target.group.transform.x * profile.width)),
+        top: Math.max(0, Math.floor(target.group.transform.y * profile.height)),
+        width: Math.max(1, Math.round(target.group.transform.width * profile.width)),
+        height: Math.max(1, Math.round(target.group.transform.height * profile.height)),
+      };
+      bounds.width = Math.min(bounds.width, profile.width - bounds.left);
+      bounds.height = Math.min(bounds.height, profile.height - bounds.top);
+      const cropFile = path.join(
+        framesDirectory,
+        suffix,
+        'registered-family',
+        `${target.group.id}.png`,
+      );
+      await fs.mkdir(path.dirname(cropFile), {recursive: true});
+      await sharp(sourceFile).extract(bounds).png().toFile(cropFile);
+      cropArtifact = path.relative(PHASE2_ROOT, cropFile);
+      const evidenceDirectory = path.join(
+        PHASE2_PROOF_DIR,
+        'asset-hardening',
+        'registered-family',
+        'phase2-render-scale',
+        suffix,
+      );
+      await fs.mkdir(evidenceDirectory, {recursive: true});
+      for (const node of target.group.children.filter(({kind}) => kind === 'asset')) {
+        const record = target.familyRecords.find(
+          (candidate) => candidate?.registeredFamilyBinding?.nodeId === node.id,
+        );
+        assetEvidence.push({
+          sceneId: target.sceneId,
+          ...await buildAssetEvidence({
+            node,
+            directory: evidenceDirectory,
+            evidenceId: `${target.sceneId}-${node.id}`,
+            renderSize: {
+              width: bounds.width,
+              height: bounds.height,
+            },
+            registeredFamilyBinding: record?.registeredFamilyBinding ?? null,
+          }),
+        });
+      }
+      registeredFamilyArtifacts.push({
+        profileId: profile.id,
+        compositeId: target.compositeId,
+        fullFrame: artifact,
+        crop: cropArtifact,
+        bounds,
+        assetEvidence,
+      });
+    }
     const proofReport = {
       composites: [{
         compositeId: target.compositeId,
@@ -543,9 +604,10 @@ for (const profile of PHASE2_PROOF_PROFILES) {
         proofFrames: [{
           proofTimeId,
           fullFrame: artifact,
-          crop: artifact,
+          crop: cropArtifact,
         }],
       }],
+      assetEvidence,
     };
     const technical = await inspectCompositeTechnical({target, proofReport});
     qualityEntries.push({
@@ -572,6 +634,24 @@ if (!qualityReport.passed) {
   throw new Error(`Phase 2 quality report 未通过：${failed.join(', ')}`);
 }
 await writeJson(path.join(reportsDirectory, 'quality-report.json'), qualityReport);
+const registeredFamilyChromiumPassed =
+  registeredFamilyArtifacts.length === PHASE2_PROOF_PROFILES.length &&
+  registeredFamilyArtifacts.every(({assetEvidence}) =>
+    assetEvidence.length === 3 &&
+    assetEvidence.every(({alphaBandInspection}) => alphaBandInspection.passed));
+if (!registeredFamilyChromiumPassed) {
+  throw new Error('Phase 2 三画幅 registered-family Chromium proof 未通过');
+}
+await writeJson(
+  path.join(reportsDirectory, 'registered-family-chromium-proof.json'),
+  {
+    schemaVersion: 1,
+    passed: registeredFamilyChromiumPassed,
+    renderer: 'Remotion Chromium',
+    providerCalls: 0,
+    artifacts: registeredFamilyArtifacts,
+  },
+);
 
 await writeJson(path.join(reportsDirectory, 'proof-times-report.json'), {
   schemaVersion: 1,
@@ -646,6 +726,7 @@ const verifierReport = {
   transitionFrameCount: transitionArtifacts.length,
   proofTimeFrameCount: proofTimeArtifacts.length,
   qualityTargetCount: qualityEntries.length,
+  registeredFamilyChromiumProfiles: registeredFamilyArtifacts.length,
   runtimeBuildFingerprint: fingerprintReport.runtimeBuildFingerprint,
   fingerprintReportSha256: await sha256File(
     path.join(reportsDirectory, 'fingerprint-report.json'),

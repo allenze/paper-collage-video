@@ -16,18 +16,24 @@ import {
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {selectStyleProofTargets} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {
+  activeManifestAssets,
+  assertAssetManifest,
+} from './asset-manifest-lib.mjs';
 
 sharp.cache(false);
 sharp.concurrency(1);
 import {
   ROOT,
   assertSlug,
+  fileExists,
   loadProject,
   probeMedia,
   projectPaths,
   resolvePublicFile,
   resolveRenderConcurrency,
   runCommand,
+  readJson,
   writeJson,
 } from './project-lib.mjs';
 
@@ -35,6 +41,7 @@ const args = process.argv.slice(2);
 const slug = args.find((argument) => !argument.startsWith('--'));
 const valueFor = (name) => args.find((argument) => argument.startsWith(`${name}=`))?.slice(name.length + 1);
 const durationSeconds = Number(valueFor('--duration') ?? 5);
+const STYLE_PROOF_RENDER_SCALE = 0.5;
 
 const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
   <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
@@ -44,7 +51,7 @@ const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
   </svg>
 `);
 
-const findTargetBounds = ({scene, nodeId, video}) => {
+const findNodeRect = ({scene, nodeId, video}) => {
   let result = null;
   const visit = (nodes, parentRect) => {
     for (const node of nodes ?? []) {
@@ -68,8 +75,11 @@ const findTargetBounds = ({scene, nodeId, video}) => {
     }
   };
   visit(scene.composition?.nodes, {left: 0, top: 0, width: video.width, height: video.height});
-  return padEvidenceBounds(result ?? {left: 0, top: 0, width: video.width, height: video.height}, video, 32);
+  return result ?? {left: 0, top: 0, width: video.width, height: video.height};
 };
+
+const findTargetBounds = ({scene, nodeId, video}) =>
+  padEvidenceBounds(findNodeRect({scene, nodeId, video}), video, 32);
 
 const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
   const sampleCount = sampleRate * seconds;
@@ -168,7 +178,7 @@ try {
       `--props=${path.relative(ROOT, propsFile)}`,
       `--frames=0-${Math.max(1, frameCount - 1)}`,
       `--concurrency=${resolveRenderConcurrency()}`,
-      '--scale=0.5', '--crf=24', '--audio-bitrate=96k',
+      `--scale=${STYLE_PROOF_RENDER_SCALE}`, '--crf=24', '--audio-bitrate=96k',
     ]);
     const probe = await probeMedia(output);
     outputs.push({sceneId, file: path.relative(ROOT, output), durationSeconds: Number(probe.format?.duration ?? durationSeconds)});
@@ -194,6 +204,19 @@ try {
     .toFile(contactSheet);
 
   const selectedScenes = project.scenes.filter(({id}) => requiredByScene.has(id));
+  const manifestFile = path.join(
+    projectPaths(slug).projectDirectory,
+    'assets-manifest.json',
+  );
+  const manifest = (await fileExists(manifestFile))
+    ? assertAssetManifest(await readJson(manifestFile), slug)
+    : {schemaVersion: 4, projectSlug: slug, assets: []};
+  const recordsByFile = new Map(
+    activeManifestAssets(manifest).map((record) => [
+      path.normalize(record.file),
+      record,
+    ]),
+  );
   const coupledGroups = selectedScenes.flatMap((scene) =>
     collectCompositionGroups(scene.composition)
       .filter(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern))
@@ -246,8 +269,22 @@ try {
   }
   const assetEvidence = [];
   for (const {node, sceneId, evidenceId} of memberNodes.values()) {
+    const scene = project.scenes.find(({id}) => id === sceneId);
+    const rect = findNodeRect({scene, nodeId: node.id, video: project.video});
+    const record = recordsByFile.get(
+      path.normalize(path.join('public', node.src)),
+    ) ?? null;
     assetEvidence.push({
-      ...await buildAssetEvidence({node, directory: evidenceDirectory, evidenceId}),
+      ...await buildAssetEvidence({
+        node,
+        directory: evidenceDirectory,
+        evidenceId,
+        renderSize: {
+          width: Math.max(1, Math.round(rect.width * STYLE_PROOF_RENDER_SCALE)),
+          height: Math.max(1, Math.round(rect.height * STYLE_PROOF_RENDER_SCALE)),
+        },
+        registeredFamilyBinding: record?.registeredFamilyBinding ?? null,
+      }),
       sceneId,
     });
   }

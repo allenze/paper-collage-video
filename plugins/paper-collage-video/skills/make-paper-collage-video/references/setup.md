@@ -10,6 +10,15 @@ If the Skill path injected into the current task names a cache version that is m
 
 `runtime-build.json` is the executable identity for proof and render behavior. Version strings alone are insufficient: source, packaged template, and installed cache must agree on both `packageVersion` and `fingerprint`. After Skill/runtime changes, run `npm run plugin:sync`, install that packaged version, compare the installed manifest, and bootstrap a fresh workspace before claiming the upgrade is active.
 
+The packaged runtime includes deterministic no-provider acceptance fixtures for registered families and rectangular alpha residue:
+
+```bash
+npm run proof:registered-family
+npm run proof:alpha-bands
+```
+
+The first reports truthful provider/local-derivative/avoided-call counts and emits a three-member composition sample. The second requires its normal-contour/shadow negative to pass and its ordinary/extreme rectangular positives to be detected at source and proof scale. These checks do not invoke image, voice, or video providers.
+
 If no workspace exists, resolve the plugin root two directories above this Skill and run:
 
 ```bash

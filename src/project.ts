@@ -60,6 +60,92 @@ export type CompositionRegistration = {
   origin: 'top-left';
 };
 
+export type RegisteredFamilyRole =
+  | 'support-rear'
+  | 'subject'
+  | 'support-front';
+
+export type RegisteredFamilySource =
+  | {kind: 'source-master'; assetId: string}
+  | {kind: 'registered-sheet'; assetId: string; stateId: string}
+  | {kind: 'registered-sheet-member'; assetId: string};
+
+export type RegisteredFamilyRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+export type RegisteredFamilyDerivation = {
+  placement?: RegisteredFamilyRect;
+  maskAssetId?: string;
+  maskChannel?: 'alpha' | 'luminance';
+  invertMask?: boolean;
+  clip?:
+    | {kind: 'rectangle'; rect: RegisteredFamilyRect}
+    | {kind: 'polygon'; points: Array<[number, number]>};
+};
+
+export type RegisteredFamilySpec = {
+  schemaVersion: 1;
+  projectSlug: string;
+  sceneId: string;
+  groupId: string;
+  familyId: string;
+  registration: CompositionRegistration;
+  members: Array<{
+    assetId: string;
+    nodeId: string;
+    role: RegisteredFamilyRole;
+    slot: RegisteredFamilyRole;
+    output: string;
+    source: RegisteredFamilySource;
+    derivation: RegisteredFamilyDerivation;
+  }>;
+  recoveryPolicy: {
+    strategy: 'preserve-family-context';
+    localDeterministicFixFirst: true;
+    isolatedMemberGeneration: 'forbidden';
+    providerRepair: 'masked-complete-source-edit';
+    fallback: 'full-source-regeneration';
+  };
+  applyToProject: boolean;
+};
+
+export type RegisteredFamilyBinding = {
+  schemaVersion: 1;
+  familyId: string;
+  pattern: 'supported-subject';
+  registrationId: string;
+  sourceMasterAssetId: string;
+  canvas: CoordinateSpace;
+  origin: 'top-left';
+  role: RegisteredFamilyRole;
+  slot: RegisteredFamilyRole;
+  nodeId: string;
+  source: {
+    kind: RegisteredFamilySource['kind'];
+    assetId: string;
+    stateId: string | null;
+    sourceSheetAssetId: string | null;
+    sourceFamilyFingerprint: string | null;
+    sha256: string;
+  };
+  derivation: {
+    placement: RegisteredFamilyRect;
+    maskAssetId: string | null;
+    maskSha256: string | null;
+    maskChannel: 'alpha' | 'luminance' | null;
+    invertMask: boolean;
+    clip: RegisteredFamilyDerivation['clip'] | null;
+    trimmed: false;
+    outputCanvasPreserved: true;
+  };
+  recoveryPolicy: RegisteredFamilySpec['recoveryPolicy'];
+  familyFingerprint: string;
+};
+
 export type CompositionAssetNode = {
   id: string;
   kind: 'asset';

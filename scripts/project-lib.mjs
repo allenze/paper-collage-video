@@ -36,6 +36,15 @@ import {
   validateCompiledEditorial,
   validateEditorialTransitionExecution,
 } from './editorial-system-lib.mjs';
+import {
+  activeManifestAssets,
+  assertAssetManifest,
+} from './asset-manifest-lib.mjs';
+import {
+  derivationRegionsFromBinding,
+  inspectAlphaBands,
+} from './alpha-band-lib.mjs';
+import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -375,6 +384,69 @@ export const validateProject = async (project, options = {}) => {
   };
   const add = (level, code, message, location) =>
     issues.push(makeIssue(level, code, message, location));
+  let manifest = options.manifest ?? null;
+  const manifestFile = path.join(
+    ROOT,
+    'projects',
+    project.slug ?? '',
+    'assets-manifest.json',
+  );
+  if (
+    !manifest &&
+    SLUG_PATTERN.test(project.slug ?? '') &&
+    await fileExists(manifestFile)
+  ) {
+    try {
+      manifest = assertAssetManifest(await readJson(manifestFile), project.slug);
+    } catch (error) {
+      add('error', 'asset-manifest-invalid', error.message, 'assets-manifest.json');
+    }
+  }
+  const manifestByFile = new Map(
+    activeManifestAssets(manifest ?? {assets: []}).map((record) => [
+      path.normalize(record.file),
+      record,
+    ]),
+  );
+  const manifestRecordForSource = (source) =>
+    manifestByFile.get(path.normalize(path.join('public', source))) ?? null;
+  const inspectRectangularAlphaBands = async ({
+    file,
+    source,
+    location,
+    renderSize = null,
+  }) => {
+    const record = manifestRecordForSource(source);
+    const inspection = await inspectAlphaBands({
+      file,
+      renderSize,
+      derivationRegions: derivationRegionsFromBinding(
+        record?.registeredFamilyBinding,
+      ),
+    });
+    if (!inspection.passed) {
+      add(
+        'error',
+        'composition-rectangular-alpha-band',
+        `透明前景存在确定性低 alpha 矩形裁切带：${inspection.failureMessage}`,
+        location,
+      );
+    } else if (inspection.severity === 'warning') {
+      const warnings = inspection.scales.flatMap(({label, diagnostics}) =>
+        diagnostics
+          .filter(({severity}) => severity === 'warning')
+          .map((diagnostic) =>
+            `${label} ${diagnostic.orientation} ${diagnostic.coordinateStart}-${diagnostic.coordinateEnd}px spans ${diagnostic.spanStart}-${diagnostic.spanEnd}px`),
+      );
+      add(
+        'warning',
+        'composition-alpha-band-warning',
+        `透明前景存在未确认的长直低 alpha 带：${warnings.join('；')}`,
+        location,
+      );
+    }
+    return inspection;
+  };
 
   if (project.schemaVersion !== 9) {
     add('error', 'schema-version', 'schemaVersion 必须为 9。', 'schemaVersion');
@@ -780,7 +852,12 @@ export const validateProject = async (project, options = {}) => {
             continue;
           }
           const inspection = await memoize(characterInspectionCache, assetFile, () => inspectCharacterPng(assetFile));
-          assets.push({kind: node.assetRole, src: state.src, sceneId: scene.id, nodeId: node.id, stateId: state.id, parentId: parent?.id ?? null, registrationId: node.registration.id, ...inspection});
+          const alphaBandInspection = await inspectRectangularAlphaBands({
+            file: assetFile,
+            source: state.src,
+            location: `${nodeLocation}.states#${state.id}.src`,
+          });
+          assets.push({kind: node.assetRole, src: state.src, sceneId: scene.id, nodeId: node.id, stateId: state.id, parentId: parent?.id ?? null, registrationId: node.registration.id, alphaBandInspection, ...inspection});
           if (!inspection.hasAlpha || inspection.transparentPixels === 0) add('error', 'composition-sequence-state-alpha', '状态素材必须包含有效透明区域。', `${nodeLocation}.states#${state.id}.src`);
           const {width, height} = node.registration.canvas;
           if (inspection.width !== width || inspection.height !== height) add('error', 'composition-sequence-state-dimensions', `状态必须与注册画布 ${width}x${height} 完全一致，当前为 ${inspection.width}x${inspection.height}。`, `${nodeLocation}.states#${state.id}.src`);
@@ -818,6 +895,13 @@ export const validateProject = async (project, options = {}) => {
           assetFile,
           () => isCutout ? inspectCharacterPng(assetFile) : inspectBackground(assetFile),
         );
+        const alphaBandInspection = isCutout
+          ? await inspectRectangularAlphaBands({
+              file: assetFile,
+              source: node.src,
+              location: `${nodeLocation}.src`,
+            })
+          : null;
         assets.push({
           kind: node.assetRole,
           src: node.src,
@@ -825,6 +909,7 @@ export const validateProject = async (project, options = {}) => {
           nodeId: node.id,
           parentId: parent?.id ?? null,
           registrationId: node.registrationId ?? null,
+          alphaBandInspection,
           ...inspection,
         });
         if (isCutout && (!inspection.hasAlpha || inspection.transparentPixels === 0)) {
@@ -862,6 +947,44 @@ export const validateProject = async (project, options = {}) => {
         }
       } catch (error) {
         add('error', 'composition-asset-inspect', error.message, `${nodeLocation}.src`);
+      }
+    }
+    if (manifest) {
+      for (const {node: group} of compositionResult.groups.filter(
+        ({node}) => node.pattern === 'supported-subject',
+      )) {
+        const groupLocation = `${sceneLocation}.composition.nodes#${group.id}`;
+        const assetNodes = (group.children ?? []).filter(
+          ({kind}) => kind === 'asset',
+        );
+        const records = assetNodes
+          .map(({src}) => manifestRecordForSource(src))
+          .filter(Boolean);
+        const result = assertRegisteredFamilyRecords({
+          records,
+          registration: group.registration,
+        });
+        const rolesMatchNodes = records.every((record) => {
+          const binding = record.registeredFamilyBinding;
+          return assetNodes.some(
+            (node) =>
+              node.id === binding?.nodeId &&
+              node.slot === binding?.slot &&
+              binding.role === binding.slot &&
+              node.registrationId === group.registration.id,
+          );
+        });
+        if (!result.passed || !rolesMatchNodes) {
+          add(
+            'error',
+            'composition-registered-family',
+            `supported-subject 必须消费三成员完整注册画布族：${[
+              ...result.errors,
+              ...(!rolesMatchNodes ? ['成员 role/slot/nodeId/registrationId 绑定不一致'] : []),
+            ].join('；')}`,
+            groupLocation,
+          );
+        }
       }
     }
 

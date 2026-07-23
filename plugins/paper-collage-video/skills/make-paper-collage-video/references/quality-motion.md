@@ -12,6 +12,10 @@ Generating a non-empty scaffold starts one quality-review metric session and per
 
 Registered members add topology-sensitive asset checks: `silhouette-fidelity`, `negative-space-clean`, and `background-leak-free`. A `supported-subject` composite also requires `motion-isolation-clean`. Passing any of those checks requires `evidenceFiles` from the current proof bundle. `key-edge-clean` only detects matte/color contamination; hard 0/255 alpha can pass that check while still deleting a limb or carrying background pixels.
 
+Every transparent foreground also receives `rectangular-alpha-band-free`. The detector scans horizontal and vertical runs whose alpha is 4–96, requires at least 24 pixels and 42% of the relevant axis, merges adjacent scan lines, and treats a band as thin at no more than 2.5% of the cross-axis. It correlates candidates within 1.2% of canvas edges, crop edges, or registered placement/rectangular clip edges; four compatible sides form an explicit rectangular-residue error. Broad soft transitions remain informational so ordinary paper shadows do not fail, while an unusually long uncorrelated straight band is a warning. Diagnostics name scale, orientation, exact coordinates, span, correlation, classification, and severity.
+
+The same inspection runs once at original resolution and again after Lanczos scaling to the asset's actual proof/render dimensions. Proof bundles contain `*-alpha-bands.json` and `*-alpha-bands.png`; quality requires current passing scale evidence for all three `supported-subject` members. These deterministic artifacts do not replace visual inspection of the alpha mask, checkerboard, tight crop, or motion-stress sheet. `key-edge-clean` is a different chroma/matte test and cannot be used as a proxy for rectangular crop residue.
+
 Semantic risk adds evidence-backed checks:
 
 - identity: `identity-family-consistent`, `identity-distinct-within-frame`, `cross-scene-identity-continuity`;
@@ -98,7 +102,7 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
 - bound event: visual event visible, sound event bound when required, proof time bound, final state preserved.
 - semantic contract: every requested check is visible in its exact target shots; cross-scene checks compare all bound scenes rather than one attractive frame.
 
-Deterministic checks already block missing slots, mismatched canvases, duplicate carrier motion, off-zone contacts, absent front alpha, incomplete upper/lower clips, duplicate semantic coverage, invalid targets, missing required sounds, out-of-window proofs, stale style fingerprints, and missing topology evidence. They do not infer whether every semantic part is intact; that remains evidence-backed semantic review.
+Deterministic checks already block missing slots, mismatched canvases, non-registered or mixed-provenance supported families, duplicate carrier motion, off-zone contacts, absent front alpha, rectangular low-alpha crop residue, incomplete upper/lower clips, duplicate semantic coverage, invalid targets, missing required sounds, out-of-window proofs, stale style fingerprints, and missing topology evidence. They do not infer whether every semantic part is intact; that remains evidence-backed semantic review.
 
 ## Motion, Visibility, and Event Authoring
 

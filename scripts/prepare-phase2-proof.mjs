@@ -38,10 +38,12 @@ import {
   sha256Value,
   writeJson,
 } from './phase2-proof-lib.mjs';
+import {prepareRegisteredFamilyProof} from './asset-hardening-proof-lib.mjs';
 
 const inputsDirectory = path.join(PHASE2_PROOF_DIR, 'inputs');
 const reportsDirectory = path.join(PHASE2_PROOF_DIR, 'reports');
 
+const registeredFamily = await prepareRegisteredFamilyProof();
 const media = await preparePhase2Media();
 const storyboard = compilePhase2Storyboard({media});
 const storyboardIssues = validateStoryboard(storyboard, {
@@ -60,7 +62,10 @@ const projects = {};
 const projectValidation = {};
 for (const profile of PHASE2_PROOF_PROFILES) {
   const project = createPhase2Project({media, profileId: profile.id});
-  const result = await validateProject(project, {storyboard});
+  const result = await validateProject(project, {
+    storyboard,
+    manifest: registeredFamily.manifest,
+  });
   const errors = result.issues.filter(({level}) => level === 'error');
   if (errors.length > 0) {
     throw new Error(
@@ -79,6 +84,10 @@ for (const profile of PHASE2_PROOF_PROFILES) {
 }
 
 await writeJson(path.join(inputsDirectory, 'storyboard.json'), storyboard);
+await writeJson(
+  path.join(inputsDirectory, 'assets-manifest.json'),
+  registeredFamily.manifest,
+);
 await writeJson(
   path.join(inputsDirectory, 'storyboard-authoring.json'),
   createPhase2StoryboardAuthoring({media}),
@@ -277,7 +286,7 @@ await writeJson(
 );
 
 const qualityTargets = await collectCompositeQualityTargets(projects['16:9'], {
-  manifest: {schemaVersion: 1, assets: []},
+  manifest: registeredFamily.manifest,
 });
 await writeJson(path.join(reportsDirectory, 'quality-targets.json'), {
   schemaVersion: 1,
@@ -299,6 +308,13 @@ await writeJson(path.join(reportsDirectory, 'prepare-report.json'), {
   schemaVersion: 1,
   passed: true,
   providerCalls: 0,
+  registeredFamily: {
+    familyId: registeredFamily.proof.familyId,
+    familyFingerprint: registeredFamily.proof.familyFingerprint,
+    providerImageCalls: registeredFamily.proof.providerImageCalls,
+    localDerivatives: registeredFamily.proof.localDerivatives,
+    avoidedCalls: registeredFamily.proof.avoidedCalls,
+  },
   projectValidation,
   storyboardFingerprint: storyboard.directingSummary.fingerprint,
   editorialFingerprint: storyboard.editorial.fingerprint,

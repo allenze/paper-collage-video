@@ -519,3 +519,9 @@
 - 根因：新编译器只把最高非装饰语义风险、coupled relationship 与 state-sequence 加入 required coverage；starter 只有 decorative/free 的静态与显隐 treatments，因此 `requiredCoverage=[]`、`targets=[]`。单元测试覆盖了高风险组合，却没有覆盖“低风险影片仍必须有代表性风格目标”。
 - 本次处理：当多维 coverage 为空时，编译器增加 `baseline:representative`，按既有风险分数和稳定顺序选一个 hero/required 代表目标；新增低风险 free composition 回归测试，并把 starter 真实 Style Proof 纳入安装缓存冒烟。
 - 版本：dev.9 已经产生过可安装但真实样式证明不可运行的包，因此修复提升为 `0.14.0-dev.10`，不在同版本号下静默替换 runtime。
+
+## 0.16.0-dev.3 Phase 2.2 正式处理
+
+- **正式关闭 F035。** 新增 `registered-family.schema.json`、严格 manifest binding、`assets:derive-registered-family` 与通用派生库。从 active source master、registered sheet cell 或正式 sheet member 一次确定性派生 `support-rear`、`subject`、`support-front`；三者共享 canvas/origin/registration/source master/family fingerprint，CLI 自动登记 provenance 和 active/superseded 生命周期并可绑定现有 supported-subject authoring。没有 placement 的裁紧独立图、没有 sheet lineage 的成员、混合 source family 或角色/slot/node 漂移都会被拒绝。恢复策略固定为本地重处理、完整 source 上下文 masked edit、完整 source regeneration，明确禁止 isolated member generation。
+- **正式关闭 F037。** 新增独立于 `key-edge-clean` 的低 alpha 水平/垂直连续带检测；同时检查原始分辨率和实际 proof/render 缩放，关联 canvas、crop、placement、rectangle clip 和四边矩形，输出坐标/分类/严重级别/失败信息。project validation、quality report、composition/style proof 都消费 JSON/overlay；checkerboard、tight crop、motion stress 继续作为人工语义证据。正常曲线/纸张软阴影 negative、普通矩形 positive 与贴边 1px extreme fixture 都有确定性回归。
+- **无 provider 证明。** `proof:registered-family` 的本地 fixture 真实报告 `providerImageCalls=0`、`localDerivatives=3`、`avoidedCalls=3`；`proof:alpha-bands` 要求 negative 通过、两个 positive 被检测。Phase 2 三画幅 Chromium fixture 直接消费同一 registered family，并由 formal verifier 生成每个画幅的关系 crop 和实际缩放 alpha evidence。本阶段没有制作最终参考样片。

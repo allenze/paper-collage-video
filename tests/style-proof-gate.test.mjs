@@ -79,6 +79,44 @@ const writeFixture = async (slug) => {
     canvas: {width: 100, height: 100},
     derivation: {method: 'alpha-extraction', parentAssetId: 'master'},
   });
+  const registeredFamilyBinding = (nodeId, role) => ({
+    schemaVersion: 1,
+    familyId: 'style-proof-family',
+    pattern: 'supported-subject',
+    registrationId: 'family',
+    sourceMasterAssetId: 'master',
+    canvas: {width: 100, height: 100},
+    origin: 'top-left',
+    role,
+    slot: role,
+    nodeId,
+    source: {
+      kind: 'source-master',
+      assetId: 'master',
+      stateId: null,
+      sourceSheetAssetId: null,
+      sourceFamilyFingerprint: null,
+      sha256: 'a'.repeat(64),
+    },
+    derivation: {
+      placement: {left: 0, top: 0, width: 100, height: 100},
+      maskAssetId: null,
+      maskSha256: null,
+      maskChannel: null,
+      invertMask: false,
+      clip: null,
+      trimmed: false,
+      outputCanvasPreserved: true,
+    },
+    recoveryPolicy: {
+      strategy: 'preserve-family-context',
+      localDeterministicFixFirst: true,
+      isolatedMemberGeneration: 'forbidden',
+      providerRepair: 'masked-complete-source-edit',
+      fallback: 'full-source-regeneration',
+    },
+    familyFingerprint: 'f'.repeat(64),
+  });
   const node = (id, slot, assetRole = 'prop') => ({
     id,
     kind: 'asset',
@@ -164,9 +202,9 @@ const writeFixture = async (slug) => {
   };
   const manifest = manifestFixture(slug, [
       {assetId: 'master', capability: 'image', file: relativeWorkspaceFile(files.master), request: {quality: {kind: 'style-sample'}}},
-      {assetId: 'rear', capability: 'image', file: relativeWorkspaceFile(files.rear), compositionBinding: binding('rear', 'support-rear')},
-      {assetId: 'subject', capability: 'image', file: relativeWorkspaceFile(files.subject), compositionBinding: binding('subject', 'subject')},
-      {assetId: 'front', capability: 'image', file: relativeWorkspaceFile(files.front), compositionBinding: binding('front', 'support-front')},
+      {assetId: 'rear', capability: 'image', adapter: 'registered-family-member', file: relativeWorkspaceFile(files.rear), media: {width: 100, height: 100, format: 'png', hasAlpha: true}, compositionBinding: binding('rear', 'support-rear'), registeredFamilyBinding: registeredFamilyBinding('rear', 'support-rear'), familyFingerprint: 'f'.repeat(64)},
+      {assetId: 'subject', capability: 'image', adapter: 'registered-family-member', file: relativeWorkspaceFile(files.subject), media: {width: 100, height: 100, format: 'png', hasAlpha: true}, compositionBinding: binding('subject', 'subject'), registeredFamilyBinding: registeredFamilyBinding('subject', 'subject'), familyFingerprint: 'f'.repeat(64)},
+      {assetId: 'front', capability: 'image', adapter: 'registered-family-member', file: relativeWorkspaceFile(files.front), media: {width: 100, height: 100, format: 'png', hasAlpha: true}, compositionBinding: binding('front', 'support-front'), registeredFamilyBinding: registeredFamilyBinding('front', 'support-front'), familyFingerprint: 'f'.repeat(64)},
     ]);
   const production = {
     $schema: '../../schemas/production.schema.json',
@@ -250,6 +288,14 @@ const writeProofEvidence = async ({slug, project, files}) => {
         checkerboard: evidencePath,
         tightCrop: evidencePath,
         motionStress: evidencePath,
+        alphaBandReport: evidencePath,
+        alphaBandOverlay: evidencePath,
+        renderSize: {width: 1, height: 1},
+        alphaBandInspection: {
+          passed: true,
+          sourceSize: {width: 100, height: 100},
+          scales: [{label: 'original'}, {label: 'render-scale'}],
+        },
       })),
     }, null, 2)}\n`,
   );

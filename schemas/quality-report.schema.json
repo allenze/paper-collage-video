@@ -40,6 +40,12 @@
           "semanticBinding": {"type": ["object", "null"]},
           "stateSheetBinding": {"type": ["object", "null"]},
           "stateSheetRecoveryBinding": {"type": ["object", "null"]},
+          "registeredFamilyBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/registered-family-binding.schema.json"}
+            ]
+          },
           "recoverySourceFile": {"type": ["string", "null"]},
           "recoverySourceSha256": {"type": ["string", "null"]},
           "recoveryEvidenceFiles": {"type": "array", "items": {"type": "string"}},

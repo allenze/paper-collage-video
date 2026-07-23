@@ -7,6 +7,39 @@ import {
 export const PHASE2_PROOF_SLUG = 'vox-phase2-proof';
 export const PHASE2_PROOF_FPS = 30;
 export const PHASE2_PROOF_UPDATED_AT = '2026-07-23T00:00:00.000Z';
+export const PHASE2_REGISTERED_FAMILY = Object.freeze({
+  familyId: 'phase2-supported-family',
+  registration: {
+    id: 'phase2-supported-registration',
+    sourceMasterAssetId: 'phase2-supported-master',
+    canvas: {width: 480, height: 320},
+    origin: 'top-left',
+  },
+  groupId: 'phase2-supported-rig',
+  members: [
+    {
+      assetId: 'phase2-support-rear',
+      nodeId: 'phase2-support-rear',
+      role: 'support-rear',
+      file: 'fixtures/vox-phase2-proof/registered-family/support-rear.png',
+      maskAssetId: 'phase2-mask-rear',
+    },
+    {
+      assetId: 'phase2-subject',
+      nodeId: 'phase2-subject',
+      role: 'subject',
+      file: 'fixtures/vox-phase2-proof/registered-family/subject.png',
+      maskAssetId: 'phase2-mask-subject',
+    },
+    {
+      assetId: 'phase2-support-front',
+      nodeId: 'phase2-support-front',
+      role: 'support-front',
+      file: 'fixtures/vox-phase2-proof/registered-family/support-front.png',
+      maskAssetId: 'phase2-mask-front',
+    },
+  ],
+});
 
 const still = () => ({
   keyframes: [{at: 0, scale: 1}, {at: 1, scale: 1}],
@@ -303,6 +336,40 @@ const boundaryData = (id) => dataGraphic({
   z: 7,
 });
 
+const registeredFamilyGroup = () => ({
+  id: PHASE2_REGISTERED_FAMILY.groupId,
+  kind: 'group',
+  pattern: 'supported-subject',
+  z: 18,
+  coordinateSpace: PHASE2_REGISTERED_FAMILY.registration.canvas,
+  transform: transform(0.08, 0.32, 0.28, 0.34),
+  motion: {
+    keyframes: [
+      {at: 0, x: 0, y: 0, rotation: -0.4},
+      {at: 0.55, x: 0.008, y: -0.006, rotation: 0.5},
+      {at: 1, x: 0, y: 0, rotation: -0.2},
+    ],
+  },
+  registration: PHASE2_REGISTERED_FAMILY.registration,
+  support: {
+    subjectId: 'phase2-subject',
+    contactAnchor: {x: 0.5, y: 0.75},
+    contactZone: [[0.18, 0.55], [0.82, 0.55], [0.82, 0.92], [0.18, 0.92]],
+    occlusionZone: [[0.08, 0.58], [0.92, 0.58], [0.92, 0.95], [0.08, 0.95]],
+  },
+  children: PHASE2_REGISTERED_FAMILY.members.map((member, index) => ({
+    id: member.nodeId,
+    kind: 'asset',
+    assetRole: member.role === 'subject' ? 'character' : 'prop',
+    src: member.file,
+    z: index,
+    slot: member.role,
+    registrationId: PHASE2_REGISTERED_FAMILY.registration.id,
+    transform: transform(0, 0, 1, 1),
+    motion: still(),
+  })),
+});
+
 const proofTimesFor = (sceneIndex) => [
   {
     id: `s${sceneIndex}-establish`,
@@ -393,6 +460,7 @@ const sceneComposition = (sceneIndex) => {
   ];
   if (first) {
     nodes.push(
+      registeredFamilyGroup(),
       annotation({id: 'annotation-arrow', annotationKind: 'arrow', label: 'arrow', value: 0, sceneIndex, enterEditPointId: 'ep-s1-open'}),
       annotation({id: 'annotation-leader', annotationKind: 'leader-line', label: 'leader', value: 0, sceneIndex, enterEditPointId: 'ep-s1-word-1'}),
       annotation({id: 'annotation-label', annotationKind: 'label', label: 'LABEL', value: 0, sceneIndex, enterEditPointId: 'ep-s1-word-2'}),
@@ -547,6 +615,11 @@ const profileOverrides = (kind, sceneIndex) => {
       '9:16': {x: 0.72, y: 0.25, width: 0.18, height: 0.12},
       '1:1': {x: 0.74, y: 0.27, width: 0.16, height: 0.16},
     },
+    family: {
+      '16:9': {x: 0.08, y: 0.32, width: 0.28, height: 0.34},
+      '9:16': {x: 0.12, y: 0.3, width: 0.55, height: 0.22},
+      '1:1': {x: 0.1, y: 0.34, width: 0.44, height: 0.3},
+    },
   };
   if (kind === 'data' && first) return presets.boundaryData;
   return presets[kind];
@@ -561,6 +634,15 @@ const placementsForScene = (sceneIndex) => {
     {targetId: `match-${first ? 'source' : 'destination'}`, role: 'subject', preferredAnchor: 'bottom-right', densityCost: 2, profileOverrides: profileOverrides('match', sceneIndex)},
     {targetId: `boundary-data-${first ? 'source' : 'destination'}`, role: 'data', preferredAnchor: 'right', densityCost: 3, profileOverrides: profileOverrides('boundaryData', sceneIndex)},
   ];
+  if (first) {
+    entries.push({
+      targetId: PHASE2_REGISTERED_FAMILY.groupId,
+      role: 'subject',
+      preferredAnchor: 'left',
+      densityCost: 4,
+      profileOverrides: profileOverrides('family', sceneIndex),
+    });
+  }
   if (!first) {
     entries.push({
       targetId: 'data-switch',

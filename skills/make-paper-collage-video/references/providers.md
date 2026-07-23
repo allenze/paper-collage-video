@@ -51,9 +51,19 @@ For a coupled family:
 1. request/generate/import the complete master;
 2. derive rear/subject/front, upper/lower bands, and masks from that master;
 3. keep each derivative on the identical canvas and origin;
-4. record every output so manifest v3 computes one family fingerprint.
+4. record every output so manifest v4 computes one family fingerprint.
 
 Do not make independent text-to-image calls for registered members. For two or more poses/states of one identity, prefer one `stateSheetBinding` request with an explicit grid and the required `preserve-sheet-context` policy, then run `assets:process-state-sheet`. This converts one provider image into registered local state files without trimming their shared cell canvas. The processor records each derivative and a family fingerprint; those local crops do not consume more generation attempts. Do not put unrelated identities in one sheet merely to reduce cost.
+
+For a `supported-subject` family, do not hand-fill three manifest records. Author one file against `schemas/registered-family.schema.json` and run:
+
+```bash
+npm run assets:derive-registered-family -- projects/<slug>/registered-families/<family>.json
+```
+
+The source can be one registered complete master, one declared cell of a registered sheet, or a member already emitted by `assets:process-state-sheet`. The CLI derives exactly `support-rear`, `subject`, and `support-front`, keeps the registration canvas and top-left origin, applies optional full-canvas mask/clip/placement rules, appends `registered-family-member` provenance, supersedes prior active records for the same asset ids, and optionally patches matching authoring nodes. It reports upstream provider image calls, local derivatives, and calls avoided from manifest provenance. A tight image with no explicit placement, a member without registered sheet lineage, or a role/slot/canvas/source-family mismatch is rejected.
+
+Its required recovery policy is `preserve-family-context`: rerun deterministic local processing first; if new pixels are required, edit a mask while retaining the complete source master/sheet as provider context; if that is unreliable, regenerate the complete source. Never generate one replacement member in isolation.
 
 For recovery, follow this order:
 

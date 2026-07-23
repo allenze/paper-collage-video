@@ -1,4 +1,44 @@
-# Paper Collage Video 0.16.0-dev.2
+# Paper Collage Video 0.16.0-dev.3
+
+This development release completes VOX Phase 2.2 asset-family and transparent
+edge production hardening. It does not include a final reference film and its
+acceptance fixtures make no image, voice, or video provider calls.
+
+## Registered supported-subject families
+
+- Adds strict registered-family authoring and manifest-binding schemas plus
+  `assets:derive-registered-family`.
+- Deterministically derives `support-rear`, `subject`, and `support-front` from
+  a registered complete master, registered sheet cell, or formally processed
+  sheet member while retaining one canvas, origin, registration, source master,
+  family fingerprint, and context-preserving recovery policy.
+- Automatically records manifest provenance and active/superseded lifecycle,
+  optionally patches matching supported-subject nodes, rejects unplaced tight
+  images, and reports provider image calls, local derivatives, and calls
+  avoided.
+
+## Rectangular alpha residue
+
+- Adds deterministic low-alpha horizontal/vertical band detection at source
+  resolution and actual proof/render scale.
+- Correlates diagnostics with canvas, crop, placement, and rectangular clip
+  boundaries; separates thin rectangular residue from broad paper shadows and
+  normal curved silhouettes.
+- Integrates independent failures into project validation, quality reports,
+  composition/style proof JSON and overlays. Checkerboard, tight-crop, and
+  motion-stress evidence remain required for human semantic review;
+  `key-edge-clean` is not a substitute.
+
+## Proof and packaging
+
+- The no-provider Phase 2 fixture now includes a locally derived registered
+  supported-subject family in all three Chromium renders.
+- Adds positive, negative, and extreme alpha fixtures and formal F035/F037
+  proof commands.
+- Bumps executable identity and packages all schemas, CLIs, proof helpers,
+  tests, Skill guidance, and fixture assets together.
+
+## Previous Phase 2.1 audit fix
 
 This development release completes the VOX Phase 2.1 production-readiness
 audit. It keeps the v9 contracts and renderer behavior from dev.1, while

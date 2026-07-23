@@ -1,4 +1,4 @@
 interface:
   display_name: "纸片分层视频制作"
-  short_description: "用明确分档预算、语义证据和影音预检制作可编辑纸片分层视频"
-  default_prompt: "使用 $make-paper-collage-video 制作纸片分层视频，在概念确认中列出三个制作档位及准确预算，并执行语义证据、旁白时长、响度与最终预览检查。"
+  short_description: "用注册素材族、透明边缘检测、语义证据和影音预检制作可编辑纸片视频"
+  default_prompt: "使用 $make-paper-collage-video 制作可编辑纸片分层视频，按批准预算生产注册素材族，并执行透明边缘、语义证据、旁白时长、响度与最终预览检查。"

@@ -3,6 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import {ROOT, fileExists, resolvePublicFile} from './project-lib.mjs';
+import {
+  alphaBandOverlaySvg,
+  derivationRegionsFromBinding,
+  inspectAlphaBands,
+} from './alpha-band-lib.mjs';
 
 export const safeEvidenceId = (value) =>
   value.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
@@ -64,20 +69,46 @@ export const padEvidenceBounds = (
 const hashFile = async (file) =>
   createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
-export const assetEvidenceIsCurrent = async (entry, node) => {
+const stableJson = (value) => JSON.stringify(value ?? null);
+
+export const assetEvidenceIsCurrent = async (
+  entry,
+  node,
+  {renderSize = null, registeredFamilyBinding = null} = {},
+) => {
   if (!entry || entry.source !== node.src || !entry.sourceSha256) return false;
+  if (stableJson(entry.renderSize) !== stableJson(renderSize)) return false;
+  if (
+    entry.derivationFingerprint !==
+    createHash('sha256')
+      .update(stableJson(registeredFamilyBinding))
+      .digest('hex')
+  ) return false;
   const sourceFile = resolvePublicFile(node.src);
   if (!(await fileExists(sourceFile))) return false;
   if (await hashFile(sourceFile) !== entry.sourceSha256) return false;
   return (
     await Promise.all(
-      [entry.alphaMask, entry.checkerboard, entry.tightCrop, entry.motionStress]
+      [
+        entry.alphaMask,
+        entry.checkerboard,
+        entry.tightCrop,
+        entry.motionStress,
+        entry.alphaBandReport,
+        entry.alphaBandOverlay,
+      ]
         .map((file) => fileExists(path.resolve(ROOT, file ?? ''))),
     )
   ).every(Boolean);
 };
 
-export const buildAssetEvidence = async ({node, directory, evidenceId = node.id}) => {
+export const buildAssetEvidence = async ({
+  node,
+  directory,
+  evidenceId = node.id,
+  renderSize = null,
+  registeredFamilyBinding = null,
+}) => {
   const sourceFile = resolvePublicFile(node.src);
   const metadata = await sharp(sourceFile).metadata();
   const width = metadata.width;
@@ -88,6 +119,8 @@ export const buildAssetEvidence = async ({node, directory, evidenceId = node.id}
   const checkerboardFile = path.join(directory, `${id}-checkerboard.png`);
   const tightCropFile = path.join(directory, `${id}-tight.png`);
   const motionStressFile = path.join(directory, `${id}-motion-stress.jpg`);
+  const alphaBandReportFile = path.join(directory, `${id}-alpha-bands.json`);
+  const alphaBandOverlayFile = path.join(directory, `${id}-alpha-bands.png`);
   const bounds = await alphaBoundsFor(sourceFile);
   const padded = padEvidenceBounds(
     bounds,
@@ -133,14 +166,44 @@ export const buildAssetEvidence = async ({node, directory, evidenceId = node.id}
     ])
     .jpeg({quality: 92})
     .toFile(motionStressFile);
+  const derivationRegions = derivationRegionsFromBinding(
+    registeredFamilyBinding,
+  );
+  const alphaBandInspection = await inspectAlphaBands({
+    file: sourceFile,
+    renderSize,
+    derivationRegions,
+  });
+  await fs.writeFile(
+    alphaBandReportFile,
+    `${JSON.stringify(alphaBandInspection, null, 2)}\n`,
+    'utf8',
+  );
+  await sharp(normal)
+    .composite([{
+      input: alphaBandOverlaySvg({
+        inspection: alphaBandInspection,
+        width,
+        height,
+      }),
+    }])
+    .png()
+    .toFile(alphaBandOverlayFile);
   return {
     nodeId: node.id,
     source: node.src,
     sourceSha256: await hashFile(sourceFile),
+    renderSize,
+    derivationFingerprint: createHash('sha256')
+      .update(stableJson(registeredFamilyBinding))
+      .digest('hex'),
     alphaBounds: bounds,
     alphaMask: path.relative(ROOT, alphaMaskFile),
     checkerboard: path.relative(ROOT, checkerboardFile),
     tightCrop: path.relative(ROOT, tightCropFile),
     motionStress: path.relative(ROOT, motionStressFile),
+    alphaBandReport: path.relative(ROOT, alphaBandReportFile),
+    alphaBandOverlay: path.relative(ROOT, alphaBandOverlayFile),
+    alphaBandInspection,
   };
 };
