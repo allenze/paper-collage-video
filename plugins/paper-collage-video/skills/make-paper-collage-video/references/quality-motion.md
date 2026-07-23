@@ -27,7 +27,7 @@ npm run style:proof -- <slug> --duration=4
 npm run project:quality -- <slug> prepare
 ```
 
-The schema-v5 report uses `scope=style` and emits a structured composite for every selected directing target, including `free` targets. Its current composite can satisfy the matching quality target directly; a separate full-project composition proof is not required merely to approve style. Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, checkerboard isolates, tight crops, and before/shifted motion-stress sheets where applicable. Record participating assets and the representative composite with those paths:
+The schema-v6 report uses `scope=style`, binds the complete `styleProofPlan`, and emits a structured composite for every selected directing target, including `free` targets. Its current composite can satisfy the matching quality target directly; a separate full-project composition proof is not required merely to approve style. Inspect `dist/<slug>/style-proof/evidence/` at useful resolution: alpha masks, checkerboard isolates, tight crops, and before/shifted motion-stress sheets where applicable. Record participating assets and the representative composite with those paths:
 
 ```json
 {
@@ -107,6 +107,6 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 
 `project:assets-ready` owns narration synchronization, subtitle derivation, v7 validation, current-proof enforcement, and both quality gates. Provider or forced-alignment timing wins; otherwise deterministic punctuation-aware timing is used. Review reading-speed warnings.
 
-`project:assets-ready` and both render commands first build an audio-only timeline mix and measure LUFS/true peak. If it fails, use the bounded `audio.narration.volume` recommendation, rerun the preflight, and keep the final artifact report authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
+After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds an audio-only timeline mix, and measures LUFS/true peak. A passing mix needs no decision. A failing mix writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns preflight. Changed source audio or timing invalidates the decision. The final artifact report remains authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 
 Reports also intersect detected silence with sampled low-motion ranges. Silence with meaningful animation and a static explanatory image with narration are valid; only their unapproved overlap fails. Read `timing-continuity.md` for thresholds and proof-backed quiet holds. Never add background music solely to hide a continuity failure.

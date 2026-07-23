@@ -135,12 +135,25 @@ const writeFixture = async (slug) => {
     sceneTransitions: [],
   };
   const storyboard = {
-    schemaVersion: 6,
+    schemaVersion: 7,
     slug,
     status: 'ready',
     directingSummary: {
-      styleProofSceneId: 'scene',
-      styleProofTreatmentId: 'subject-on-support',
+      styleProofPlan: {
+        requiredCoverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
+        targets: [{
+          sceneId: 'scene',
+          treatmentId: 'subject-on-support',
+          targetId: 'subject',
+          proofTimeId: null,
+          riskScore: 46,
+          directingFingerprint: 'a'.repeat(64),
+          sourceFamilyKey: 'target:subject',
+          coverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
+        }],
+        sourceFamilyKeys: ['target:subject'],
+        fingerprint: 'c'.repeat(64),
+      },
     },
     scenes: [{
       id: 'scene',
@@ -203,17 +216,23 @@ const writeProofEvidence = async ({slug, project, files}) => {
   await fs.writeFile(
     styleProofReportPath(slug),
     `${JSON.stringify({
-      schemaVersion: 5,
+      schemaVersion: 6,
       scope: 'style',
       slug,
-      sceneId: 'scene',
-      directingTreatmentId: 'subject-on-support',
-      directingTargetId: 'subject',
-      directingProofTimeId: null,
-      directingFingerprint: 'a'.repeat(64),
+      planFingerprint: 'c'.repeat(64),
+      directingTargets: [{
+        sceneId: 'scene',
+        treatmentId: 'subject-on-support',
+        targetId: 'subject',
+        proofTimeId: null,
+        riskScore: 46,
+        directingFingerprint: 'a'.repeat(64),
+        sourceFamilyKey: 'target:subject',
+        coverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
+      }],
       runtimeBuildFingerprint,
       generatedAt: new Date().toISOString(),
-      output: evidencePath,
+      outputs: [{sceneId: 'scene', file: evidencePath, durationSeconds: 4}],
       contactSheet: evidencePath,
       composites: [{
         compositeId: target.compositeId,
@@ -225,6 +244,7 @@ const writeProofEvidence = async ({slug, project, files}) => {
         ],
       }],
       assetEvidence: target.memberNodeIds.map((nodeId) => ({
+        sceneId: target.sceneId,
         nodeId,
         alphaMask: evidencePath,
         checkerboard: evidencePath,

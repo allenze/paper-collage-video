@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {ROOT, assertSlug, fileExists, loadProject} from './project-lib.mjs';
+import {loadStoryboard} from './storyboard-lib.mjs';
 import {
   validateSemanticEvidenceTargets,
   writeSemanticContracts,
@@ -24,8 +25,8 @@ try {
     throw new Error('contracts 输入路径越过工作区。');
   }
   const input = JSON.parse(await fs.readFile(inputFile, 'utf8'));
-  const {project} = await loadProject(slug);
-  const targetIssues = validateSemanticEvidenceTargets(input, project);
+  const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
+  const targetIssues = validateSemanticEvidenceTargets(input, project, {storyboard, allowPlanned: true});
   if (targetIssues.length) throw new Error(targetIssues.join('\n'));
   const result = await writeSemanticContracts({slug, input});
   console.log(`✓ 语义契约已锁定：${path.relative(ROOT, result.file)}`);

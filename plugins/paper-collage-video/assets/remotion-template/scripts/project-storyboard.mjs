@@ -29,7 +29,7 @@ try {
   const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 6,
+    schemaVersion: 7,
     slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(supplied.sceneTransitions),

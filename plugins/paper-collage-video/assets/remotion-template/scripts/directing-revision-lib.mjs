@@ -64,14 +64,8 @@ const changedCategories = (before, after) => {
 };
 
 const styleProofTarget = (storyboard) => {
-  const sceneId = storyboard.directingSummary?.styleProofSceneId ?? null;
-  const treatmentId = storyboard.directingSummary?.styleProofTreatmentId ?? null;
-  const scene = storyboard.scenes?.find(({id}) => id === sceneId);
-  return {
-    sceneId,
-    treatmentId,
-    directingFingerprint: scene?.directing?.fingerprint ?? null,
-  };
+  const plan = storyboard.directingSummary?.styleProofPlan ?? null;
+  return plan ? {fingerprint: plan.fingerprint, targets: plan.targets} : null;
 };
 
 export const prepareDirectingRevision = ({
@@ -86,7 +80,7 @@ export const prepareDirectingRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 6,
+    schemaVersion: 7,
     slug: currentStoryboard.slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(authored.sceneTransitions),

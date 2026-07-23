@@ -40,6 +40,19 @@
         "tool": {"type": "string", "minLength": 1},
         "toolHint": {"type": "string"},
         "model": {"type": "string"},
+        "invocation": {
+          "type": "object",
+          "properties": {
+            "providerValue": {"type": "string", "minLength": 1},
+            "modelValue": {"type": "string", "minLength": 1},
+            "reportedModelAliases": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1},
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        },
         "requiredEnv": {
           "type": "array",
           "items": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},

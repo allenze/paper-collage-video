@@ -30,6 +30,7 @@ try {
         adapter: configured.adapter,
         model: configured.model ?? null,
         tool: configured.tool ?? null,
+        invocation: configured.invocation ?? null,
         readiness: await inspectProviderReadiness({...configured, id, capability}),
       });
     }
@@ -40,6 +41,7 @@ try {
         adapter: provider.adapter,
         model: provider.model ?? null,
         tool: provider.tool ?? null,
+        invocation: provider.invocation ?? null,
       },
       readiness: await inspectProviderReadiness(provider),
       candidates,

@@ -4,9 +4,11 @@ import {
   assertProviderConfig,
   loadAssetRequest,
   loadProviderConfig,
+  normalizeReportedModel,
   recordAssetProvenance,
   resolveConfirmedProvider,
 } from './provider-lib.mjs';
+import {readGenerationAttempt} from './generation-attempt-lib.mjs';
 import {ROOT} from './project-lib.mjs';
 
 const args = process.argv.slice(2);
@@ -25,18 +27,33 @@ try {
   const loadedConfig = assertProviderConfig(
     await loadProviderConfig(loadedRequest.request.projectSlug),
   );
+  const attemptId = valueFor('--attempt-id');
+  const attempt = attemptId
+    ? (await readGenerationAttempt({
+        slug: loadedRequest.request.projectSlug,
+        attemptId,
+      })).attempt
+    : null;
+  if (attempt && providerId !== 'auto' && providerId !== attempt.provider) {
+    throw new Error(`--provider 与生成尝试继承的 ${attempt.provider} 不一致。`);
+  }
   const provider = resolveConfirmedProvider(
     loadedConfig.config,
     loadedRequest.request.capability,
-    providerId,
+    attempt?.provider ?? providerId,
   );
+  const reportedModel = valueFor('--model');
+  const inheritedModel = attempt?.model ?? null;
+  if (reportedModel && inheritedModel && reportedModel !== inheritedModel) {
+    normalizeReportedModel({provider, model: reportedModel});
+  }
   const recorded = await recordAssetProvenance({
     request: loadedRequest.request,
     output: loadedRequest.output,
     provider,
-    model: valueFor('--model'),
+    model: inheritedModel ?? normalizeReportedModel({provider, model: reportedModel}),
     externalId: valueFor('--external-id'),
-    attemptId: valueFor('--attempt-id'),
+    attemptId,
   });
   console.log(`✓ 已登记资产：${recorded.record.file}`);
   if (recorded.record.capability === 'voice') {

@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -191,8 +191,29 @@
       "maxStatesPerSheet": 4,
       "maxContinuousTargets": 2
     },
-    "styleProofSceneId": "starter",
-    "styleProofTreatmentId": "show-traveler",
-    "fingerprint": "3b8e82b91a352567415c52683bfdcba8dcdd752b6d138da86055a76ec56bfb29"
+    "styleProofPlan": {
+      "requiredCoverage": [
+        "baseline:representative"
+      ],
+      "targets": [
+        {
+          "sceneId": "starter",
+          "treatmentId": "show-traveler",
+          "targetId": "traveler",
+          "proofTimeId": "proof-action",
+          "riskScore": 13,
+          "directingFingerprint": "c046e2af0e2c444af91af08ea3378369e36ad7c3f376c0fcf88386ac36bf8935",
+          "sourceFamilyKey": "target:traveler",
+          "coverage": [
+            "baseline:representative"
+          ]
+        }
+      ],
+      "sourceFamilyKeys": [
+        "target:traveler"
+      ],
+      "fingerprint": "be2a3c963da2cf12eab97a77d2f853c48b1b50c0d9981faf22372bfa74747aac"
+    },
+    "fingerprint": "b9a8a8d630c537c9abc3887183cbff5b2c2b3610fb14aacd44746336c21e1c5f"
   }
 }

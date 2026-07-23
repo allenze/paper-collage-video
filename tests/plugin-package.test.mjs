@@ -91,6 +91,8 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(packageJson.scripts['provider:select'], 'node scripts/provider-select.mjs');
   assert.equal(packageJson.scripts['provider:reuse'], 'node scripts/provider-reuse.mjs');
   assert.equal(packageJson.scripts['provider:attempt'], 'node scripts/provider-attempt.mjs');
+  assert.equal(packageJson.scripts['provider:request'], 'node scripts/provider-request.mjs');
+  assert.equal(packageJson.scripts['provider:recover-record'], 'node scripts/provider-recover-record.mjs');
   assert.equal(packageJson.scripts['project:plan'], 'node scripts/project-plan.mjs');
   assert.equal(packageJson.scripts['project:storyboard'], 'node scripts/project-storyboard.mjs');
   assert.equal(packageJson.scripts['project:revise-preview-directing'], 'node scripts/project-revise-preview-directing.mjs');
@@ -108,6 +110,7 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.match(packageJson.scripts['project:composition-proof'], /category=evidence-render/);
   assert.equal(packageJson.scripts['project:metrics'], 'node scripts/project-metrics.mjs');
   assert.match(packageJson.scripts['project:audio-preflight'], /category=deterministic-check/);
+  assert.match(packageJson.scripts['project:audio-calibration'], /category=deterministic-check/);
   assert.equal(packageJson.scripts['project:subtitles'], 'node scripts/project-subtitles.mjs');
   assert.match(packageJson.scripts['style:proof'], /category=evidence-render/);
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
@@ -159,11 +162,14 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/asset-evidence-lib.mjs',
     'scripts/asset-manifest-lib.mjs',
     'scripts/audio-preflight-lib.mjs',
+    'scripts/audio-calibration-lib.mjs',
     'scripts/provider-lib.mjs',
     'scripts/generation-attempt-lib.mjs',
     'scripts/production-metrics-lib.mjs',
     'scripts/semantic-contract-lib.mjs',
     'scripts/provider-attempt.mjs',
+    'scripts/provider-request.mjs',
+    'scripts/provider-recover-record.mjs',
     'scripts/provider-reuse.mjs',
     'scripts/provider-select.mjs',
     'scripts/python-runtime.mjs',
@@ -172,6 +178,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-metrics-run.mjs',
     'scripts/project-metrics.mjs',
     'scripts/project-audio-preflight.mjs',
+    'scripts/project-audio-calibration.mjs',
     'scripts/project-asset-lifecycle.mjs',
     'scripts/render-cache-lib.mjs',
     'scripts/runtime-build-lib.mjs',

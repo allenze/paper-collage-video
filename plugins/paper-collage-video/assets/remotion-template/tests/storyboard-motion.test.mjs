@@ -34,7 +34,7 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
 });
 
 const authoredStoryboard = () => ({
-  schemaVersion: 6,
+  schemaVersion: 7,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
@@ -108,7 +108,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v6 compiles treatments into composition plans, risk selection, and cost evidence', () => {
+test('v7 compiles treatments into composition plans, risk selection, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);
@@ -121,13 +121,90 @@ test('v6 compiles treatments into composition plans, risk selection, and cost ev
     proofTimeId: 'proof-action',
     riskScore: 46,
     directingFingerprint: storyboard.scenes[0].directing.fingerprint,
+    sourceFamilyKey: 'target:subject',
+    coverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
   });
 
   const summary = summarizeStoryboard(storyboard);
   assert.equal(summary.sceneCount, 1);
   assert.equal(summary.scenes[0].treatmentCount, 3);
   assert.equal(summary.directing.estimatedPoseSheetCalls, 0);
-  assert.equal(summary.directing.styleProofTreatmentId, 'land-on-stage');
+  assert.equal(summary.directing.styleProofPlan.targets[0].treatmentId, 'land-on-stage');
+});
+
+test('style proof planning covers semantic, coupled, and state risks with the fewest source families', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[0].proofTimeId = 'proof-establish';
+  authored.scenes[0].beats[0].treatments = [{
+    id: 'butterfly-folded',
+    targetId: 'butterfly',
+    importance: 'hero',
+    necessity: 'required',
+    changeClass: 'pose-change',
+    motion: {kind: 'state-sequence', poseFamilyId: 'butterfly-flight', stateId: 'folded', visualChange: 'Wings folded', playback: 'once', transition: 'cut'},
+    composition: {pattern: 'supported-subject', relationship: {id: 'butterfly-on-flower', predicate: 'on', object: 'flower', proof: 'Butterfly remains registered to the flower'}},
+    graphic: null,
+    semanticRisk: 'topology',
+    proofTimeId: 'proof-establish',
+    rationale: 'The first registered state establishes the coupled family.',
+  }];
+  authored.scenes[0].beats[1].treatments = [{
+    ...authored.scenes[0].beats[0].treatments[0],
+    id: 'butterfly-open',
+    motion: {...authored.scenes[0].beats[0].treatments[0].motion, stateId: 'open', visualChange: 'Wings open'},
+    proofTimeId: 'proof-action',
+  }];
+  authored.scenes[0].beats[2].proofTimeId = 'proof-final';
+  authored.scenes[0].beats[2].treatments = [{
+    ...staticTreatment({id: 'diagram-lockup', targetId: 'diagram', proofTimeId: 'proof-final'}),
+    importance: 'hero',
+    semanticRisk: 'diagram',
+    rationale: 'The final diagram must remain readable.',
+  }];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
+  const stylePlan = storyboard.directingSummary.styleProofPlan;
+  assert.deepEqual(stylePlan.requiredCoverage, [
+    'motion:state-sequence',
+    'relationship:coupled',
+    'relationship:supported-subject',
+    'semantic:diagram',
+  ]);
+  assert.deepEqual(stylePlan.targets.map(({treatmentId}) => treatmentId), [
+    'butterfly-folded',
+    'diagram-lockup',
+  ]);
+  assert.deepEqual(stylePlan.sourceFamilyKeys, [
+    'pose-family:butterfly-flight',
+    'target:diagram',
+  ]);
+});
+
+test('style proof planning keeps one representative target for a low-risk free composition', () => {
+  const input = authoredStoryboard();
+  input.scenes[0].beats = input.scenes[0].beats.map((beat, index) => ({
+    ...beat,
+    treatments: [{
+      ...staticTreatment({
+        id: `quiet-${index}`,
+        targetId: index === 1 ? 'hero' : 'stage',
+        proofTimeId: beat.proofTimeId,
+      }),
+      importance: index === 1 ? 'hero' : 'supporting',
+    }],
+  }));
+  const storyboard = compileStoryboardDirecting(
+    input,
+    {plan: plan()},
+  );
+  assert.deepEqual(
+    storyboard.directingSummary.styleProofPlan.requiredCoverage,
+    ['baseline:representative'],
+  );
+  assert.equal(storyboard.directingSummary.styleProofPlan.targets.length, 1);
+  assert.equal(
+    storyboard.directingSummary.styleProofPlan.targets[0].coverage[0],
+    'baseline:representative',
+  );
 });
 
 test('compiled composition plans and fingerprints cannot drift from treatments', () => {
@@ -305,7 +382,7 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v6 storyboard audio beats require an approved event-level proof', () => {
+test('v7 storyboard audio beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
   storyboard.scenes[0].beats[1].proofTimeId = null;
   assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})

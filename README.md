@@ -69,7 +69,7 @@ Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于
 
 正常制作一条新视频时，人参与三个内容节点：
 
-1. 口述主题后，一次确认概念、Storyboard v6 导演节拍与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
+1. 口述主题后，一次确认概念、Storyboard v7 导演节拍与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、图片/动作预算和文本/生图/虚构语音 provider。
 2. 确认一张风格样张、短试听和必要时的 3–5 秒动作证明。
 3. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
@@ -142,7 +142,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v6 再把逐节拍导演 treatments 编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、风险排名和证明指纹，并为每对相邻镜头把叙事意图路由成不透明动画边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v2 解析时长、幕数、图片与动作预算，Storyboard v7 再把逐节拍导演 treatments 编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划和指纹，并为每对相邻镜头把叙事意图路由成不透明动画边界。人一次确认故事板、概念、预算和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -154,7 +154,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
 | `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
-| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v6 节拍 treatments、意图转场、可见性/组合/状态计划、风险与证明时刻 |
+| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v7 节拍 treatments、意图转场、多维风格证明、可见性/组合/状态计划与证明时刻 |
 | `npm run project:revise-preview-directing -- <slug> --input=<file>` | 在预览退回后保护概念/风格并按既定 motion budget 正式重编导演字段 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
@@ -165,8 +165,11 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run provider:select -- <slug> <capability> <provider-id>` | 记录人确认的 provider、作用域和宿主工具 |
 | `npm run provider:run -- --request=<file>` | 运行用户配置的命令适配器并登记资产来源 |
 | `npm run provider:record -- --request=<file>` | 登记宿主工具或手工导入的本地输出 |
+| `npm run provider:request -- validate --request=<file>` | 只读校验请求并输出规范 provider/model invocation |
+| `npm run provider:recover-record -- --request=<file> --attempt-id=<id>` | 从已计费成功但未落 manifest 的关闭尝试恢复一次登记 |
 | `npm run provider:reuse -- --request=<file>` | 按 provider/model/输入指纹复用哈希有效的已有资产 |
 | `npm run provider:attempt -- reserve --request=<file>` | 在宿主生图前原子预留一次批准额度并返回 attempt id |
+| `npm run provider:attempt -- summary --project=<slug>` | 只读汇总生成尝试与计费状态 |
 | `npm run project:handoff-check -- <slug>` | 旧客户端兼容检查；新 Skill 使用 `project:resume` 的 handoff 字段 |
 | `npm run project:checkpoint -- <slug> <id> <status>` | 记录地点、人物、旁白或质检批次的可恢复进度 |
 | `npm run project:asset-lifecycle -- <slug> --asset=<id> --status=<active|rejected|recovery-source> --reason=<原因>` | 保留溯源并明确资产是否进入当前质量分母 |
@@ -174,6 +177,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
 | `npm run project:composition-proof -- <slug> [--force]` | 按项目、资产与 runtime-build 指纹增量生成关系/语义证明；`--force` 显式禁用全部证明缓存 |
 | `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v7 校验、证明指纹与双质量门和阶段推进 |
+| `npm run project:audio-calibration -- <slug> propose` | 为当前旁白与时间线生成带指纹的响度校准草案 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |
 | `npm run project:subtitles -- <slug>` | 低层恢复命令：同步或生成字幕时间 |
 | `npm run project:quality -- <slug> record-batch --input=<file>` | 原子记录与哈希/组合指纹绑定的资产或组合语义检查 |
@@ -181,7 +185,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v7 组合生成 3–5 秒 schema-v5 样式证明；自由目标也有非空 composite，耦合目标另含逐成员 alpha/棋盘格/紧裁/stress 证据 |
+| `npm run style:proof -- <slug>` | 用真实 v7 组合生成覆盖语义、耦合关系与状态序列的 schema-v6 多目标样式证明 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
 | `npm run dev` | 在 Remotion Studio 中打开通用开发 composition |
@@ -207,7 +211,7 @@ Skill 不会只根据名称猜测能力存在：它先检查当前宿主的实�
 
 复制 `providers.local.example.json` 为 `providers.local.json`，即可把任意 CLI、SDK 包装脚本或私有 API 接到 `command` adapter。配置只保存 `requiredEnv` 的变量名，API key 仍放在环境变量中。异步服务由用户的 adapter 自行提交和轮询；稳定接口是“读取请求 JSON、写入指定输出、退出码为 0”。
 
-新图像请求使用 schema v3，同时声明组合绑定与语义风险。人物、复杂拓扑、功能机构和说明图先写入 `semantic-contracts.json`，再由 proof target 和证据型质量门验证；prompt 不作为验收依据。宿主生图先运行 `provider:attempt reserve`，命令 adapter 由 `provider:run` 自动预留。所有可能计费的成功、废稿、拒绝和放弃结果写入只追加账本，预算用尽时下一次调用被阻断。
+新图像请求使用 schema v6，同时声明组合绑定、语义风险和可验证输出面。人物、复杂拓扑、功能机构和说明图先写入 `semantic-contracts.json`，再由 proof target 和证据型质量门验证；prompt 不作为验收依据。宿主生图先只读校验请求，再运行 `provider:attempt reserve` 并使用返回的规范 invocation；命令 adapter 由 `provider:run` 自动预留。所有可能计费的成功、废稿、拒绝和放弃结果写入只追加账本，预算用尽时下一次调用被阻断。
 
 被接受的输出仍通过 `provider:run` 或 `provider:record` 写入 manifest v4，记录 provider、模型/任务 id、请求指纹、SHA-256、组合/语义绑定、母版/派生成员、源家族指纹和生命周期。替换记录保留为 `superseded`；`rejected` 与 `recovery-source` 保留审计但不进入当前质量分母。相同 provider、模型、输入、设置和完整绑定才允许 `provider:reuse`；图像仍需在当前项目通过质量检查。完整契约见 [Provider Configuration](skills/make-paper-collage-video/references/providers.md) 和 [Semantic Production Contracts](skills/make-paper-collage-video/references/semantic-contracts.md)。
 

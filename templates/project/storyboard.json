@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard-authoring.schema.json",
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "slug": "{{slug}}",
   "status": "pending",
   "arc": "",

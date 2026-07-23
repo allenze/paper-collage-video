@@ -120,6 +120,7 @@ test('preview rendering accepts a bounded explicit concurrency override', () => 
 test('generated-image budgets exclude deterministic derivatives and manual SVG assets', () => {
   const image = (method) => ({
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     request: {compositionBinding: {derivation: {method}}},
   });
   assert.equal(
@@ -242,7 +243,7 @@ test('command adapters write a local output and provenance records its hash', as
     );
     const recorded = await recordAssetProvenance({
       request: {
-        schemaVersion: 5,
+        schemaVersion: 6,
         projectSlug: slug,
         assetId: 'draft-script',
         capability: 'text',
@@ -289,7 +290,7 @@ test('voice outputs are measured and rejected before recording when scene timing
     ], {encoding: 'utf8'});
     assert.equal(generated.status, 0, generated.stderr);
     const base = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       projectSlug: 'voice-timing-test',
       assetId: 'scene-one-narration',
       capability: 'voice',
@@ -312,16 +313,17 @@ test('voice outputs are measured and rejected before recording when scene timing
   }
 });
 
-test('v5 image requests require complete composition and semantic bindings', () => {
+test('v6 image requests require complete composition and semantic bindings', () => {
   assert.throws(
-    () => validateAssetRequest({schemaVersion: 5, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
+    () => validateAssetRequest({schemaVersion: 6, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
     /compositionBinding/,
   );
   assert.doesNotThrow(() => validateAssetRequest({
-    schemaVersion: 5,
+    schemaVersion: 6,
     projectSlug: 'binding-test',
     assetId: 'water',
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     output: 'public/water.png',
     prompt: 'derive water from registered master',
     compositionBinding: {
@@ -331,6 +333,45 @@ test('v5 image requests require complete composition and semantic bindings', () 
     },
     semanticBinding: {riskClass: 'topology-critical', contractIds: ['river-topology']},
   }));
+});
+
+test('image output surfaces reject baked transparency and invalid chroma boundaries', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'provider-surface-'));
+  const opaque = path.join(directory, 'opaque.png');
+  const alpha = path.join(directory, 'alpha.png');
+  const request = {
+    schemaVersion: 6,
+    capability: 'image',
+    compositionBinding: {canvas: {width: 32, height: 32}},
+  };
+  try {
+    await sharp({
+      create: {width: 32, height: 32, channels: 3, background: '#cccccc'},
+    }).png().toFile(opaque);
+    await assert.rejects(
+      verifyOutputFile(opaque, {...request, outputSurface: {mode: 'alpha'}}),
+      /真实透明像素/,
+    );
+    await assert.rejects(
+      verifyOutputFile(opaque, {
+        ...request,
+        outputSurface: {mode: 'chroma-key', keyColor: '#00ff00', tolerance: 8},
+      }),
+      /可靠色键面/,
+    );
+    await sharp({
+      create: {width: 32, height: 32, channels: 4, background: '#cccccc00'},
+    }).png().toFile(alpha);
+    await assert.rejects(
+      verifyOutputFile(alpha, {...request, outputSurface: {mode: 'opaque'}}),
+      /声明 opaque/,
+    );
+    await assert.doesNotReject(
+      verifyOutputFile(alpha, {...request, outputSurface: {mode: 'alpha'}}),
+    );
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
+  }
 });
 
 test('bundled provider status is valid and defers host capability selection', () => {
@@ -395,7 +436,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 6);
+    assert.equal(storyboardTemplate.schemaVersion, 7);
     assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
@@ -556,7 +597,7 @@ test('new projects require a locked storyboard before concept approval', async (
     const compiledStoryboard = JSON.parse(
       await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
     );
-    assert.equal(compiledStoryboard.schemaVersion, 6);
+    assert.equal(compiledStoryboard.schemaVersion, 7);
     assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({type}) => type === 'paper-slide'));
 

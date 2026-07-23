@@ -10,7 +10,7 @@ import {
   readJson,
 } from './project-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
-import {selectStyleProofTarget} from './motion-treatment-lib.mjs';
+import {selectStyleProofTargets} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
 const REQUIRED_ASSET_EVIDENCE = ['alphaMask', 'checkerboard', 'tightCrop', 'motionStress'];
@@ -39,29 +39,32 @@ const assertReviewedEvidence = (entry, files, label) => {
 
 export const assertStyleProofReady = async (slug) => {
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
-  const directingTarget = selectStyleProofTarget(storyboard);
-  if (!directingTarget) return {required: false, ready: true, report: null, composites: []};
+  const directingTargets = selectStyleProofTargets(storyboard);
+  if (directingTargets.length === 0) return {required: false, ready: true, report: null, composites: []};
 
-  const targets = await collectStyleProofTargets(project, directingTarget);
+  const targetGroups = await Promise.all(directingTargets.map((target) => collectStyleProofTargets(project, target)));
+  const targets = [...new Map(targetGroups.flat().map((target) => [target.compositeId, target])).values()];
 
   const reportFile = styleProofReportPath(slug);
   if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
   const report = await readJson(reportFile);
-  if (report.schemaVersion !== 5 || report.scope !== 'style' || !Array.isArray(report.composites)) {
+  if (report.schemaVersion !== 6 || report.scope !== 'style' || !Array.isArray(report.composites)) {
     throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run style:proof。');
   }
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   if (
-    report.sceneId !== directingTarget.sceneId ||
-    report.directingTreatmentId !== directingTarget.treatmentId ||
-    report.directingTargetId !== directingTarget.targetId ||
-    report.directingProofTimeId !== directingTarget.proofTimeId ||
-    report.directingFingerprint !== directingTarget.directingFingerprint ||
+    report.planFingerprint !== storyboard.directingSummary.styleProofPlan.fingerprint ||
+    JSON.stringify(report.directingTargets) !== JSON.stringify(directingTargets) ||
     report.runtimeBuildFingerprint !== runtimeBuildFingerprint
   ) {
-    throw new Error('风格拓扑证明没有绑定当前最高风险导演 treatment；请重新运行 npm run style:proof。');
+    throw new Error('风格拓扑证明没有绑定当前多维风险覆盖计划；请重新运行 npm run style:proof。');
   }
-  await assertEvidenceFile(report.output, 'output');
+  if (!Array.isArray(report.outputs) || report.outputs.length === 0) {
+    throw new Error('风格拓扑证明缺少 outputs。');
+  }
+  for (const [index, output] of report.outputs.entries()) {
+    await assertEvidenceFile(output.file, `outputs[${index}].file`);
+  }
   await assertEvidenceFile(report.contactSheet, 'contactSheet');
 
   const targetById = new Map(targets.map((target) => [target.compositeId, target]));
@@ -80,7 +83,8 @@ export const assertStyleProofReady = async (slug) => {
     }
     const assetEvidence = report.assetEvidence ?? [];
     for (const nodeId of target.memberNodeIds ?? []) {
-      const evidence = assetEvidence.find((candidate) => candidate.nodeId === nodeId);
+      const evidence = assetEvidence.find((candidate) =>
+        candidate.sceneId === target.sceneId && candidate.nodeId === nodeId);
       if (!evidence) throw new Error(`${proof.compositeId} 缺少成员 ${nodeId} 的 alpha 证据。`);
       for (const field of REQUIRED_ASSET_EVIDENCE) await assertEvidenceFile(evidence[field], `${nodeId}.${field}`);
     }
@@ -98,7 +102,10 @@ export const assertStyleProofReady = async (slug) => {
     }
     const proof = report.composites.find(({compositeId}) => compositeId === target.compositeId);
     const compositeEvidence = (proof?.proofFrames ?? []).flatMap((frame) => REQUIRED_FRAME_EVIDENCE.map((field) => frame[field]));
-    const targetAssetEvidence = (report.assetEvidence ?? []).filter(({nodeId}) => target.memberNodeIds.includes(nodeId));
+    const targetAssetEvidence = (report.assetEvidence ?? []).filter(
+      ({sceneId, nodeId}) =>
+        sceneId === target.sceneId && target.memberNodeIds.includes(nodeId),
+    );
     compositeEvidence.push(...targetAssetEvidence.map(({motionStress}) => motionStress));
     if (composite) assertReviewedEvidence(composite, compositeEvidence, target.compositeId);
     for (const nodeId of target.memberNodeIds) {
@@ -126,9 +133,8 @@ export const assertStyleProofReady = async (slug) => {
     required: true,
     ready: true,
     report: reportFile,
-    sceneId: directingTarget.sceneId,
-    treatmentId: directingTarget.treatmentId,
-    targetId: directingTarget.targetId,
+    planFingerprint: storyboard.directingSummary.styleProofPlan.fingerprint,
+    targets: directingTargets,
     composites: provenTargets.map(({compositeId}) => compositeId),
   };
 };

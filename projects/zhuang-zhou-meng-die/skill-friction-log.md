@@ -494,3 +494,28 @@
 - 根因：新测试复用了现成生产数据，没有遵守“打包 runtime 独立于 production projects”的既有边界；package test 只确认测试文件被复制，没有执行安装缓存中的完整测试集。
 - 本次处理：新增自包含 `fixtures/directing-revision-fixture.mjs`，让源码与打包测试使用同一最小 plan/storyboard/production fixture；将该 fixture 纳入 `plugin:sync`，不把任何庄周项目内容打入插件。
 - 验收要求：安装缓存引导的全新工作区必须运行完整 `npm test`，不能只依赖源码测试和 starter 单项冒烟。
+
+## 0.14.0-dev.9 重新审计与正式处理
+
+- **正式关闭 F001/F002/F003/F004/F016。** Storyboard v7 由编译器生成多维 `styleProofPlan`，同时覆盖最高语义风险类别、每种具体 coupled relationship 与 state-sequence，并优先复用同一 source family；style gate 绑定完整目标列表和 plan fingerprint。语义契约可以在 runtime composition 尚未组装时绑定并验证已编译 storyboard 的 scene/node/proof，随后由 composition proof 对真实项目重新严格验证。diagram 的 asset 检查与 composite 可读性检查通过 evidence target `scope` 分离，避免把最终说明图文字职责错误压到无文字栅格母版。
+- **正式关闭 F017/F019/F026/F027/F030。** Image request v6 必须声明 `outputSurface`，登记时验证真实 alpha、opaque 或 chroma-key 边界，明确拒绝烘焙棋盘格和假透明。Provider 配置可声明 connector-facing provider/model 映射与回报 alias；reserve 返回带指纹的 canonical invocation，record 从 attempt 继承 provider/model。新增只读 `provider:attempt summary` 和 `provider:request validate`。新增 `provider:recover-record`，只允许把同 request/provider/output 的已计费 `succeeded` attempt 恢复为恰好一条 manifest 记录，不重复计费。
+- **正式关闭 F044。** 旁白同步后的 `project:assets-ready` 现在先运行 audio calibration：通过则直接继续，失败则写出包含素材/时间线指纹的校准草案并给出精确 accept 命令。接受动作必须携带匹配指纹和人的明确 note，更新项目旁白音量并重新预检；素材或时间线变化使旧决定失效。最终成片 report 的实测响度仍是权威结果。
+- **部分改善 F005/F006/F018/F022/F025。** request validate、canonical invocation、完整 request fingerprint、attempt 继承与 output surface 把仓库内可控制的交接契约固定下来；但宿主工具能否直接写入请求路径、严格执行目标画布、以及调用前强制经过 reserve，仍取决于 connector/host 是否消费该 invocation。composition/semantic/outputSurface 仍是显式契约，不把创作语义隐式猜成字段。
+- **外部限制，仓库不能单独关闭 F007/F028/F029。** ChatCut 是否返回本地文件，以及 Browser download event 是否可靠，属于 connector/host 输出能力；runtime 只能在文件已经进入工作区后验证、登记和恢复，不能伪造 connector 成功。
+- **继续保留后续候选 F031/F034/F035/F037/F057。** 本轮没有把项目专用脚本、临时处理或外部绕行记为正式修复。
+
+## F059：本地插件升级在 Codex 权限审批层被不支持的 model 阻断
+
+- 阶段：`0.14.0-dev.9` 源码/打包验证完成后，升级实际安装缓存。
+- 实际错误：对明确目标 `paper-collage-video@paper-collage-video` 执行正式 remove/re-add 流程时，权限审批返回 `This model is not supported when using X-OpenAI-Internal-Codex-Responses-Lite`，命令没有执行。
+- 已确认状态：源码与打包副本均为 `0.14.0-dev.9`，runtime fingerprint 均为 `4cc079edfc6e0534ca7d7e8eaa47fcfcfd67c70150ed1284f1deec7745b014e8`；实际安装缓存仍安全地保留在 `0.14.0-dev.8` / `7ebf3b3357a59270073cfb025c40f8852560ed6600ab1b8f3bba764d6a14c025`，没有发生半卸载。
+- 后续结果：人在知晓“remove 后若 re-add 再失败会暂时没有已安装插件”的风险后再次明确授权；新任务状态随后显示宿主已经完成 dev.9 安装刷新，registry、安装缓存、Skill 与 runtime fingerprint 均一致，因此没有再执行多余的 remove。没有直接复制缓存文件绕过插件管理。
+- 再次出现：dev.9 的真实 Style Proof 冒烟发现 F060 并产出 dev.10 后，即使人在上一回合已经按要求明确接受 remove/re-add 风险，正式 `codex plugin remove paper-collage-video@paper-collage-video --json` 仍被同一个审批服务 model 错误拒绝。dev.9 安装继续完整保留；按安全规则没有改用缓存复制、其他插件管理接口或间接命令绕过拒绝。
+
+## F060：多维 Style Proof 计划在全装饰性 `free` 项目中变成空计划
+
+- 阶段：`0.14.0-dev.9` 实际安装缓存 / 全新工作区真实 `style:proof` 冒烟。
+- 实际错误：`style:proof failed: 故事板没有可用于风格运动样片的风险覆盖计划。`
+- 根因：新编译器只把最高非装饰语义风险、coupled relationship 与 state-sequence 加入 required coverage；starter 只有 decorative/free 的静态与显隐 treatments，因此 `requiredCoverage=[]`、`targets=[]`。单元测试覆盖了高风险组合，却没有覆盖“低风险影片仍必须有代表性风格目标”。
+- 本次处理：当多维 coverage 为空时，编译器增加 `baseline:representative`，按既有风险分数和稳定顺序选一个 hero/required 代表目标；新增低风险 free composition 回归测试，并把 starter 真实 Style Proof 纳入安装缓存冒烟。
+- 版本：dev.9 已经产生过可安装但真实样式证明不可运行的包，因此修复提升为 `0.14.0-dev.10`，不在同版本号下静默替换 runtime。

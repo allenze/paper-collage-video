@@ -23,7 +23,7 @@ A treatment has orthogonal dimensions. Motion (`static`, continuous transform, s
 
 ## Author Intent, Compile Execution
 
-Storyboard v6 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
+Storyboard v7 input owns `beats[].treatments[]`. It does not own `compositionPlan`, `directing`, sheet layouts, style-proof planning, risk ranking, or fingerprints. `project:storyboard` compiles those fields and rejects hand-authored derived values.
 
 Every treatment declares:
 
@@ -86,6 +86,6 @@ Legal motivated overrides are `paper-slide`, `paper-wipe`, or `torn-wipe` for sp
 
 ## Proof and Review
 
-The compiler ranks treatments by semantic risk, discrete-state complexity, composition coupling, importance, and necessity. `style:proof` renders the highest-risk scene/treatment and binds the report to its directing fingerprint. A changed treatment invalidates the proof even if the scene id stays the same.
+The compiler ranks treatments by semantic risk, discrete-state complexity, composition coupling, importance, and necessity, then compiles a `styleProofPlan`. The plan requires coverage for the highest semantic-risk classes, each concrete coupled relationship, and state-sequence behavior, and greedily reuses one source family where it can prove multiple facets. If a film has no such high-risk facet, the highest-ranked treatment becomes one `baseline:representative` target so the style gate never becomes empty. `style:proof` renders every selected target and binds the report to the plan fingerprint. A changed treatment invalidates the plan even if the scene id stays the same.
 
 Final reports state the number of pose-sheet provider calls, deterministic state derivatives, and isolated calls avoided. Savings count only when provenance proves that one provider result produced multiple local derivatives.

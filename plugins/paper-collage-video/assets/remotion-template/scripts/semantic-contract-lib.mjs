@@ -44,14 +44,14 @@ export const SEMANTIC_CHECKS_BY_RISK = {
   'identity-critical': ['identity-family-consistent'],
   'topology-critical': SEMANTIC_CHECKS_BY_KIND.topology,
   'mechanism-critical': SEMANTIC_CHECKS_BY_KIND.mechanism,
-  'diagram-critical': SEMANTIC_CHECKS_BY_KIND.diagram,
+  'diagram-critical': ['diagram-edge-clean'],
 };
 
 export const SEMANTIC_ASSET_CHECKS_BY_KIND = {
   identity: ['identity-family-consistent'],
   topology: SEMANTIC_CHECKS_BY_KIND.topology,
   mechanism: SEMANTIC_CHECKS_BY_KIND.mechanism,
-  diagram: SEMANTIC_CHECKS_BY_KIND.diagram,
+  diagram: ['diagram-edge-clean'],
 };
 
 export const CONTRACT_KIND_BY_RISK = {
@@ -173,6 +173,9 @@ export const validateSemanticContracts = (document, {projectSlug = null} = {}) =
         targetIds.add(target.id);
       }
       const allowedChecks = SEMANTIC_CHECKS_BY_KIND[contract.kind];
+      if (target?.scope !== undefined && !['asset', 'composite'].includes(target.scope)) {
+        add('evidence-scope', 'scope 必须是 asset 或 composite。', `${targetBase}.scope`);
+      }
       if (
         !Array.isArray(target?.checks) ||
         target.checks.length === 0 ||
@@ -382,9 +385,10 @@ export const validateSemanticContracts = (document, {projectSlug = null} = {}) =
   return issues;
 };
 
-export const validateSemanticEvidenceTargets = (document, project) => {
+export const validateSemanticEvidenceTargets = (document, project, {storyboard = null, allowPlanned = false} = {}) => {
   const issues = [];
   const scenes = new Map((project?.scenes ?? []).map((scene) => [scene.id, scene]));
+  const plannedScenes = new Map((storyboard?.scenes ?? []).map((scene) => [scene.id, scene]));
   const nodeIds = (nodes, result = new Set()) => {
     for (const node of nodes ?? []) {
       result.add(node.id);
@@ -397,14 +401,27 @@ export const validateSemanticEvidenceTargets = (document, project) => {
       for (const shot of target.shots ?? []) {
         const location = `${contract.id}/${target.id}/${shot.sceneId}`;
         const scene = scenes.get(shot.sceneId);
+        const plannedScene = plannedScenes.get(shot.sceneId);
         if (!scene) {
-          issues.push(`${location}: 未知场景。`);
-          continue;
+          if (!allowPlanned || !plannedScene) {
+            issues.push(`${location}: 未知场景。`);
+            continue;
+          }
         }
-        if (shot.nodeId && !nodeIds(scene.composition?.nodes).has(shot.nodeId)) {
+        const plannedNodeIds = new Set((plannedScene?.beats ?? []).flatMap(({treatments}) =>
+          (treatments ?? []).map(({targetId}) => targetId),
+        ));
+        if (
+          shot.nodeId &&
+          !nodeIds(scene?.composition?.nodes).has(shot.nodeId) &&
+          (!allowPlanned || !plannedNodeIds.has(shot.nodeId))
+        ) {
           issues.push(`${location}: 未知节点 ${shot.nodeId}。`);
         }
-        const proofIds = new Set((scene.motion?.proofTimes ?? []).map(({id}) => id));
+        const proofIds = new Set([
+          ...(scene?.motion?.proofTimes ?? []).map(({id}) => id),
+          ...(allowPlanned ? (plannedScene?.proofTimes ?? []).map(({id}) => id) : []),
+        ]);
         const missingProofs = shot.proofTimeIds.filter((id) => !proofIds.has(id));
         if (missingProofs.length) {
           issues.push(`${location}: 未知 proofTimeId ${missingProofs.join(', ')}。`);
@@ -451,7 +468,12 @@ export const assertSemanticContractsReady = async (slug) => {
 export const requiredChecksForSemanticBinding = (binding, contracts = []) =>
   [...new Set([
     ...(SEMANTIC_CHECKS_BY_RISK[binding?.riskClass] ?? []),
-    ...contracts.flatMap(({kind}) => SEMANTIC_ASSET_CHECKS_BY_KIND[kind] ?? []),
+    ...contracts.flatMap((contract) => [
+      ...(SEMANTIC_ASSET_CHECKS_BY_KIND[contract.kind] ?? []),
+      ...(contract.evidenceTargets ?? [])
+        .filter(({scope}) => scope === 'asset')
+        .flatMap(({checks}) => checks ?? []),
+    ]),
   ])];
 
 export const assertRequestSemanticContracts = async (request) => {

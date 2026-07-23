@@ -19,10 +19,11 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const sheetRequest = () => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   projectSlug: 'fixture-project',
   assetId: 'reader-state-sheet',
   capability: 'image',
+  outputSurface: {mode: 'opaque'},
   output: 'public/projects/fixture-project/assets/reader-state-sheet.png',
   prompt: 'A registered 2x2 pose sheet on a uniform chroma background.',
   compositionBinding: {

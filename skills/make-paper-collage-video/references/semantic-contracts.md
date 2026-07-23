@@ -4,7 +4,7 @@ Read this before generating recurring characters, articulated subjects, function
 
 ## Classify Risk Before Generation
 
-Use one dominant `semanticBinding.riskClass` per schema-v5 image request, then bind every additional applicable contract in `contractIds`. The runtime unions the asset checks from all bound contract kinds. If any bound contract is `identity`, declare `generationFamily` even when identity is not the dominant risk.
+Use one dominant `semanticBinding.riskClass` per schema-v6 image request, then bind every additional applicable contract in `contractIds`. The runtime unions only contract checks that are meaningful on the source asset; an evidence target with `"scope": "composite"` remains mandatory at composition proof without incorrectly failing the raster source. Use `"scope": "asset"` only for checks that must hold on the original file. If any bound contract is `identity`, declare `generationFamily` even when identity is not the dominant risk.
 
 `decorative` is valid only when `contractIds` is empty. If a plate contains a named subject, meaningful negative space, a working mechanism, or an explanatory diagram, classify it by the dominant critical risk instead of calling the whole plate decorative.
 
@@ -26,7 +26,7 @@ Write a project-local input, then validate and lock it without adding a human ga
 npm run project:semantic-contracts -- <slug> --input=projects/<slug>/semantic-contracts-input.json
 ```
 
-Every contract needs invariants plus one or more `evidenceTargets`. Each evidence target names the exact scene/node/proof ids and the semantic checks that must be reviewed. Cross-scene identity continuity must include shots from at least two scenes.
+Every contract needs invariants plus one or more `evidenceTargets`. Each evidence target names the exact scene/node/proof ids and the semantic checks that must be reviewed. Targets may bind compiler-validated storyboard scenes/nodes/proof ids before runtime composition exists; composition proof later revalidates them against the assembled project. Cross-scene identity continuity must include shots from at least two scenes.
 
 Topology, mechanism, and diagram contracts must cover every check defined for their kind across their evidence targets. Every `coexistenceSet` scene must have an `identity-distinct-within-frame` target shot; a character list without same-frame proof is not sufficient.
 
@@ -145,7 +145,7 @@ Name the required visible parts and negative spaces of articulated or internally
 - `negative-space-clean`
 - `background-leak-free`
 
-Continue to use `supported-subject` or `registered-environment` when layers touch or share boundaries; the topology contract does not replace v5 registration and source-master rules. Do not invent synonymous check names because the quality recorder rejects unknown enums.
+Continue to use `supported-subject` or `registered-environment` when layers touch or share boundaries; the topology contract does not replace registration and source-master rules. Do not invent synonymous check names because the quality recorder rejects unknown enums.
 
 ## Evidence Rules
 

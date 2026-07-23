@@ -413,8 +413,7 @@ try {
     directing: {
       fingerprint: storyboard.directingSummary.fingerprint,
       productionProfile: storyboard.directingSummary.profile,
-      styleProofSceneId: storyboard.directingSummary.styleProofSceneId,
-      styleProofTreatmentId: storyboard.directingSummary.styleProofTreatmentId,
+      styleProofPlan: storyboard.directingSummary.styleProofPlan,
       poseSheetPlans: storyboard.directingSummary.poseSheetPlans,
       plannedPoseSheetCalls: storyboard.directingSummary.estimatedPoseSheetCalls,
       plannedAvoidedIsolatedStateCalls: storyboard.directingSummary.avoidedIsolatedStateCalls,

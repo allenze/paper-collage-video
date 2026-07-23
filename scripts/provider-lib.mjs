@@ -14,6 +14,7 @@ import {
   requiredChecksForSemanticBinding,
 } from './semantic-contract-lib.mjs';
 import {
+  assertRecoverableGenerationAttempt,
   assertReservedGenerationAttempt,
   closeGenerationAttempt,
   generationAttemptsPath,
@@ -90,6 +91,8 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     stateSheetBinding: request.stateSheetBinding ?? null,
     stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
     semanticBinding: request.semanticBinding ?? null,
+    timingBinding: request.timingBinding ?? null,
+    outputSurface: request.outputSurface ?? null,
     providerId,
   };
   return createHash('sha256')
@@ -199,6 +202,28 @@ export const validateProviderConfig = (config) => {
       ) {
         add('error', 'provider-env', 'requiredEnv 只能包含环境变量名。', `${location}.requiredEnv`);
       }
+      if (provider?.invocation !== undefined) {
+        const invocation = provider.invocation;
+        if (
+          !isPlainObject(invocation) ||
+          ['providerValue', 'modelValue'].some(
+            (key) => invocation[key] !== undefined &&
+              (typeof invocation[key] !== 'string' || !invocation[key].trim()),
+          ) ||
+          (invocation.reportedModelAliases !== undefined &&
+            (!Array.isArray(invocation.reportedModelAliases) ||
+              invocation.reportedModelAliases.some(
+                (alias) => typeof alias !== 'string' || !alias.trim(),
+              )))
+        ) {
+          add(
+            'error',
+            'provider-invocation',
+            'invocation 的 provider/model 映射和 reportedModelAliases 必须是非空字符串。',
+            `${location}.invocation`,
+          );
+        }
+      }
       if (provider?.adapter === 'command') {
         if (!provider.command?.executable || !Array.isArray(provider.command?.args)) {
           add(
@@ -288,6 +313,40 @@ export const resolveConfirmedProvider = (
     );
   }
   return provider;
+};
+
+export const buildProviderInvocation = ({request, provider, attemptId = null, model = null}) => {
+  const actualModel =
+    model ?? request.model ?? provider.invocation?.modelValue ?? provider.model ?? null;
+  const invocation = {
+    adapter: provider.adapter,
+    tool: provider.tool ?? null,
+    provider: provider.invocation?.providerValue ?? provider.id,
+    model: actualModel,
+    capability: request.capability,
+    prompt: request.prompt ?? null,
+    text: request.text ?? null,
+    voiceId: request.voiceId ?? null,
+    settings: request.settings ?? {},
+    outputSurface: request.outputSurface ?? null,
+    attemptId,
+  };
+  return {
+    ...invocation,
+    fingerprint: createHash('sha256')
+      .update(JSON.stringify(stableValue(invocation)))
+      .digest('hex'),
+  };
+};
+
+export const normalizeReportedModel = ({provider, model}) => {
+  const aliases = new Set(provider.invocation?.reportedModelAliases ?? []);
+  const configured = provider.invocation?.modelValue ?? provider.model ?? null;
+  if (!configured) return model ?? null;
+  if (!model || model === configured || aliases.has(model)) return configured ?? model ?? null;
+  throw new Error(
+    `provider 回报的 model ${model} 未映射到已确认配置 ${configured ?? '(none)'}。`,
+  );
 };
 
 export const assertProviderSelections = (loaded) => {
@@ -595,7 +654,7 @@ export const inspectStateSheetRecoveryMask = async ({maskFile, stateSheetBinding
 
 export const validateAssetRequest = (request) => {
   const errors = [];
-  if (request?.schemaVersion !== 5) errors.push('schemaVersion 必须为 5');
+  if (request?.schemaVersion !== 6) errors.push('schemaVersion 必须为 6');
   if (!SLUG_PATTERN.test(request?.projectSlug ?? '')) errors.push('projectSlug 格式无效');
   if (!SLUG_PATTERN.test(request?.assetId ?? '')) errors.push('assetId 格式无效');
   if (!PROVIDER_CAPABILITIES.includes(request?.capability)) errors.push('capability 必须是 text、image 或 voice');
@@ -606,7 +665,26 @@ export const validateAssetRequest = (request) => {
     errors.push('image request 缺少 compositionBinding');
   }
   if (request?.capability === 'image' && !isPlainObject(request.semanticBinding)) {
-    errors.push('schema-v5 image request 缺少 semanticBinding');
+    errors.push('schema-v6 image request 缺少 semanticBinding');
+  }
+  if (request?.capability === 'image') {
+    const surface = request.outputSurface;
+    if (!isPlainObject(surface) || !['alpha', 'chroma-key', 'opaque'].includes(surface.mode)) {
+      errors.push('schema-v6 image request 缺少有效 outputSurface');
+    } else {
+      if (
+        surface.mode === 'chroma-key' &&
+        (typeof surface.keyColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(surface.keyColor))
+      ) {
+        errors.push('chroma-key outputSurface 必须声明 #RRGGBB keyColor');
+      }
+      if (
+        surface.tolerance !== undefined &&
+        (!Number.isInteger(surface.tolerance) || surface.tolerance < 0 || surface.tolerance > 255)
+      ) {
+        errors.push('outputSurface.tolerance 必须是 0–255 的整数');
+      }
+    }
   }
   if (request?.capability === 'voice' && !request.text) errors.push('voice request 缺少 text');
   if (request?.timingBinding !== undefined) {
@@ -856,6 +934,50 @@ export const verifyOutputFile = async (file, request = null) => {
         );
       }
     }
+    const surface = request.outputSurface;
+    if (surface?.mode === 'alpha') {
+      const pixels = await sharp(file).ensureAlpha().raw().toBuffer({resolveWithObject: true});
+      const alphaOffset = pixels.info.channels - 1;
+      let transparentPixels = 0;
+      for (let offset = alphaOffset; offset < pixels.data.length; offset += pixels.info.channels) {
+        if (pixels.data[offset] < 250) transparentPixels += 1;
+      }
+      if (!metadata.hasAlpha || transparentPixels === 0) {
+        throw new Error(
+          'provider 图像未提供真实透明像素；alpha 输出不能是烘焙棋盘格或全不透明图。',
+        );
+      }
+    } else if (surface?.mode === 'opaque' && metadata.hasAlpha) {
+      const pixels = await sharp(file).ensureAlpha().raw().toBuffer({resolveWithObject: true});
+      const alphaOffset = pixels.info.channels - 1;
+      for (let offset = alphaOffset; offset < pixels.data.length; offset += pixels.info.channels) {
+        if (pixels.data[offset] !== 255) {
+          throw new Error('provider 图像声明 opaque，但输出含透明或半透明像素。');
+        }
+      }
+    } else if (surface?.mode === 'chroma-key') {
+      const pixels = await sharp(file).removeAlpha().raw().toBuffer({resolveWithObject: true});
+      const rgb = surface.keyColor.slice(1).match(/.{2}/g).map((part) => Number.parseInt(part, 16));
+      const tolerance = surface.tolerance ?? 24;
+      const {width, height, channels} = pixels.info;
+      const boundary = [];
+      for (let x = 0; x < width; x += 1) {
+        boundary.push([x, 0], [x, height - 1]);
+      }
+      for (let y = 1; y < height - 1; y += 1) {
+        boundary.push([0, y], [width - 1, y]);
+      }
+      const matches = boundary.filter(([x, y]) => {
+        const offset = (y * width + x) * channels;
+        return rgb.every((value, channel) =>
+          Math.abs(pixels.data[offset + channel] - value) <= tolerance);
+      }).length;
+      if (matches / boundary.length < 0.8) {
+        throw new Error(
+          `provider 图像边界未形成可靠色键面：仅 ${matches}/${boundary.length} 像素匹配 ${surface.keyColor}。`,
+        );
+      }
+    }
   } else if (request?.capability === 'voice') {
     const probe = await probeMedia(file).catch(() => null);
     const audio = probe?.streams?.find(({codec_type: type}) => type === 'audio');
@@ -893,12 +1015,13 @@ export const recordAssetProvenance = async ({
   externalId = null,
   reusedFrom = null,
   attemptId = null,
+  recoverClosedAttempt = false,
 }) => {
   const trackedAttempt =
     request.schemaVersion >= 3 &&
     isQuotaConsumingImageRequest(request) &&
     !reusedFrom;
-  if (trackedAttempt) {
+  if (trackedAttempt && !recoverClosedAttempt) {
     await assertReservedGenerationAttempt({request, provider, attemptId});
   }
   let stat;
@@ -908,7 +1031,7 @@ export const recordAssetProvenance = async ({
     ({stat, metadata} = await verifyOutputFile(output, request));
     sha256 = createHash('sha256').update(await fs.readFile(output)).digest('hex');
   } catch (error) {
-    if (trackedAttempt) {
+    if (trackedAttempt && !recoverClosedAttempt) {
       await closeGenerationAttempt({
         slug: request.projectSlug,
         attemptId,
@@ -932,6 +1055,21 @@ export const recordAssetProvenance = async ({
           assets: [],
         };
     assertAssetManifest(manifest, request.projectSlug);
+    if (
+      recoverClosedAttempt &&
+      manifest.assets.some((asset) => asset.attemptId === attemptId)
+    ) {
+      throw new Error(`生成尝试 ${attemptId} 已经存在资产登记，不能重复恢复。`);
+    }
+    if (recoverClosedAttempt) {
+      await assertRecoverableGenerationAttempt({
+        request,
+        provider,
+        attemptId,
+        output: path.relative(ROOT, output),
+        outputSha256: sha256,
+      });
+    }
     const actualModel = model || request.model || provider.model || null;
     const recordedAt = new Date().toISOString();
     const requestFingerprint = createRequestFingerprint({
@@ -955,6 +1093,7 @@ export const recordAssetProvenance = async ({
       model: actualModel,
       externalId: externalId || null,
       attemptId,
+      recoveredFromClosedAttempt: recoverClosedAttempt,
       requestFingerprint,
       reusedFrom,
       sha256,
@@ -1016,7 +1155,7 @@ export const recordAssetProvenance = async ({
     }
     await writeJson(manifestFile, manifest);
   } catch (error) {
-    if (trackedAttempt) {
+    if (trackedAttempt && !recoverClosedAttempt) {
       await closeGenerationAttempt({
         slug: request.projectSlug,
         attemptId,
@@ -1029,7 +1168,7 @@ export const recordAssetProvenance = async ({
     }
     throw error;
   }
-  if (trackedAttempt) {
+  if (trackedAttempt && !recoverClosedAttempt) {
     await closeGenerationAttempt({
       slug: request.projectSlug,
       attemptId,

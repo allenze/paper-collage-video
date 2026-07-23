@@ -18,19 +18,20 @@ Use `provider:select` only for an isolated change or fallback. A provider switch
 | `command` | User CLI/wrapper/private adapter | `provider:run` executes without a shell and records success |
 | `manual` | Authorized supplied or deterministic local asset | Copy/derive output, then `provider:record` |
 
-## Schema-v5 Image Requests and Reuse
+## Schema-v6 Image Requests and Reuse
 
-Every new image request uses schema v5 and requires both `compositionBinding` and `semanticBinding`. A free asset names its scene/node/role/canvas. A coupled asset also names the common registration and source master. Critical content binds a ready project semantic contract. Older request schemas are rejected rather than migrated.
+Every new image request uses schema v6 and requires `compositionBinding`, `semanticBinding`, and an explicit `outputSurface`. Use `alpha` only when the file must contain real transparent pixels, `chroma-key` with a declared edge key color, or `opaque` for a fully opaque plate. Registration rejects baked checkerboards, false alpha, unexpected transparency, and unreliable chroma boundaries. A free asset names its scene/node/role/canvas. A coupled asset also names the common registration and source master. Critical content binds a ready project semantic contract. Older request schemas are rejected rather than migrated.
 
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "projectSlug": "example",
   "assetId": "boat-front",
   "capability": "image",
   "output": "public/projects/example/assets/boat/front.png",
   "prompt": "Extract the front gunwale from the approved registered master",
+  "outputSurface": {"mode": "alpha"},
   "compositionBinding": {
     "sceneId": "scene-01",
     "nodeId": "boat-front",
@@ -57,7 +58,7 @@ Do not make independent text-to-image calls for registered members. For two or m
 For recovery, follow this order:
 
 1. rerun local splitting/keying when no new pixels are needed;
-2. create a schema-v5 `masked-sheet-edit` request that names the complete recorded sheet as `stateSheetRecoveryBinding.sourceSheetAssetId`, uses the same id as `compositionBinding.derivation.parentAssetId`, includes it in `generationFamily.referenceAssetIds`, supplies a full-canvas `maskAssetId`, and names only the failed `targetStateIds`;
+2. create a schema-v6 `masked-sheet-edit` request that names the complete recorded sheet as `stateSheetRecoveryBinding.sourceSheetAssetId`, uses the same id as `compositionBinding.derivation.parentAssetId`, includes it in `generationFamily.referenceAssetIds`, supplies a full-canvas `maskAssetId`, and names only the failed `targetStateIds`;
 3. if untargeted cells cannot remain unchanged, create a `full-sheet-regeneration` request whose target ids equal every member of the state sheet.
 
 The validator rejects a provider-generation/edit request for one `stateBinding` when its generation family contains multiple states. A masked edit also requires `identity-family-consistent`, `cell-separation`, `reference-conformant`, and `untargeted-cells-unchanged`; quality preparation compares untargeted source and result pixels. This is context-preserving regional repair, not isolated cell generation.
@@ -66,12 +67,15 @@ Reuse requires the whole composition binding to match, so an unrelated water ima
 
 ```bash
 npm run provider:reuse -- --request=projects/<slug>/requests/<asset>.json
+npm run provider:request -- validate --request=projects/<slug>/requests/<asset>.json --json
 npm run provider:attempt -- reserve --request=projects/<slug>/requests/<asset>.json --provider=<id> --json
+npm run provider:attempt -- summary --project=<slug> --json
 npm run provider:run -- --request=projects/<slug>/requests/<asset>.json --provider=<id>
-npm run provider:record -- --request=projects/<slug>/requests/<asset>.json --provider=<id> --model=<model> --attempt-id=<attemptId>
+npm run provider:record -- --request=projects/<slug>/requests/<asset>.json --attempt-id=<attemptId>
+npm run provider:recover-record -- --request=projects/<slug>/requests/<asset>.json --attempt-id=<closedSucceededAttemptId>
 ```
 
-Try exact reuse before reserving an attempt. `provider:run` reserves automatically; a host tool call must use the explicit reserve command first. If a host result is abandoned instead of recorded, close it with `provider:attempt close` and state whether quota was consumed. Never delete or rewrite `generation-attempts.jsonl`.
+Try exact reuse before reserving an attempt. Validate the request first. `provider:attempt reserve --json` returns the canonical provider/model invocation mapping plus its fingerprint, so the host handoff does not need to guess connector ids. `provider:record` inherits provider/model from the attempt and rejects conflicting overrides. `provider:run` reserves automatically; a host tool call must use the explicit reserve command first. If a host result is abandoned instead of recorded, close it with `provider:attempt close` and state whether quota was consumed. When the ledger already says `succeeded` but manifest recording was interrupted, `provider:recover-record` verifies request/output identity and creates exactly one provenance record without consuming quota twice. Never delete or rewrite `generation-attempts.jsonl`.
 
 The manifest owns accepted asset provenance. The append-only attempt ledger owns real generation usage, including rejected and abandoned results. Production scheduling stays in `production.json`.
 

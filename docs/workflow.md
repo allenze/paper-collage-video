@@ -43,11 +43,11 @@ capability-review
 
 `project:plan --json` 会针对当前幕数返回三个档位的准确生图尝试上限、姿态母版调用/格数、连续动效目标上限、成片影响和时长权威。首次规划时同时传入时长、幕数等写入参数；已有已解析计划时，只传 slug 与 `--json` 即可只读重显选项而不改写项目。概念确认卡与“修改后再继续”路径都直接显示这些结构化选项；批准文件用 `planDecision` 回填档位、时长、幕数和 `human-target` / `content-derived`，避免自然语言备注与机器计划漂移。
 
-计划完成后，Codex 先为每个节拍判断可见变化，并用 `project:storyboard` 锁定 schema-v6 `treatments` 与相邻场景边界。边界先声明 `continuity`、地点变化、时间流逝、焦点揭示、章节重置或冲击剪辑意图，编译器再路由注册纸张动画；只有 `impact-cut` 能生成硬切。动作、持久显隐、组合关系、图形机制和语义风险是正交维度：姿态/道具状态变化路由到 `state-sequence`，环境呼吸和镜头变化路由到连续变换，show/hide 路由到持久可见性事件，接触与共享边界分别路由到注册组合，问号/圆圈/箭头路由到可编辑图形。命令确定性编译 `compositionPlan`、风险排名、姿态母版网格、成本摘要、转场 recipe 和指纹；输入不能手写其他派生字段。每个节拍显式声明 proof 绑定或 null；必需动作超出档位时阻断并要求提高档位或缩小故事范围，不会偷偷降级为位移。它不增加审批次数，而是与叙事、事实、制作档位/预算和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入 provider 选择并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
+计划完成后，Codex 先为每个节拍判断可见变化，并用 `project:storyboard` 锁定 schema-v7 `treatments` 与相邻场景边界。边界先声明 `continuity`、地点变化、时间流逝、焦点揭示、章节重置或冲击剪辑意图，编译器再路由注册纸张动画；只有 `impact-cut` 能生成硬切。动作、持久显隐、组合关系、图形机制和语义风险是正交维度：姿态/道具状态变化路由到 `state-sequence`，环境呼吸和镜头变化路由到连续变换，show/hide 路由到持久可见性事件，接触与共享边界分别路由到注册组合，问号/圆圈/箭头路由到可编辑图形。命令确定性编译 `compositionPlan`、多维风格证明计划、姿态母版网格、成本摘要、转场 recipe 和指纹；输入不能手写其他派生字段。每个节拍显式声明 proof 绑定或 null；必需动作超出档位时阻断并要求提高档位或缩小故事范围，不会偷偷降级为位移。它不增加审批次数，而是与叙事、事实、制作档位/预算和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入 provider 选择并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
 
 ## 2. 风格与虚构音色确认
 
-只生成一张代表性样张和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。`style:proof` 自动选择编译器排名最高的风险 treatment，渲染一段 3–5 秒真实 v7 组合 proof，并绑定导演指纹；不再默认取第一个可用镜头。schema-v5 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite，可直接作为匹配质量目标的当前证据；耦合证明包还包含原分辨率关系裁切、逐成员 alpha、棋盘格孤立图、紧裁图和相对位移 stress sheet。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明，但不会增加第四个人工等待节点。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
+只生成编译器多维 `styleProofPlan` 所需的最少母版家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。`style:proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一母版证明多种风险；它渲染 3–5 秒真实 v7 组合 proof，绑定完整目标清单和计划指纹。schema-v6 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite；耦合证明包还包含原分辨率关系裁切、逐成员 alpha、棋盘格孤立图、紧裁图和相对位移 stress sheet。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明，但不会增加第四个人工等待节点。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
 
 ## 3. 批量生产与质量门
 

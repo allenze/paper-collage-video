@@ -2,13 +2,16 @@
 import path from 'node:path';
 import {
   assertProviderConfig,
+  buildProviderInvocation,
   loadAssetRequest,
   loadProviderConfig,
   resolveConfirmedProvider,
 } from './provider-lib.mjs';
 import {
   closeGenerationAttempt,
+  readGenerationAttemptEvents,
   reserveGenerationAttempt,
+  summarizeGenerationAttempts,
 } from './generation-attempt-lib.mjs';
 import {ROOT} from './project-lib.mjs';
 
@@ -42,11 +45,39 @@ try {
       model: valueFor('--model'),
     });
     if (args.includes('--json')) {
-      console.log(JSON.stringify({attemptId: result.event.attemptId, budget: result.budget}, null, 2));
+      console.log(JSON.stringify({
+        attemptId: result.event.attemptId,
+        budget: result.budget,
+        invocation: buildProviderInvocation({
+          request: loadedRequest.request,
+          provider,
+          attemptId: result.event.attemptId,
+          model: result.event.model,
+        }),
+      }, null, 2));
     } else {
       console.log(`✓ 已预留生成额度：${result.event.attemptId}`);
       console.log(`  ledger: ${path.relative(ROOT, result.file)}`);
       console.log(`  budget: ${result.budget.used} used + ${result.budget.reserved} reserved / ${result.budget.maximum}`);
+    }
+  } else if (action === 'summary') {
+    const slug = valueFor('--project');
+    if (!slug) throw new Error('summary 必须提供 --project=<slug>。');
+    const loaded = await readGenerationAttemptEvents(slug);
+    const summary = summarizeGenerationAttempts(loaded.events);
+    const output = {
+      projectSlug: slug,
+      ledger: path.relative(ROOT, loaded.file),
+      exists: loaded.exists,
+      ...summary,
+    };
+    if (args.includes('--json')) console.log(JSON.stringify(output, null, 2));
+    else {
+      console.log(`Generation attempts: ${slug}`);
+      console.log(`  used ${summary.used}; reserved ${summary.reserved}; closed ${summary.closed}`);
+      for (const [status, count] of Object.entries(summary.byStatus)) {
+        console.log(`  ${status}: ${count}`);
+      }
     }
   } else if (action === 'close') {
     const slug = valueFor('--project');
@@ -65,7 +96,7 @@ try {
     });
     console.log(`✓ 生成尝试已关闭：${result.event.status} (${result.event.quotaConsumed ? 'counted' : 'not-counted'})`);
   } else {
-    throw new Error('用法：provider:attempt -- <reserve|close> ...');
+    throw new Error('用法：provider:attempt -- <reserve|summary|close> ...');
   }
 } catch (error) {
   console.error(`provider:attempt failed: ${error.message}`);

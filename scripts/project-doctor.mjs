@@ -68,6 +68,7 @@ const requiredWorkspaceScripts = [
   'project:composition-proof',
   'project:quality',
   'project:audio-preflight',
+  'project:audio-calibration',
   'project:preview',
   'project:render',
   'provider:attempt',

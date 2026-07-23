@@ -38,7 +38,7 @@ try {
   const mode = resolveAssetsReadyMode(state.stage);
   await run('project-sync.mjs', [slug]);
   await run('project-subtitles.mjs', [slug]);
-  await run('project-audio-preflight.mjs', [slug, '--strict']);
+  await run('project-audio-calibration.mjs', [slug, 'propose']);
   if (mode === 'advance') {
     await run('project-advance.mjs', [slug, 'assets-ready', ...args]);
   } else {

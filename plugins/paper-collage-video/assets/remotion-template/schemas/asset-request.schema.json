@@ -6,7 +6,7 @@
   "required": ["schemaVersion", "projectSlug", "assetId", "capability", "output"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 5},
+    "schemaVersion": {"const": 6},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "assetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "capability": {"enum": ["text", "image", "voice"]},
@@ -16,6 +16,22 @@
     "voiceId": {"type": "string"},
     "model": {"type": "string"},
     "settings": {"type": "object"},
+    "outputSurface": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["alpha", "chroma-key", "opaque"]},
+        "keyColor": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
+        "tolerance": {"type": "integer", "minimum": 0, "maximum": 255}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"mode": {"const": "chroma-key"}}},
+          "then": {"required": ["keyColor"]}
+        }
+      ],
+      "additionalProperties": false
+    },
     "timingBinding": {
       "type": "object",
       "required": ["sceneId"],
@@ -199,7 +215,7 @@
   "additionalProperties": false,
   "allOf": [
     {"if": {"properties": {"capability": {"const": "text"}}}, "then": {"required": ["prompt"]}},
-    {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["prompt", "compositionBinding"]}},
+    {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["prompt", "compositionBinding", "outputSurface"]}},
     {"if": {"properties": {"capability": {"const": "image"}}}, "then": {"required": ["semanticBinding"]}},
     {"if": {"properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}, "then": {"oneOf": [{"required": ["stateBinding"]}, {"required": ["stateSheetBinding"]}]}},
     {"if": {"required": ["stateSheetRecoveryBinding"]}, "then": {"required": ["stateSheetBinding", "quality", "compositionBinding"], "properties": {"compositionBinding": {"properties": {"pattern": {"const": "state-sequence"}}}}}},

@@ -14,7 +14,7 @@ import {
   styleProofReportPath,
 } from './style-proof-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
-import {selectStyleProofTarget} from './motion-treatment-lib.mjs';
+import {selectStyleProofTargets} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
 sharp.cache(false);
@@ -97,140 +97,187 @@ try {
   assertSlug(slug);
   if (!Number.isFinite(durationSeconds) || durationSeconds < 3 || durationSeconds > 5) throw new Error('--duration 必须位于 3..5 秒。');
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
-  const directingTarget = selectStyleProofTarget(storyboard);
-  if (!directingTarget) throw new Error('故事板没有可用于风格运动样片的导演 treatment。');
-  const selected = project.scenes.find(({id}) => id === directingTarget.sceneId);
-  if (!selected) throw new Error(`项目没有实现最高风险导演镜头 ${directingTarget.sceneId}。`);
-  const directingNode = directingTarget.targetId === 'scene-camera'
-    ? {kind: 'camera'}
-    : flattenCompositionNodes(selected.composition?.nodes)
-        .find(({node}) => node.id === directingTarget.targetId)?.node;
-  if (!directingNode) throw new Error(`最高风险导演目标不存在：${directingTarget.targetId}。`);
-  const targets = await collectStyleProofTargets(project, directingTarget);
-  if (targets.length === 0) throw new Error('最高风险导演目标没有生成可审核的风格证据目标。');
+  const directingTargets = selectStyleProofTargets(storyboard);
+  if (directingTargets.length === 0) throw new Error('故事板没有可用于风格运动样片的风险覆盖计划。');
+  for (const directingTarget of directingTargets) {
+    const scene = project.scenes.find(({id}) => id === directingTarget.sceneId);
+    if (!scene) throw new Error(`项目没有实现风险覆盖镜头 ${directingTarget.sceneId}。`);
+    const node = directingTarget.targetId === 'scene-camera'
+      ? {kind: 'camera'}
+      : flattenCompositionNodes(scene.composition?.nodes)
+          .find(({node: candidate}) => candidate.id === directingTarget.targetId)?.node;
+    if (!node) throw new Error(`风险覆盖目标不存在：${directingTarget.sceneId}/${directingTarget.targetId}。`);
+  }
+  const targetGroups = await Promise.all(directingTargets.map((target) => collectStyleProofTargets(project, target)));
+  const targets = [...new Map(targetGroups.flat().map((target) => [target.compositeId, target])).values()];
+  if (targets.length === 0) throw new Error('风险覆盖计划没有生成可审核的风格证据目标。');
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
 
   const paths = projectPaths(slug);
   const proofDirectory = path.join(paths.distDirectory, 'style-proof');
-  const propsFile = path.join(proofDirectory, 'project.json');
-  const output = path.join(paths.distDirectory, 'style-motion-proof.mp4');
   const reportFile = styleProofReportPath(slug);
   const contactSheet = path.join(paths.distDirectory, 'style-motion-proof-contact-sheet.jpg');
   const toneSrc = `projects/${slug}/audio/style-proof-tone.wav`;
   const toneFile = resolvePublicFile(toneSrc);
   await fs.mkdir(path.dirname(toneFile), {recursive: true});
   await fs.writeFile(toneFile, makeProofTone());
-
-  const proofProject = {
-    ...project,
-    plan: {
-      ...project.plan,
-      requested: {durationSeconds, sceneCount: 1},
-      resolved: {...project.plan.resolved, durationSeconds, sceneCount: 1},
-    },
-    audio: {...project.audio, narration: {volume: 0.01}, music: null},
-    scenes: [{
-      ...selected,
-      tailSeconds: durationSeconds - 1,
-      transition: {type: 'none', durationSeconds: 0},
-      narration: {src: toneSrc, startSeconds: 0, durationSeconds: 1, text: ''},
-      subtitles: [],
-    }],
-  };
-  await writeJson(propsFile, proofProject);
-
   const frameCount = Math.round(durationSeconds * project.video.fps);
   const remotion = path.join(ROOT, 'node_modules', '.bin', 'remotion');
-  await runCommand(remotion, [
-    'render', 'src/index.ts', 'Paper-Collage', output,
-    `--props=${path.relative(ROOT, propsFile)}`,
-    `--frames=0-${Math.max(1, frameCount - 1)}`,
-    `--concurrency=${resolveRenderConcurrency()}`,
-    '--scale=0.5', '--crf=24', '--audio-bitrate=96k',
-  ]);
-
-  const requiredProofIds = new Set(targets.flatMap(({proofTimeIds}) => proofTimeIds));
-  const proofs = selected.motion.proofTimes.filter(({id}) => requiredProofIds.has(id));
   const frameDirectory = path.join(proofDirectory, 'frames');
   const cropDirectory = path.join(proofDirectory, 'crops');
   const debugDirectory = path.join(proofDirectory, 'debug');
   const evidenceDirectory = path.join(proofDirectory, 'evidence');
   await Promise.all([frameDirectory, cropDirectory, debugDirectory, evidenceDirectory].map((directory) => fs.mkdir(directory, {recursive: true})));
   const renderedFrames = new Map();
-  const panels = await Promise.all(proofs.map(async (proof, index) => {
-    const frameFile = path.join(frameDirectory, `proof-${index + 1}-${proof.id}.png`);
-    const frame = Math.round(proof.at * Math.max(1, frameCount - 1));
+  const panels = [];
+  const outputs = [];
+  const proofProjects = [];
+  const requiredByScene = new Map();
+  for (const target of targets) {
+    const shots = target.proofShots ?? [{sceneId: target.sceneId, proofTimeIds: target.proofTimeIds}];
+    for (const shot of shots) {
+      const required = requiredByScene.get(shot.sceneId) ?? new Set();
+      for (const proofTimeId of shot.proofTimeIds ?? target.proofTimeIds ?? []) required.add(proofTimeId);
+      requiredByScene.set(shot.sceneId, required);
+    }
+  }
+  for (const [sceneId, requiredProofIds] of requiredByScene) {
+    const selected = project.scenes.find(({id}) => id === sceneId);
+    if (!selected) throw new Error(`风格证据引用了未实现镜头 ${sceneId}。`);
+    const propsFile = path.join(proofDirectory, `project-${safeEvidenceId(sceneId)}.json`);
+    const output = path.join(paths.distDirectory, `style-motion-proof-${safeEvidenceId(sceneId)}.mp4`);
+    const proofProject = {
+      ...project,
+      plan: {
+        ...project.plan,
+        requested: {durationSeconds, sceneCount: 1},
+        resolved: {...project.plan.resolved, durationSeconds, sceneCount: 1},
+      },
+      audio: {...project.audio, narration: {volume: 0.01}, music: null},
+      scenes: [{
+        ...selected,
+        tailSeconds: durationSeconds - 1,
+        transition: {type: 'none', durationSeconds: 0},
+        narration: {src: toneSrc, startSeconds: 0, durationSeconds: 1, text: ''},
+        subtitles: [],
+      }],
+    };
+    await writeJson(propsFile, proofProject);
     await runCommand(remotion, [
-      'still', 'src/index.ts', 'Paper-Collage', frameFile,
+      'render', 'src/index.ts', 'Paper-Collage', output,
       `--props=${path.relative(ROOT, propsFile)}`,
-      `--frame=${frame}`,
+      `--frames=0-${Math.max(1, frameCount - 1)}`,
       `--concurrency=${resolveRenderConcurrency()}`,
+      '--scale=0.5', '--crf=24', '--audio-bitrate=96k',
     ]);
-    renderedFrames.set(proof.id, frameFile);
-    return sharp(frameFile).resize(640, 360, {fit: 'cover'}).jpeg().toBuffer();
-  }));
+    const probe = await probeMedia(output);
+    outputs.push({sceneId, file: path.relative(ROOT, output), durationSeconds: Number(probe.format?.duration ?? durationSeconds)});
+    proofProjects.push(path.relative(ROOT, propsFile));
+    const proofs = selected.motion.proofTimes.filter(({id}) => requiredProofIds.has(id));
+    for (const proof of proofs) {
+      const frameFile = path.join(frameDirectory, `${safeEvidenceId(sceneId)}-${safeEvidenceId(proof.id)}.png`);
+      const frame = Math.round(proof.at * Math.max(1, frameCount - 1));
+      await runCommand(remotion, [
+        'still', 'src/index.ts', 'Paper-Collage', frameFile,
+        `--props=${path.relative(ROOT, propsFile)}`,
+        `--frame=${frame}`,
+        `--concurrency=${resolveRenderConcurrency()}`,
+      ]);
+      renderedFrames.set(`${sceneId}:${proof.id}`, frameFile);
+      panels.push(await sharp(frameFile).resize(640, 360, {fit: 'cover'}).jpeg().toBuffer());
+    }
+  }
+  if (panels.length === 0) throw new Error('风险覆盖计划没有可渲染的证明时刻。');
   await sharp({create: {width: panels.length * 640, height: 360, channels: 3, background: '#160f0d'}})
     .composite(panels.map((input, index) => ({input, left: index * 640, top: 0})))
     .jpeg({quality: 90})
     .toFile(contactSheet);
 
-  const coupledGroups = collectCompositionGroups(selected.composition).filter(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern));
-  const stateSequences = collectStateSequences(selected.composition);
+  const selectedScenes = project.scenes.filter(({id}) => requiredByScene.has(id));
+  const coupledGroups = selectedScenes.flatMap((scene) =>
+    collectCompositionGroups(scene.composition)
+      .filter(({node}) => ['supported-subject', 'registered-environment'].includes(node.pattern))
+      .map((entry) => ({...entry, sceneId: scene.id})),
+  );
+  const stateSequences = selectedScenes.flatMap((scene) =>
+    collectStateSequences(scene.composition).map((entry) => ({...entry, sceneId: scene.id})),
+  );
   const memberNodes = new Map();
-  for (const {node: group} of coupledGroups) {
+  for (const {node: group, sceneId} of coupledGroups) {
     for (const {node} of flattenCompositionNodes(group.children)) {
-      if (node.kind === 'asset') memberNodes.set(`${node.id}:${node.src}`, {node, evidenceId: node.id});
+      if (node.kind === 'asset') memberNodes.set(`${sceneId}:${node.id}:${node.src}`, {
+        node,
+        sceneId,
+        evidenceId: `${sceneId}-${node.id}`,
+      });
       if (node.kind === 'state-sequence') {
-        for (const state of node.states) memberNodes.set(`${node.id}:${state.src}`, {
+        for (const state of node.states) memberNodes.set(`${sceneId}:${node.id}:${state.src}`, {
           node: {...node, kind: 'asset', src: state.src},
-          evidenceId: `${node.id}-${state.id}`,
+          sceneId,
+          evidenceId: `${sceneId}-${node.id}-${state.id}`,
         });
       }
     }
   }
-  for (const {node} of stateSequences) {
-    for (const state of node.states) memberNodes.set(`${node.id}:${state.src}`, {
+  for (const {node, sceneId} of stateSequences) {
+    for (const state of node.states) memberNodes.set(`${sceneId}:${node.id}:${state.src}`, {
       node: {...node, kind: 'asset', src: state.src},
-      evidenceId: `${node.id}-${state.id}`,
+      sceneId,
+      evidenceId: `${sceneId}-${node.id}-${state.id}`,
     });
   }
   const targetMemberIds = new Set(targets.flatMap(({memberNodeIds}) => memberNodeIds));
-  for (const {node} of flattenCompositionNodes(selected.composition?.nodes)) {
-    if (!targetMemberIds.has(node.id)) continue;
-    if (node.kind === 'asset') memberNodes.set(`${node.id}:${node.src}`, {node, evidenceId: node.id});
-    if (node.kind === 'state-sequence') {
-      for (const state of node.states) memberNodes.set(`${node.id}:${state.src}`, {
-        node: {...node, kind: 'asset', src: state.src},
-        evidenceId: `${node.id}-${state.id}`,
+  for (const selected of selectedScenes) {
+    for (const {node} of flattenCompositionNodes(selected.composition?.nodes)) {
+      if (!targetMemberIds.has(node.id)) continue;
+      if (node.kind === 'asset') memberNodes.set(`${selected.id}:${node.id}:${node.src}`, {
+        node,
+        sceneId: selected.id,
+        evidenceId: `${selected.id}-${node.id}`,
       });
+      if (node.kind === 'state-sequence') {
+        for (const state of node.states) memberNodes.set(`${selected.id}:${node.id}:${state.src}`, {
+          node: {...node, kind: 'asset', src: state.src},
+          sceneId: selected.id,
+          evidenceId: `${selected.id}-${node.id}-${state.id}`,
+        });
+      }
     }
   }
   const assetEvidence = [];
-  for (const {node, evidenceId} of memberNodes.values()) {
-    assetEvidence.push(await buildAssetEvidence({node, directory: evidenceDirectory, evidenceId}));
+  for (const {node, sceneId, evidenceId} of memberNodes.values()) {
+    assetEvidence.push({
+      ...await buildAssetEvidence({node, directory: evidenceDirectory, evidenceId}),
+      sceneId,
+    });
   }
   const composites = [];
   for (const target of targets) {
-    const bounds = findTargetBounds({scene: selected, nodeId: target.nodeId, video: project.video});
     const proofFrames = [];
-    for (const proofTimeId of target.proofTimeIds) {
-      const fullFrame = renderedFrames.get(proofTimeId);
-      if (!fullFrame) continue;
-      const id = `${safeEvidenceId(target.compositeId)}-${safeEvidenceId(proofTimeId)}`;
-      const cropFile = path.join(cropDirectory, `${id}.png`);
-      const debugFile = path.join(debugDirectory, `${id}.png`);
-      await sharp(fullFrame).extract(bounds).png().toFile(cropFile);
-      await sharp(fullFrame)
-        .composite([{input: debugOverlay({width: project.video.width, height: project.video.height, bounds, label: `${target.compositeId} · ${proofTimeId}`})}])
-        .png()
-        .toFile(debugFile);
-      proofFrames.push({
-        proofTimeId,
-        fullFrame: path.relative(ROOT, fullFrame),
-        crop: path.relative(ROOT, cropFile),
-        debugFrame: path.relative(ROOT, debugFile),
-        bounds,
-      });
+    const shots = target.proofShots ?? [{sceneId: target.sceneId, nodeId: target.nodeId, proofTimeIds: target.proofTimeIds}];
+    for (const shot of shots) {
+      const selected = project.scenes.find(({id}) => id === shot.sceneId);
+      const bounds = findTargetBounds({scene: selected, nodeId: shot.nodeId ?? target.nodeId, video: project.video});
+      for (const proofTimeId of shot.proofTimeIds ?? target.proofTimeIds) {
+        const fullFrame = renderedFrames.get(`${shot.sceneId}:${proofTimeId}`);
+        if (!fullFrame) continue;
+        const id = `${safeEvidenceId(target.compositeId)}-${safeEvidenceId(shot.sceneId)}-${safeEvidenceId(proofTimeId)}`;
+        const cropFile = path.join(cropDirectory, `${id}.png`);
+        const debugFile = path.join(debugDirectory, `${id}.png`);
+        await sharp(fullFrame).extract(bounds).png().toFile(cropFile);
+        await sharp(fullFrame)
+          .composite([{input: debugOverlay({width: project.video.width, height: project.video.height, bounds, label: `${target.compositeId} · ${proofTimeId}`})}])
+          .png()
+          .toFile(debugFile);
+        proofFrames.push({
+          sceneId: shot.sceneId,
+          proofTimeId,
+          fullFrame: path.relative(ROOT, fullFrame),
+          crop: path.relative(ROOT, cropFile),
+          debugFrame: path.relative(ROOT, debugFile),
+          bounds,
+        });
+      }
     }
     composites.push({
       compositeId: target.compositeId,
@@ -242,34 +289,28 @@ try {
     });
   }
 
-  const probe = await probeMedia(output);
   const groups = [
-    ...coupledGroups.map(({node}) => ({id: node.id, pattern: node.pattern, registrationId: node.registration?.id ?? null, sourceMasterAssetId: node.registration?.sourceMasterAssetId ?? null})),
-    ...stateSequences.map(({node}) => ({id: node.id, pattern: 'state-sequence', registrationId: node.registration.id, sourceMasterAssetId: node.registration.sourceMasterAssetId})),
+    ...coupledGroups.map(({node, sceneId}) => ({sceneId, id: node.id, pattern: node.pattern, registrationId: node.registration?.id ?? null, sourceMasterAssetId: node.registration?.sourceMasterAssetId ?? null})),
+    ...stateSequences.map(({node, sceneId}) => ({sceneId, id: node.id, pattern: 'state-sequence', registrationId: node.registration.id, sourceMasterAssetId: node.registration.sourceMasterAssetId})),
   ];
   await writeJson(reportFile, {
-    schemaVersion: 5,
+    schemaVersion: 6,
     slug,
     generatedAt: new Date().toISOString(),
-    sceneId: selected.id,
-    directingTreatmentId: directingTarget.treatmentId,
-    directingTargetId: directingTarget.targetId,
-    directingProofTimeId: directingTarget.proofTimeId,
-    directingTargetKind: directingNode.kind,
-    directingFingerprint: directingTarget.directingFingerprint,
+    planFingerprint: storyboard.directingSummary.styleProofPlan.fingerprint,
+    directingTargets,
     runtimeBuildFingerprint,
-    output: path.relative(ROOT, output),
+    outputs,
     contactSheet: path.relative(ROOT, contactSheet),
-    proofProject: path.relative(ROOT, propsFile),
+    proofProjects,
     scope: 'style',
-    method: 'highest-risk directing target rendered through the real project composition with quality-compatible target evidence',
+    method: 'compiler-selected semantic, coupled-relationship, and state-sequence risk coverage rendered through real project compositions with source-family reuse',
     groups,
     composites,
     assetEvidence,
-    durationSeconds: Number(probe.format?.duration ?? durationSeconds),
     proofFrameCount: panels.length,
   });
-  console.log(`✓ v5 真实拓扑运动证明：${path.relative(ROOT, output)}`);
+  console.log(`✓ v6 多维风险风格证明：${outputs.map(({file}) => file).join(', ')}`);
   console.log(`✓ 组合证明联系表：${path.relative(ROOT, contactSheet)}`);
   console.log(`✓ 运动报告：${path.relative(ROOT, reportFile)}`);
 } catch (error) {

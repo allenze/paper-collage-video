@@ -37,6 +37,14 @@ const RISK_SCORE = {
   diagram: 5,
 };
 
+const STYLE_SEMANTIC_SEVERITY = {
+  decorative: 0,
+  identity: 1,
+  topology: 2,
+  mechanism: 3,
+  diagram: 3,
+};
+
 const IMPORTANCE_SCORE = {ambient: 0, supporting: 1, hero: 2};
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 const normalizedTime = (value) =>
@@ -70,6 +78,122 @@ export const treatmentRiskScore = (treatment) =>
   (treatment?.composition?.pattern === 'supported-subject' ? 3 : 0) +
   (IMPORTANCE_SCORE[treatment?.importance] ?? 0) +
   (treatment?.necessity === 'required' ? 1 : 0);
+
+const styleSourceFamilyKey = (treatment) =>
+  treatment?.motion?.kind === 'state-sequence'
+    ? `pose-family:${treatment.motion.poseFamilyId}`
+    : `target:${treatment?.targetId}`;
+
+const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
+  const coverage = [];
+  if ((STYLE_SEMANTIC_SEVERITY[treatment.semanticRisk] ?? 0) === highestSemanticSeverity && highestSemanticSeverity > 0) {
+    coverage.push(`semantic:${treatment.semanticRisk}`);
+  }
+  if (['supported-subject', 'registered-environment'].includes(treatment.composition?.pattern)) {
+    coverage.push(`relationship:${treatment.composition.pattern}`);
+  }
+  if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
+  return coverage;
+};
+
+export const compileStyleProofPlan = (scenes) => {
+  const candidates = scenes.flatMap((scene) =>
+    scene.beats.flatMap((beat) => beat.treatments.map((treatment) => ({
+      sceneId: scene.id,
+      treatmentId: treatment.id,
+      targetId: treatment.targetId,
+      proofTimeId: treatment.proofTimeId ?? null,
+      riskScore: treatmentRiskScore(treatment),
+      directingFingerprint: scene.directing.fingerprint,
+      sourceFamilyKey: styleSourceFamilyKey(treatment),
+      semanticRisk: treatment.semanticRisk,
+      compositionPattern: treatment.composition.pattern,
+      motionKind: treatment.motion.kind,
+      treatment,
+    }))),
+  );
+  if (candidates.length === 0) {
+    return {
+      requiredCoverage: [],
+      targets: [],
+      sourceFamilyKeys: [],
+      fingerprint: hashCompositionValue({requiredCoverage: [], targets: []}),
+    };
+  }
+  const highestSemanticSeverity = Math.max(
+    ...candidates.map(({semanticRisk}) => STYLE_SEMANTIC_SEVERITY[semanticRisk] ?? 0),
+  );
+  const requiredCoverage = new Set();
+  for (const candidate of candidates) {
+    for (const coverage of styleCoverageForTreatment(candidate.treatment, highestSemanticSeverity)) {
+      requiredCoverage.add(coverage);
+    }
+  }
+  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment'].includes(compositionPattern))) {
+    requiredCoverage.add('relationship:coupled');
+  }
+  const representative = [...candidates].sort((left, right) =>
+    right.riskScore - left.riskScore ||
+    left.sceneId.localeCompare(right.sceneId) ||
+    left.treatmentId.localeCompare(right.treatmentId),
+  )[0];
+  if (requiredCoverage.size === 0) {
+    requiredCoverage.add('baseline:representative');
+  }
+  const enriched = candidates.map(({treatment, ...candidate}) => {
+    const coverage = styleCoverageForTreatment(treatment, highestSemanticSeverity);
+    if (coverage.some((entry) => entry.startsWith('relationship:'))) coverage.push('relationship:coupled');
+    if (
+      requiredCoverage.has('baseline:representative') &&
+      candidate.sceneId === representative.sceneId &&
+      candidate.treatmentId === representative.treatmentId
+    ) {
+      coverage.push('baseline:representative');
+    }
+    return {...candidate, coverage: [...new Set(coverage)].sort()};
+  });
+  const uncovered = new Set(requiredCoverage);
+  const selected = [];
+  const selectedFamilies = new Set();
+  while (uncovered.size > 0) {
+    const ranked = enriched
+      .filter((candidate) => !selected.some(({sceneId, treatmentId}) => sceneId === candidate.sceneId && treatmentId === candidate.treatmentId))
+      .map((candidate) => ({
+        candidate,
+        newlyCovered: candidate.coverage.filter((entry) => uncovered.has(entry)),
+        newFamilyCost: selectedFamilies.has(candidate.sourceFamilyKey) ? 0 : 1,
+      }))
+      .filter(({newlyCovered}) => newlyCovered.length > 0)
+      .sort((left, right) =>
+        right.newlyCovered.length - left.newlyCovered.length ||
+        left.newFamilyCost - right.newFamilyCost ||
+        right.candidate.riskScore - left.candidate.riskScore ||
+        left.candidate.sceneId.localeCompare(right.candidate.sceneId) ||
+        left.candidate.treatmentId.localeCompare(right.candidate.treatmentId),
+      );
+    const next = ranked[0]?.candidate;
+    if (!next) break;
+    selected.push(next);
+    selectedFamilies.add(next.sourceFamilyKey);
+    for (const entry of next.coverage) uncovered.delete(entry);
+  }
+  const targets = selected.map((candidate) => ({
+    sceneId: candidate.sceneId,
+    treatmentId: candidate.treatmentId,
+    targetId: candidate.targetId,
+    proofTimeId: candidate.proofTimeId,
+    riskScore: candidate.riskScore,
+    directingFingerprint: candidate.directingFingerprint,
+    sourceFamilyKey: candidate.sourceFamilyKey,
+    coverage: candidate.coverage,
+  }));
+  const plan = {
+    requiredCoverage: [...requiredCoverage].sort(),
+    targets,
+    sourceFamilyKeys: [...selectedFamilies].sort(),
+  };
+  return {...plan, fingerprint: hashCompositionValue(plan)};
+};
 
 export const validateTreatment = (treatment, {location = 'treatment', beatAt = null} = {}) => {
   const issues = [];
@@ -419,14 +543,11 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     error.issues = budgetIssues;
     throw error;
   }
-  const styleTarget = scenes
-    .map((scene) => ({sceneId: scene.id, treatmentId: scene.directing.highestRiskTreatmentId, riskScore: scene.directing.riskScore}))
-    .sort((left, right) => right.riskScore - left.riskScore || left.sceneId.localeCompare(right.sceneId))[0] ?? null;
+  const styleProofPlan = compileStyleProofPlan(scenes);
   const directingSummary = {
     profile: plan?.productionProfile ?? null,
     ...demand,
-    styleProofSceneId: styleTarget?.riskScore > 0 ? styleTarget.sceneId : null,
-    styleProofTreatmentId: styleTarget?.riskScore > 0 ? styleTarget.treatmentId : null,
+    styleProofPlan,
   };
   directingSummary.fingerprint = hashCompositionValue({
     scenes: scenes.map(({id, directing, compositionPlan}) => ({id, directing, compositionPlan})),
@@ -526,21 +647,8 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
 };
 
 export const selectStyleProofTarget = (storyboard) => {
-  const sceneId = storyboard?.directingSummary?.styleProofSceneId;
-  if (!sceneId) return null;
-  const scene = storyboard.scenes.find(({id}) => id === sceneId);
-  if (!scene) return null;
-  const treatmentId = storyboard.directingSummary.styleProofTreatmentId;
-  const treatment = scene.beats
-    .flatMap((beat) => beat.treatments)
-    .find(({id}) => id === treatmentId);
-  if (!treatment) return null;
-  return {
-    sceneId,
-    treatmentId,
-    targetId: treatment.targetId,
-    proofTimeId: treatment.proofTimeId ?? null,
-    riskScore: scene.directing.riskScore,
-    directingFingerprint: scene.directing.fingerprint,
-  };
+  return storyboard?.directingSummary?.styleProofPlan?.targets?.[0] ?? null;
 };
+
+export const selectStyleProofTargets = (storyboard) =>
+  storyboard?.directingSummary?.styleProofPlan?.targets ?? [];

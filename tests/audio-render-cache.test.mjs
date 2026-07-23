@@ -10,6 +10,10 @@ import {
   assessAudioPreflight,
   collectProjectAudioEvents,
 } from '../scripts/audio-preflight-lib.mjs';
+import {
+  createAudioCalibrationSourceFingerprint,
+  validateAudioCalibration,
+} from '../scripts/audio-calibration-lib.mjs';
 import {createRenderFingerprints} from '../scripts/render-cache-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -90,12 +94,22 @@ test('render fingerprints separate visual changes from audio-only changes', asyn
     const changedAudio = await createRenderFingerprints(audioOnly, 'preview');
     assert.equal(changedAudio.visual, original.visual);
     assert.notEqual(changedAudio.audio, original.audio);
+    assert.equal(
+      await createAudioCalibrationSourceFingerprint(audioOnly),
+      await createAudioCalibrationSourceFingerprint(project),
+    );
 
     const visualOnly = structuredClone(project);
     visualOnly.scenes[0].camera.intensity = 1.5;
     const changedVisual = await createRenderFingerprints(visualOnly, 'preview');
     assert.notEqual(changedVisual.visual, original.visual);
     assert.equal(changedVisual.audio, original.audio);
+    const retimed = structuredClone(project);
+    retimed.scenes[0].narration.startSeconds = 0.2;
+    assert.notEqual(
+      await createAudioCalibrationSourceFingerprint(retimed),
+      await createAudioCalibrationSourceFingerprint(project),
+    );
 
     const {events, timeline} = collectProjectAudioEvents(project);
     assert.equal(events.length, 1);
@@ -129,4 +143,25 @@ test('audio preflight recommends bounded narration gain without replacing final 
     loudness: {integratedLufs: -16.2, truePeakDbtp: -2, loudnessRangeLu: 4},
   });
   assert.equal(passing.passed, true);
+});
+
+test('accepted audio calibration requires a source fingerprint, applied gain, and human note', () => {
+  const calibration = {
+    schemaVersion: 1,
+    projectSlug: 'audio-assessment',
+    status: 'accepted',
+    sourceFingerprint: 'a'.repeat(64),
+    currentNarrationVolume: 1,
+    recommendedNarrationVolume: 2,
+    acceptedNarrationVolume: 2,
+    acceptanceNote: 'Approved after narration sync.',
+  };
+  assert.equal(
+    validateAudioCalibration(calibration, 'audio-assessment'),
+    calibration,
+  );
+  assert.throws(
+    () => validateAudioCalibration({...calibration, acceptanceNote: ''}, 'audio-assessment'),
+    /确认说明/,
+  );
 });

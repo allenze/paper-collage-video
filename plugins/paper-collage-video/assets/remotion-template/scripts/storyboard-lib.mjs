@@ -39,8 +39,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 6) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 6。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 7) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 7。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -306,10 +306,9 @@ export const summarizeStoryboard = (storyboard) => ({
         }))
       : [],
   directing: storyboard?.status === 'ready'
-    ? {
+      ? {
         fingerprint: storyboard.directingSummary?.fingerprint ?? null,
-        styleProofSceneId: storyboard.directingSummary?.styleProofSceneId ?? null,
-        styleProofTreatmentId: storyboard.directingSummary?.styleProofTreatmentId ?? null,
+        styleProofPlan: storyboard.directingSummary?.styleProofPlan ?? null,
         estimatedPoseSheetCalls: storyboard.directingSummary?.estimatedPoseSheetCalls ?? 0,
         avoidedIsolatedStateCalls: storyboard.directingSummary?.avoidedIsolatedStateCalls ?? 0,
       }
