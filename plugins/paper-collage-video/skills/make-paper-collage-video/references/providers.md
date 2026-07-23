@@ -23,11 +23,16 @@ Use `provider:select` only for an isolated change or fallback. A provider switch
 Every new image request uses schema v7 and requires `compositionBinding`,
 `semanticBinding`, and an explicit `outputSurface`. Use `alpha` only when the
 file must contain real transparent pixels, `chroma-key` with a declared edge
-key color, or `opaque` for a fully opaque plate. Registration rejects baked
-checkerboards, false alpha, unexpected transparency, and unreliable chroma
-boundaries. A free asset names its scene/node/role/canvas. Critical content
-binds a ready project semantic contract. Older request schemas are rejected
-rather than migrated.
+key color, `opaque` for a fully opaque plate, or `layer-sheet` for the mixed
+surface of a registered 2×2 source. In a layer sheet, reference/rear cells are
+opaque and subject/front cells use real alpha or a declared flat chroma key.
+For host image models without reliable native alpha, chroma key is the default:
+choose a color absent from every cutout (often `#ff00ff` for yellow/green paper),
+require a uniform untextured plane, and require every internal negative space
+to show that same color. Registration rejects baked checkerboards, false alpha,
+unexpected transparency, and missing/unreliable per-cell chroma planes. A free
+asset names its scene/node/role/canvas. Critical content binds a ready project
+semantic contract. Older request schemas are rejected rather than migrated.
 
 Before authoring any rear/subject/front request, compile the storyboard source
 package and read [layer-complete-assets.md](layer-complete-assets.md). A
@@ -45,7 +50,7 @@ and context-preserving recovery policy.
   "capability": "image",
   "output": "public/projects/example/assets/boat/layer-sheet.png",
   "prompt": "Create one registered 2x2 sheet: flat reference, clean rear plate, complete boat silhouette, complete front wave overlay",
-  "outputSurface": {"mode": "alpha"},
+  "outputSurface": {"mode": "layer-sheet"},
   "compositionBinding": {
     "sceneId": "scene-01",
     "nodeId": "boat-depth-stack",
@@ -73,11 +78,17 @@ and context-preserving recovery policy.
     "sheetLayout": {
       "columns": 2,
       "rows": 2,
+      "providerSource": {
+        "canvasMode": "provider-native",
+        "minimumWidth": 1024,
+        "minimumHeight": 1024,
+        "cellExtraction": "explicit-rects"
+      },
       "cells": [
-        {"packageRole": "reference", "row": 0, "column": 0},
-        {"packageRole": "support-rear", "row": 0, "column": 1},
-        {"packageRole": "subject", "row": 1, "column": 0},
-        {"packageRole": "support-front", "row": 1, "column": 1}
+        {"packageRole": "reference", "row": 0, "column": 0, "outputSurface": {"mode": "opaque"}},
+        {"packageRole": "support-rear", "row": 0, "column": 1, "outputSurface": {"mode": "opaque"}},
+        {"packageRole": "subject", "row": 1, "column": 0, "outputSurface": {"mode": "chroma-key", "keyColor": "#ff00ff", "tolerance": 24}},
+        {"packageRole": "support-front", "row": 1, "column": 1, "outputSurface": {"mode": "chroma-key", "keyColor": "#ff00ff", "tolerance": 24}}
       ]
     },
     "recoveryPolicy": {
@@ -101,10 +112,15 @@ For a layer-complete family, use exactly one of these source strategies:
    each made with the full reference in provider context and each returning one
    complete full-canvas layer.
 
-The manifest records the provider roots and local derivatives, then computes
-one family fingerprint. A composed flat reference is comparison evidence, not
-a valid pixel source for independently moving layers. Masking its visible
-pixels cannot reconstruct hidden rear or subject content.
+The manifest records the untouched provider root and three local derivatives,
+then computes one family fingerprint. If the provider emits its native size or
+adds separators, keep that raw file unchanged and declare each accepted
+`sourceRect`, destination `placement`, and any keying parameters in the
+registered-family spec. The CLI writes `<member>.png.key.json` for keyed cells
+and fingerprints that metadata. Do not resize, key, or silently replace the
+provider output before `provider:record`. A composed flat reference is
+comparison evidence, not a valid pixel source for independently moving layers.
+Masking its visible pixels cannot reconstruct hidden rear or subject content.
 
 Do not make isolated text-to-image calls for registered members. For two or
 more poses/states of one identity, prefer one `stateSheetBinding` request with

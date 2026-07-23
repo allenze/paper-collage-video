@@ -161,7 +161,7 @@ test('schema-v7 rejects isolated depth members and accepts one complete 2x2 laye
     capability: 'image',
     output: 'public/projects/layer-request/boat-layer-sheet.png',
     prompt: 'Reference plus complete rear, subject, and front layers.',
-    outputSurface: {mode: 'alpha'},
+    outputSurface: {mode: 'layer-sheet'},
     compositionBinding: {
       sceneId: 'scene-01',
       nodeId: 'boat-stack',
@@ -191,10 +191,10 @@ test('schema-v7 rejects isolated depth members and accepts one complete 2x2 laye
         columns: 2,
         rows: 2,
         cells: [
-          {packageRole: 'reference', row: 0, column: 0},
-          {packageRole: 'support-rear', row: 0, column: 1},
-          {packageRole: 'subject', row: 1, column: 0},
-          {packageRole: 'support-front', row: 1, column: 1},
+          {packageRole: 'reference', row: 0, column: 0, outputSurface: {mode: 'opaque'}},
+          {packageRole: 'support-rear', row: 0, column: 1, outputSurface: {mode: 'opaque'}},
+          {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 24}},
+          {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 24}},
         ],
       },
       recoveryPolicy,

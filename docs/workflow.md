@@ -47,7 +47,7 @@ capability-review
 
 ## 2. 风格与虚构音色确认
 
-只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。`style:proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v10 组合 proof，绑定完整目标清单和计划指纹。schema-v6 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明，但不会增加第四个人工等待节点。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
+只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。需要透明运动层的 registered 2×2 sheet 使用逐格 surface：reference/rear 保持不透明，subject/front 在宿主模型原生 alpha 不可靠时使用已声明且不与主体冲突的纯色色键。provider-native 原图原样登记，分隔线裁除、色键、缩放和 key metadata 由正式 registered-family 派生器完成并计为三个本地 derivative。`style:proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v10 组合 proof，绑定完整目标清单和计划指纹。schema-v6 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明，但不会增加第四个人工等待节点。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
 
 ## 3. 批量生产与质量门
 

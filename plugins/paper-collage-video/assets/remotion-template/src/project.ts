@@ -82,6 +82,15 @@ export type RegisteredFamilyRect = {
 
 export type RegisteredFamilyDerivation = {
   placement?: RegisteredFamilyRect;
+  sourceRect?: RegisteredFamilyRect;
+  keying?: {
+    keyColor: string;
+    transparentThreshold: number;
+    opaqueThreshold: number;
+    edgeFeather: number;
+    matteErode: number;
+    edgePadding: number;
+  };
   maskAssetId?: string;
   maskChannel?: 'alpha' | 'luminance';
   invertMask?: boolean;
@@ -151,6 +160,14 @@ export type RegisteredFamilyBinding = {
   };
   derivation: {
     placement: RegisteredFamilyRect;
+    sourceRect: RegisteredFamilyRect | null;
+    sourceSurface: {
+      mode: 'alpha' | 'chroma-key' | 'opaque';
+      keyColor: string | null;
+      tolerance: number | null;
+    } | null;
+    keying: RegisteredFamilyDerivation['keying'] | null;
+    keyingMetadataSha256: string | null;
     maskAssetId: string | null;
     maskSha256: string | null;
     maskChannel: 'alpha' | 'luminance' | null;

@@ -6,6 +6,7 @@ import {
   assertAssetManifest,
   createAssetRecordId,
 } from './asset-manifest-lib.mjs';
+import {removeChromaKey} from './chroma-key-lib.mjs';
 
 export const REGISTERED_FAMILY_ROLES = [
   'support-rear',
@@ -187,6 +188,43 @@ export const validateRegisteredFamilySpec = (spec) => {
     ) {
       errors.push(`${location}.derivation.placement 必须位于完整注册画布内`);
     }
+    if (
+      derivation?.sourceRect !== undefined &&
+      !validRect(derivation.sourceRect)
+    ) {
+      errors.push(`${location}.derivation.sourceRect 必须是正整数像素矩形`);
+    }
+    if (
+      derivation?.sourceRect !== undefined &&
+      member?.source?.kind !== 'registered-layer-sheet'
+    ) {
+      errors.push(`${location}.derivation.sourceRect 只能用于 registered-layer-sheet`);
+    }
+    if (derivation?.keying !== undefined) {
+      const keying = derivation.keying;
+      if (
+        member?.source?.kind !== 'registered-layer-sheet' ||
+        typeof keying !== 'object' ||
+        !/^#[0-9a-fA-F]{6}$/.test(keying.keyColor ?? '') ||
+        !Number.isFinite(keying.transparentThreshold) ||
+        keying.transparentThreshold < 0 ||
+        keying.transparentThreshold > 255 ||
+        !Number.isFinite(keying.opaqueThreshold) ||
+        keying.opaqueThreshold <= keying.transparentThreshold ||
+        keying.opaqueThreshold > 441.7 ||
+        !Number.isFinite(keying.edgeFeather) ||
+        keying.edgeFeather < 0 ||
+        keying.edgeFeather > 8 ||
+        !Number.isInteger(keying.matteErode) ||
+        keying.matteErode < 0 ||
+        keying.matteErode > 8 ||
+        !Number.isInteger(keying.edgePadding) ||
+        keying.edgePadding < 0 ||
+        keying.edgePadding > 32
+      ) {
+        errors.push(`${location}.derivation.keying 必须是 registered-layer-sheet 的完整色键参数`);
+      }
+    }
     if (derivation?.maskAssetId !== undefined) {
       if (
         !nonEmpty(derivation.maskAssetId) ||
@@ -271,12 +309,27 @@ const imageMetadata = async (file) => {
   return metadata;
 };
 
+const chromaKeyCell = async ({input, keying}) => {
+  const result = await removeChromaKey({input, ...keying});
+  if (
+    result.metadata.transparentPixels <= 0 ||
+    result.metadata.transparentPixels >= result.metadata.totalPixels
+  ) {
+    throw new Error(
+      `色键派生必须同时保留可见像素和真实透明像素：` +
+      `${result.metadata.transparentPixels}/${result.metadata.totalPixels}`,
+    );
+  }
+  return result;
+};
+
 const layerSheetCell = async ({
   file,
   record,
   packageRole,
   registration,
   sourcePackage,
+  derivation,
 }) => {
   const binding =
     record.compositionBinding?.layerPackageBinding ??
@@ -311,27 +364,100 @@ const layerSheetCell = async ({
   }
   const metadata = await imageMetadata(file);
   const {columns, rows} = binding.sheetLayout;
+  const sourceRect = derivation?.sourceRect ?? null;
   if (
-    metadata.width % columns !== 0 ||
-    metadata.height % rows !== 0
+    binding.sheetLayout?.providerSource?.cellExtraction === 'explicit-rects' &&
+    !sourceRect
+  ) {
+    throw new Error(
+      `registered-sheet ${record.assetId} 使用 provider-native 画布时必须为 ${packageRole} 声明 sourceRect`,
+    );
+  }
+  if (
+    !sourceRect &&
+    (
+      metadata.width % columns !== 0 ||
+      metadata.height % rows !== 0
+    )
   ) {
     throw new Error(`registered-sheet ${record.assetId} 无法等格分割`);
   }
-  const width = metadata.width / columns;
-  const height = metadata.height / rows;
-  return {
-    buffer: await sharp(file)
-      .extract({
-        left: cell.column * width,
-        top: cell.row * height,
-        width,
-        height,
-      })
+  const rect = sourceRect ?? {
+    left: cell.column * (metadata.width / columns),
+    top: cell.row * (metadata.height / rows),
+    width: metadata.width / columns,
+    height: metadata.height / rows,
+  };
+  if (
+    !validRect(rect) ||
+    rect.left + rect.width > metadata.width ||
+    rect.top + rect.height > metadata.height
+  ) {
+    throw new Error(
+      `registered-sheet ${record.assetId} 的 ${packageRole} sourceRect 越过 provider 原图`,
+    );
+  }
+  const extracted = await sharp(file)
+    .extract(rect)
+    .png()
+    .toBuffer();
+  const surface = cell.outputSurface ?? null;
+  let buffer = extracted;
+  let keyingMetadata = null;
+  if (surface?.mode === 'chroma-key') {
+    if (!derivation?.keying) {
+      throw new Error(
+        `registered-sheet ${record.assetId} 的 ${packageRole} 色键格缺少正式 keying 参数`,
+      );
+    }
+    if (
+      derivation.keying.keyColor.toLowerCase() !==
+      surface.keyColor.toLowerCase()
+    ) {
+      throw new Error(
+        `registered-sheet ${record.assetId} 的 ${packageRole} keying 颜色必须匹配 provider request`,
+      );
+    }
+    ({buffer, metadata: keyingMetadata} = await chromaKeyCell({
+      input: extracted,
+      keying: derivation.keying,
+    }));
+  } else if (derivation?.keying) {
+    throw new Error(
+      `registered-sheet ${record.assetId} 的 ${packageRole} 非色键格不得声明 keying`,
+    );
+  } else {
+    buffer = await sharp(extracted).ensureAlpha().png().toBuffer();
+  }
+  if (
+    ['subject', 'support-front'].includes(packageRole) &&
+    surface?.mode === 'alpha'
+  ) {
+    const alpha = await sharp(buffer)
       .ensureAlpha()
-      .png()
-      .toBuffer(),
-    width,
-    height,
+      .extractChannel(3)
+      .raw()
+      .toBuffer();
+    if (!alpha.some((value) => value < 250)) {
+      throw new Error(
+        `registered-sheet ${record.assetId} 的 ${packageRole} alpha 格没有真实透明像素`,
+      );
+    }
+  }
+  return {
+    buffer,
+    width: rect.width,
+    height: rect.height,
+    sourceRect: rect,
+    sourceSurface: surface
+      ? {
+          mode: surface.mode,
+          keyColor: surface.keyColor ?? null,
+          tolerance: surface.tolerance ?? null,
+        }
+      : null,
+    keying: derivation?.keying ?? null,
+    keyingMetadata,
     lineage: {
       kind: 'registered-layer-sheet',
       assetId: record.assetId,
@@ -346,6 +472,7 @@ const sourceImage = async ({
   root,
   manifest,
   source,
+  derivation,
   registration,
   sourcePackage,
 }) => {
@@ -364,6 +491,7 @@ const sourceImage = async ({
         packageRole: source.packageRole,
         registration,
         sourcePackage,
+        derivation,
       }),
       sha256: actualSha256,
     };
@@ -465,6 +593,7 @@ const buildMemberImage = async ({
     root,
     manifest,
     source: member.source,
+    derivation: member.derivation,
     registration,
     sourcePackage: {
       ...sourcePackage,
@@ -544,6 +673,25 @@ const buildMemberImage = async ({
   }
   await fs.mkdir(path.dirname(output), {recursive: true});
   await fs.writeFile(output, outputBuffer);
+  const keyingMetadataFile = `${output}.key.json`;
+  let keyingMetadataSha256 = null;
+  if (source.keyingMetadata) {
+    const keyingMetadata = {
+      ...source.keyingMetadata,
+      input: source.record.file,
+      output: path.relative(root, output),
+      sourceRect: source.sourceRect,
+      sourceAssetId: source.record.assetId,
+    };
+    await fs.writeFile(
+      keyingMetadataFile,
+      `${JSON.stringify(keyingMetadata, null, 2)}\n`,
+      'utf8',
+    );
+    keyingMetadataSha256 = await sha256File(keyingMetadataFile);
+  } else {
+    await fs.rm(keyingMetadataFile, {force: true});
+  }
   const metadata = await imageMetadata(output);
   if (
     metadata.width !== canvas.width ||
@@ -584,6 +732,10 @@ const buildMemberImage = async ({
       hasAlpha: metadata.hasAlpha === true,
     },
     placement,
+    sourceRect: source.sourceRect ?? null,
+    sourceSurface: source.sourceSurface ?? null,
+    keying: source.keying ?? null,
+    keyingMetadataSha256,
     maskRecord,
     maskSha256,
     transparentPixels,
@@ -618,6 +770,10 @@ export const createRegisteredFamilyFingerprint = ({
     output: member.file,
     source: member.source.lineage,
     placement: member.placement,
+    sourceRect: member.sourceRect,
+    sourceSurface: member.sourceSurface,
+    keying: member.keying,
+    keyingMetadataSha256: member.keyingMetadataSha256,
     maskAssetId: member.maskRecord?.assetId ?? null,
     maskSha256: member.maskSha256,
     clip: member.member.derivation.clip ?? null,
@@ -705,6 +861,10 @@ export const deriveRegisteredFamily = async ({
       },
       derivation: {
         placement: derived.placement,
+        sourceRect: derived.sourceRect,
+        sourceSurface: derived.sourceSurface,
+        keying: derived.keying,
+        keyingMetadataSha256: derived.keyingMetadataSha256,
         maskAssetId: derived.maskRecord?.assetId ?? null,
         maskSha256: derived.maskSha256,
         maskChannel: member.derivation.maskChannel ?? null,
@@ -748,7 +908,9 @@ export const deriveRegisteredFamily = async ({
         outputRole: member.role,
         canvas: spec.registration.canvas,
         derivation: {
-          method: member.derivation.maskAssetId
+          method: derived.keying
+            ? 'alpha-extraction'
+            : member.derivation.maskAssetId
             ? 'mask-application'
             : member.derivation.clip
               ? 'mask-application'
@@ -952,6 +1114,26 @@ export const assertRegisteredFamilyRecords = ({
       binding.sourcePackageId !== sourcePackageId
     ) {
       errors.push(`${record.assetId} sourcePackageId 不匹配`);
+    }
+    if (
+      binding.derivation?.sourceSurface?.mode === 'chroma-key' &&
+      (
+        !binding.derivation.keying ||
+        !/^[a-f0-9]{64}$/.test(
+          binding.derivation.keyingMetadataSha256 ?? '',
+        )
+      )
+    ) {
+      errors.push(`${record.assetId} 色键来源缺少正式 keying provenance`);
+    }
+    if (
+      binding.derivation?.sourceSurface?.mode !== 'chroma-key' &&
+      (
+        binding.derivation?.keying != null ||
+        binding.derivation?.keyingMetadataSha256 != null
+      )
+    ) {
+      errors.push(`${record.assetId} 非色键来源不得携带 keying provenance`);
     }
   }
   for (const role of REGISTERED_FAMILY_ROLES) {

@@ -131,6 +131,27 @@
       "type": "object",
       "properties": {
         "placement": {"$ref": "#/$defs/rect"},
+        "sourceRect": {"$ref": "#/$defs/rect"},
+        "keying": {
+          "type": "object",
+          "required": [
+            "keyColor",
+            "transparentThreshold",
+            "opaqueThreshold",
+            "edgeFeather",
+            "matteErode",
+            "edgePadding"
+          ],
+          "properties": {
+            "keyColor": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
+            "transparentThreshold": {"type": "number", "minimum": 0, "maximum": 255},
+            "opaqueThreshold": {"type": "number", "exclusiveMinimum": 0, "maximum": 441.7},
+            "edgeFeather": {"type": "number", "minimum": 0, "maximum": 8},
+            "matteErode": {"type": "integer", "minimum": 0, "maximum": 8},
+            "edgePadding": {"type": "integer", "minimum": 0, "maximum": 32}
+          },
+          "additionalProperties": false
+        },
         "maskAssetId": {"type": "string", "minLength": 1},
         "maskChannel": {"enum": ["alpha", "luminance"]},
         "invertMask": {"type": "boolean"},

@@ -413,12 +413,30 @@ const inspectTechnicalQuality = async ({asset, project}) => {
     const minimumHeight = Math.round(project.video.height * scale);
     checks.push({id: 'minimum-resolution', passed: Number(metadata.width ?? 0) >= minimumWidth && Number(metadata.height ?? 0) >= minimumHeight, expected: `${minimumWidth}x${minimumHeight}`, actual: `${metadata.width ?? 0}x${metadata.height ?? 0}`});
   }
-  if (['character', 'prop'].includes(asset.kind)) {
+  const hasRegisteredKeying =
+    asset.registeredFamilyBinding?.derivation?.sourceSurface?.mode ===
+    'chroma-key';
+  if (['character', 'prop'].includes(asset.kind) || hasRegisteredKeying) {
     const inspection = await inspectCharacterPng(file);
     checks.push(
       {id: 'alpha-present', passed: inspection.hasAlpha && inspection.transparentPixels > 0, actual: inspection.hasAlpha},
       {id: 'key-edge-clean', passed: inspection.keyEdgeRatio <= 0.12, expected: '<= 0.12', actual: inspection.keyEdgeRatio},
     );
+    if (hasRegisteredKeying) {
+      const metadataFile = `${file}.key.json`;
+      const metadataHash = await fileExists(metadataFile)
+        ? await hashFile(metadataFile)
+        : null;
+      checks.push({
+        id: 'keying-provenance-current',
+        passed:
+          metadataHash ===
+          asset.registeredFamilyBinding.derivation.keyingMetadataSha256,
+        expected:
+          asset.registeredFamilyBinding.derivation.keyingMetadataSha256,
+        actual: metadataHash,
+      });
+    }
   }
   if (metadata.hasAlpha === true) {
     const inspection = await inspectAlphaBands({

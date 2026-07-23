@@ -69,15 +69,24 @@ Use one schema-v7 image request with:
 
 - `sourceStrategy=registered-layer-sheet`;
 - `packageRole=registered-sheet`;
+- `outputSurface.mode=layer-sheet`;
 - a 2×2 `sheetLayout` containing `reference`, `support-rear`, `subject`, and
   `support-front` exactly once;
+- opaque `reference`/`support-rear` cells and alpha or flat chroma-key
+  `subject`/`support-front` cells; default to a declared chroma key when the
+  selected host model does not reliably emit native alpha;
+- optional `providerSource` when provider-native dimensions or separators
+  require explicit post-generation cell rectangles;
 - all three `memberAssetIds`;
 - the complete source master in `referenceAssetIds`;
 - the formal recovery policy.
 
-This costs one expected provider image call, creates three deterministic local
-derivatives, and avoids three calls compared with reference + three
-full-context edits.
+The provider root remains byte-for-byte unchanged. The registered-family spec
+declares explicit `sourceRect`, destination placement, and keying parameters
+when needed; the CLI performs separator removal, keying, and scaling as part of
+the same three fingerprinted local members. This costs one expected provider
+image call, creates three deterministic local derivatives, and avoids three
+calls compared with reference + three full-context edits.
 
 ### Context-preserving layer edits
 
@@ -102,6 +111,8 @@ member must:
   policy, and family fingerprint;
 - record role, completeness, source lineage, hash, lifecycle, and
   `trimmed=false`;
+- for chroma cells, record the source surface, source rectangle, exact keying
+  parameters, and current key-metadata SHA;
 - remain an active `registered-family-member` manifest record.
 
 `registered-depth-stack` has exactly three asset children, one per role. Each

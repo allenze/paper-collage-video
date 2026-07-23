@@ -1,4 +1,33 @@
-# Paper Collage Video 0.16.0-dev.5
+# Paper Collage Video 0.16.0-dev.6
+
+This development release makes provider-native mixed-surface registered layer
+sheets a first-class production source. A 2×2 request now declares
+`outputSurface.mode=layer-sheet`: reference and rear cells are opaque, while
+subject and front cells use real alpha or an explicit flat chroma key. Host
+models that do not reliably emit native alpha can therefore return one RGB
+provider root without fake checkerboard transparency.
+
+The provider root remains byte-for-byte unchanged in provenance. The formal
+registered-family derivation accepts fingerprinted source-cell rectangles for
+provider-native dimensions and separators, applies the repository chroma-key
+processor, scales each result onto the shared registration canvas, writes
+current `.key.json` metadata, and records all of that in each member binding and
+family fingerprint. Provider validation rejects missing per-cell key planes;
+quality rejects stale key metadata and key-colored edge residue.
+
+The no-provider F035 fixture now exercises a gapped provider-native RGB sheet
+with opaque top cells and magenta-keyed subject/front cells. This closes the
+generic gap exposed by the first VOX Phase 2.4 pilot attempt, where a
+project-local brightness/chroma threshold preserved blue ocean inside submarine
+negative spaces and incorrectly attributed a locally normalized file to the
+provider.
+
+No image, voice, or video provider call is required by this engineering
+release. The pilot's remaining approved image attempt stays unused until the
+source, packaged plugin, installed cache, and fresh-workspace runtime identities
+match.
+
+## Inherited 0.16.0-dev.5 approved attempt budget
 
 This development release separates a production profile's planning ceiling from
 the exact image-attempt cap a human approved for one project. Creative Plan v4

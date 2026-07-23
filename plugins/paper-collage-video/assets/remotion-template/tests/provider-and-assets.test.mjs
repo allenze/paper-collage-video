@@ -349,6 +349,8 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
   const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'provider-surface-'));
   const opaque = path.join(directory, 'opaque.png');
   const alpha = path.join(directory, 'alpha.png');
+  const mixedSheet = path.join(directory, 'mixed-sheet.png');
+  const checkerSheet = path.join(directory, 'checker-sheet.png');
   const request = {
     schemaVersion: 7,
     capability: 'image',
@@ -378,6 +380,50 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
     );
     await assert.doesNotReject(
       verifyOutputFile(alpha, {...request, outputSurface: {mode: 'alpha'}}),
+    );
+    const sheetRequest = {
+      ...request,
+      compositionBinding: {canvas: {width: 128, height: 128}},
+      outputSurface: {mode: 'layer-sheet'},
+      layerPackageBinding: {
+        sheetLayout: {
+          columns: 2,
+          rows: 2,
+          providerSource: {
+            canvasMode: 'provider-native',
+            minimumWidth: 64,
+            minimumHeight: 64,
+            cellExtraction: 'explicit-rects',
+          },
+          cells: [
+            {packageRole: 'reference', row: 0, column: 0, outputSurface: {mode: 'opaque'}},
+            {packageRole: 'support-rear', row: 0, column: 1, outputSurface: {mode: 'opaque'}},
+            {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
+            {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
+          ],
+        },
+      },
+    };
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="66" height="66">
+        <rect width="66" height="66" fill="#ffffff"/>
+        <rect x="0" y="0" width="32" height="32" fill="#173f72"/>
+        <rect x="34" y="0" width="32" height="32" fill="#173f72"/>
+        <rect x="0" y="34" width="32" height="32" fill="#ff00ff"/>
+        <ellipse cx="16" cy="50" rx="9" ry="6" fill="#f5bd20"/>
+        <rect x="34" y="34" width="32" height="32" fill="#ff00ff"/>
+        <path d="M34 60 Q50 42 66 60 V66 H34 Z" fill="#2f733f"/>
+      </svg>
+    `)).png().toFile(mixedSheet);
+    await assert.doesNotReject(
+      verifyOutputFile(mixedSheet, sheetRequest),
+    );
+    await sharp({
+      create: {width: 66, height: 66, channels: 3, background: '#dddddd'},
+    }).png().toFile(checkerSheet);
+    await assert.rejects(
+      verifyOutputFile(checkerSheet, sheetRequest),
+      /没有形成声明的纯色色键面/,
     );
   } finally {
     await fsp.rm(directory, {recursive: true, force: true});

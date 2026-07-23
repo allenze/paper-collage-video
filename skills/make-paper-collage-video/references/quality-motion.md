@@ -24,6 +24,13 @@ visual inspection of the alpha mask, checkerboard, tight crop, or family proof.
 `key-edge-clean` is a different chroma/matte test and cannot be used as a proxy
 for rectangular crop residue.
 
+For a registered member derived from a chroma-key sheet cell, quality also
+requires `keying-provenance-current`: the adjacent `.key.json` must exist and
+its SHA-256 must match the registered-family binding. Inspect internal negative
+spaces as well as the outer silhouette; a clean outer edge does not excuse
+ocean/background pixels trapped inside a window, handle, propeller, or foliage
+hole.
+
 Semantic risk adds evidence-backed checks:
 
 - identity: `identity-family-consistent`, `identity-distinct-within-frame`, `cross-scene-identity-continuity`;

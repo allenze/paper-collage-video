@@ -53,6 +53,13 @@ responsive reveal envelopes. Participating asset/composite semantic checks must
 already be recorded. This is an executable precondition inside `style-review`,
 not another approval state.
 
+A mixed-surface registered sheet records the untouched provider-native RGB/RGBA
+file as the provider root. `assets:derive-registered-family` is the only formal
+path for explicit cell rectangles, separator removal, chroma-key-to-alpha,
+registration-canvas scaling, key metadata, and the three local member records.
+A resized/keyed project copy must never be recorded as though it were the raw
+provider result.
+
 ## v10 Project, v9 Editorial, Composition, and Boundary Tree
 
 Schema v10 is the only supported Project, Storyboard Authoring, and Compiled

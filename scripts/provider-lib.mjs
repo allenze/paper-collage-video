@@ -670,7 +670,10 @@ export const validateAssetRequest = (request) => {
   }
   if (request?.capability === 'image') {
     const surface = request.outputSurface;
-    if (!isPlainObject(surface) || !['alpha', 'chroma-key', 'opaque'].includes(surface.mode)) {
+    if (
+      !isPlainObject(surface) ||
+      !['alpha', 'chroma-key', 'opaque', 'layer-sheet'].includes(surface.mode)
+    ) {
       errors.push('schema-v7 image request 缺少有效 outputSurface');
     } else {
       if (
@@ -684,6 +687,12 @@ export const validateAssetRequest = (request) => {
         (!Number.isInteger(surface.tolerance) || surface.tolerance < 0 || surface.tolerance > 255)
       ) {
         errors.push('outputSurface.tolerance 必须是 0–255 的整数');
+      }
+      if (
+        surface.mode === 'layer-sheet' &&
+        (surface.keyColor !== undefined || surface.tolerance !== undefined)
+      ) {
+        errors.push('layer-sheet outputSurface 的色键必须逐格声明');
       }
     }
   }
@@ -937,6 +946,61 @@ export const validateAssetRequest = (request) => {
         ) {
           errors.push('registered-layer-sheet 必须声明 reference + 三层的完整 2x2 sheetLayout');
         }
+        if (request.outputSurface?.mode !== 'layer-sheet') {
+          errors.push('registered-layer-sheet provider root 必须使用逐格 layer-sheet outputSurface');
+        }
+        for (const cell of cells) {
+          const surface = cell.outputSurface;
+          if (
+            !isPlainObject(surface) ||
+            !['alpha', 'chroma-key', 'opaque'].includes(surface.mode)
+          ) {
+            errors.push(`registered-layer-sheet ${cell.packageRole ?? 'unknown'} 格缺少有效 outputSurface`);
+            continue;
+          }
+          if (
+            surface.mode === 'chroma-key' &&
+            (typeof surface.keyColor !== 'string' ||
+              !/^#[0-9a-fA-F]{6}$/.test(surface.keyColor))
+          ) {
+            errors.push(`registered-layer-sheet ${cell.packageRole} 色键格必须声明 #RRGGBB keyColor`);
+          }
+          if (
+            surface.tolerance !== undefined &&
+            (!Number.isInteger(surface.tolerance) ||
+              surface.tolerance < 0 ||
+              surface.tolerance > 255)
+          ) {
+            errors.push(`registered-layer-sheet ${cell.packageRole} tolerance 必须是 0–255 的整数`);
+          }
+          if (
+            ['reference', 'support-rear'].includes(cell.packageRole) &&
+            surface.mode !== 'opaque'
+          ) {
+            errors.push(`registered-layer-sheet ${cell.packageRole} 必须是 opaque`);
+          }
+          if (
+            ['subject', 'support-front'].includes(cell.packageRole) &&
+            !['alpha', 'chroma-key'].includes(surface.mode)
+          ) {
+            errors.push(`registered-layer-sheet ${cell.packageRole} 必须是 alpha 或 chroma-key`);
+          }
+        }
+        const providerSource = layout?.providerSource;
+        if (
+          providerSource !== undefined &&
+          providerSource !== null &&
+          (
+            providerSource.canvasMode !== 'provider-native' ||
+            !Number.isInteger(providerSource.minimumWidth) ||
+            providerSource.minimumWidth < 2 ||
+            !Number.isInteger(providerSource.minimumHeight) ||
+            providerSource.minimumHeight < 2 ||
+            providerSource.cellExtraction !== 'explicit-rects'
+          )
+        ) {
+          errors.push('registered-layer-sheet providerSource 必须声明 provider-native、最小画布与 explicit-rects');
+        }
       } else if (binding.sheetLayout !== null) {
         errors.push('context-preserving-layer-edits 的 sheetLayout 必须为 null');
       }
@@ -996,6 +1060,16 @@ export const validateAssetRequest = (request) => {
     ) {
       errors.push('quality.requiredChecks 不得省略 riskClass 要求的语义检查');
     }
+  }
+  if (
+    request?.capability === 'image' &&
+    request.outputSurface?.mode === 'layer-sheet' &&
+    (
+      request.layerPackageBinding?.sourceStrategy !== 'registered-layer-sheet' ||
+      request.layerPackageBinding?.packageRole !== 'registered-sheet'
+    )
+  ) {
+    errors.push('layer-sheet outputSurface 只能用于 registered-layer-sheet provider root');
   }
   if (errors.length) throw new Error(`资产请求无效：${errors.join('；')}`);
   return request;
@@ -1131,7 +1205,24 @@ export const verifyOutputFile = async (file, request = null) => {
     }
     if (request.schemaVersion >= 3) {
       const expected = request.compositionBinding.canvas;
-      if (metadata.width !== expected.width || metadata.height !== expected.height) {
+      const providerSource =
+        request.layerPackageBinding?.sheetLayout?.providerSource ?? null;
+      if (
+        providerSource?.canvasMode === 'provider-native' &&
+        (
+          metadata.width < providerSource.minimumWidth ||
+          metadata.height < providerSource.minimumHeight
+        )
+      ) {
+        throw new Error(
+          `provider 原生 sheet 画布 ${metadata.width}x${metadata.height} 小于声明下限 ` +
+          `${providerSource.minimumWidth}x${providerSource.minimumHeight}。`,
+        );
+      }
+      if (
+        providerSource?.canvasMode !== 'provider-native' &&
+        (metadata.width !== expected.width || metadata.height !== expected.height)
+      ) {
         throw new Error(
           `provider 图像尺寸 ${metadata.width}x${metadata.height} 与请求画布 ${expected.width}x${expected.height} 不一致。`,
         );
@@ -1179,6 +1270,58 @@ export const verifyOutputFile = async (file, request = null) => {
         throw new Error(
           `provider 图像边界未形成可靠色键面：仅 ${matches}/${boundary.length} 像素匹配 ${surface.keyColor}。`,
         );
+      }
+    } else if (surface?.mode === 'layer-sheet') {
+      const layout = request.layerPackageBinding?.sheetLayout;
+      if (layout?.columns !== 2 || layout?.rows !== 2) {
+        throw new Error('layer-sheet 输出缺少正式 2x2 sheetLayout。');
+      }
+      const pixels = await sharp(file)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({resolveWithObject: true});
+      const {width, height, channels} = pixels.info;
+      for (const cell of layout.cells ?? []) {
+        const cellSurface = cell.outputSurface;
+        const left = Math.floor(cell.column * width / layout.columns);
+        const right = Math.floor((cell.column + 1) * width / layout.columns);
+        const top = Math.floor(cell.row * height / layout.rows);
+        const bottom = Math.floor((cell.row + 1) * height / layout.rows);
+        let transparent = 0;
+        let keyed = 0;
+        const total = Math.max(1, (right - left) * (bottom - top));
+        const key = cellSurface?.mode === 'chroma-key'
+          ? cellSurface.keyColor
+            .slice(1)
+            .match(/.{2}/g)
+            .map((part) => Number.parseInt(part, 16))
+          : null;
+        const tolerance = cellSurface?.tolerance ?? 24;
+        for (let y = top; y < bottom; y += 1) {
+          for (let x = left; x < right; x += 1) {
+            const offset = (y * width + x) * channels;
+            if (pixels.data[offset + channels - 1] < 250) transparent += 1;
+            if (
+              key?.every(
+                (value, channel) =>
+                  Math.abs(pixels.data[offset + channel] - value) <= tolerance,
+              )
+            ) {
+              keyed += 1;
+            }
+          }
+        }
+        if (cellSurface?.mode === 'alpha' && transparent / total < 0.08) {
+          throw new Error(
+            `registered-layer-sheet ${cell.packageRole} 格未提供足够真实透明像素。`,
+          );
+        }
+        if (cellSurface?.mode === 'chroma-key' && keyed / total < 0.08) {
+          throw new Error(
+            `registered-layer-sheet ${cell.packageRole} 格没有形成声明的纯色色键面 ` +
+            `${cellSurface.keyColor}；匹配比例 ${(keyed / total).toFixed(4)}。`,
+          );
+        }
       }
     }
   } else if (request?.capability === 'voice') {

@@ -122,23 +122,40 @@ const prepareRegisteredSource = async () => {
     ASSET_HARDENING_PUBLIC_DIR,
     'registered-layer-sheet.png',
   );
+  const gutter = 4;
+  const magenta = await sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: '#ff00ff',
+    },
+  }).png().toBuffer();
+  const subjectOnKey = await sharp(magenta)
+    .composite([{input: subject}])
+    .png()
+    .toBuffer();
+  const frontOnKey = await sharp(magenta)
+    .composite([{input: front}])
+    .png()
+    .toBuffer();
   await sharp({
     create: {
-      width: width * 2,
-      height: height * 2,
-      channels: 4,
-      background: '#00000000',
+      width: width * 2 + gutter,
+      height: height * 2 + gutter,
+      channels: 3,
+      background: '#ffffff',
     },
   })
     .composite([
       {input: masterFile, left: 0, top: 0},
-      {input: rear, left: width, top: 0},
-      {input: subject, left: 0, top: height},
-      {input: front, left: width, top: height},
+      {input: rear, left: width + gutter, top: 0},
+      {input: subjectOnKey, left: 0, top: height + gutter},
+      {input: frontOnKey, left: width + gutter, top: height + gutter},
     ])
     .png()
     .toFile(layerSheetFile);
-  return {masterFile, layerSheetFile};
+  return {masterFile, layerSheetFile, gutter};
 };
 
 const createRegisteredFamilySpec = () => ({
@@ -176,7 +193,31 @@ const createRegisteredFamilySpec = () => ({
       assetId: 'phase2-registered-layer-sheet',
       packageRole: member.role,
     },
-    derivation: {},
+    derivation: {
+      sourceRect: {
+        left: member.role === 'support-rear'
+          ? PHASE2_REGISTERED_FAMILY.registration.canvas.width + 4
+          : member.role === 'support-front'
+            ? PHASE2_REGISTERED_FAMILY.registration.canvas.width + 4
+            : 0,
+        top: member.role === 'support-rear'
+          ? 0
+          : PHASE2_REGISTERED_FAMILY.registration.canvas.height + 4,
+        ...PHASE2_REGISTERED_FAMILY.registration.canvas,
+      },
+      ...(['subject', 'support-front'].includes(member.role)
+        ? {
+            keying: {
+              keyColor: '#ff00ff',
+              transparentThreshold: 18,
+              opaqueThreshold: 95,
+              edgeFeather: 0.6,
+              matteErode: 1,
+              edgePadding: 6,
+            },
+          }
+        : {}),
+    },
   })),
   recoveryPolicy: REGISTERED_FAMILY_RECOVERY_POLICY,
   applyToProject: false,
@@ -232,11 +273,17 @@ export const prepareRegisteredFamilyProof = async () => {
     sheetLayout: {
       columns: 2,
       rows: 2,
+      providerSource: {
+        canvasMode: 'provider-native',
+        minimumWidth: registration.canvas.width * 2,
+        minimumHeight: registration.canvas.height * 2,
+        cellExtraction: 'explicit-rects',
+      },
       cells: [
-        {packageRole: 'reference', row: 0, column: 0},
-        {packageRole: 'support-rear', row: 0, column: 1},
-        {packageRole: 'subject', row: 1, column: 0},
-        {packageRole: 'support-front', row: 1, column: 1},
+        {packageRole: 'reference', row: 0, column: 0, outputSurface: {mode: 'opaque'}},
+        {packageRole: 'support-rear', row: 0, column: 1, outputSurface: {mode: 'opaque'}},
+        {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
+        {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
       ],
     },
     recoveryPolicy: {
@@ -267,7 +314,10 @@ export const prepareRegisteredFamilyProof = async () => {
         parentAssetId: registration.sourceMasterAssetId,
       },
     },
-    request: {layerPackageBinding},
+    request: {
+      outputSurface: {mode: 'layer-sheet'},
+      layerPackageBinding,
+    },
   }));
   const derived = await deriveRegisteredFamily({
     root: ROOT,

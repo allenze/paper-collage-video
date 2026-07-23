@@ -334,6 +334,135 @@ test('registered family derives three deterministic full-canvas members and life
   }
 });
 
+test('registered family derives provider-native mixed-surface sheets with explicit rects and chroma provenance', async () => {
+  const fixture = await makeFamilyFixture();
+  try {
+    const sourceRecord = fixture.manifest.assets.find(
+      ({assetId}) => assetId === 'fixture-layer-sheet',
+    );
+    const sourceFile = path.join(fixture.root, sourceRecord.file);
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="364" height="244">
+        <rect width="364" height="244" fill="#ffffff"/>
+        <rect x="0" y="0" width="180" height="120" fill="#d3b986"/>
+        <path d="M18 66 H162 V106 H18 Z" fill="#795336"/>
+        <rect x="184" y="0" width="180" height="120" fill="#d3b986"/>
+        <path d="M18 66 H162 V106 H18 Z" transform="translate(184 0)" fill="#795336"/>
+        <rect x="0" y="124" width="180" height="120" fill="#ff00ff"/>
+        <ellipse cx="90" cy="180" rx="31" ry="45" fill="#b56b49"/>
+        <circle cx="90" cy="180" r="10" fill="#ff00ff"/>
+        <rect x="184" y="124" width="180" height="120" fill="#ff00ff"/>
+        <path d="M196 212 Q274 164 352 212 V244 H196 Z" fill="#2f733f"/>
+      </svg>
+    `)).png().toFile(sourceFile);
+    const sourceMetadata = await sharp(sourceFile).metadata();
+    sourceRecord.sha256 = await sha256File(sourceFile);
+    sourceRecord.sizeBytes = (await fs.stat(sourceFile)).size;
+    sourceRecord.media = {
+      width: sourceMetadata.width,
+      height: sourceMetadata.height,
+      format: sourceMetadata.format,
+      hasAlpha: sourceMetadata.hasAlpha === true,
+    };
+    sourceRecord.request.layerPackageBinding.sheetLayout = {
+      columns: 2,
+      rows: 2,
+      providerSource: {
+        canvasMode: 'provider-native',
+        minimumWidth: 320,
+        minimumHeight: 220,
+        cellExtraction: 'explicit-rects',
+      },
+      cells: [
+        {packageRole: 'reference', row: 0, column: 0, outputSurface: {mode: 'opaque'}},
+        {packageRole: 'support-rear', row: 0, column: 1, outputSurface: {mode: 'opaque'}},
+        {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
+        {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8}},
+      ],
+    };
+    const rects = {
+      'support-rear': {left: 184, top: 0, width: 180, height: 120},
+      subject: {left: 0, top: 124, width: 180, height: 120},
+      'support-front': {left: 184, top: 124, width: 180, height: 120},
+    };
+    fixture.spec.members = fixture.spec.members.map((member) => ({
+      ...member,
+      derivation: {
+        sourceRect: rects[member.role],
+        placement: {
+          left: 0,
+          top: 0,
+          width: fixture.registration.canvas.width,
+          height: fixture.registration.canvas.height,
+        },
+        ...(['subject', 'support-front'].includes(member.role)
+          ? {
+              keying: {
+                keyColor: '#ff00ff',
+                transparentThreshold: 18,
+                opaqueThreshold: 95,
+                edgeFeather: 0.6,
+                matteErode: 1,
+                edgePadding: 6,
+              },
+            }
+          : {}),
+      },
+    }));
+    const result = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: fixture.spec,
+      manifest: fixture.manifest,
+      now: '2026-07-23T01:30:00.000Z',
+    });
+    assert.equal(result.records.length, 3);
+    assert.equal(result.report.providerImageCalls, 1);
+    assert.equal(result.report.localDerivatives, 3);
+    const rear = result.records.find(
+      ({registeredFamilyBinding}) =>
+        registeredFamilyBinding.role === 'support-rear',
+    );
+    const subject = result.records.find(
+      ({registeredFamilyBinding}) =>
+        registeredFamilyBinding.role === 'subject',
+    );
+    assert.equal(rear.registeredFamilyBinding.derivation.keying, null);
+    assert.equal(
+      subject.registeredFamilyBinding.derivation.sourceSurface.mode,
+      'chroma-key',
+    );
+    assert.equal(
+      subject.registeredFamilyBinding.derivation.keying.keyColor,
+      '#ff00ff',
+    );
+    assert.match(
+      subject.registeredFamilyBinding.derivation.keyingMetadataSha256,
+      /^[a-f0-9]{64}$/,
+    );
+    assert.equal(
+      await fs.stat(path.join(fixture.root, `${subject.file}.key.json`))
+        .then(() => true),
+      true,
+    );
+    const alpha = await sharp(path.join(fixture.root, subject.file))
+      .ensureAlpha()
+      .extractChannel(3)
+      .raw()
+      .toBuffer();
+    assert.ok(alpha.some((value) => value === 0));
+    assert.ok(alpha.some((value) => value === 255));
+    assert.equal(
+      assertRegisteredFamilyRecords({
+        records: result.records,
+        registration: fixture.registration,
+      }).passed,
+      true,
+    );
+  } finally {
+    await fs.rm(fixture.root, {recursive: true, force: true});
+  }
+});
+
 test('registered family rejects an isolated legacy member source', async () => {
   const fixture = await makeFamilyFixture();
   try {

@@ -522,6 +522,10 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     },
     derivation: {
       placement: {left: 0, top: 0, width: 100, height: 100},
+      sourceRect: null,
+      sourceSurface: null,
+      keying: null,
+      keyingMetadataSha256: null,
       maskAssetId: null,
       maskSha256: null,
       maskChannel: null,

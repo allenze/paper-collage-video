@@ -96,6 +96,7 @@ for (const entry of [
   'scripts/asset-hardening-proof-lib.mjs',
   'scripts/asset-evidence-lib.mjs',
   'scripts/asset-manifest-lib.mjs',
+  'scripts/chroma-key-lib.mjs',
   'scripts/audio-preflight-lib.mjs',
   'scripts/audio-calibration-lib.mjs',
   'scripts/creative-plan-lib.mjs',

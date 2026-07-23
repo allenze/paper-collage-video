@@ -75,6 +75,10 @@
       "type": "object",
       "required": [
         "placement",
+        "sourceRect",
+        "sourceSurface",
+        "keying",
+        "keyingMetadataSha256",
         "maskAssetId",
         "maskSha256",
         "maskChannel",
@@ -85,6 +89,37 @@
       ],
       "properties": {
         "placement": {"$ref": "https://local.paper-collage.dev/registered-family.schema.json#/$defs/rect"},
+        "sourceRect": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "https://local.paper-collage.dev/registered-family.schema.json#/$defs/rect"}
+          ]
+        },
+        "sourceSurface": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["mode", "keyColor", "tolerance"],
+              "properties": {
+                "mode": {"enum": ["alpha", "chroma-key", "opaque"]},
+                "keyColor": {"type": ["string", "null"], "pattern": "^#[0-9a-fA-F]{6}$"},
+                "tolerance": {"type": ["integer", "null"], "minimum": 0, "maximum": 255}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "keying": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "https://local.paper-collage.dev/registered-family.schema.json#/$defs/derivation/properties/keying"}
+          ]
+        },
+        "keyingMetadataSha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
         "maskAssetId": {"type": ["string", "null"]},
         "maskSha256": {
           "type": ["string", "null"],
