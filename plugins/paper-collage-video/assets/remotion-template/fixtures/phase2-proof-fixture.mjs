@@ -946,7 +946,7 @@ export const createPhase2StoryboardAuthoring = ({media}) => ({
 });
 
 export const createPhase2Plan = () => ({
-  schemaVersion: 3,
+  schemaVersion: 4,
   slug: PHASE2_PROOF_SLUG,
   status: 'resolved',
   inputMode: 'both',
@@ -964,6 +964,12 @@ export const createPhase2Plan = () => ({
     maxPoseSheetCalls: 2,
     maxStatesPerSheet: 6,
     maxContinuousTargets: 12,
+  },
+  approvedImageBudget: {
+    imageAttemptLimit: 1,
+    expectedProviderImageCalls: 1,
+    profileHardCeiling: 21,
+    approvedAt: PHASE2_PROOF_UPDATED_AT,
   },
   requested: {durationSeconds: 6, sceneCount: 2},
   resolved: {

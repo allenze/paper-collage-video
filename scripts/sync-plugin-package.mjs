@@ -389,7 +389,7 @@ const project = {
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   plan: {
-    schemaVersion: 3,
+    schemaVersion: 4,
     slug: 'starter-demo',
     status: 'resolved',
     inputMode: 'both',
@@ -407,6 +407,12 @@ const project = {
       maxPoseSheetCalls: 1,
       maxStatesPerSheet: 4,
       maxContinuousTargets: 2,
+    },
+    approvedImageBudget: {
+      imageAttemptLimit: 1,
+      expectedProviderImageCalls: 0,
+      profileHardCeiling: 6,
+      approvedAt: '2026-01-01T00:00:00.000Z',
     },
     requested: {durationSeconds: 1.2, sceneCount: 1},
     resolved: {

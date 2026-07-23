@@ -162,6 +162,16 @@ npm run provider:recover-record -- --request=projects/<slug>/requests/<asset>.js
 
 Try exact reuse before reserving an attempt. Validate the request first. `provider:attempt reserve --json` returns the canonical provider/model invocation mapping plus its fingerprint, so the host handoff does not need to guess connector ids. `provider:record` inherits provider/model from the attempt and rejects conflicting overrides. `provider:run` reserves automatically; a host tool call must use the explicit reserve command first. If a host result is abandoned instead of recorded, close it with `provider:attempt close` and state whether quota was consumed. When the ledger already says `succeeded` but manifest recording was interrupted, `provider:recover-record` verifies request/output identity and creates exactly one provenance record without consuming quota twice. Never delete or rewrite `generation-attempts.jsonl`.
 
+Creative Plan v4 distinguishes the selected profile's
+`assetBudget.maxGeneratedImages` planning ceiling from
+`approvedImageBudget.imageAttemptLimit`. The combined concept selection must
+include `budgetDecision.imageAttemptLimit`; `project:confirm-concept` rejects a
+limit below compiled expected calls or above the profile ceiling. Reservation
+must fail when this approval is absent and must enforce the approved cap even
+when the profile ceiling is larger. `provider:attempt summary --json` is the
+read-only proof surface for ceiling, approved cap, used, reserved, and remaining
+attempts.
+
 The manifest owns accepted asset provenance. The append-only attempt ledger owns real generation usage, including rejected and abandoned results. Production scheduling stays in `production.json`.
 
 ## Preflight Production Narration

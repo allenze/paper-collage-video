@@ -37,7 +37,10 @@ const printPlan = ({project, json}) => {
   console.log(`  目标幕数：${project.plan.resolved.sceneCount}`);
   console.log(`  制作档位：${project.plan.productionProfile}`);
   console.log(
-    `  生图预算：基础 ${project.plan.assetBudget.baseImageAttempts} + 分层 source-package 预留 ${project.plan.assetBudget.layerPackageAttemptReserve} = 最多 ${project.plan.assetBudget.maxGeneratedImages} 次计费尝试`,
+    `  生图 profile ceiling：基础 ${project.plan.assetBudget.baseImageAttempts} + 分层 source-package 预留 ${project.plan.assetBudget.layerPackageAttemptReserve} = 最多 ${project.plan.assetBudget.maxGeneratedImages} 次计费尝试`,
+  );
+  console.log(
+    `  人批准图片尝试上限：${project.plan.approvedImageBudget?.imageAttemptLimit ?? '待组合概念审批'}`,
   );
   console.log(`  动作预算：最多 ${project.plan.motionBudget.maxPoseSheetCalls} 张姿态母版 · 单张 ${project.plan.motionBudget.maxStatesPerSheet} 格 · ${project.plan.motionBudget.maxContinuousTargets} 个连续动效目标`);
   console.log('  可选制作档位：');

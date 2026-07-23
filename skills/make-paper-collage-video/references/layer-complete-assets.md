@@ -43,8 +43,12 @@ For every layer-aware treatment, author:
 `directingSummary.generationBudget.sourcePackagePlans`. The combined concept
 approval must copy `sourcePackageDecision` exactly. It records structural
 minimum calls, expected calls, local derivatives, avoided calls, and the
-profile hard ceiling. A ceiling is authorization capacity, not automatic
-spending.
+profile hard ceiling. A ceiling is planning capacity, not provider
+authorization or automatic spending. Creative Plan v4 separately records
+`approvedImageBudget.imageAttemptLimit`; the combined approval's
+`budgetDecision.imageAttemptLimit` must cover the expected calls, stay at or
+below the profile ceiling, and becomes the only limit the attempt ledger may
+reserve against.
 
 One single-scene profile reserves:
 

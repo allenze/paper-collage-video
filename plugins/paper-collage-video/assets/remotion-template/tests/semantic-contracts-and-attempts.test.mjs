@@ -309,7 +309,11 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify({
       schemaVersion: 6,
       slug,
-      plan: {productionProfile: 'draft', assetBudget: {maxGeneratedImages: 1}},
+      plan: {
+        productionProfile: 'draft',
+        assetBudget: {maxGeneratedImages: 6},
+        approvedImageBudget: {imageAttemptLimit: 1},
+      },
       video: {width: 100, height: 100, fps: 30},
       audio: {narration: {volume: 1}},
       scenes: [],
@@ -333,6 +337,55 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(path.join(ROOT, 'public', 'projects', slug), {recursive: true, force: true});
+  }
+});
+
+test('attempt ledger enforces the narrower human-approved cap instead of the profile ceiling', async () => {
+  const slug = `attempt-approved-cap-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const request = (assetId) => ({
+    schemaVersion: 7,
+    projectSlug: slug,
+    assetId,
+    capability: 'image',
+    outputSurface: {mode: 'opaque'},
+    compositionBinding: {derivation: {method: 'provider-generation'}},
+  });
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      JSON.stringify({
+        plan: {
+          assetBudget: {maxGeneratedImages: 6},
+          approvedImageBudget: {imageAttemptLimit: 2},
+        },
+      }),
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'generation-attempts.jsonl'),
+      '',
+    );
+    const first = await reserveGenerationAttempt({
+      request: request('first'),
+      provider: {id: 'provider'},
+    });
+    const second = await reserveGenerationAttempt({
+      request: request('second'),
+      provider: {id: 'provider'},
+    });
+    assert.equal(first.budget.maximum, 2);
+    assert.equal(second.budget.maximum, 2);
+    await assert.rejects(
+      () =>
+        reserveGenerationAttempt({
+          request: request('third'),
+          provider: {id: 'provider'},
+        }),
+      /批准上限 2/,
+    );
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
   }
 });
 
@@ -419,7 +472,12 @@ test('manual attempt closure requires truthful quota semantics', async () => {
   };
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
-    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({plan: {assetBudget: {maxGeneratedImages: 2}}}));
+    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({
+      plan: {
+        assetBudget: {maxGeneratedImages: 6},
+        approvedImageBudget: {imageAttemptLimit: 2},
+      },
+    }));
     const reserved = await reserveGenerationAttempt({request, provider: {id: 'provider'}});
     await assert.rejects(
       () => closeGenerationAttempt({slug, attemptId: reserved.event.attemptId, status: 'rejected', quotaConsumed: false}),
@@ -458,7 +516,12 @@ test('a succeeded closed attempt can recover one provenance record without consu
     await fs.mkdir(path.dirname(output), {recursive: true});
     await fs.writeFile(
       path.join(projectDirectory, 'project.json'),
-      JSON.stringify({plan: {assetBudget: {maxGeneratedImages: 1}}}),
+      JSON.stringify({
+        plan: {
+          assetBudget: {maxGeneratedImages: 6},
+          approvedImageBudget: {imageAttemptLimit: 1},
+        },
+      }),
     );
     await fs.writeFile(
       path.join(projectDirectory, 'assets-manifest.json'),
@@ -519,7 +582,12 @@ test('parallel reservations cannot oversubscribe the approved image budget', asy
   });
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
-    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({plan: {assetBudget: {maxGeneratedImages: 1}}}));
+    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({
+      plan: {
+        assetBudget: {maxGeneratedImages: 6},
+        approvedImageBudget: {imageAttemptLimit: 1},
+      },
+    }));
     await fs.writeFile(path.join(projectDirectory, 'generation-attempts.jsonl'), '');
     const results = await Promise.allSettled([
       reserveGenerationAttempt({request: request('first'), provider: {id: 'provider'}}),

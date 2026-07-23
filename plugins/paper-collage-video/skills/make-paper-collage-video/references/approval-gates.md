@@ -31,8 +31,10 @@ Do not create a fourth default gate after final render. Local final delivery com
 - After style approval, produce autonomously within the approved asset budget.
 - Reuse exact-match assets and deterministic local processing before regeneration.
 - Disclose the compiled source-package strategy, base/reserve/hard ceiling,
-  provider calls, local derivatives, and avoided calls at the decision that
-  authorizes them.
+  proposed exact image-attempt cap, provider calls, local derivatives, and
+  avoided calls at the decision that authorizes them. Record the cap as
+  `budgetDecision.imageAttemptLimit`; the profile ceiling alone is not provider
+  authorization.
 
 ## Voice, Rights, and Accuracy
 

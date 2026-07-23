@@ -13,7 +13,7 @@ import {
   reserveGenerationAttempt,
   summarizeGenerationAttempts,
 } from './generation-attempt-lib.mjs';
-import {ROOT} from './project-lib.mjs';
+import {ROOT, loadProject} from './project-lib.mjs';
 
 const args = process.argv.slice(2);
 const action = args.find((arg) => !arg.startsWith('--'));
@@ -65,15 +65,34 @@ try {
     if (!slug) throw new Error('summary 必须提供 --project=<slug>。');
     const loaded = await readGenerationAttemptEvents(slug);
     const summary = summarizeGenerationAttempts(loaded.events);
+    const {project} = await loadProject(slug);
+    const profileHardCeiling =
+      project.plan?.assetBudget?.maxGeneratedImages ?? null;
+    const approvedImageAttemptLimit =
+      project.plan?.approvedImageBudget?.imageAttemptLimit ?? null;
     const output = {
       projectSlug: slug,
       ledger: path.relative(ROOT, loaded.file),
       exists: loaded.exists,
+      budget: {
+        profileHardCeiling,
+        approvedImageAttemptLimit,
+        remaining:
+          Number.isInteger(approvedImageAttemptLimit)
+            ? Math.max(
+              0,
+              approvedImageAttemptLimit - summary.used - summary.reserved,
+            )
+            : null,
+      },
       ...summary,
     };
     if (args.includes('--json')) console.log(JSON.stringify(output, null, 2));
     else {
       console.log(`Generation attempts: ${slug}`);
+      console.log(
+        `  approved ${approvedImageAttemptLimit ?? 'pending'} / profile ${profileHardCeiling ?? 'unresolved'}; remaining ${output.budget.remaining ?? 'pending'}`,
+      );
       console.log(`  used ${summary.used}; reserved ${summary.reserved}; closed ${summary.closed}`);
       for (const [status, count] of Object.entries(summary.byStatus)) {
         console.log(`  ${status}: ${count}`);

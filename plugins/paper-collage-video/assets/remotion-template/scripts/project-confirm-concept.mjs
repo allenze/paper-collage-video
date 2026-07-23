@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import {
+  assertApprovedImageBudgetDecision,
   assertCreativePlanReady,
   assertConfirmedPlanDecision,
 } from './creative-plan-lib.mjs';
@@ -74,6 +75,12 @@ try {
     storyboard.directingSummary,
   );
   const at = new Date().toISOString();
+  const approvedImageBudget = assertApprovedImageBudgetDecision(
+    payload.budgetDecision,
+    project.plan,
+    storyboard.directingSummary,
+    {at},
+  );
   const confirmed = await writeProviderSelections({
     slug,
     selections,
@@ -82,6 +89,13 @@ try {
     at,
   });
   await assertSelectedProvidersReady(slug);
+  project.plan = {
+    ...project.plan,
+    approvedImageBudget,
+    updatedAt: at,
+  };
+  assertCreativePlanReady(project.plan, {slug});
+  await writeJson(paths.projectFile, project);
 
   let next = transitionProduction(state, 'capabilities-ready', {note, at});
   next = transitionProduction(next, 'brief-ready', {at});
@@ -98,7 +112,10 @@ try {
     `✓ 已锁定制作规格：${confirmedPlan.productionProfile} · ${confirmedPlan.durationSeconds}s · ${confirmedPlan.sceneCount} 幕 · ${confirmedPlan.durationAuthority}`,
   );
   console.log(
-    `✓ 已锁定分层 source packages：结构最低 ${confirmedSourcePackages.requiredProviderImageCalls} 次图片调用 · 预计 ${confirmedSourcePackages.expectedProviderImageCalls} 次 · 硬上限 ${confirmedSourcePackages.hardCeiling ?? '未设置'}`,
+    `✓ 已锁定分层 source packages：结构最低 ${confirmedSourcePackages.requiredProviderImageCalls} 次图片调用 · 预计 ${confirmedSourcePackages.expectedProviderImageCalls} 次 · profile hard ceiling ${confirmedSourcePackages.hardCeiling ?? '未设置'}`,
+  );
+  console.log(
+    `✓ 已锁定人批准图片尝试上限：${approvedImageBudget.imageAttemptLimit} 次（预计 ${approvedImageBudget.expectedProviderImageCalls} 次）`,
   );
   console.log(`✓ 生产状态：${next.stage}`);
 } catch (error) {

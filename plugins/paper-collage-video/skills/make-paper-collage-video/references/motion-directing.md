@@ -67,17 +67,19 @@ The compiler turns those declarations into patterns, relationships, state schedu
 
 ## Allocate Motion Without Sacrificing Hero Actions
 
-Creative Plan v3 gives each production profile two ceilings:
+Creative Plan v4 gives each production profile two planning ceilings:
 
 - `assetBudget`: quota-consuming image attempts, split into a compiled base and
   an explicit source-recovery reserve;
 - `motionBudget`: pose-sheet calls, cells per sheet, and continuous-motion targets.
 
 For a one-scene project the default hard ceilings are draft `4+2=6`, balanced
-`4+4=8`, and full-depth `5+6=11` image attempts. The reserve is not permission
-to spend automatically: concept approval binds the exact
-`sourcePackageDecision`, and each provider attempt still needs validation,
-reservation, and truthful recording. A `registered-layer-sheet` source package
+`4+4=8`, and full-depth `5+6=11` image attempts. The profile ceiling is not
+permission to spend automatically: concept approval binds the exact
+`sourcePackageDecision` plus `budgetDecision.imageAttemptLimit`. The approved
+cap must cover compiled expected calls, cannot exceed the profile ceiling, and
+is the limit enforced by reservation and project validation. A
+`registered-layer-sheet` source package
 normally costs one provider call, yields three deterministic local derivatives,
 and avoids three isolated calls. Full-context layer edits cost four calls and
 are chosen only when the provider cannot reliably return the registered sheet.

@@ -4,13 +4,14 @@
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
   "plan": {
-    "schemaVersion": 3,
+    "schemaVersion": 4,
     "slug": "vox-primitives",
     "status": "resolved",
     "inputMode": "both",
     "productionProfile": "full-depth",
     "assetBudget": {"backgrounds": 2, "environmentLayers": 4, "characterSheets": 2, "styleSamples": 1, "baseImageAttempts": 9, "layerPackageAttemptReserve": 12, "maxGeneratedImages": 21},
     "motionBudget": {"maxPoseSheetCalls": 2, "maxStatesPerSheet": 6, "maxContinuousTargets": 12},
+    "approvedImageBudget": {"imageAttemptLimit": 0, "expectedProviderImageCalls": 0, "profileHardCeiling": 21, "approvedAt": "2026-07-23T00:00:00.000Z"},
     "requested": {"durationSeconds": 6, "sceneCount": 2},
     "resolved": {"durationSeconds": 6, "sceneCount": 2, "estimatedNarrationSeconds": 1, "rationale": "A compact deterministic engineering sample.", "resolvedAt": "2026-07-23T00:00:00.000Z"},
     "updatedAt": "2026-07-23T00:00:00.000Z"

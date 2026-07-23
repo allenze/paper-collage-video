@@ -560,6 +560,34 @@ export const validateProject = async (project, options = {}) => {
     if (JSON.stringify(projectEditorial) !== JSON.stringify(storyboardEditorial)) {
       add('error', 'editorial-drift', 'project.editorial 必须与已批准故事板的 v9 编译结果完全一致。', 'editorial');
     }
+    const approvedImageBudget = project.plan?.approvedImageBudget;
+    const currentExpectedProviderImageCalls =
+      storyboard.directingSummary?.generationBudget
+        ?.expectedProviderImageCalls ?? 0;
+    if (
+      approvedImageBudget &&
+      approvedImageBudget.expectedProviderImageCalls !==
+        currentExpectedProviderImageCalls
+    ) {
+      add(
+        'error',
+        'approved-image-budget-storyboard-drift',
+        `预算审批时预计 ${approvedImageBudget.expectedProviderImageCalls} 次图片 provider 调用，当前 storyboard 预计 ${currentExpectedProviderImageCalls} 次；请重新审批预算。`,
+        'plan.approvedImageBudget.expectedProviderImageCalls',
+      );
+    }
+    if (
+      approvedImageBudget &&
+      approvedImageBudget.imageAttemptLimit <
+        currentExpectedProviderImageCalls
+    ) {
+      add(
+        'error',
+        'approved-image-budget-insufficient',
+        `当前 storyboard 预计 ${currentExpectedProviderImageCalls} 次图片 provider 调用，超过人批准上限 ${approvedImageBudget.imageAttemptLimit}。`,
+        'plan.approvedImageBudget.imageAttemptLimit',
+      );
+    }
   }
   if (!project.editorial) {
     add('error', 'editorial-required', 'v9 项目必须包含已编译 editorial 系统。', 'editorial');
@@ -1264,44 +1292,76 @@ export const validateProject = async (project, options = {}) => {
     }
   }
 
-  const generatedImageBudget = project.plan?.assetBudget?.maxGeneratedImages;
-  if (Number.isInteger(generatedImageBudget) && generatedImageBudget > 0) {
-    const attempts = await readGenerationAttemptEvents(project.slug);
-    const manifestFile = path.join(
-      ROOT,
-      'projects',
-      project.slug,
-      'assets-manifest.json',
+  const profileHardCeiling =
+    project.plan?.assetBudget?.maxGeneratedImages ?? null;
+  const approvedImageAttemptLimit =
+    project.plan?.approvedImageBudget?.imageAttemptLimit ?? null;
+  const expectedProviderImageCalls =
+    project.plan?.approvedImageBudget?.expectedProviderImageCalls ?? null;
+  const attempts = await readGenerationAttemptEvents(project.slug);
+  const usage = attempts.exists
+    ? summarizeGenerationAttempts(attempts.events)
+    : {used: 0, reserved: 0, closed: 0, attempts: [], byStatus: {}};
+  const providerBudget = {
+    profileHardCeiling,
+    approvedImageAttemptLimit,
+    expectedProviderImageCalls,
+    used: usage.used,
+    reserved: usage.reserved,
+  };
+  if (usage.reserved > 0) {
+    add(
+      'error',
+      'asset-budget-reservations-open',
+      `仍有 ${usage.reserved} 次生图额度处于 reserved；请登记结果或显式关闭尝试。`,
+      'generation-attempts.jsonl',
     );
-    if (attempts.exists) {
-      const usage = summarizeGenerationAttempts(attempts.events);
-      if (usage.reserved > 0) {
-        add(
-          'error',
-          'asset-budget-reservations-open',
-          `仍有 ${usage.reserved} 次生图额度处于 reserved；请登记结果或显式关闭尝试。`,
-          'generation-attempts.jsonl',
-        );
-      }
-      if (usage.used > generatedImageBudget) {
-        add(
-          'error',
-          'asset-budget-exceeded',
-          `${project.plan.productionProfile ?? 'balanced'} 档位预算最多 ${generatedImageBudget} 次计费生图，尝试账本已记录 ${usage.used} 次。`,
-          'plan.assetBudget.maxGeneratedImages',
-        );
-      }
-    } else if (await fileExists(manifestFile)) {
-      const manifest = await readJson(manifestFile);
-      const generatedImages = countProviderGeneratedImages(manifest.assets);
-      if (generatedImages > generatedImageBudget) {
-        add(
-          'error',
-          'asset-budget-exceeded',
-          `${project.plan.productionProfile ?? 'balanced'} 档位预算最多 ${generatedImageBudget} 张生成图，旧版 manifest 已记录 ${generatedImages} 张；请复用素材或在概念审批时显式升级档位。`,
-          'plan.assetBudget.maxGeneratedImages',
-        );
-      }
+  }
+  if (
+    (usage.used > 0 || usage.reserved > 0) &&
+    !Number.isInteger(approvedImageAttemptLimit)
+  ) {
+    add(
+      'error',
+      'approved-image-budget-missing',
+      '尝试账本已有图片 provider 活动，但项目没有人批准的图片尝试上限。',
+      'plan.approvedImageBudget',
+    );
+  } else if (
+    Number.isInteger(approvedImageAttemptLimit) &&
+    usage.used > approvedImageAttemptLimit
+  ) {
+    add(
+      'error',
+      'asset-budget-exceeded',
+      `人批准上限为 ${approvedImageAttemptLimit} 次计费生图，尝试账本已记录 ${usage.used} 次。`,
+      'plan.approvedImageBudget.imageAttemptLimit',
+    );
+  }
+  if (!attempts.exists && await fileExists(manifestFile)) {
+    const manifest = await readJson(manifestFile);
+    const generatedImages = countProviderGeneratedImages(manifest.assets);
+    providerBudget.used = generatedImages;
+    if (
+      generatedImages > 0 &&
+      !Number.isInteger(approvedImageAttemptLimit)
+    ) {
+      add(
+        'error',
+        'approved-image-budget-missing',
+        `manifest 已记录 ${generatedImages} 张 provider 图片，但项目没有人批准的图片尝试上限。`,
+        'plan.approvedImageBudget',
+      );
+    } else if (
+      Number.isInteger(approvedImageAttemptLimit) &&
+      generatedImages > approvedImageAttemptLimit
+    ) {
+      add(
+        'error',
+        'asset-budget-exceeded',
+        `人批准上限为 ${approvedImageAttemptLimit} 张生成图，manifest 已记录 ${generatedImages} 张。`,
+        'plan.approvedImageBudget.imageAttemptLimit',
+      );
     }
   }
 
@@ -1312,6 +1372,7 @@ export const validateProject = async (project, options = {}) => {
     generatedAt: new Date().toISOString(),
     project: {slug: project.slug, title: project.title},
     plan: project.plan ?? null,
+    providerBudget,
     passed: errors === 0,
     summary: {errors, warnings, assetCount: assets.length},
     timeline,

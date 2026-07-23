@@ -438,8 +438,9 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
-    assert.equal(project.plan.schemaVersion, 3);
+    assert.equal(project.plan.schemaVersion, 4);
     assert.equal(project.plan.motionBudget, null);
+    assert.equal(project.plan.approvedImageBudget, null);
     assert.equal(manifest.projectSlug, slug);
     assert.equal(manifest.schemaVersion, 4);
     assert.deepEqual(manifest.assets, []);
@@ -715,6 +716,9 @@ test('concept and all providers can be confirmed in one workflow command', async
             hardCeiling: 20,
             sourcePackagePlans: [],
           },
+          budgetDecision: {
+            imageAttemptLimit: 2,
+          },
           selections: {
             text: {providerId: 'host-text'},
             image: {providerId: 'manual-image'},
@@ -742,6 +746,24 @@ test('concept and all providers can be confirmed in one workflow command', async
     );
     assert.equal(production.stage, 'style-review');
     assert.equal(production.approvals.concept.status, 'approved');
+    const approvedProject = JSON.parse(
+      await fsp.readFile(path.join(projectDirectory, 'project.json'), 'utf8'),
+    );
+    assert.deepEqual(
+      {
+        imageAttemptLimit:
+          approvedProject.plan.approvedImageBudget.imageAttemptLimit,
+        expectedProviderImageCalls:
+          approvedProject.plan.approvedImageBudget.expectedProviderImageCalls,
+        profileHardCeiling:
+          approvedProject.plan.approvedImageBudget.profileHardCeiling,
+      },
+      {
+        imageAttemptLimit: 2,
+        expectedProviderImageCalls: 0,
+        profileHardCeiling: 20,
+      },
+    );
     const providers = spawnSync(
       process.execPath,
       [path.join(ROOT, 'scripts', 'provider-status.mjs'), slug, '--json'],

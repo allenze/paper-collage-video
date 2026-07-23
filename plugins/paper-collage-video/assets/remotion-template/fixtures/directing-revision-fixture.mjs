@@ -1,9 +1,10 @@
 export const directingRevisionPlan = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   slug: 'directing-revision-fixture',
   status: 'resolved',
   productionProfile: 'draft',
   motionBudget: {maxPoseSheetCalls: 1, maxStatesPerSheet: 4, maxContinuousTargets: 2},
+  approvedImageBudget: null,
   resolved: {durationSeconds: 6, sceneCount: 1},
 };
 

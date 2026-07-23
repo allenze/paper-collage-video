@@ -10,7 +10,7 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
 | `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
 | `storyboard.json` | Approved schema-v10 beat treatments, editorial authoring, intent-routed scene boundaries, layer source packages, and compiler-owned edit/directing/proof plans and fingerprints |
-| `project.json` | Creative Plan v3 budgets, exact source-package decision, and v10 Remotion execution tree |
+| `project.json` | Creative Plan v4 profile ceilings, human-approved image-attempt cap, exact source-package decision, and v10 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
@@ -56,12 +56,16 @@ not another approval state.
 ## v10 Project, v9 Editorial, Composition, and Boundary Tree
 
 Schema v10 is the only supported Project, Storyboard Authoring, and Compiled
-Storyboard contract. Creative Plan v3 owns the approved profile and hard
-provider-attempt ceiling. The storyboard compiler owns
+Storyboard contract. Creative Plan v4 owns the approved profile, its planning
+ceiling, and `approvedImageBudget`: the narrower exact attempt cap authorized by
+the human. The storyboard compiler owns
 `directingSummary.generationBudget`, including exact structural source-package
 calls, pose-sheet calls, reserve, local derivatives, and avoided calls. Concept
-approval copies the compiled `sourcePackageDecision` exactly; provider requests
-cannot silently add or change a layer package afterward. A scene has
+approval copies the compiled `sourcePackageDecision` exactly and requires
+`budgetDecision.imageAttemptLimit`; it records expected calls and the profile
+ceiling at approval time. Provider requests cannot silently add or change a
+layer package afterward, and storyboard call-count drift invalidates the budget
+approval. A scene has
 `composition.nodes`; nodes are recursive `asset`, `state-sequence`,
 `typography`, `shape`, `annotation`, `data-graphic`, `editorial-switch`,
 `motif-field`, or `group` records. All transforms and keyframe deltas are
@@ -183,7 +187,7 @@ matching source/config/registered-derivation/render-size/runtime fingerprints
 and existing evidence files. `--force` disables frame, composite, and
 asset-evidence reuse and records that decision in the report.
 `project:assets-ready` rejects missing/stale proof fingerprints, open generation
-reservations, over-budget attempts, pending/failed asset or composite quality,
+reservations, missing or exceeded human-approved attempt caps, pending/failed asset or composite quality,
 and audio without either a passing preflight or a fingerprinted, explicitly
 accepted calibration decision.
 
@@ -192,6 +196,6 @@ Fix a wrong mask, crop, anchor, registration, or derivative without another huma
 Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion,
 extraction, layer/state-sheet processing, editorial/directing compilation,
 proof, attempt accounting, or report logic ad hoc. Only the current Creative
-Plan v3, project/storyboard schema v10, quality-report schema v4, asset-request
+Plan v4, project/storyboard schema v10, quality-report schema v4, asset-request
 schema v7, registered-family schema v2, and current style-proof contract are
 supported; older contracts are intentionally not migrated or executed.

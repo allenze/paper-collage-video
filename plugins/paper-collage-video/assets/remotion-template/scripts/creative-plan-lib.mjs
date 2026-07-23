@@ -116,6 +116,7 @@ export const summarizeConceptDecision = (plan) => {
     durationAuthority: deriveDurationAuthority(plan),
     assetBudget: plan.assetBudget,
     motionBudget: plan.motionBudget,
+    approvedImageBudget: plan.approvedImageBudget,
     profileOptions: summarizeProductionProfiles(plan.resolved.sceneCount),
   };
 };
@@ -142,10 +143,52 @@ export const assertConfirmedPlanDecision = (decision, plan) => {
   return expected;
 };
 
+export const assertApprovedImageBudgetDecision = (
+  decision,
+  plan,
+  directingSummary,
+  {at = new Date().toISOString()} = {},
+) => {
+  if (!decision || typeof decision !== 'object' || Array.isArray(decision)) {
+    throw new Error(
+      '确认文件必须包含 budgetDecision，记录人批准的 imageAttemptLimit。',
+    );
+  }
+  const imageAttemptLimit = decision.imageAttemptLimit;
+  if (!Number.isInteger(imageAttemptLimit) || imageAttemptLimit < 0) {
+    throw new Error('budgetDecision.imageAttemptLimit 必须是非负整数。');
+  }
+  const expectedProviderImageCalls =
+    directingSummary?.generationBudget?.expectedProviderImageCalls ?? 0;
+  const profileHardCeiling = plan?.assetBudget?.maxGeneratedImages;
+  if (!Number.isInteger(profileHardCeiling) || profileHardCeiling < 0) {
+    throw new Error('当前 Creative Plan 缺少有效的图片 profile hard ceiling。');
+  }
+  if (imageAttemptLimit < expectedProviderImageCalls) {
+    throw new Error(
+      `批准的图片尝试上限 ${imageAttemptLimit} 低于当前 storyboard 预计需要的 ${expectedProviderImageCalls} 次；请缩小范围或提高上限。`,
+    );
+  }
+  if (imageAttemptLimit > profileHardCeiling) {
+    throw new Error(
+      `批准的图片尝试上限 ${imageAttemptLimit} 超过 ${plan.productionProfile} profile hard ceiling ${profileHardCeiling}；请提高档位或降低上限。`,
+    );
+  }
+  return {
+    imageAttemptLimit,
+    expectedProviderImageCalls,
+    profileHardCeiling,
+    approvedAt: at,
+  };
+};
+
 const isPositiveNumber = (value) =>
   typeof value === 'number' && Number.isFinite(value) && value > 0;
 
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
+
+const isNonNegativeInteger = (value) =>
+  Number.isInteger(value) && value >= 0;
 
 const isDateTime = (value) =>
   typeof value === 'string' && Number.isFinite(Date.parse(value));
@@ -165,8 +208,8 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
     return [{code: 'plan-missing', message: '缺少创作规格计划。', location: 'plan'}];
   }
-  if (plan.schemaVersion !== 3) {
-    add('plan-schema-version', 'plan.schemaVersion 必须为 3。', 'plan.schemaVersion');
+  if (plan.schemaVersion !== 4) {
+    add('plan-schema-version', 'plan.schemaVersion 必须为 4。', 'plan.schemaVersion');
   }
   if (slug && plan.slug !== slug) {
     add('plan-slug', `plan.slug 必须为 ${slug}。`, 'plan.slug');
@@ -211,6 +254,56 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!isDateTime(plan.updatedAt)) {
     add('plan-updated-at', 'plan.updatedAt 必须是有效时间。', 'plan.updatedAt');
   }
+  if (plan.approvedImageBudget !== null) {
+    const approval = plan.approvedImageBudget;
+    if (!approval || typeof approval !== 'object' || Array.isArray(approval)) {
+      add(
+        'plan-approved-image-budget',
+        'approvedImageBudget 必须是对象或 null。',
+        'plan.approvedImageBudget',
+      );
+    } else {
+      if (!isNonNegativeInteger(approval.imageAttemptLimit)) {
+        add(
+          'plan-approved-image-attempt-limit',
+          '批准的图片尝试上限必须是非负整数。',
+          'plan.approvedImageBudget.imageAttemptLimit',
+        );
+      }
+      if (!isNonNegativeInteger(approval.expectedProviderImageCalls)) {
+        add(
+          'plan-approved-image-expected-calls',
+          '批准记录中的预计图片调用必须是非负整数。',
+          'plan.approvedImageBudget.expectedProviderImageCalls',
+        );
+      }
+      if (!isNonNegativeInteger(approval.profileHardCeiling)) {
+        add(
+          'plan-approved-image-profile-ceiling',
+          '批准记录中的 profile hard ceiling 必须是非负整数。',
+          'plan.approvedImageBudget.profileHardCeiling',
+        );
+      }
+      if (!isDateTime(approval.approvedAt)) {
+        add(
+          'plan-approved-image-at',
+          '批准记录必须包含有效 approvedAt。',
+          'plan.approvedImageBudget.approvedAt',
+        );
+      }
+      if (
+        isNonNegativeInteger(approval.imageAttemptLimit) &&
+        isNonNegativeInteger(approval.expectedProviderImageCalls) &&
+        approval.imageAttemptLimit < approval.expectedProviderImageCalls
+      ) {
+        add(
+          'plan-approved-image-below-expected',
+          '批准的图片尝试上限不能低于审批时的预计 provider 图片调用。',
+          'plan.approvedImageBudget',
+        );
+      }
+    }
+  }
 
   if (plan.status === 'pending') {
     if (plan.resolved !== null) {
@@ -218,6 +311,13 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
     }
     if (plan.assetBudget !== null || plan.motionBudget !== null) {
       add('plan-pending-budgets', 'pending 计划的 assetBudget 与 motionBudget 必须为 null。', 'plan');
+    }
+    if (plan.approvedImageBudget !== null) {
+      add(
+        'plan-pending-approved-image-budget',
+        'pending 计划不能包含已批准图片预算。',
+        'plan.approvedImageBudget',
+      );
     }
     return issues;
   }
@@ -280,6 +380,30 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
         'plan-asset-budget',
         'plan.assetBudget 必须与 productionProfile 和幕数匹配。',
         'plan.assetBudget',
+      );
+    }
+    if (
+      plan.approvedImageBudget &&
+      expectedBudget &&
+      plan.approvedImageBudget.profileHardCeiling !==
+        expectedBudget.maxGeneratedImages
+    ) {
+      add(
+        'plan-approved-image-ceiling-drift',
+        '批准记录中的 profile hard ceiling 已与当前制作档位漂移；请重新进行概念与预算审批。',
+        'plan.approvedImageBudget.profileHardCeiling',
+      );
+    }
+    if (
+      plan.approvedImageBudget &&
+      expectedBudget &&
+      plan.approvedImageBudget.imageAttemptLimit >
+        expectedBudget.maxGeneratedImages
+    ) {
+      add(
+        'plan-approved-image-over-profile',
+        '批准的图片尝试上限不能超过当前制作档位 hard ceiling。',
+        'plan.approvedImageBudget.imageAttemptLimit',
       );
     }
   }
@@ -353,7 +477,7 @@ export const buildCreativePlan = ({
     sceneCount: requestedSceneCount,
   };
   const plan = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     slug,
     status: 'resolved',
     inputMode: deriveCreativePlanMode(requested),
@@ -368,6 +492,7 @@ export const buildCreativePlan = ({
     },
     assetBudget: deriveAssetBudget(productionProfile, sceneCount),
     motionBudget: deriveMotionBudget(productionProfile, sceneCount),
+    approvedImageBudget: null,
     updatedAt: at,
   };
   assertCreativePlanReady(plan, {slug});

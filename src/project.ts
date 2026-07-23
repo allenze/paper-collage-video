@@ -818,7 +818,7 @@ export type PaperCollageProject = {
   slug: string;
   title: string;
   plan: {
-    schemaVersion: 3;
+    schemaVersion: 4;
     slug: string;
     status: 'pending' | 'resolved';
     inputMode: 'none' | 'duration-only' | 'scenes-only' | 'both';
@@ -836,6 +836,12 @@ export type PaperCollageProject = {
       maxPoseSheetCalls: number;
       maxStatesPerSheet: number;
       maxContinuousTargets: number;
+    } | null;
+    approvedImageBudget: {
+      imageAttemptLimit: number;
+      expectedProviderImageCalls: number;
+      profileHardCeiling: number;
+      approvedAt: string;
     } | null;
     requested: {durationSeconds: number | null; sceneCount: number | null};
     resolved: null | {

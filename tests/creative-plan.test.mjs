@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   assessCreativePlanTimeline,
+  assertApprovedImageBudgetDecision,
   assertConfirmedPlanDecision,
   buildCreativePlan,
   deriveAssetBudget,
@@ -27,7 +28,7 @@ const make = (overrides) =>
 
 test('creative planning supports all four partial-input modes', () => {
   const none = make({});
-  assert.equal(none.schemaVersion, 3);
+  assert.equal(none.schemaVersion, 4);
   assert.equal(none.inputMode, 'none');
   assert.equal(none.productionProfile, 'balanced');
   assert.deepEqual(none.assetBudget, {
@@ -44,6 +45,7 @@ test('creative planning supports all four partial-input modes', () => {
     maxStatesPerSheet: 4,
     maxContinuousTargets: 12,
   });
+  assert.equal(none.approvedImageBudget, null);
   assert.deepEqual(none.requested, {durationSeconds: null, sceneCount: null});
 
   const durationOnly = make({
@@ -142,6 +144,48 @@ test('concept decisions expose bounded profile choices with exact scene budgets'
   assert.equal(
     deriveDurationAuthority(make({requestedDurationSeconds: 30})),
     'human-target',
+  );
+});
+
+test('human-approved image limit is narrower than the profile ceiling and covers expected calls', () => {
+  const plan = make({
+    sceneCount: 1,
+    productionProfile: 'draft',
+  });
+  const directingSummary = {
+    generationBudget: {expectedProviderImageCalls: 1},
+  };
+  assert.deepEqual(
+    assertApprovedImageBudgetDecision(
+      {imageAttemptLimit: 2},
+      plan,
+      directingSummary,
+      {at},
+    ),
+    {
+      imageAttemptLimit: 2,
+      expectedProviderImageCalls: 1,
+      profileHardCeiling: 6,
+      approvedAt: at,
+    },
+  );
+  assert.throws(
+    () =>
+      assertApprovedImageBudgetDecision(
+        {imageAttemptLimit: 0},
+        plan,
+        directingSummary,
+      ),
+    /低于当前 storyboard 预计需要的 1 次/,
+  );
+  assert.throws(
+    () =>
+      assertApprovedImageBudgetDecision(
+        {imageAttemptLimit: 7},
+        plan,
+        directingSummary,
+      ),
+    /超过 draft profile hard ceiling 6/,
   );
 });
 

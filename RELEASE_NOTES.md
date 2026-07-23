@@ -1,4 +1,21 @@
-# Paper Collage Video 0.16.0-dev.4
+# Paper Collage Video 0.16.0-dev.5
+
+This development release separates a production profile's planning ceiling from
+the exact image-attempt cap a human approved for one project. Creative Plan v4
+adds `approvedImageBudget`; combined concept confirmation requires an explicit
+`budgetDecision.imageAttemptLimit`, records the expected calls and profile
+ceiling at approval time, and refuses a cap below the compiled storyboard need
+or above the selected profile.
+
+The append-only attempt ledger now reserves against the human-approved cap,
+not the larger profile ceiling. Read-only attempt summaries and project
+validation expose the profile ceiling, approved cap, expected calls, usage,
+reservations, and remaining capacity. Storyboard drift invalidates the approval.
+This fixes the generic budget-control gap found while preparing the VOX Phase
+2.4 single-scene registered-depth-stack pilot. The engineering change itself
+uses no image, voice, or video provider.
+
+## Inherited 0.16.0-dev.4 layer-complete assets
 
 This development release moves rear/subject/front completeness planning before
 provider approval and generation. It fixes the production-design error exposed

@@ -141,9 +141,14 @@ export const reserveGenerationAttempt = async ({request, provider, model = null}
   }
   const projectFile = path.join(ROOT, 'projects', request.projectSlug, 'project.json');
   const project = JSON.parse(await fs.readFile(projectFile, 'utf8'));
-  const maximum = project.plan?.assetBudget?.maxGeneratedImages;
-  if (!Number.isInteger(maximum) || maximum < 1) {
-    throw new Error('生成图预算尚未通过概念审批，不能发起生图。');
+  const maximum = project.plan?.approvedImageBudget?.imageAttemptLimit;
+  if (!Number.isInteger(maximum) || maximum < 0) {
+    throw new Error(
+      '人批准的图片尝试上限尚未通过概念审批并写入 approvedImageBudget，不能发起生图。',
+    );
+  }
+  if (maximum === 0) {
+    throw new Error('人批准的图片尝试上限为 0，不能发起生图。');
   }
   return withLedgerLock(request.projectSlug, async () => {
     const loaded = await readGenerationAttemptEvents(request.projectSlug);

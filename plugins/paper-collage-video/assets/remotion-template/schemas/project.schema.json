@@ -36,9 +36,9 @@
   "$defs": {
     "plan": {
       "type": "object",
-      "required": ["schemaVersion", "slug", "status", "inputMode", "productionProfile", "assetBudget", "motionBudget", "requested", "resolved", "updatedAt"],
+      "required": ["schemaVersion", "slug", "status", "inputMode", "productionProfile", "assetBudget", "motionBudget", "approvedImageBudget", "requested", "resolved", "updatedAt"],
       "properties": {
-        "schemaVersion": {"const": 3},
+        "schemaVersion": {"const": 4},
         "slug": {"type": "string"},
         "status": {"enum": ["pending", "resolved"]},
         "inputMode": {"enum": ["none", "duration-only", "scenes-only", "both"]},
@@ -72,6 +72,22 @@
                 "maxPoseSheetCalls": {"type": "integer", "minimum": 1},
                 "maxStatesPerSheet": {"type": "integer", "minimum": 2},
                 "maxContinuousTargets": {"type": "integer", "minimum": 1}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "approvedImageBudget": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["imageAttemptLimit", "expectedProviderImageCalls", "profileHardCeiling", "approvedAt"],
+              "properties": {
+                "imageAttemptLimit": {"type": "integer", "minimum": 0},
+                "expectedProviderImageCalls": {"type": "integer", "minimum": 0},
+                "profileHardCeiling": {"type": "integer", "minimum": 0},
+                "approvedAt": {"type": "string", "format": "date-time"}
               },
               "additionalProperties": false
             }
