@@ -47,6 +47,7 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/style-proof-lib.mjs',
   'scripts/storyboard-lib.mjs',
   'scripts/render-phase2-proof.mjs',
+  'scripts/schema-v9.mjs',
   'scripts/validate_v9_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-vox-sample.mjs',

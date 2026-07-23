@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video-workspace",
-  "version": "0.16.0-dev.1",
+  "version": "0.16.0-dev.2",
   "description": "Configuration-driven paper-collage video pipeline and Codex plugin built with Remotion.",
   "private": true,
   "type": "module",
@@ -69,7 +69,7 @@
     "proof:phase2:render": "node scripts/render-phase2-proof.mjs",
     "proof:phase2:verify": "node scripts/verify-phase2-proof.mjs",
     "proof:phase2": "npm run proof:phase2:prepare && npm run proof:phase2:render && npm run proof:phase2:verify",
-    "schema:v9": ".venv/bin/python scripts/validate_v9_schemas.py",
+    "schema:v9": "node scripts/schema-v9.mjs",
     "dev": "remotion studio src/index.ts --props=projects/starter-demo/project.json",
     "check": "tsc --noEmit",
     "bundle": "remotion bundle src/index.ts",

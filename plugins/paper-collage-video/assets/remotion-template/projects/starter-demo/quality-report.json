@@ -177,7 +177,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
-      "fingerprint": "f383740bb41b3b1e7f1d9bdb7a385f025042d7dd59957222e70fda9d729f183a",
+      "fingerprint": "84f9552783d7b3d468a9decca09b0c28fa4fb4f95e38a4b6bc922135d61cfb85",
       "proofTimeIds": [
         "proof-establish"
       ],
@@ -210,8 +210,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "f383740bb41b3b1e7f1d9bdb7a385f025042d7dd59957222e70fda9d729f183a",
-            "actual": "f383740bb41b3b1e7f1d9bdb7a385f025042d7dd59957222e70fda9d729f183a"
+            "expected": "84f9552783d7b3d468a9decca09b0c28fa4fb4f95e38a4b6bc922135d61cfb85",
+            "actual": "84f9552783d7b3d468a9decca09b0c28fa4fb4f95e38a4b6bc922135d61cfb85"
           },
           {
             "id": "proof-artifacts-present",
@@ -259,7 +259,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "fa68dd4364ec2771470f7fc185f31cb023bd33736f0066df4044339ddeaea941",
-      "fingerprint": "7828ef2aec47f31fb627780d4c68e212c50fde91c3ddc249ebd9138f86e793aa",
+      "fingerprint": "a796619ae33b5c979d028c09d48e83d294368c229a921ed4f8afb21f553d2c32",
       "proofTimeIds": [
         "proof-action"
       ],
@@ -292,8 +292,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "7828ef2aec47f31fb627780d4c68e212c50fde91c3ddc249ebd9138f86e793aa",
-            "actual": "7828ef2aec47f31fb627780d4c68e212c50fde91c3ddc249ebd9138f86e793aa"
+            "expected": "a796619ae33b5c979d028c09d48e83d294368c229a921ed4f8afb21f553d2c32",
+            "actual": "a796619ae33b5c979d028c09d48e83d294368c229a921ed4f8afb21f553d2c32"
           },
           {
             "id": "proof-artifacts-present",
@@ -341,7 +341,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "2fd24fa9491ccc0c2497848473aad57bcaf7b25b24fed12aba11410e8117968e",
-      "fingerprint": "f7bccd20af79fbb4679ea273c646e16e5bd1124739e9fa64c0e87d852f39bc1c",
+      "fingerprint": "84e7bde50212909b93c66bd02dfb4ebf5734036fd7dd30e209d6da719b7bd7ea",
       "proofTimeIds": [
         "proof-final"
       ],
@@ -374,8 +374,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "f7bccd20af79fbb4679ea273c646e16e5bd1124739e9fa64c0e87d852f39bc1c",
-            "actual": "f7bccd20af79fbb4679ea273c646e16e5bd1124739e9fa64c0e87d852f39bc1c"
+            "expected": "84e7bde50212909b93c66bd02dfb4ebf5734036fd7dd30e209d6da719b7bd7ea",
+            "actual": "84e7bde50212909b93c66bd02dfb4ebf5734036fd7dd30e209d6da719b7bd7ea"
           },
           {
             "id": "proof-artifacts-present",

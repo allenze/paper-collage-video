@@ -146,6 +146,7 @@ for (const entry of [
   'scripts/project-semantic-contracts.mjs',
   'scripts/storyboard-lib.mjs',
   'scripts/render-phase2-proof.mjs',
+  'scripts/schema-v9.mjs',
   'scripts/validate_v9_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-vox-sample.mjs',

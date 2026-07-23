@@ -1,4 +1,24 @@
-# Paper Collage Video 0.16.0-dev.1
+# Paper Collage Video 0.16.0-dev.2
+
+This development release completes the VOX Phase 2.1 production-readiness
+audit. It keeps the v9 contracts and renderer behavior from dev.1, while
+making the packaged `schema:v9` check self-contained in a newly bootstrapped
+workspace.
+
+## Audit fix
+
+- `npm run schema:v9` now deterministically prepares its local v9 proof inputs
+  before validating the Storyboard Authoring, Compiled Storyboard, and three
+  Project contracts. A fresh installed-cache workspace no longer depends on a
+  pre-existing `dist/vox-phase2-proof/inputs` directory.
+- The new wrapper is included in the packaged runtime and runtime-build
+  fingerprint. It uses only local fixtures and never invokes an image, voice,
+  or video provider.
+
+## Inherited Phase 2 system
+
+The complete Phase 2 feature set and compatibility policy below are unchanged
+from `0.16.0-dev.1`.
 
 This development release establishes the reusable VOX Phase 2 editorial
 system without requiring any image, voice, or video provider. It upgrades the

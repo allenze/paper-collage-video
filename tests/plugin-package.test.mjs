@@ -139,7 +139,7 @@ test('packaged runtime is lightweight and independent from production projects',
   );
   assert.equal(
     packageJson.scripts['schema:v9'],
-    '.venv/bin/python scripts/validate_v9_schemas.py',
+    'node scripts/schema-v9.mjs',
   );
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
@@ -225,6 +225,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-revise-preview-directing.mjs',
     'scripts/storyboard-lib.mjs',
     'scripts/render-phase2-proof.mjs',
+    'scripts/schema-v9.mjs',
     'scripts/validate_v9_schemas.py',
     'scripts/verify-phase2-proof.mjs',
     'scripts/verify-vox-sample.mjs',

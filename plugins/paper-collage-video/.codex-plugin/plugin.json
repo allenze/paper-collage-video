@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video",
-  "version": "0.16.0-dev.1",
+  "version": "0.16.0-dev.2",
   "description": "Create editable paper-collage and hand-drawn explainer videos with multidimensional style proof, explicit provider output surfaces, calibrated narration, registered limited-animation states, and proof-backed rendering.",
   "author": {
     "name": "Paper Collage Video Contributors"
