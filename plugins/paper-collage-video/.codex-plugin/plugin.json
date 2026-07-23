@@ -15,7 +15,7 @@
   "interface": {
     "displayName": "纸片分层视频制作",
     "shortDescription": "用音频 edit points、响应式导演和数据 SVG 制作纸片视频",
-    "longDescription": "初始化独立的 Remotion 工作区，用 Storyboard v9 编译实际音频 edit points、三画幅响应式导演、可适配 typography、语义注释、数据驱动 SVG、高级 match/panel/data 切换，以及既有注册组合、状态序列、景深视差和确定性装饰场，并用完整指纹与正式工程证明交付可恢复的纸片拼贴与手绘解释视频。",
+    "longDescription": "初始化独立的 Remotion 工作区，用 Storyboard v10 与 Editorial v9 编译实际音频 edit points、三画幅响应式导演、可适配 typography、语义注释、数据驱动 SVG、高级 match/panel/data 切换，以及完整分层注册组合、状态序列、景深视差和确定性装饰场，并用完整指纹与正式工程证明交付可恢复的纸片拼贴与手绘解释视频。",
     "developerName": "Paper Collage Video Contributors",
     "category": "Creativity",
     "capabilities": [
