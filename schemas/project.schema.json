@@ -38,7 +38,7 @@
   "$defs": {
     "worldContract": {
       "type": "object",
-      "required": ["id", "sceneIds", "requiredStripRoles"],
+      "required": ["id", "sceneIds", "requiredStripRoles", "stripSources"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "sceneIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
@@ -47,6 +47,20 @@
           "minItems": 4,
           "uniqueItems": true,
           "items": {"enum": ["far", "mid", "ground", "near"]}
+        },
+        "stripSources": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": ["role", "sourceAssetId"],
+            "properties": {
+              "role": {"enum": ["far", "mid", "ground", "near"]},
+              "sourceAssetId": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
@@ -74,6 +88,14 @@
           "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "fromProofTimeId", "toProofTimeId", "direction", "minimumDelta"],
           "properties": {
             "id": {"type": "string", "minLength": 1}, "kind": {"const": "travel"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "fromProofTimeId": {"type": "string", "minLength": 1}, "toProofTimeId": {"type": "string", "minLength": 1}, "direction": {"enum": ["left", "right"]}, "minimumDelta": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "fromProofTimeId", "direction", "minimumDelta"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "monotonic-travel"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "fromProofTimeId": {"type": "string", "minLength": 1}, "direction": {"enum": ["left", "right"]}, "minimumDelta": {"type": "number", "minimum": 0}
           },
           "additionalProperties": false
         },

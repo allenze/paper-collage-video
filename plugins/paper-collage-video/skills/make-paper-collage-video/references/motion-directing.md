@@ -61,6 +61,13 @@ tracked subject; this lets near strips genuinely occlude it without inheriting
 world phase. The renderer expands internal copies. Authors never place repeated
 asset nodes.
 
+At execution, one root world maps every strip role to a stable source asset
+across its scenes. A route traveler also declares the inclusive proof window in
+which it must fit the walkable safe band; use that window when a racer must
+leave after a verified legal run. Use a `monotonic-travel` trajectory assertion
+for a forward-only chase that may end in a true stop, rather than faking the
+hold with a small backward correction.
+
 For a state family with an opening pose and later cyclic action, author the
 same `playback` mode on every related treatment, then declare the family-level
 `cycles`, `activeFrom`, and ordered `activeStateIds` on one of those treatments.

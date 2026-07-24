@@ -8,7 +8,7 @@ import {
 
 const still = () => ({keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]});
 const transform = ({x, y, width, height = width}) => ({x, y, width, height, anchorX: 0, anchorY: 0});
-const strip = (role) => ({id: `${role}-strip`, kind: 'world-strip', role, src: `${role}.png`, z: 0, depth: 0, transform: transform({x: 0, y: 0, width: 1, height: 1}), motion: still(), loopingStripBinding: {}});
+const strip = (role) => ({id: `${role}-strip`, kind: 'world-strip', role, src: `${role}.png`, z: 0, depth: 0, transform: transform({x: 0, y: 0, width: 1, height: 1}), motion: still(), loopingStripBinding: {sourceAssetId: `forest-${role}-source`}});
 const stateNode = (id, x) => ({
   id,
   kind: 'state-sequence',
@@ -31,7 +31,10 @@ const scene = ({id, includeMarker = true}) => ({
       id: 'forest-track',
       groupId: 'world',
       route: {
-        subjectIds: ['hare', 'turtle'],
+        travelers: [
+          {nodeId: 'hare', fromProofTimeId: 'sleep', throughProofTimeId: 'finish'},
+          {nodeId: 'turtle', fromProofTimeId: 'sleep', throughProofTimeId: 'finish'},
+        ],
         subjectSafeBand: {x: 0, y: 0.5, width: 1, height: 0.3},
         markerNodeIds: includeMarker ? ['start-flag'] : [],
       },
@@ -58,7 +61,10 @@ const scene = ({id, includeMarker = true}) => ({
 
 const project = () => ({
   scenes: [scene({id: 'scene-01'}), scene({id: 'scene-02'})],
-  worlds: [{id: 'forest-track', sceneIds: ['scene-01', 'scene-02'], requiredStripRoles: ['far', 'mid', 'ground', 'near']}],
+  worlds: [{
+    id: 'forest-track', sceneIds: ['scene-01', 'scene-02'], requiredStripRoles: ['far', 'mid', 'ground', 'near'],
+    stripSources: ['far', 'mid', 'ground', 'near'].map((role) => ({role, sourceAssetId: `forest-${role}-source`})),
+  }],
   trajectoryContracts: [{
     id: 'race-order',
     assertions: [
@@ -80,6 +86,22 @@ test('world contracts require continuous depth layers, a route-safe band and gro
   const floating = project();
   floating.scenes[0].composition.nodes.find(({id}) => id === 'start-flag').transform.y = 0.1;
   assert.ok(validateWorldContracts(floating).some(({code}) => code === 'world-route-marker-floating'));
+  const sourceDrift = project();
+  sourceDrift.scenes[1].composition.nodes[0].children.find(({role}) => role === 'near').loopingStripBinding.sourceAssetId = 'other-near-source';
+  assert.ok(validateWorldContracts(sourceDrift).some(({code}) => code === 'world-contract-strip-source'));
+});
+
+test('route travelers can leave after their declared safe-band proof window', () => {
+  const exiting = project();
+  const scene = exiting.scenes[0];
+  scene.motion.proofTimes.push({id: 'exit', at: 0.95});
+  scene.composition.world.route.travelers.find(({nodeId}) => nodeId === 'turtle').throughProofTimeId = 'run';
+  scene.composition.nodes.find(({id}) => id === 'turtle').motion = {
+    keyframes: [{at: 0, x: 0}, {at: 0.5, x: 0.08}, {at: 0.95, x: 1.1}],
+  };
+  exiting.trajectoryContracts[0].assertions.push({id: 'turtle-exits', kind: 'offscreen-at', sceneId: 'scene-01', proofTimeId: 'exit', nodeId: 'turtle', side: 'right'});
+  assert.deepEqual(validateWorldContracts(exiting), []);
+  assert.deepEqual(validateTrajectoryContracts(exiting).filter(({code}) => code.startsWith('trajectory-offscreen')), []);
 });
 
 test('trajectory contracts prove state, speed/order, direction and narrative sequence', () => {
@@ -91,4 +113,14 @@ test('trajectory contracts prove state, speed/order, direction and narrative seq
   const unordered = project();
   unordered.trajectoryContracts[0].sequence = ['hare-runs', 'hare-sleeps'];
   assert.ok(validateProductionContracts(unordered).some(({code}) => code === 'trajectory-sequence-order'));
+  const monotonic = project();
+  monotonic.trajectoryContracts[0].assertions.push({
+    id: 'hare-never-backtracks', kind: 'monotonic-travel', sceneId: 'scene-01', proofTimeId: 'finish',
+    nodeId: 'hare', fromProofTimeId: 'sleep', direction: 'right', minimumDelta: 0,
+  });
+  assert.deepEqual(validateTrajectoryContracts(monotonic).filter(({code}) => code.startsWith('trajectory-monotonic')), []);
+  monotonic.scenes[0].composition.nodes.find(({id}) => id === 'hare').motion = {
+    keyframes: [{at: 0, x: 0}, {at: 0.4, x: 0.3}, {at: 0.7, x: 0.16}, {at: 1, x: 0.44}],
+  };
+  assert.ok(validateTrajectoryContracts(monotonic).some(({code}) => code === 'trajectory-monotonic-backtrack'));
 });

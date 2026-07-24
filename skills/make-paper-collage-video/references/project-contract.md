@@ -124,6 +124,16 @@ quality review uses `world-lock-clean` rather than motion/repetition checks and
 must prove that only the intended foreground subject changes between proof
 frames.
 
+A root `worlds[]` contract binds every participating scene to one four-role
+source map. Each `far`/`mid`/`ground`/`near` `world-strip` must reuse that
+role's declared `loopingStripBinding.sourceAssetId`; matching role names alone
+are insufficient to claim a continuous world. Each route traveler declares an
+inclusive `fromProofTimeId`/`throughProofTimeId` safe-band window. It is in the
+walkable band throughout that window, and may then be proven to leave frame
+without falsely failing the route constraint. Use `monotonic-travel` when a
+chase must never reverse: it samples every authored x keyframe between its
+proofs, permits a final zero-motion hold, and rejects any backward segment.
+
 A continuous `traverse` target must span at least `0.45` in normalized parent
 space. A continuous `sway` target must use the `sway` idle primitive and a
 bottom-biased motion pivot; the pivot is independent of registration placement.

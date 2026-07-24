@@ -53,11 +53,12 @@ const rectForNode = ({node, parent, progress}) => {
 
 const resolveNodeRect = ({scene, nodeId, progress}) => {
   let result = null;
-  const visit = (nodes, parent) => {
+  const visit = (nodes, parent, path = []) => {
     for (const node of nodes ?? []) {
       const rect = rectForNode({node, parent, progress});
-      if (node.id === nodeId) result = {node, rect};
-      if (node.kind === 'group') visit(node.children, rect);
+      const nextPath = [...path, node];
+      if (node.id === nodeId) result = {node, rect, path: nextPath};
+      if (node.kind === 'group') visit(node.children, rect, nextPath);
     }
   };
   visit(scene.composition?.nodes, {left: 0, top: 0, width: 1, height: 1});
@@ -66,6 +67,23 @@ const resolveNodeRect = ({scene, nodeId, progress}) => {
 
 const proofFor = (scene, proofTimeId) =>
   (scene.motion?.proofTimes ?? []).find(({id}) => id === proofTimeId) ?? null;
+
+const proofWindow = ({scene, fromProofTimeId, throughProofTimeId}) => {
+  const from = proofFor(scene, fromProofTimeId);
+  const through = proofFor(scene, throughProofTimeId);
+  if (!from || !through || through.at < from.at) return null;
+  return (scene.motion?.proofTimes ?? []).filter(({at}) => at >= from.at && at <= through.at);
+};
+
+const motionSampleTimes = ({path, from, through}) => {
+  const times = new Set([from, through]);
+  for (const node of path ?? []) {
+    for (const frame of node.motion?.keyframes ?? []) {
+      if (frame.at >= from && frame.at <= through) times.add(frame.at);
+    }
+  }
+  return [...times].sort((left, right) => left - right);
+};
 
 const sceneById = (project) => new Map((project.scenes ?? []).map((scene, index) => [scene.id, {...scene, sceneIndex: index}]));
 
@@ -96,6 +114,17 @@ export const validateWorldContracts = (project) => {
     if (!['far', 'mid', 'ground', 'near'].every((role) => requiredRoles.has(role))) {
       add(issues, 'world-contract-layer-roles', '连续世界必须声明 far、mid、ground、near 四类世界图层。', `${location}.requiredStripRoles`);
     }
+    const sourceByRole = new Map();
+    for (const [sourceIndex, source] of (world.stripSources ?? []).entries()) {
+      if (!requiredRoles.has(source?.role) || !nonEmpty(source?.sourceAssetId) || sourceByRole.has(source.role)) {
+        add(issues, 'world-contract-strip-sources', '连续世界必须为每个 far、mid、ground、near 图层声明唯一的 sourceAssetId。', `${location}.stripSources[${sourceIndex}]`);
+        continue;
+      }
+      sourceByRole.set(source.role, source.sourceAssetId);
+    }
+    for (const role of requiredRoles) {
+      if (!sourceByRole.has(role)) add(issues, 'world-contract-strip-sources', `连续世界缺少 ${role} 图层的 sourceAssetId。`, `${location}.stripSources`);
+    }
     for (const sceneId of world.sceneIds) {
       const scene = scenes.get(sceneId);
       const sceneLocation = `${location}.sceneIds`;
@@ -117,25 +146,47 @@ export const validateWorldContracts = (project) => {
       for (const role of requiredRoles) {
         if (!actualRoles.has(role)) add(issues, 'world-contract-strip-role', `世界组缺少 ${role} 图层。`, `scenes.${sceneId}.composition.world.groupId`);
       }
+      for (const strip of (group.children ?? []).filter(({kind}) => kind === 'world-strip')) {
+        const expectedSource = sourceByRole.get(strip.role);
+        if (expectedSource && strip.loopingStripBinding?.sourceAssetId !== expectedSource) {
+          add(issues, 'world-contract-strip-source', `世界图层 ${strip.role} 必须复用连续世界声明的 sourceAssetId。`, `scenes.${sceneId}.composition.world.groupId`);
+        }
+      }
       const route = binding.route;
       const band = route?.subjectSafeBand;
       if (![band?.x, band?.y, band?.width, band?.height].every(finite) || band.x < 0 || band.y < 0 || band.width <= 0 || band.height <= 0 || band.x + band.width > 1 || band.y + band.height > 1) {
         add(issues, 'world-route-safe-band', '路线 subjectSafeBand 必须是画布内的规范矩形。', `scenes.${sceneId}.composition.world.route.subjectSafeBand`);
         continue;
       }
-      const subjectIds = route?.subjectIds ?? [];
-      if (!Array.isArray(subjectIds) || subjectIds.length === 0) {
-        add(issues, 'world-route-subjects', '路线必须绑定至少一个行进主体。', `scenes.${sceneId}.composition.world.route.subjectIds`);
+      const travelers = route?.travelers ?? [];
+      if (!Array.isArray(travelers) || travelers.length === 0) {
+        add(issues, 'world-route-subjects', '路线必须绑定至少一个行进主体。', `scenes.${sceneId}.composition.world.route.travelers`);
       }
-      for (const subjectId of subjectIds) {
-        for (const proof of scene.motion?.proofTimes ?? []) {
-          const subject = resolveNodeRect({scene, nodeId: subjectId, progress: proof.at});
+      const travelerIds = new Set();
+      for (const [travelerIndex, traveler] of travelers.entries()) {
+        const travelerLocation = `scenes.${sceneId}.composition.world.route.travelers[${travelerIndex}]`;
+        if (!nonEmpty(traveler?.nodeId) || travelerIds.has(traveler.nodeId)) {
+          add(issues, 'world-route-traveler-id', '路线行者 nodeId 缺失或重复。', travelerLocation);
+          continue;
+        }
+        travelerIds.add(traveler.nodeId);
+        const proofs = proofWindow({
+          scene,
+          fromProofTimeId: traveler.fromProofTimeId,
+          throughProofTimeId: traveler.throughProofTimeId,
+        });
+        if (!proofs || proofs.length === 0) {
+          add(issues, 'world-route-traveler-window', '路线行者必须声明同幕、非递减的 proof 窗口。', travelerLocation);
+          continue;
+        }
+        for (const proof of proofs) {
+          const subject = resolveNodeRect({scene, nodeId: traveler.nodeId, progress: proof.at});
           if (!subject) {
-            add(issues, 'world-route-subject-missing', `路线主体不存在：${subjectId}。`, `scenes.${sceneId}.composition.world.route.subjectIds`);
+            add(issues, 'world-route-subject-missing', `路线主体不存在：${traveler.nodeId}。`, travelerLocation);
             break;
           }
           if (!rectangleWithin(subject.rect, {left: band.x, top: band.y, width: band.width, height: band.height})) {
-            add(issues, 'world-route-subject-outside-band', `主体 ${subjectId} 在证明时刻 ${proof.id} 离开路线安全带。`, `scenes.${sceneId}.motion.proofTimes`);
+            add(issues, 'world-route-subject-outside-band', `主体 ${traveler.nodeId} 在证明时刻 ${proof.id} 离开路线安全带。`, `scenes.${sceneId}.motion.proofTimes`);
           }
         }
       }
@@ -220,6 +271,26 @@ export const validateTrajectoryContracts = (project) => {
           const signed = assertion.direction === 'right' ? delta : -delta;
           if (signed < assertion.minimumDelta) add(issues, 'trajectory-travel-distance', `节点 ${assertion.nodeId} 未按 ${assertion.direction} 方向移动至少 ${assertion.minimumDelta}。`, assertionLocation);
         }
+      } else if (assertion.kind === 'monotonic-travel') {
+        const fromProof = proofFor(scene, assertion.fromProofTimeId);
+        const from = fromProof && resolve(assertion.nodeId, fromProof.at);
+        const to = resolve(assertion.nodeId, proof.at);
+        if (!fromProof || !from || !to || proof.at <= fromProof.at) {
+          add(issues, 'trajectory-monotonic-proof', 'monotonic-travel 必须引用同幕中严格递增的两个证明时刻与存在节点。', assertionLocation);
+        } else {
+          const samples = motionSampleTimes({path: to.path, from: fromProof.at, through: proof.at})
+            .map((at) => ({at, target: resolve(assertion.nodeId, at)}));
+          if (samples.some(({target}) => !target)) {
+            add(issues, 'trajectory-monotonic-node', `节点 ${assertion.nodeId} 无法在完整单调窗口中解析。`, assertionLocation);
+            continue;
+          }
+          const direction = assertion.direction === 'right' ? 1 : -1;
+          const hasBacktrack = samples.some(({target}, index) =>
+            index > 0 && direction * (target.rect.left - samples[index - 1].target.rect.left) < -1e-6);
+          if (hasBacktrack) add(issues, 'trajectory-monotonic-backtrack', `节点 ${assertion.nodeId} 在 ${assertion.fromProofTimeId} 至 ${assertion.proofTimeId} 出现反向移动。`, assertionLocation);
+          const total = direction * (samples.at(-1).target.rect.left - samples[0].target.rect.left);
+          if (total < assertion.minimumDelta) add(issues, 'trajectory-monotonic-distance', `节点 ${assertion.nodeId} 在单调窗口内未完成至少 ${assertion.minimumDelta} 的净位移。`, assertionLocation);
+        }
       } else if (assertion.kind === 'offscreen-at') {
         const target = resolve(assertion.nodeId);
         if (!target) add(issues, 'trajectory-offscreen-node', 'offscreen-at 必须引用存在节点。', assertionLocation);
@@ -258,7 +329,7 @@ export const validateProductionContracts = (project) => [
 ];
 
 export const summarizeProductionContracts = (project) => ({
-  worlds: (project.worlds ?? []).map(({id, sceneIds, requiredStripRoles}) => ({id, sceneIds, requiredStripRoles})),
+  worlds: (project.worlds ?? []).map(({id, sceneIds, requiredStripRoles, stripSources}) => ({id, sceneIds, requiredStripRoles, stripSources})),
   trajectories: (project.trajectoryContracts ?? []).map(({id, sequence, assertions}) => ({
     id,
     sequence,

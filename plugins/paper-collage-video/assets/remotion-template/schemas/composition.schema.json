@@ -876,11 +876,21 @@
       },
       "additionalProperties": false
     },
+    "worldRouteTraveler": {
+      "type": "object",
+      "required": ["nodeId", "fromProofTimeId", "throughProofTimeId"],
+      "properties": {
+        "nodeId": {"type": "string", "minLength": 1},
+        "fromProofTimeId": {"type": "string", "minLength": 1},
+        "throughProofTimeId": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
     "worldRoute": {
       "type": "object",
-      "required": ["subjectIds", "subjectSafeBand", "markerNodeIds"],
+      "required": ["travelers", "subjectSafeBand", "markerNodeIds"],
       "properties": {
-        "subjectIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "travelers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/worldRouteTraveler"}},
         "subjectSafeBand": {"$ref": "#/$defs/normalizedRectangle"},
         "markerNodeIds": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
       },

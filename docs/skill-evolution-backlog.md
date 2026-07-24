@@ -107,6 +107,23 @@ documentation, and packaged-plugin copy are updated together.
   reversed event sequence. A race author still declares its own participants
   and semantics—there is no rabbit/turtle special case.
 
+## 2026-07-24 — Route windows, strip-source continuity, and a true stopped chase
+
+- **Origin:** `gui-tu-sai-pao-v2` concept planning against the current v10
+  contracts; no old project, asset, or render was read.
+- **Observed failure:** a route's flat `subjectIds` list required a racer to be
+  inside the safe band at every proof, contradicting a later required
+  `offscreen-at` exit. Role-only world validation also allowed a different
+  far/mid/ground/near source in a later scene, and signed end-point travel
+  could not prove a forward chase that ended in a genuine zero-motion stop.
+- **Required capability:** proof-windowed route travelers, root-declared
+  strip-source reuse across every bound scene, and a keyframe-sampled
+  `monotonic-travel` assertion with an allowed zero net displacement.
+- **Acceptance evidence:** schema and deterministic validation reject an
+  out-of-window/invalid traveler, a later-scene strip-source drift, and an
+  intermediate backward keyframe; they allow a legal route window followed by
+  an offscreen exit and a forward chase that holds still at the end.
+
 ## 2026-07-24 — Revision-safe scene consolidation and narration continuity
 
 - **Origin:** `projects/gui-tu-sai-pao` recut that merged the initial setup
