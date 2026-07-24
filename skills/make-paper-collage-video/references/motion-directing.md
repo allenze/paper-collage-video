@@ -12,7 +12,7 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `ambient-motion` | `continuous-transform` | breathing, paper drift, floating question mark |
 | `camera-change` | `continuous-transform` on `scene-camera` | push, pull, pan |
 | `depth-parallax` | `continuous-transform` with `parallax-camera` on `scene-camera` | camera-coupled paper planes at authored depth |
-| `depth-layer-separation` | `registered-depth-stack` with `bounded-relative` | complete rear plate, complete subject, and complete front overlay move within reviewed reveal envelopes |
+| `depth-layer-separation` | `registered-depth-stack` with `bounded-relative` | complete rear plate, complete subject, and complete front overlay move within reviewed reveal envelopes; a full-silhouette subject may additionally use a proved `subjectTravelEnvelope` |
 | `pose-change` | `state-sequence` | hand moves from chest to pointing at a board |
 | `prop-state-change` | `state-sequence` | page turns, cards change, book lowers |
 | `contact-change` | `supported-subject` | person stands on a boat, book remains in hand |
@@ -40,7 +40,14 @@ complete layer roles, shared canvas, source strategy, and 16:9/9:16/1:1 reveal
 envelopes. A free group may add deliberate local depth only when that nested
 separation is part of the approved design.
 
-`motif-field` is decorative only. Author one target with preset (`drift`, `fall-drift`, `burst`, or `orbit`), distribution (`scattered`, `grid`, or `edge`), bounded `count<=64`, cycles, normalized placement `bounds`, and explicit rectangle/ellipse `exclusionZones` around titles, faces, labels, and explanatory data. Keep all fields in one scene at or below 192 instances. Runtime supplies a fixed integer seed, 1–8 reviewed motif sources, base size, and bounded scale/rotation/opacity variation. Placement uses deterministic bounded rejection with motif-footprint clearance; loop presets either close geometrically or hide the respawn edge. The renderer expands the instances deterministically; do not author a large array of individual asset nodes.
+`motif-field` is decorative only. Author one target with preset (`drift`, `fall-drift`, `rise-drift`, `burst`, or `orbit`), distribution (`scattered`, `grid`, or `edge`), bounded `count<=64`, cycles, normalized placement `bounds`, and explicit rectangle/ellipse `exclusionZones` around titles, faces, labels, and explanatory data. `rise-drift` is the deterministic physical bubble primitive: every instance begins just below the field, moves monotonically upward, expands slightly, and hides its top/bottom respawn. Keep all fields in one scene at or below 192 instances. Runtime supplies a fixed integer seed, 1–8 reviewed motif sources, base size, and bounded scale/rotation/opacity variation. Placement uses deterministic bounded rejection with motif-footprint clearance; loop presets either close geometrically or hide the respawn edge. The renderer expands the instances deterministically; do not author a large array of individual asset nodes.
+
+Use continuous preset `traverse` for a subject whose world-relative path must be
+materially larger than camera drift; runtime validation requires a normalized
+path span of at least `0.45`. Use preset `sway` with
+`motion.idle.preset=sway` and a bottom-biased `motion.pivot.y>=0.8` for rooted
+foliage. `motion.pivot` changes the transform origin without changing a
+registered member's full-canvas placement or top-left registration.
 
 ## Author Intent, Compile Execution
 

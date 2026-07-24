@@ -137,11 +137,13 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
   common registration/full canvas, strict rear-to-front depth, neutral
   reconstruction/reference conformity, no transparent exposure at either
   extreme of every responsive reveal envelope, and clean bounded relative
-  motion.
+  motion. When `subjectTravelEnvelope` is authored, also inspect all three
+  responsive lower-left/upper-right subject-only travel pairs and confirm the
+  subject crosses the world while rear/front remain locally stable.
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
 - `state-sequence`: state order correct, pose registration stable, identity consistent, transition clean, every state bound to a current proof frame.
 - `parallax-rig`: depth order readable, camera coupling clean, registered groups stable, final composition readable.
-- `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable.
+- `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable. For `rise-drift`, verify monotonic bottom-to-top travel, slight expansion, and invisible respawn.
 - `typography`: fit/overflow, font loading, reveal/emphasis edit-point binding, mixed-script legibility, and safe-area/exclusion compliance.
 - `annotation`: semantic anchors, route validity, title/subtitle/motif exclusion clearance, lifecycle binding, and counter state.
 - `data-graphic`: data/domain/format/geometry mapping, focus/reveal states, edit-point binding, and deterministic SVG output.

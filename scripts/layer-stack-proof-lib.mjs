@@ -135,6 +135,104 @@ const writeEnvelopePair = async ({
   };
 };
 
+const subjectTravelSvg = async ({
+  members,
+  width,
+  height,
+  limit,
+  direction,
+}) => {
+  const images = [];
+  for (const member of members) {
+    const metadata = await sharp(member.file).metadata();
+    const cover = Math.max(width / metadata.width, height / metadata.height);
+    const baseWidth = metadata.width * cover;
+    const baseHeight = metadata.height * cover;
+    const left = (width - baseWidth) / 2;
+    const top = (height - baseHeight) / 2;
+    const moving = member.role === 'subject';
+    const translateX = moving ? direction * limit.x * width : 0;
+    const translateY = moving ? -direction * limit.y * height : 0;
+    const rotation = moving ? direction * limit.rotationDegrees : 0;
+    const scale = moving ? 1 + limit.scale : 1;
+    images.push(`
+      <image
+        href="${await dataUrlFor(member.file)}"
+        x="${left}"
+        y="${top}"
+        width="${baseWidth}"
+        height="${baseHeight}"
+        preserveAspectRatio="none"
+        transform="translate(${translateX} ${translateY}) rotate(${rotation} ${width / 2} ${height / 2}) translate(${width / 2} ${height / 2}) scale(${scale}) translate(${-width / 2} ${-height / 2})"
+      />
+    `);
+  }
+  return Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      ${images.join('\n')}
+    </svg>
+  `);
+};
+
+const writeSubjectTravelPair = async ({
+  members,
+  profile,
+  limit,
+  file,
+}) => {
+  const {width, height} = PROFILE_SIZES[profile];
+  const lowerLeft = await subjectTravelSvg({
+    members,
+    width,
+    height,
+    limit,
+    direction: -1,
+  });
+  const upperRight = await subjectTravelSvg({
+    members,
+    width,
+    height,
+    limit,
+    direction: 1,
+  });
+  const left = await sharp(lowerLeft).ensureAlpha().png().toBuffer();
+  const right = await sharp(upperRight).ensureAlpha().png().toBuffer();
+  await sharp({
+    create: {
+      width: width * 2,
+      height,
+      channels: 4,
+      background: '#00000000',
+    },
+  })
+    .composite([
+      {input: left, left: 0, top: 0},
+      {input: right, left: width, top: 0},
+    ])
+    .png()
+    .toFile(file);
+  const {data, info} = await sharp(file)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({resolveWithObject: true});
+  let transparentPixels = 0;
+  for (
+    let offset = info.channels - 1;
+    offset < data.length;
+    offset += info.channels
+  ) {
+    if (data[offset] < 255) transparentPixels += 1;
+  }
+  return {
+    profile,
+    file,
+    width: info.width,
+    height: info.height,
+    transparentPixels,
+    passed: transparentPixels === 0,
+  };
+};
+
 export const buildLayerStackProof = async ({
   group,
   memberFiles,
@@ -255,11 +353,29 @@ export const buildLayerStackProof = async ({
       }),
     );
   }
+  const subjectTravelExtremes = [];
+  if (group.layerStack.subjectTravelEnvelope) {
+    for (const profile of Object.keys(PROFILE_SIZES)) {
+      const file = path.join(
+        directory,
+        `${safeId}-subject-travel-${profile.replace(':', 'x')}.png`,
+      );
+      subjectTravelExtremes.push(
+        await writeSubjectTravelPair({
+          members,
+          profile,
+          limit: group.layerStack.subjectTravelEnvelope[profile],
+          file,
+        }),
+      );
+    }
+  }
   const artifacts = {
     neutralReconstruction: neutralFile,
     referenceComparison: comparisonFile,
     explodedView: explodedFile,
     envelopeExtremes,
+    subjectTravelExtremes,
   };
   return {
     members: members.map(({role, nodeId, depth}) => ({
@@ -275,9 +391,12 @@ export const buildLayerStackProof = async ({
           comparisonFile,
           explodedFile,
           ...envelopeExtremes.map(({file}) => file),
+          ...subjectTravelExtremes.map(({file}) => file),
         ].map(async (file) => [file, await sha256File(file)]))
       ),
     ),
-    passed: envelopeExtremes.every(({passed}) => passed),
+    passed:
+      envelopeExtremes.every(({passed}) => passed) &&
+      subjectTravelExtremes.every(({passed}) => passed),
   };
 };

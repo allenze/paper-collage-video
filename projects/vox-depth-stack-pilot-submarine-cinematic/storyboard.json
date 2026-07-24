@@ -375,21 +375,41 @@
                 "revealEnvelope": {
                   "16:9": {
                     "x": 0.04,
-                    "y": 0.02,
-                    "scale": 0.09,
-                    "rotationDegrees": 1
+                    "y": 0.03,
+                    "scale": 0.12,
+                    "rotationDegrees": 4
                   },
                   "9:16": {
-                    "x": 0.025,
+                    "x": 0.04,
                     "y": 0.03,
-                    "scale": 0.08,
-                    "rotationDegrees": 1
+                    "scale": 0.12,
+                    "rotationDegrees": 4
                   },
                   "1:1": {
-                    "x": 0.03,
-                    "y": 0.025,
-                    "scale": 0.08,
-                    "rotationDegrees": 1
+                    "x": 0.04,
+                    "y": 0.03,
+                    "scale": 0.16,
+                    "rotationDegrees": 4
+                  }
+                },
+                "subjectTravelEnvelope": {
+                  "16:9": {
+                    "x": 0.52,
+                    "y": 0.3,
+                    "scale": 0.3,
+                    "rotationDegrees": 12
+                  },
+                  "9:16": {
+                    "x": 0.52,
+                    "y": 0.3,
+                    "scale": 0.3,
+                    "rotationDegrees": 12
+                  },
+                  "1:1": {
+                    "x": 0.52,
+                    "y": 0.3,
+                    "scale": 0.3,
+                    "rotationDegrees": 12
                   }
                 }
               },
@@ -397,6 +417,24 @@
               "semanticRisk": "topology",
               "proofTimeId": "seaweed-reveal",
               "rationale": "The action must reveal previously occluded hull and ocean pixels from complete members rather than a flattened composite."
+            },
+            {
+              "id": "seaweed-rooted-sway",
+              "targetId": "seaweed-front",
+              "importance": "supporting",
+              "necessity": "required",
+              "changeClass": "ambient-motion",
+              "motion": {
+                "kind": "continuous-transform",
+                "preset": "sway"
+              },
+              "composition": {
+                "pattern": "free"
+              },
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "seaweed-reveal",
+              "rationale": "The complete foreground foliage must visibly sway around a rooted bottom pivot while preserving its registered canvas."
             }
           ]
         },
@@ -416,7 +454,7 @@
               "changeClass": "ambient-motion",
               "motion": {
                 "kind": "continuous-transform",
-                "preset": "float"
+                "preset": "traverse"
               },
               "composition": {
                 "pattern": "free"
@@ -530,7 +568,7 @@
               "changeClass": "decorative-field",
               "motion": {
                 "kind": "motif-field",
-                "preset": "orbit",
+                "preset": "rise-drift",
                 "distribution": "scattered",
                 "count": 30,
                 "cycles": 2.7,
@@ -568,7 +606,7 @@
               "changeClass": "decorative-field",
               "motion": {
                 "kind": "motif-field",
-                "preset": "fall-drift",
+                "preset": "rise-drift",
                 "distribution": "grid",
                 "count": 12,
                 "cycles": 3.4,
@@ -709,9 +747,16 @@
             "proofTimeId": "seaweed-reveal"
           },
           {
+            "id": "seaweed-rooted-sway",
+            "nodeId": "seaweed-front",
+            "preset": "sway",
+            "at": 0.2,
+            "proofTimeId": "seaweed-reveal"
+          },
+          {
             "id": "submarine-direction-and-scale",
             "nodeId": "yellow-submarine",
-            "preset": "float",
+            "preset": "traverse",
             "at": 0.38,
             "proofTimeId": "reverse-travel"
           }
@@ -748,7 +793,7 @@
           {
             "id": "ambient-bubble-field-treatment",
             "nodeId": "ambient-bubble-field",
-            "preset": "orbit",
+            "preset": "rise-drift",
             "distribution": "scattered",
             "count": 30,
             "cycles": 2.7,
@@ -802,7 +847,7 @@
           {
             "id": "propeller-bubble-stream-treatment",
             "nodeId": "propeller-bubble-stream",
-            "preset": "fall-drift",
+            "preset": "rise-drift",
             "distribution": "grid",
             "count": 12,
             "cycles": 3.4,
@@ -850,21 +895,41 @@
             "revealEnvelope": {
               "16:9": {
                 "x": 0.04,
-                "y": 0.02,
-                "scale": 0.09,
-                "rotationDegrees": 1
+                "y": 0.03,
+                "scale": 0.12,
+                "rotationDegrees": 4
               },
               "9:16": {
-                "x": 0.025,
+                "x": 0.04,
                 "y": 0.03,
-                "scale": 0.08,
-                "rotationDegrees": 1
+                "scale": 0.12,
+                "rotationDegrees": 4
               },
               "1:1": {
-                "x": 0.03,
-                "y": 0.025,
-                "scale": 0.08,
-                "rotationDegrees": 1
+                "x": 0.04,
+                "y": 0.03,
+                "scale": 0.16,
+                "rotationDegrees": 4
+              }
+            },
+            "subjectTravelEnvelope": {
+              "16:9": {
+                "x": 0.52,
+                "y": 0.3,
+                "scale": 0.3,
+                "rotationDegrees": 12
+              },
+              "9:16": {
+                "x": 0.52,
+                "y": 0.3,
+                "scale": 0.3,
+                "rotationDegrees": 12
+              },
+              "1:1": {
+                "x": 0.52,
+                "y": 0.3,
+                "scale": 0.3,
+                "rotationDegrees": 12
               }
             },
             "providerImageCalls": 1,
@@ -875,15 +940,14 @@
         ]
       },
       "directing": {
-        "fingerprint": "5d1b42d66a4ad42f3c030645ad38aa00c8a1eceafe21f657c5bd186fea352a77",
-        "treatmentCount": 8,
+        "fingerprint": "e71d7a3f930178451f149aaa92f0edb60233542c6a2a322c4d088890e2647c58",
+        "treatmentCount": 9,
         "riskScore": 49,
         "highestRiskTreatmentId": "cinematic-layer-separation"
       }
     }
   ],
   "sceneTransitions": [],
-  "updatedAt": "2026-07-23T19:40:47.672Z",
   "directingSummary": {
     "profile": "full-depth",
     "requiredStateFamilies": 0,
@@ -892,7 +956,7 @@
     "totalStates": 0,
     "estimatedPoseSheetCalls": 0,
     "maxStatesInFamily": 0,
-    "continuousTargets": 3,
+    "continuousTargets": 4,
     "visibilityTargets": 0,
     "motifFieldTargets": 4,
     "graphicTreatments": 0,
@@ -944,21 +1008,41 @@
           "revealEnvelope": {
             "16:9": {
               "x": 0.04,
-              "y": 0.02,
-              "scale": 0.09,
-              "rotationDegrees": 1
+              "y": 0.03,
+              "scale": 0.12,
+              "rotationDegrees": 4
             },
             "9:16": {
-              "x": 0.025,
+              "x": 0.04,
               "y": 0.03,
-              "scale": 0.08,
-              "rotationDegrees": 1
+              "scale": 0.12,
+              "rotationDegrees": 4
             },
             "1:1": {
-              "x": 0.03,
-              "y": 0.025,
-              "scale": 0.08,
-              "rotationDegrees": 1
+              "x": 0.04,
+              "y": 0.03,
+              "scale": 0.16,
+              "rotationDegrees": 4
+            }
+          },
+          "subjectTravelEnvelope": {
+            "16:9": {
+              "x": 0.52,
+              "y": 0.3,
+              "scale": 0.3,
+              "rotationDegrees": 12
+            },
+            "9:16": {
+              "x": 0.52,
+              "y": 0.3,
+              "scale": 0.3,
+              "rotationDegrees": 12
+            },
+            "1:1": {
+              "x": 0.52,
+              "y": 0.3,
+              "scale": 0.3,
+              "rotationDegrees": 12
             }
           },
           "providerImageCalls": 1,
@@ -970,8 +1054,11 @@
     },
     "styleProofPlan": {
       "requiredCoverage": [
+        "motion:bottom-pivot-sway",
         "motion:bounded-relative-layers",
         "motion:motif-field",
+        "motion:physical-rise",
+        "motion:subject-traverse",
         "relationship:coupled",
         "relationship:registered-depth-stack",
         "semantic:topology"
@@ -983,7 +1070,7 @@
           "targetId": "submarine-depth-stack",
           "proofTimeId": "seaweed-reveal",
           "riskScore": 49,
-          "directingFingerprint": "5d1b42d66a4ad42f3c030645ad38aa00c8a1eceafe21f657c5bd186fea352a77",
+          "directingFingerprint": "e71d7a3f930178451f149aaa92f0edb60233542c6a2a322c4d088890e2647c58",
           "sourceFamilyKey": "target:submarine-depth-stack",
           "coverage": [
             "motion:bounded-relative-layers",
@@ -994,23 +1081,52 @@
         },
         {
           "sceneId": "submarine-scene",
-          "treatmentId": "front-fish-school-treatment",
-          "targetId": "front-fish-school",
+          "treatmentId": "propeller-bubble-stream-treatment",
+          "targetId": "propeller-bubble-stream",
           "proofTimeId": "foreground-rush",
-          "riskScore": 12,
-          "directingFingerprint": "5d1b42d66a4ad42f3c030645ad38aa00c8a1eceafe21f657c5bd186fea352a77",
-          "sourceFamilyKey": "motif-field:front-fish-school",
+          "riskScore": 11,
+          "directingFingerprint": "e71d7a3f930178451f149aaa92f0edb60233542c6a2a322c4d088890e2647c58",
+          "sourceFamilyKey": "motif-field:propeller-bubble-stream",
           "coverage": [
-            "motion:motif-field"
+            "motion:motif-field",
+            "motion:physical-rise"
+          ]
+        },
+        {
+          "sceneId": "submarine-scene",
+          "treatmentId": "submarine-direction-and-scale",
+          "targetId": "yellow-submarine",
+          "proofTimeId": "reverse-travel",
+          "riskScore": 43,
+          "directingFingerprint": "e71d7a3f930178451f149aaa92f0edb60233542c6a2a322c4d088890e2647c58",
+          "sourceFamilyKey": "target:yellow-submarine",
+          "coverage": [
+            "motion:subject-traverse",
+            "semantic:topology"
+          ]
+        },
+        {
+          "sceneId": "submarine-scene",
+          "treatmentId": "seaweed-rooted-sway",
+          "targetId": "seaweed-front",
+          "proofTimeId": "seaweed-reveal",
+          "riskScore": 12,
+          "directingFingerprint": "e71d7a3f930178451f149aaa92f0edb60233542c6a2a322c4d088890e2647c58",
+          "sourceFamilyKey": "target:seaweed-front",
+          "coverage": [
+            "motion:bottom-pivot-sway"
           ]
         }
       ],
       "sourceFamilyKeys": [
-        "motif-field:front-fish-school",
-        "target:submarine-depth-stack"
+        "motif-field:propeller-bubble-stream",
+        "target:seaweed-front",
+        "target:submarine-depth-stack",
+        "target:yellow-submarine"
       ],
-      "fingerprint": "5a5919453491fd4d6969ca8c2a720e71499e2fd9f0321f0263f87899e0ed683e"
+      "fingerprint": "8d9c33fef42f2e33291d11e705349957fe55ad8f18245847dc854d95e81229e1"
     },
-    "fingerprint": "7f36c01c59535015a098719f407aeed1350e9e9765ac9e897fd5a9176614d283"
-  }
+    "fingerprint": "f02fa5600d2f1c46244580b80efd065e6af59514f3ee1e488185254df938d49a"
+  },
+  "updatedAt": "2026-07-24T00:07:19.843Z"
 }

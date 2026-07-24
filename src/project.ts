@@ -24,7 +24,7 @@ export type MotionKeyframe = {
 };
 
 export type IdleMotion = {
-  preset: 'float' | 'breathe' | 'grind' | 'drift' | 'still';
+  preset: 'float' | 'breathe' | 'grind' | 'drift' | 'sway' | 'still';
   intensity: number;
   cycleSeconds: number;
   phase?: number;
@@ -33,6 +33,7 @@ export type IdleMotion = {
 export type NodeMotion = {
   keyframes: MotionKeyframe[];
   idle?: IdleMotion;
+  pivot?: {x: number; y: number};
 };
 
 export type NodeVisibility = {
@@ -608,6 +609,7 @@ export type CompositionGroupNode = {
       | 'context-preserving-layer-edits';
     motionCapability: 'bounded-relative';
     revealEnvelope: LayerRevealEnvelope;
+    subjectTravelEnvelope?: LayerRevealEnvelope;
   };
   support?: {
     subjectId: string;
@@ -629,7 +631,7 @@ export type CompositionMotifFieldNode = {
   seed: number;
   distribution: 'scattered' | 'grid' | 'edge';
   fieldMotion: {
-    preset: 'drift' | 'fall-drift' | 'burst' | 'orbit';
+    preset: 'drift' | 'fall-drift' | 'rise-drift' | 'burst' | 'orbit';
     cycles: number;
   };
   baseSize: number;

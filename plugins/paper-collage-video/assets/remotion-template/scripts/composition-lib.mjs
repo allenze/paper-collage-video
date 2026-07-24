@@ -53,18 +53,55 @@ const rectanglesOverlap = (left, right) =>
   left.y + left.height > right.y;
 const LAYER_ROLES = ['support-rear', 'subject', 'support-front'];
 const RESPONSIVE_LAYER_PROFILES = ['16:9', '9:16', '1:1'];
-const maximumAuthoredMotion = (keyframes = []) => ({
-  x: Math.max(0, ...keyframes.map(({x = 0}) => Math.abs(x))),
-  y: Math.max(0, ...keyframes.map(({y = 0}) => Math.abs(y))),
-  scale: Math.max(
-    0,
-    ...keyframes.map(({scale = 1}) => Math.abs(scale - 1)),
-  ),
-  rotationDegrees: Math.max(
-    0,
-    ...keyframes.map(({rotation = 0}) => Math.abs(rotation)),
-  ),
-});
+const maximumAuthoredMotion = (motion = {}) => {
+  const keyframes = motion.keyframes ?? [];
+  const idle = motion.idle;
+  const idleIntensity = idle?.intensity ?? 0;
+  const idleMaximum = {
+    x:
+      idle?.preset === 'sway'
+        ? 0.004 * idleIntensity
+        : idle?.preset === 'grind'
+          ? 0.008 * idleIntensity
+          : idle?.preset === 'drift'
+            ? 0.005 * idleIntensity
+            : 0,
+    y:
+      idle?.preset === 'float'
+        ? 0.006 * idleIntensity
+        : idle?.preset === 'drift'
+          ? 0.003 * idleIntensity
+          : 0,
+    scale:
+      idle?.preset === 'breathe'
+        ? 0.008 * idleIntensity
+        : 0,
+    rotationDegrees:
+      idle?.preset === 'sway'
+        ? 2.8 * idleIntensity
+        : idle?.preset === 'grind'
+          ? 0.55 * idleIntensity
+          : 0,
+  };
+  return {
+    x:
+      Math.max(0, ...keyframes.map(({x = 0}) => Math.abs(x))) +
+      idleMaximum.x,
+    y:
+      Math.max(0, ...keyframes.map(({y = 0}) => Math.abs(y))) +
+      idleMaximum.y,
+    scale:
+      Math.max(
+        0,
+        ...keyframes.map(({scale = 1}) => Math.abs(scale - 1)),
+      ) + idleMaximum.scale,
+    rotationDegrees:
+      Math.max(
+        0,
+        ...keyframes.map(({rotation = 0}) => Math.abs(rotation)),
+      ) + idleMaximum.rotationDegrees,
+  };
+};
 
 export const stableStringify = (value) => {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -227,9 +264,17 @@ export const validateCompositionStructure = ({
       add('error', 'composition-node-visibility', 'visibility.initial 必须是 visible 或 hidden。', `${nodeLocation}.visibility.initial`);
     }
     if (node.motion?.idle) {
-      if (!['float', 'breathe', 'grind', 'drift', 'still'].includes(node.motion.idle.preset)) add('error', 'composition-idle-preset', `未知 idle preset：${node.motion.idle.preset}`, `${nodeLocation}.motion.idle.preset`);
+      if (!['float', 'breathe', 'grind', 'drift', 'sway', 'still'].includes(node.motion.idle.preset)) add('error', 'composition-idle-preset', `未知 idle preset：${node.motion.idle.preset}`, `${nodeLocation}.motion.idle.preset`);
       if (!(finite(node.motion.idle.intensity) && node.motion.idle.intensity >= 0 && node.motion.idle.intensity <= 3)) add('error', 'composition-idle-intensity', 'idle.intensity 必须位于 0..3。', `${nodeLocation}.motion.idle.intensity`);
       if (!(finite(node.motion.idle.cycleSeconds) && node.motion.idle.cycleSeconds > 0)) add('error', 'composition-idle-cycle', 'idle.cycleSeconds 必须大于 0。', `${nodeLocation}.motion.idle.cycleSeconds`);
+    }
+    if (node.motion?.pivot) {
+      for (const property of ['x', 'y']) {
+        const value = node.motion.pivot[property];
+        if (!(finite(value) && value >= 0 && value <= 1)) {
+          add('error', 'composition-motion-pivot', `motion.pivot.${property} 必须位于 0..1。`, `${nodeLocation}.motion.pivot.${property}`);
+        }
+      }
     }
     if (node.kind === 'asset') {
       assets.push({node, parent});
@@ -447,7 +492,7 @@ export const validateCompositionStructure = ({
       if (!['scattered', 'grid', 'edge'].includes(node.distribution)) {
         add('error', 'composition-motif-distribution', `未知 motif-field distribution：${node.distribution}`, `${nodeLocation}.distribution`);
       }
-      if (!['drift', 'fall-drift', 'burst', 'orbit'].includes(node.fieldMotion?.preset)) {
+      if (!['drift', 'fall-drift', 'rise-drift', 'burst', 'orbit'].includes(node.fieldMotion?.preset)) {
         add('error', 'composition-motif-motion', `未知 motif-field motion：${node.fieldMotion?.preset}`, `${nodeLocation}.fieldMotion.preset`);
       }
       if (!(finite(node.fieldMotion?.cycles) && node.fieldMotion.cycles > 0 && node.fieldMotion.cycles <= 12)) {
@@ -662,6 +707,41 @@ export const validateCompositionStructure = ({
         );
       }
       const profileLimits = node.layerStack?.revealEnvelope;
+      const subjectTravelLimits = node.layerStack?.subjectTravelEnvelope;
+      if (subjectTravelLimits) {
+        const maxima = {
+          x: 0.75,
+          y: 0.5,
+          scale: 0.5,
+          rotationDegrees: 30,
+        };
+        for (const profile of RESPONSIVE_LAYER_PROFILES) {
+          const limit = subjectTravelLimits[profile];
+          if (!limit) {
+            add(
+              'error',
+              'composition-subject-travel-profile',
+              `layerStack.subjectTravelEnvelope 缺少 ${profile}。`,
+              `${nodeLocation}.layerStack.subjectTravelEnvelope.${profile}`,
+            );
+            continue;
+          }
+          for (const [key, maximum] of Object.entries(maxima)) {
+            if (
+              !finite(limit[key]) ||
+              limit[key] < 0 ||
+              limit[key] > maximum
+            ) {
+              add(
+                'error',
+                'composition-subject-travel-limit',
+                `${profile}.${key} 必须位于 0..${maximum}。`,
+                `${nodeLocation}.layerStack.subjectTravelEnvelope.${profile}.${key}`,
+              );
+            }
+          }
+        }
+      }
       for (const child of members) {
         const registrationId =
           child.kind === 'asset'
@@ -691,9 +771,7 @@ export const validateCompositionStructure = ({
             `${nodeLocation}.children`,
           );
         }
-        const requested = maximumAuthoredMotion(
-          child.motion?.keyframes,
-        );
+        const requested = maximumAuthoredMotion(child.motion);
         if (
           (child.motion?.keyframes ?? []).some(
             ({scale}) => finite(scale) && scale < 1,
@@ -707,13 +785,18 @@ export const validateCompositionStructure = ({
           );
         }
         for (const profile of RESPONSIVE_LAYER_PROFILES) {
-          const limit = profileLimits?.[profile];
+          const limit =
+            child.slot === 'subject' && subjectTravelLimits
+              ? subjectTravelLimits[profile]
+              : profileLimits?.[profile];
           if (!limit) {
             add(
               'error',
-              'composition-layer-reveal-profile',
-              `layerStack.revealEnvelope 缺少 ${profile}。`,
-              `${nodeLocation}.layerStack.revealEnvelope.${profile}`,
+              child.slot === 'subject'
+                ? 'composition-subject-travel-profile'
+                : 'composition-layer-reveal-profile',
+              `${child.slot === 'subject' ? 'layerStack.subjectTravelEnvelope' : 'layerStack.revealEnvelope'} 缺少 ${profile}。`,
+              `${nodeLocation}.layerStack.${child.slot === 'subject' ? 'subjectTravelEnvelope' : 'revealEnvelope'}.${profile}`,
             );
             continue;
           }
@@ -725,8 +808,10 @@ export const validateCompositionStructure = ({
             ) {
               add(
                 'error',
-                'composition-layer-reveal-exceeded',
-                `${child.id} 的 ${key}=${requested[key]} 超过 ${profile} 已证明的显露包络 ${limit[key] ?? 'missing'}。`,
+                child.slot === 'subject' && subjectTravelLimits
+                  ? 'composition-subject-travel-exceeded'
+                  : 'composition-layer-reveal-exceeded',
+                `${child.id} 的 ${key}=${requested[key]} 超过 ${profile} 已证明的${child.slot === 'subject' && subjectTravelLimits ? '主体航迹' : '显露'}包络 ${limit[key] ?? 'missing'}。`,
                 `${nodeLocation}.children#${child.id}.motion`,
               );
             }

@@ -108,12 +108,27 @@ export const assertStyleProofReady = async (slug) => {
       const layerProof = proof.layerStackProof;
       const envelopeExtremes =
         layerProof?.artifacts?.envelopeExtremes ?? [];
+      const subjectTravelExtremes =
+        layerProof?.artifacts?.subjectTravelExtremes ?? [];
+      const subjectTravelRequired = Boolean(
+        target.group?.layerStack?.subjectTravelEnvelope,
+      );
       if (
         layerProof?.passed !== true ||
         envelopeExtremes.length !== 3 ||
         envelopeExtremes.some(
           ({passed, transparentPixels}) =>
             passed !== true || transparentPixels !== 0,
+        ) ||
+        (
+          subjectTravelRequired &&
+          (
+            subjectTravelExtremes.length !== 3 ||
+            subjectTravelExtremes.some(
+              ({passed, transparentPixels}) =>
+                passed !== true || transparentPixels !== 0,
+            )
+          )
         )
       ) {
         throw new Error(
@@ -136,6 +151,12 @@ export const assertStyleProofReady = async (slug) => {
         await assertEvidenceFile(
           envelope.file,
           `${proof.compositeId}.envelope.${envelope.profile}`,
+        );
+      }
+      for (const envelope of subjectTravelExtremes) {
+        await assertEvidenceFile(
+          envelope.file,
+          `${proof.compositeId}.subjectTravel.${envelope.profile}`,
         );
       }
     }
@@ -162,6 +183,9 @@ export const assertStyleProofReady = async (slug) => {
         proof.layerStackProof.artifacts.referenceComparison,
         proof.layerStackProof.artifacts.explodedView,
         ...proof.layerStackProof.artifacts.envelopeExtremes.map(
+          ({file}) => file,
+        ),
+        ...(proof.layerStackProof.artifacts.subjectTravelExtremes ?? []).map(
           ({file}) => file,
         ),
       );

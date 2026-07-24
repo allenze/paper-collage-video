@@ -76,6 +76,12 @@ export const resolveIdleState = ({
       return {...defaults, y: wave * 0.006 * intensity};
     case 'drift':
       return {...defaults, x: wave * 0.005 * intensity, y: Math.cos(frame / cycleFrames * Math.PI * 2) * 0.003 * intensity};
+    case 'sway':
+      return {
+        ...defaults,
+        x: wave * 0.004 * intensity,
+        rotation: wave * 2.8 * intensity,
+      };
     case 'grind':
       return {...defaults, x: wave * 0.008 * intensity, rotation: wave * 0.55 * intensity};
     default:

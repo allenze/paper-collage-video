@@ -362,6 +362,11 @@ try {
               ...entry,
               file: path.relative(ROOT, entry.file),
             })),
+          subjectTravelExtremes:
+            built.artifacts.subjectTravelExtremes.map((entry) => ({
+              ...entry,
+              file: path.relative(ROOT, entry.file),
+            })),
         },
         artifactHashes: Object.fromEntries(
           Object.entries(built.artifactHashes).map(

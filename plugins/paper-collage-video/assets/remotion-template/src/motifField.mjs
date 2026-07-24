@@ -148,6 +148,17 @@ export const resolveMotifFieldMotion = ({instance, preset, progress, cycles}) =>
   const wave = Math.sin(phase * TAU);
   const cosine = Math.cos(phase * TAU);
   switch (preset) {
+    case 'rise-drift': {
+      const respawnFade = clamp01(Math.min(phase, 1 - phase) / 0.08);
+      const absoluteY = 1.08 - phase * 1.16;
+      return {
+        x: wave * 0.018,
+        y: absoluteY - instance.y,
+        rotation: wave * 5,
+        scale: 0.82 + phase * 0.22,
+        opacity: respawnFade,
+      };
+    }
     case 'fall-drift': {
       const respawnFade = clamp01(Math.min(phase, 1 - phase) / 0.12);
       return {

@@ -479,6 +479,8 @@ try {
               cached.layerStackProof.artifacts?.explodedView,
               ...(cached.layerStackProof.artifacts?.envelopeExtremes ?? [])
                 .map(({file}) => file),
+              ...(cached.layerStackProof.artifacts?.subjectTravelExtremes ?? [])
+                .map(({file}) => file),
             ].map((file) =>
               file
                 ? fileExists(path.resolve(ROOT, file))
@@ -581,6 +583,11 @@ try {
           ),
           envelopeExtremes:
             built.artifacts.envelopeExtremes.map((entry) => ({
+              ...entry,
+              file: path.relative(ROOT, entry.file),
+            })),
+          subjectTravelExtremes:
+            built.artifacts.subjectTravelExtremes.map((entry) => ({
               ...entry,
               file: path.relative(ROOT, entry.file),
             })),

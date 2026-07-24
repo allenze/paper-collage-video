@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "vox-depth-stack-pilot-submarine-cinematic",
+  "reviews": [
+    {
+      "assetId": "ocean-rear",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "note": "逐项检查 source、alpha、checkerboard、tight crop、motion-stress 与六个全帧证据；1536×1536 后景为连续不透明纸艺海洋，无文字、水印、矩形透明带或背景泄漏，色彩和撕纸纹理与全片一致。"
+    },
+    {
+      "assetId": "yellow-submarine",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "subject-complete",
+        "identity-consistent",
+        "edge-clean",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "note": "逐项检查 source、alpha、checkerboard、tight crop、motion-stress、事件帧与语义裁切；螺旋桨、完整船身、潜望镜和三个舷窗在大航迹各时刻保持一致，透明边缘干净，无色键残留、矩形低 alpha 带或背景泄漏。"
+    },
+    {
+      "assetId": "seaweed-front",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "no-text",
+        "no-watermark",
+        "subject-complete",
+        "style-consistent",
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "note": "逐项检查 source、alpha、checkerboard、tight crop、motion-stress 与六个全帧证据；前景水草为完整透明叠层，底部根系连续，枝叶轮廓和负空间干净，无文字、水印、色键残留或背景泄漏。"
+    },
+    {
+      "compositeId": "parallax-rig:submarine-scene",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "depth-order-readable",
+        "camera-coupling-clean",
+        "registered-groups-stable",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "note": "六个 proof time 的 full/crop/debug 证据均已检查；后景鱼群、海洋、潜艇、水草、前景鱼群与气泡保持明确景深顺序。相机缩放峰值已收敛至 1.16，镜头变化不再掩盖潜艇的世界内位移，注册组在推拉和视差中稳定。"
+    },
+    {
+      "compositeId": "motif-field:submarine-scene:rear-fish-school",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "field-density-readable",
+        "field-bounds-clean",
+        "field-exclusions-clean",
+        "field-motion-clean",
+        "field-loop-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "note": "六个 proof time 的 full/crop/debug 证据均已检查；小型鱼群保持在潜艇后景，密度和边界稳定，主体走廊未被遮挡，确定性横向运动在证明片段首尾无可见跳变。"
+    },
+    {
+      "compositeId": "motif-field:submarine-scene:ambient-bubble-field",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "field-density-readable",
+        "field-bounds-clean",
+        "field-exclusions-clean",
+        "field-motion-clean",
+        "field-loop-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "note": "六个 proof time 的 full/crop/debug 证据均已检查；30 个纸艺气泡疏密可读、保持在水域边界内并避开英雄轮廓。rise-drift 使用底部确定性生成、单调向上位移、轻微横向漂移与不可见区回绕，循环无可见跳变。"
+    },
+    {
+      "compositeId": "motif-field:submarine-scene:propeller-bubble-stream",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "field-density-readable",
+        "field-bounds-clean",
+        "field-exclusions-clean",
+        "field-motion-clean",
+        "field-loop-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "note": "六个 proof time 的 full/crop/debug 证据均已检查；螺旋桨附近的 18 个气泡在局部边界内保持清晰密度，按 rise-drift 从下向上运动并在画外回绕，不遮挡潜艇关键轮廓。"
+    },
+    {
+      "compositeId": "motif-field:submarine-scene:front-fish-school",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "field-density-readable",
+        "field-bounds-clean",
+        "field-exclusions-clean",
+        "field-motion-clean",
+        "field-loop-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "note": "六个 proof time 的 full/crop/debug 证据均已检查；大型鱼群在潜艇前景反向穿越，位置、透明度和边界稳定，foreground-rush 形成明显近景速度感，同时潜艇轮廓仍可识别。"
+    },
+    {
+      "compositeId": "group:submarine-scene:submarine-depth-stack",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "registration-aligned",
+        "layer-completeness-proven",
+        "depth-order-readable",
+        "neutral-reconstruction-readable",
+        "exploded-view-readable",
+        "responsive-motion-stress-clean",
+        "final-composition-readable"
+      ],
+      "failedChecks": [],
+      "note": "已检查六个 full/crop/debug 帧、三成员 alpha/checkerboard/tight/motion-stress、neutral reconstruction、reference comparison、exploded view，以及 16:9、9:16、1:1 的普通包络和主体航迹包络。三成员注册对齐、层级完整，六组压力证据均为 0 透明像素；潜艇从左下向右上大跨度穿越时仍保持可读。"
+    },
+    {
+      "compositeId": "event:submarine-scene:wide-entry-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "note": "wide-entry 的 full/crop/debug 证据已检查；潜艇从画面左下进入，螺旋桨与船身清楚可见，事件绑定到 0.06 proof time。该纯音乐镜头无独立音效要求，后续状态连续保留。"
+    },
+    {
+      "compositeId": "event:submarine-scene:seaweed-reveal-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "note": "seaweed-reveal 的 full/crop/debug 证据已检查；底部轴心水草向左右摆动时完整船身、潜望镜和舷窗在 0.23 proof time 可读。该纯音乐镜头无独立音效要求，显露后的注册关系持续稳定。"
+    },
+    {
+      "compositeId": "event:submarine-scene:reverse-travel-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "note": "reverse-travel 的 full/crop/debug、潜艇 alpha/checkerboard/tight/motion-stress 证据已检查；潜艇在 0.41 proof time 已从左侧进入画面中右部并改变运动向量，画面内相对位移清楚。该纯音乐镜头无独立音效要求，轮廓和后续状态均保持。"
+    },
+    {
+      "compositeId": "event:submarine-scene:rear-fish-crossing-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "note": "rear-fish-crossing 的 full/crop/debug 证据已检查；0.57 proof time 中小型鱼群从潜艇后方横穿，潜艇已到画面右上区域，前后层次明确。该纯音乐镜头无独立音效要求，事件后主体仍连续可见。"
+    },
+    {
+      "compositeId": "event:submarine-scene:foreground-rush-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "note": "foreground-rush 的 full/crop/debug 证据已检查；0.73 proof time 中大型前景鱼群、上升气泡、水草和潜艇形成清楚的多层速度差，潜艇仍可辨认。该纯音乐镜头无独立音效要求，最终构图未被破坏。"
+    },
+    {
+      "compositeId": "event:submarine-scene:deep-lockup-event",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "failedChecks": [],
+      "note": "deep-lockup 的 full/crop/debug 证据已检查；0.92 proof time 中镜头拉回，潜艇完整稳定地停在中右部，水草、气泡与前后鱼群保留深度。该纯音乐镜头无独立音效要求，最终状态持续到片尾。"
+    },
+    {
+      "compositeId": "semantic:yellow-submarine-topology:submarine-complete-silhouette",
+      "reviewer": "host-vision",
+      "passedChecks": [
+        "silhouette-fidelity",
+        "negative-space-clean",
+        "background-leak-free"
+      ],
+      "failedChecks": [],
+      "note": "已检查所有语义裁切、三成员资产证据及六个 proof time；潜艇的螺旋桨、船身、潜望镜和三个舷窗在遮挡、缩放和大航迹运动中保持同一拓扑，舷窗负空间干净，无蓝底或色键泄漏。"
+    }
+  ]
+}

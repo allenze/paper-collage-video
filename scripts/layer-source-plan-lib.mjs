@@ -130,6 +130,61 @@ const validateRevealEnvelope = (envelope, {issues, location}) => {
   }
 };
 
+const validateSubjectTravelEnvelope = (envelope, {issues, location}) => {
+  const maxima = {
+    x: 0.75,
+    y: 0.5,
+    scale: 0.5,
+    rotationDegrees: 30,
+  };
+  if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) {
+    addIssue(
+      issues,
+      'subject-travel-envelope-required',
+      '主体大航迹必须声明 16:9、9:16、1:1 subjectTravelEnvelope。',
+      location,
+    );
+    return;
+  }
+  for (const profile of RESPONSIVE_LAYER_PROFILES) {
+    const value = envelope[profile];
+    const valueLocation = `${location}.${profile}`;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      addIssue(
+        issues,
+        'subject-travel-profile-required',
+        `subjectTravelEnvelope 缺少 ${profile}。`,
+        valueLocation,
+      );
+      continue;
+    }
+    for (const [key, maximum] of Object.entries(maxima)) {
+      if (
+        !finite(value[key]) ||
+        value[key] < 0 ||
+        value[key] > maximum
+      ) {
+        addIssue(
+          issues,
+          'subject-travel-value',
+          `${profile}.${key} 必须位于 0..${maximum}。`,
+          `${valueLocation}.${key}`,
+        );
+      }
+    }
+  }
+  for (const key of Object.keys(envelope)) {
+    if (!RESPONSIVE_LAYER_PROFILES.includes(key)) {
+      addIssue(
+        issues,
+        'subject-travel-profile-unknown',
+        `未知 subjectTravelEnvelope 画幅：${key}。`,
+        `${location}.${key}`,
+      );
+    }
+  }
+};
+
 const validateLayers = (layers, {issues, location}) => {
   if (!Array.isArray(layers) || layers.length !== 3) {
     addIssue(
@@ -213,7 +268,8 @@ export const validateLayerCompositionIntent = (
     strategy !== undefined ||
     composition?.sourcePackageId !== undefined ||
     composition?.layers !== undefined ||
-    composition?.revealEnvelope !== undefined;
+    composition?.revealEnvelope !== undefined ||
+    composition?.subjectTravelEnvelope !== undefined;
   if (!layerAware) return issues;
 
   if (
@@ -293,8 +349,23 @@ export const validateLayerCompositionIntent = (
       issues,
       location: `${location}.revealEnvelope`,
     });
+    if (composition?.subjectTravelEnvelope !== undefined) {
+      if (pattern !== 'registered-depth-stack') {
+        addIssue(
+          issues,
+          'subject-travel-pattern',
+          'subjectTravelEnvelope 只适用于 registered-depth-stack。',
+          `${location}.subjectTravelEnvelope`,
+        );
+      } else {
+        validateSubjectTravelEnvelope(composition.subjectTravelEnvelope, {
+          issues,
+          location: `${location}.subjectTravelEnvelope`,
+        });
+      }
+    }
   } else {
-    for (const key of ['layers', 'revealEnvelope']) {
+    for (const key of ['layers', 'revealEnvelope', 'subjectTravelEnvelope']) {
       if (composition?.[key] !== undefined) {
         addIssue(
           issues,
@@ -354,6 +425,11 @@ export const compileLayerStackPlan = ({
     revealEnvelope:
       composition.motionCapability === 'bounded-relative'
         ? normalizedEnvelope(composition.revealEnvelope)
+        : null,
+    subjectTravelEnvelope:
+      composition.motionCapability === 'bounded-relative' &&
+      composition.subjectTravelEnvelope
+        ? normalizedEnvelope(composition.subjectTravelEnvelope)
         : null,
     providerImageCalls: costs.expectedProviderImageCalls,
     localDerivatives: costs.localDerivatives,

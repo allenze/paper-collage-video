@@ -49,7 +49,9 @@ inputs, runtime build, and source family. Ordinary coupled families require
 per-member alpha/checkerboard/tight/motion-stress evidence. A
 `registered-depth-stack` instead adds neutral reconstruction, reference
 comparison, checkerboard exploded members, and both extremes of all three
-responsive reveal envelopes. Participating asset/composite semantic checks must
+responsive reveal envelopes. A stack with `subjectTravelEnvelope` additionally
+proves both subject-only lower-left/upper-right extremes in all three profiles.
+Participating asset/composite semantic checks must
 already be recorded. This is an executable precondition inside `style-review`,
 not another approval state.
 
@@ -105,7 +107,11 @@ its exact rear/subject/front children own strictly increasing depth and may have
 bounded relative motion because their complete source package has been proven
 against responsive reveal envelopes.
 
-`motif-field` is a first-class decorative node. It owns reviewed motif sources, fixed seed, bounded count, distribution, internal motion preset/cycles, base size, variation ranges, required normalized `bounds`, and explicit rectangle/ellipse `exclusionZones`. Runtime placement uses bounded deterministic rejection with motif-footprint clearance, so title, face, and explanatory-data zones are reproducibly protected. One field expands at most 64 instances; all fields in one scene may total at most 192. `fall-drift` and `burst` hide their wrap point, while `drift` and `orbit` close geometrically; `cycles` affects every preset. Configuration, exclusions, source files, and loop proof are fingerprinted. A motif field is not a semantic crowd, identity family, or substitute for generated pose states.
+`motif-field` is a first-class decorative node. It owns reviewed motif sources, fixed seed, bounded count, distribution, internal motion preset/cycles, base size, variation ranges, required normalized `bounds`, and explicit rectangle/ellipse `exclusionZones`. Runtime placement uses bounded deterministic rejection with motif-footprint clearance, so title, face, and explanatory-data zones are reproducibly protected. One field expands at most 64 instances; all fields in one scene may total at most 192. `fall-drift`, `rise-drift`, and `burst` hide their wrap point, while `drift` and `orbit` close geometrically; `cycles` affects every preset. `rise-drift` computes a deterministic monotonically upward bottom-to-top lifecycle with slight expansion. Configuration, exclusions, source files, and loop proof are fingerprinted. A motif field is not a semantic crowd, identity family, or substitute for generated pose states.
+
+A continuous `traverse` target must span at least `0.45` in normalized parent
+space. A continuous `sway` target must use the `sway` idle primitive and a
+bottom-biased motion pivot; the pivot is independent of registration placement.
 
 The v9 `editorial` contract is also first class. It binds final local audio and timing evidence to cue/edit-point/binding plans, declares reusable typography/annotation/data/switch nodes, compiles three responsive directing plans, and compiles dimension-specific advanced transitions. Read `editorial-system-v9.md` for timing, layout, anchor, descriptor, quality, and proof requirements. Project validation compares the compiled editorial fingerprint with the Storyboard, verifies audio SHA/duration/timing data, checks actual transition targets against match descriptors, and rejects hidden renderer-only aspect-ratio behavior.
 
@@ -130,7 +136,7 @@ Use only these patterns:
 |---|---|---|
 | `free` | independent label, bird, leaf, stamp, or cutout | no persistent support/shared boundary |
 | `supported-subject` | person in boat, object on table, hand holding prop | rear support, subject, front support, shared registration, contact and occlusion zones |
-| `registered-depth-stack` | independently moving rear, subject, and front planes | clean rear plate, full subject silhouette, full front overlay, shared registration, strict depth, responsive reveal envelopes |
+| `registered-depth-stack` | independently moving rear, subject, and front planes | clean rear plate, full subject silhouette, full front overlay, shared registration, strict depth, responsive reveal envelopes, and optional subject-only travel envelopes |
 | `registered-environment` | land/water, sky/ground, wall/floor, tabletop edge | shared master canvas, registration, fixed boundary, upper/lower clipped members |
 
 Groups own carrier motion; children own only local motion. Do not repeat the group's world path on attached children. Local z-order is deterministic. The default `between-supports` order is support rear, optional contact shadow, subject, support front. Use `support.layering=subject-front` only when the approved visual language requires the complete subject silhouette to remain above every support member; quality review then proves `subject-front-clear` instead of front occlusion. Registered environment members use the complete master canvas with top-left origin; textures may move within a fixed clip, but the boundary must not move across semantic content.
@@ -196,7 +202,8 @@ evidence, and renders only changed authored proof. Normal coupled families use
 alpha/checkerboard/tight/motion-stress plus alpha-band evidence. A
 `registered-depth-stack` additionally requires neutral reconstruction,
 reference comparison, checkerboard exploded members, and both extremes of all
-three responsive reveal envelopes; isolated member stress is not proof that
+three responsive reveal envelopes. A stack with `subjectTravelEnvelope` also
+renders the three subject-only travel extreme pairs; isolated member stress is not proof that
 hidden pixels are complete. It never treats a cache entry as current without
 matching source/config/registered-derivation/render-size/runtime fingerprints
 and existing evidence files. `--force` disables frame, composite, and

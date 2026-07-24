@@ -237,21 +237,41 @@
                 "revealEnvelope": {
                   "16:9": {
                     "x": 0.04,
-                    "y": 0.02,
-                    "scale": 0.09,
-                    "rotationDegrees": 1
+                    "y": 0.03,
+                    "scale": 0.12,
+                    "rotationDegrees": 4
                   },
                   "9:16": {
-                    "x": 0.025,
+                    "x": 0.04,
                     "y": 0.03,
-                    "scale": 0.08,
-                    "rotationDegrees": 1
+                    "scale": 0.12,
+                    "rotationDegrees": 4
                   },
                   "1:1": {
-                    "x": 0.03,
-                    "y": 0.025,
-                    "scale": 0.08,
-                    "rotationDegrees": 1
+                    "x": 0.04,
+                    "y": 0.03,
+                    "scale": 0.16,
+                    "rotationDegrees": 4
+                  }
+                },
+                "subjectTravelEnvelope": {
+                  "16:9": {
+                    "x": 0.52,
+                    "y": 0.3,
+                    "scale": 0.3,
+                    "rotationDegrees": 12
+                  },
+                  "9:16": {
+                    "x": 0.52,
+                    "y": 0.3,
+                    "scale": 0.3,
+                    "rotationDegrees": 12
+                  },
+                  "1:1": {
+                    "x": 0.52,
+                    "y": 0.3,
+                    "scale": 0.3,
+                    "rotationDegrees": 12
                   }
                 }
               },
@@ -259,6 +279,24 @@
               "semanticRisk": "topology",
               "proofTimeId": "seaweed-reveal",
               "rationale": "The action must reveal previously occluded hull and ocean pixels from complete members rather than a flattened composite."
+            },
+            {
+              "id": "seaweed-rooted-sway",
+              "targetId": "seaweed-front",
+              "importance": "supporting",
+              "necessity": "required",
+              "changeClass": "ambient-motion",
+              "motion": {
+                "kind": "continuous-transform",
+                "preset": "sway"
+              },
+              "composition": {
+                "pattern": "free"
+              },
+              "graphic": null,
+              "semanticRisk": "decorative",
+              "proofTimeId": "seaweed-reveal",
+              "rationale": "The complete foreground foliage must visibly sway around a rooted bottom pivot while preserving its registered canvas."
             }
           ]
         },
@@ -278,7 +316,7 @@
               "changeClass": "ambient-motion",
               "motion": {
                 "kind": "continuous-transform",
-                "preset": "float"
+                "preset": "traverse"
               },
               "composition": {
                 "pattern": "free"
@@ -392,7 +430,7 @@
               "changeClass": "decorative-field",
               "motion": {
                 "kind": "motif-field",
-                "preset": "orbit",
+                "preset": "rise-drift",
                 "distribution": "scattered",
                 "count": 30,
                 "cycles": 2.7,
@@ -430,7 +468,7 @@
               "changeClass": "decorative-field",
               "motion": {
                 "kind": "motif-field",
-                "preset": "fall-drift",
+                "preset": "rise-drift",
                 "distribution": "grid",
                 "count": 12,
                 "cycles": 3.4,

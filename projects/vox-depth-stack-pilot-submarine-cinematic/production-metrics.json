@@ -4,7 +4,7 @@
   "projectSlug": "vox-depth-stack-pilot-submarine-cinematic",
   "createdAt": "2026-07-23T19:36:27.143Z",
   "collectionStartedAt": "2026-07-23T19:36:27.143Z",
-  "updatedAt": "2026-07-23T20:17:29.141Z",
+  "updatedAt": "2026-07-24T00:29:04.008Z",
   "measurementNotes": {
     "commandWallClock": "Measures the wrapped local command from process start to exit.",
     "reviewSessionWindow": "Measures from quality scaffold completion to successful batch recording; it includes model/tool orchestration and pauses, not provider-only inference time.",
@@ -734,22 +734,404 @@
         "exitCode": 0,
         "signal": null
       }
+    },
+    {
+      "id": "metric-ef898de4-d9cb-4677-aa5e-0764f8aebab6",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:02:07.961Z",
+      "endedAt": "2026-07-24T00:02:08.261Z",
+      "durationMs": 300,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-0e835369-bd28-4b7f-8047-cba25594f3e7",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:04:20.472Z",
+      "endedAt": "2026-07-24T00:04:22.105Z",
+      "durationMs": 1633,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "--duration=4"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-10a056e6-d545-4341-ae29-634b04ac2ff3",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:04:35.337Z",
+      "endedAt": "2026-07-24T00:05:20.195Z",
+      "durationMs": 44858,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "--duration=4"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-101d3656-b885-4d68-9a99-57db5217f496",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:07:56.075Z",
+      "endedAt": "2026-07-24T00:08:40.962Z",
+      "durationMs": 44887,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "--duration=4"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-a3cd3fc2-d055-4c73-b9f8-76056e75b9c4",
+      "category": "deterministic-check",
+      "operation": "validate",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:13:49.382Z",
+      "endedAt": "2026-07-24T00:13:49.626Z",
+      "durationMs": 244,
+      "metadata": {
+        "script": "scripts/project-validate.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-1968ce9e-5f41-4715-b12f-dd941ba0aba5",
+      "category": "evidence-render",
+      "operation": "style-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:14:03.074Z",
+      "endedAt": "2026-07-24T00:14:50.587Z",
+      "durationMs": 47513,
+      "metadata": {
+        "script": "scripts/style-motion-proof.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "--duration=4"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-282f6599-6651-463b-b844-e7d079240b70",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:15:44.842Z",
+      "endedAt": "2026-07-24T00:15:45.359Z",
+      "durationMs": 517,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "prepare"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-fa3411f3-44d3-4217-ba8f-f62a9cc32833",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "failed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:16:26.654Z",
+      "endedAt": "2026-07-24T00:16:27.453Z",
+      "durationMs": 799,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "scaffold",
+          "--output=projects/vox-depth-stack-pilot-submarine-cinematic/style-quality-review-scaffold.json"
+        ],
+        "exitCode": 1,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-22af583c-259b-4969-a75e-0df67c15a6e2",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:16:36.893Z",
+      "endedAt": "2026-07-24T00:16:38.057Z",
+      "durationMs": 1164,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "scaffold",
+          "--output=projects/vox-depth-stack-pilot-submarine-cinematic/style-quality-review-scaffold.json",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-2d82ead6-0ebd-4e41-aa86-ce64c6a0e73b",
+      "category": "ai-review",
+      "operation": "quality-review",
+      "source": "paper-collage-video",
+      "status": "abandoned",
+      "measurement": "review-session-window",
+      "startedAt": "2026-07-24T00:16:38.042Z",
+      "endedAt": "2026-07-24T00:17:49.273Z",
+      "durationMs": 71231,
+      "metadata": {
+        "reviewer": "host-vision",
+        "reviewCount": 16,
+        "scaffold": "projects/vox-depth-stack-pilot-submarine-cinematic/style-quality-review-scaffold.json",
+        "closeReason": "superseded"
+      }
+    },
+    {
+      "id": "metric-875e739f-5cd1-4630-bfcd-a2ed7fce90e4",
+      "category": "evidence-render",
+      "operation": "composition-proof",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:17:02.684Z",
+      "endedAt": "2026-07-24T00:17:36.223Z",
+      "durationMs": 33539,
+      "metadata": {
+        "script": "scripts/project-composition-proof.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-c0842354-39f8-49a8-afa1-26c6ea8d25c8",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:17:47.392Z",
+      "endedAt": "2026-07-24T00:17:48.319Z",
+      "durationMs": 927,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "prepare"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-782094d1-99b7-4d55-a9de-cc5f0d3ee9bf",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:17:48.477Z",
+      "endedAt": "2026-07-24T00:17:49.284Z",
+      "durationMs": 807,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "scaffold",
+          "--output=projects/vox-depth-stack-pilot-submarine-cinematic/style-quality-review-scaffold.json",
+          "--force"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-af584c3b-36bf-4964-ba8d-0323c79373a9",
+      "category": "ai-review",
+      "operation": "quality-review",
+      "source": "paper-collage-video",
+      "status": "completed",
+      "measurement": "review-session-window",
+      "startedAt": "2026-07-24T00:17:49.273Z",
+      "endedAt": "2026-07-24T00:21:14.551Z",
+      "durationMs": 205278,
+      "metadata": {
+        "reviewer": "host-vision",
+        "reviewCount": 16,
+        "scaffold": "projects/vox-depth-stack-pilot-submarine-cinematic/style-quality-review-scaffold.json",
+        "reviewers": [
+          "host-vision"
+        ],
+        "recordedReviewCount": 16,
+        "input": "projects/vox-depth-stack-pilot-submarine-cinematic/style-quality-review.json"
+      }
+    },
+    {
+      "id": "metric-5cdab5ca-04d4-4714-82dd-7b17a323db3b",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:21:12.926Z",
+      "endedAt": "2026-07-24T00:21:14.565Z",
+      "durationMs": 1639,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "record-batch",
+          "--input=projects/vox-depth-stack-pilot-submarine-cinematic/style-quality-review.json"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-bbe79df9-68fd-4c80-b9e6-2ae0a4978dd5",
+      "category": "deterministic-check",
+      "operation": "quality-command",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:21:14.732Z",
+      "endedAt": "2026-07-24T00:21:15.656Z",
+      "durationMs": 924,
+      "metadata": {
+        "script": "scripts/project-quality.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic",
+          "status",
+          "--json"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-7b557fea-ea3a-472e-ab87-ffaeb380f164",
+      "category": "deterministic-check",
+      "operation": "assets-ready",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:21:15.838Z",
+      "endedAt": "2026-07-24T00:21:18.080Z",
+      "durationMs": 2242,
+      "metadata": {
+        "script": "scripts/project-assets-ready.mjs",
+        "arguments": [
+          "vox-depth-stack-pilot-submarine-cinematic"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-8a95dcf6-3ac8-4c91-b834-39f7418327bc",
+      "category": "video-render",
+      "operation": "preview-render",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:21:35.330Z",
+      "endedAt": "2026-07-24T00:22:52.901Z",
+      "durationMs": 77571,
+      "metadata": {
+        "script": "scripts/project-render.mjs",
+        "arguments": [
+          "preview",
+          "vox-depth-stack-pilot-submarine-cinematic"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
+    },
+    {
+      "id": "metric-123a3356-ed14-48a7-84af-c3b7b9c57184",
+      "category": "video-render",
+      "operation": "final-render",
+      "source": "command-wrapper",
+      "status": "completed",
+      "measurement": "command-wall-clock",
+      "startedAt": "2026-07-24T00:24:00.586Z",
+      "endedAt": "2026-07-24T00:29:04.008Z",
+      "durationMs": 303422,
+      "metadata": {
+        "script": "scripts/project-render.mjs",
+        "arguments": [
+          "render",
+          "vox-depth-stack-pilot-submarine-cinematic"
+        ],
+        "exitCode": 0,
+        "signal": null
+      }
     }
   ],
   "summary": {
     "observation": {
       "startedAt": "2026-07-23T19:36:27.143Z",
-      "endedAt": "2026-07-23T20:17:29.141Z",
-      "durationMs": 2461998
+      "endedAt": "2026-07-24T00:29:04.008Z",
+      "durationMs": 17556865
     },
     "coverage": {
       "status": "full",
       "collectionStartedAt": "2026-07-23T19:36:27.143Z"
     },
-    "measuredUnionMs": 1117291,
-    "measuredPercentOfObservation": 45.38,
-    "unattributedMs": 1344707,
-    "unattributedPercentOfObservation": 54.62,
+    "measuredUnionMs": 1919873,
+    "measuredPercentOfObservation": 10.94,
+    "unattributedMs": 15636992,
+    "unattributedPercentOfObservation": 89.06,
     "byCategory": {
       "ai-generation": {
         "durationMs": 0,
@@ -758,9 +1140,9 @@
         "activeSegmentCount": 0
       },
       "ai-review": {
-        "durationMs": 690848,
-        "percentOfObservation": 28.06,
-        "segmentCount": 4,
+        "durationMs": 967357,
+        "percentOfObservation": 5.51,
+        "segmentCount": 6,
         "activeSegmentCount": 0
       },
       "human-review": {
@@ -770,28 +1152,28 @@
         "activeSegmentCount": 0
       },
       "deterministic-check": {
-        "durationMs": 17281,
-        "percentOfObservation": 0.7,
-        "segmentCount": 24,
+        "durationMs": 26844,
+        "percentOfObservation": 0.15,
+        "segmentCount": 34,
         "activeSegmentCount": 0
       },
       "evidence-render": {
-        "durationMs": 160013,
-        "percentOfObservation": 6.5,
-        "segmentCount": 6,
+        "durationMs": 332443,
+        "percentOfObservation": 1.89,
+        "segmentCount": 11,
         "activeSegmentCount": 0
       },
       "video-render": {
-        "durationMs": 342087,
-        "percentOfObservation": 13.89,
-        "segmentCount": 2,
+        "durationMs": 723080,
+        "percentOfObservation": 4.12,
+        "segmentCount": 4,
         "activeSegmentCount": 0
       }
     },
     "aiReview": {
-      "durationMs": 690848,
-      "percentOfObservation": 28.06,
-      "segmentCount": 4,
+      "durationMs": 967357,
+      "percentOfObservation": 5.51,
+      "segmentCount": 6,
       "activeSegmentCount": 0
     }
   }

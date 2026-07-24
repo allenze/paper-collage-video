@@ -142,8 +142,8 @@ test('motif fields enforce bounded density, exclusions, placement, and scene bud
   }).issues.some(({code}) => code === 'composition-motif-scene-budget'));
 });
 
-test('fall and burst fields hide deterministic respawns while cycles affect burst timing', () => {
-  for (const preset of ['drift', 'fall-drift', 'burst', 'orbit']) {
+test('fall, rise, and burst fields hide deterministic respawns while cycles affect timing', () => {
+  for (const preset of ['drift', 'fall-drift', 'rise-drift', 'burst', 'orbit']) {
     assert.equal(verifyMotifFieldLoop({preset, cycles: 2}).passed, true);
   }
   const instance = {...resolveMotifFieldInstances(motifField({exclusionZones: []}))[0], phase: 0};
@@ -167,6 +167,22 @@ test('fall and burst fields hide deterministic respawns while cycles affect burs
     cycles: 2,
   });
   assert.equal(respawn.opacity, 0);
+
+  const lower = resolveMotifFieldMotion({
+    instance,
+    preset: 'rise-drift',
+    progress: 0.1,
+    cycles: 1,
+  });
+  const upper = resolveMotifFieldMotion({
+    instance,
+    preset: 'rise-drift',
+    progress: 0.8,
+    cycles: 1,
+  });
+  assert.ok(instance.y + lower.y > instance.y + upper.y);
+  assert.ok(instance.y + lower.y > 0.9);
+  assert.ok(instance.y + upper.y < 0.2);
 });
 
 test('camera-coupled parallax separates depth while keeping the focal plane stable', () => {

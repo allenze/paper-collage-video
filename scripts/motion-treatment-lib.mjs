@@ -29,8 +29,8 @@ export const CHANGE_CLASSES = [
   'decorative-field',
 ];
 export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field'];
-export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'parallax-camera'];
-export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'burst', 'orbit'];
+export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'traverse', 'sway', 'parallax-camera'];
+export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'rise-drift', 'burst', 'orbit'];
 export const MOTIF_FIELD_DISTRIBUTIONS = ['scattered', 'grid', 'edge'];
 export const COMPOSITION_PATTERNS = [
   'free',
@@ -133,6 +133,18 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   }
   if (treatment.composition?.motionCapability === 'bounded-relative') {
     coverage.push('motion:bounded-relative-layers');
+  }
+  if (treatment.motion?.preset === 'traverse') {
+    coverage.push('motion:subject-traverse');
+  }
+  if (treatment.motion?.preset === 'sway') {
+    coverage.push('motion:bottom-pivot-sway');
+  }
+  if (
+    treatment.motion?.kind === 'motif-field' &&
+    treatment.motion.preset === 'rise-drift'
+  ) {
+    coverage.push('motion:physical-rise');
   }
   if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
   if (treatment.motion?.kind === 'motif-field') coverage.push('motion:motif-field');
@@ -809,6 +821,23 @@ const hasVisibleNodeMotion = (node) => {
   });
 };
 
+const traverseSpan = (node) => {
+  const frames = node?.motion?.keyframes ?? [];
+  let maximum = 0;
+  for (const left of frames) {
+    for (const right of frames) {
+      maximum = Math.max(
+        maximum,
+        Math.hypot(
+          (right.x ?? 0) - (left.x ?? 0),
+          (right.y ?? 0) - (left.y ?? 0),
+        ),
+      );
+    }
+  }
+  return maximum;
+};
+
 export const validateDirectingExecution = ({scene, storyboardScene, location = 'scene'}) => {
   const issues = [];
   const nodes = new Map(
@@ -838,6 +867,29 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       addIssue(issues, 'directing-target-missing', `导演计划的连续动效目标不存在：${planned.nodeId}。`, `${location}.composition`);
     } else if (!hasVisibleNodeMotion(node)) {
       addIssue(issues, 'directing-continuous-drift', `导演计划要求 ${planned.nodeId} 执行 ${planned.preset}，但节点没有可见关键帧或 idle。`, `${location}.composition.nodes#${planned.nodeId}.motion`);
+    } else if (
+      planned.preset === 'traverse' &&
+      traverseSpan(node) < 0.45
+    ) {
+      addIssue(
+        issues,
+        'directing-traverse-span',
+        `导演计划要求 ${planned.nodeId} 执行大幅主体航迹，但最大相对位移不足画布对角归一化 0.45。`,
+        `${location}.composition.nodes#${planned.nodeId}.motion.keyframes`,
+      );
+    } else if (
+      planned.preset === 'sway' &&
+      (
+        node.motion?.idle?.preset !== 'sway' ||
+        (node.motion?.pivot?.y ?? 0) < 0.8
+      )
+    ) {
+      addIssue(
+        issues,
+        'directing-sway-pivot',
+        `导演计划要求 ${planned.nodeId} 以底部支点连续摆动。`,
+        `${location}.composition.nodes#${planned.nodeId}.motion`,
+      );
     }
   }
   for (const planned of storyboardScene?.compositionPlan?.motifFields ?? []) {

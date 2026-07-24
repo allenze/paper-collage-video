@@ -39,6 +39,15 @@ For every layer-aware treatment, author:
 - non-negative maximum x/y/scale/rotation reveal limits for `16:9`, `9:16`,
   and `1:1`.
 
+When the complete subject must cross a large part of the world while the clean
+rear and full front overlay stay locally stable, additionally author
+`subjectTravelEnvelope` for all three responsive profiles. It is separate from
+the ordinary reveal envelope: only the `subject` slot may consume it. The
+compiler fingerprints it in the source-package plan, runtime validates the
+subject trajectory against it, and family proof renders lower-left and
+upper-right subject-only extremes. Do not enlarge the common reveal envelope to
+smuggle background or foreground motion into this capability.
+
 `project:storyboard` compiles this into
 `directingSummary.generationBudget.sourcePackagePlans`. The combined concept
 approval must copy `sourcePackageDecision` exactly. It records structural
@@ -142,6 +151,9 @@ the envelope's `scale` is reviewed protective overscan expansion, not
 permission to reveal outside a clean plate. Camera parallax may use those child
 depths only when its zoom/focal-depth combination also keeps every resolved
 member scale at or above `1`. Other coupled groups remain one depth carrier.
+When `subjectTravelEnvelope` exists, the subject instead uses its smallest
+responsive travel limit; rear and front members remain governed by the ordinary
+reveal envelope.
 
 ## Proof
 
@@ -153,6 +165,8 @@ composition proof must produce:
 - checkerboard exploded view of all three complete members;
 - original and actual render-scale alpha-band evidence per member;
 - both reveal-envelope extremes at `16:9`, `9:16`, and `1:1`.
+- when authored, both subject-only travel extremes at `16:9`, `9:16`, and
+  `1:1`.
 
 Every responsive envelope extreme must have zero transparent pixels in the
 final composite. Human review still decides whether the rear is a credible

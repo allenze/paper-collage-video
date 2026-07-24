@@ -22,6 +22,12 @@ const revealEnvelope = {
   '1:1': {x: 0.03, y: 0.03, scale: 0.04, rotationDegrees: 1.5},
 };
 
+const subjectTravelEnvelope = {
+  '16:9': {x: 0.58, y: 0.32, scale: 0.3, rotationDegrees: 12},
+  '9:16': {x: 0.42, y: 0.4, scale: 0.28, rotationDegrees: 10},
+  '1:1': {x: 0.48, y: 0.36, scale: 0.28, rotationDegrees: 10},
+};
+
 const layers = [
   {
     id: 'rear',
@@ -86,6 +92,7 @@ test('source package compiler exposes exact calls, derivatives, avoided calls an
   assert.equal(plan.providerImageCalls, 1);
   assert.equal(plan.localDerivatives, 3);
   assert.equal(plan.avoidedCalls, 3);
+  assert.equal(plan.subjectTravelEnvelope, null);
   assert.deepEqual(
     plan.layers.map(({completeness}) => completeness),
     ['clean-plate', 'full-silhouette', 'full-overlay'],
@@ -106,6 +113,32 @@ test('source package compiler exposes exact calls, derivatives, avoided calls an
       hardCeiling: 8,
       sourcePackagePlans: [plan],
     },
+  );
+});
+
+test('registered depth stacks compile a separate subject-only large travel envelope', () => {
+  const composition = {
+    ...validComposition,
+    subjectTravelEnvelope,
+  };
+  assert.deepEqual(validateLayerCompositionIntent(composition), []);
+  const plan = compileLayerStackPlan({
+    sceneId: 'scene-01',
+    treatment: {
+      id: 'boat-traverse',
+      targetId: 'boat-stack',
+      proofTimeId: 'proof-motion',
+      composition,
+    },
+  });
+  assert.deepEqual(plan.subjectTravelEnvelope, subjectTravelEnvelope);
+
+  const invalid = structuredClone(composition);
+  invalid.subjectTravelEnvelope['16:9'].x = 0.76;
+  assert.ok(
+    validateLayerCompositionIntent(invalid).some(
+      ({code}) => code === 'subject-travel-value',
+    ),
   );
 });
 
@@ -271,6 +304,7 @@ test('family-aware proof renders neutral, exploded and three responsive envelope
           '9:16': {x: 0.01, y: 0.02, scale: 0.08, rotationDegrees: 0},
           '1:1': {x: 0.015, y: 0.015, scale: 0.08, rotationDegrees: 0},
         },
+        subjectTravelEnvelope,
       },
       children: [
         {id: 'rear', kind: 'asset', slot: 'support-rear', depth: -0.7},
@@ -287,8 +321,12 @@ test('family-aware proof renders neutral, exploded and three responsive envelope
     });
     assert.equal(proof.passed, true);
     assert.equal(proof.artifacts.envelopeExtremes.length, 3);
+    assert.equal(proof.artifacts.subjectTravelExtremes.length, 3);
     assert.ok(
-      proof.artifacts.envelopeExtremes.every(
+      [
+        ...proof.artifacts.envelopeExtremes,
+        ...proof.artifacts.subjectTravelExtremes,
+      ].every(
         ({transparentPixels}) => transparentPixels === 0,
       ),
     );
@@ -297,6 +335,7 @@ test('family-aware proof renders neutral, exploded and three responsive envelope
       proof.artifacts.referenceComparison,
       proof.artifacts.explodedView,
       ...proof.artifacts.envelopeExtremes.map(({file}) => file),
+      ...proof.artifacts.subjectTravelExtremes.map(({file}) => file),
     ]) {
       assert.ok((await fs.stat(file)).size > 0);
     }

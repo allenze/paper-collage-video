@@ -124,7 +124,7 @@
           "required": ["kind"],
           "properties": {
             "kind": {"enum": ["static", "continuous-transform", "state-sequence", "visibility-transition", "motif-field"]},
-            "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "parallax-camera", "fall-drift", "burst", "orbit"]},
+            "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera", "fall-drift", "rise-drift", "burst", "orbit"]},
             "poseFamilyId": {"type": "string", "minLength": 1},
             "stateId": {"type": "string", "minLength": 1},
             "visualChange": {"type": "string", "minLength": 1},
@@ -159,7 +159,8 @@
               "maxItems": 3,
               "items": {"$ref": "#/$defs/layerIntent"}
             },
-            "revealEnvelope": {"$ref": "#/$defs/layerRevealEnvelope"}
+            "revealEnvelope": {"$ref": "#/$defs/layerRevealEnvelope"},
+            "subjectTravelEnvelope": {"$ref": "composition.schema.json#/$defs/subjectTravelEnvelope"}
           },
           "additionalProperties": false
         },
@@ -269,7 +270,7 @@
     },
     "layerStackPlan": {
       "type": "object",
-      "required": ["id", "treatmentId", "sceneId", "targetId", "pattern", "motionCapability", "sourceStrategy", "layers", "revealEnvelope", "providerImageCalls", "localDerivatives", "avoidedCalls", "proofTimeId"],
+      "required": ["id", "treatmentId", "sceneId", "targetId", "pattern", "motionCapability", "sourceStrategy", "layers", "revealEnvelope", "subjectTravelEnvelope", "providerImageCalls", "localDerivatives", "avoidedCalls", "proofTimeId"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "treatmentId": {"type": "string", "minLength": 1},
@@ -283,6 +284,12 @@
           "oneOf": [
             {"type": "null"},
             {"$ref": "#/$defs/layerRevealEnvelope"}
+          ]
+        },
+        "subjectTravelEnvelope": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "composition.schema.json#/$defs/subjectTravelEnvelope"}
           ]
         },
         "providerImageCalls": {"enum": [1, 4]},
@@ -323,7 +330,7 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "parallax-camera"]},
+        "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera"]},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },
@@ -335,7 +342,7 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "preset": {"enum": ["drift", "fall-drift", "burst", "orbit"]},
+        "preset": {"enum": ["drift", "fall-drift", "rise-drift", "burst", "orbit"]},
         "distribution": {"enum": ["scattered", "grid", "edge"]},
         "count": {"type": "integer", "minimum": 1, "maximum": 64},
         "cycles": {"type": "number", "exclusiveMinimum": 0, "maximum": 12},

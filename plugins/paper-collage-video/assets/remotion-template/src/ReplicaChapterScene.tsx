@@ -176,7 +176,7 @@ const containerStyle = ({
   zIndex: renderZ,
   opacity: resolved.opacity,
   transform: resolved.css,
-  transformOrigin: `${node.transform.anchorX * 100}% ${node.transform.anchorY * 100}%`,
+  transformOrigin: `${(node.motion.pivot?.x ?? node.transform.anchorX) * 100}% ${(node.motion.pivot?.y ?? node.transform.anchorY) * 100}%`,
 });
 
 const AssetView = ({
@@ -483,7 +483,7 @@ const GroupView = ({
         zIndex: renderZ,
         opacity: resolved.opacity,
         transform: resolved.css,
-        transformOrigin: `${node.transform.anchorX * 100}% ${node.transform.anchorY * 100}%`,
+        transformOrigin: `${(node.motion.pivot?.x ?? node.transform.anchorX) * 100}% ${(node.motion.pivot?.y ?? node.transform.anchorY) * 100}%`,
       }}
     >
       {[...node.children]

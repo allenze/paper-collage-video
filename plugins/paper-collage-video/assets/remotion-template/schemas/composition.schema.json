@@ -39,10 +39,19 @@
           "type": "object",
           "required": ["preset", "intensity", "cycleSeconds"],
           "properties": {
-            "preset": {"enum": ["float", "breathe", "grind", "drift", "still"]},
+            "preset": {"enum": ["float", "breathe", "grind", "drift", "sway", "still"]},
             "intensity": {"type": "number", "minimum": 0, "maximum": 3},
             "cycleSeconds": {"type": "number", "exclusiveMinimum": 0},
             "phase": {"type": "number"}
+          },
+          "additionalProperties": false
+        },
+        "pivot": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": {
+            "x": {"type": "number", "minimum": 0, "maximum": 1},
+            "y": {"type": "number", "minimum": 0, "maximum": 1}
           },
           "additionalProperties": false
         }
@@ -117,6 +126,32 @@
       },
       "additionalProperties": false
     },
+    "subjectTravelLimit": {
+      "type": "object",
+      "required": ["x", "y", "scale", "rotationDegrees"],
+      "properties": {
+        "x": {"type": "number", "minimum": 0, "maximum": 0.75},
+        "y": {"type": "number", "minimum": 0, "maximum": 0.5},
+        "scale": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.5,
+          "description": "Maximum subject-only expansion above scale 1 along a proved large traverse."
+        },
+        "rotationDegrees": {"type": "number", "minimum": 0, "maximum": 30}
+      },
+      "additionalProperties": false
+    },
+    "subjectTravelEnvelope": {
+      "type": "object",
+      "required": ["16:9", "9:16", "1:1"],
+      "properties": {
+        "16:9": {"$ref": "#/$defs/subjectTravelLimit"},
+        "9:16": {"$ref": "#/$defs/subjectTravelLimit"},
+        "1:1": {"$ref": "#/$defs/subjectTravelLimit"}
+      },
+      "additionalProperties": false
+    },
     "layerStack": {
       "type": "object",
       "required": ["sourcePackageId", "sourceStrategy", "motionCapability", "revealEnvelope"],
@@ -124,7 +159,8 @@
         "sourcePackageId": {"type": "string", "minLength": 1},
         "sourceStrategy": {"enum": ["registered-layer-sheet", "context-preserving-layer-edits"]},
         "motionCapability": {"const": "bounded-relative"},
-        "revealEnvelope": {"$ref": "#/$defs/layerRevealEnvelope"}
+        "revealEnvelope": {"$ref": "#/$defs/layerRevealEnvelope"},
+        "subjectTravelEnvelope": {"$ref": "#/$defs/subjectTravelEnvelope"}
       },
       "additionalProperties": false
     },
@@ -634,7 +670,7 @@
           "type": "object",
           "required": ["preset", "cycles"],
           "properties": {
-            "preset": {"enum": ["drift", "fall-drift", "burst", "orbit"]},
+            "preset": {"enum": ["drift", "fall-drift", "rise-drift", "burst", "orbit"]},
             "cycles": {"type": "number", "exclusiveMinimum": 0, "maximum": 12}
           },
           "additionalProperties": false

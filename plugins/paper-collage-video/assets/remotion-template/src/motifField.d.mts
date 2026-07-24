@@ -46,12 +46,12 @@ export declare const resolveMotifFieldInstances: (
 
 export declare const resolveMotifFieldMotion: (input: {
   instance: MotifFieldInstance;
-  preset: 'drift' | 'fall-drift' | 'burst' | 'orbit';
+  preset: 'drift' | 'fall-drift' | 'rise-drift' | 'burst' | 'orbit';
   progress: number;
   cycles: number;
 }) => {x: number; y: number; rotation: number; scale: number; opacity: number};
 
 export declare const verifyMotifFieldLoop: (input: {
-  preset: 'drift' | 'fall-drift' | 'burst' | 'orbit';
+  preset: 'drift' | 'fall-drift' | 'rise-drift' | 'burst' | 'orbit';
   cycles: number;
 }) => {passed: boolean; transformDelta: number; edgeOpacity: number};

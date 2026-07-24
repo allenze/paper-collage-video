@@ -1072,9 +1072,15 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       ...(layerProof?.artifacts?.envelopeExtremes ?? []).map(
         ({file}) => file,
       ),
+      ...(layerProof?.artifacts?.subjectTravelExtremes ?? []).map(
+        ({file}) => file,
+      ),
     ].filter(Boolean);
+    const subjectTravelRequired = Boolean(
+      target.group.layerStack?.subjectTravelEnvelope,
+    );
     const layerArtifactsPresent =
-      layerArtifacts.length === 6 &&
+      layerArtifacts.length === (subjectTravelRequired ? 9 : 6) &&
       (
         await Promise.all(
           layerArtifacts.map(async (file) => {
@@ -1088,6 +1094,8 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       ).every(Boolean);
     const envelopeResults =
       layerProof?.artifacts?.envelopeExtremes ?? [];
+    const subjectTravelResults =
+      layerProof?.artifacts?.subjectTravelExtremes ?? [];
     checks.push(
       {
         id: 'registered-layer-family',
@@ -1117,6 +1125,27 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
           ),
         expected: 'zero transparent pixels at both extremes of all profiles',
         actual: envelopeResults.map(
+          ({profile, passed, transparentPixels}) => ({
+            profile,
+            passed,
+            transparentPixels,
+          }),
+        ),
+      },
+      {
+        id: 'subject-travel-proof',
+        passed:
+          !subjectTravelRequired ||
+          (
+            subjectTravelResults.length === 3 &&
+            subjectTravelResults.every(
+              ({passed, transparentPixels}) =>
+                passed && transparentPixels === 0,
+            )
+          ),
+        expected:
+          'when authored, subject-only lower-left and upper-right travel extremes remain complete in all responsive profiles',
+        actual: subjectTravelResults.map(
           ({profile, passed, transparentPixels}) => ({
             profile,
             passed,

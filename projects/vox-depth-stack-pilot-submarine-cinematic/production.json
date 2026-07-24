@@ -4,7 +4,7 @@
   "slug": "vox-depth-stack-pilot-submarine-cinematic",
   "stage": "complete",
   "createdAt": "2026-07-23T19:36:27.143Z",
-  "updatedAt": "2026-07-23T20:17:29.135Z",
+  "updatedAt": "2026-07-24T00:29:36.189Z",
   "approvals": {
     "concept": {
       "status": "approved",
@@ -18,16 +18,25 @@
     },
     "preview": {
       "status": "approved",
-      "decidedAt": "2026-07-23T20:12:44.132Z",
-      "note": "依据用户此前明确授权在 preview 完成并通过后代为通过 human-review；已检查完整 preview、六格联系表和验收报告，18 秒多焦距、潜艇折返/尺度变化、前后景鱼群、气泡、水草和三层视差符合本次要求。"
+      "decidedAt": "2026-07-24T00:23:47.660Z",
+      "note": "按用户既有授权完成 human-review：完整 18 秒 preview 技术报告全部通过；逐帧联系表与每秒抽帧确认潜艇相对背景完成左下入场、向右上大跨度穿越及中右部锁定，水草围绕底部轴心左右摆动，气泡从下向上运动，前后景鱼群与相机视差保持清楚层级。"
     },
     "publish": {
-      "status": "pending",
-      "decidedAt": null,
-      "note": ""
+      "status": "approved",
+      "decidedAt": "2026-07-24T00:29:36.189Z",
+      "note": "按用户既有最终渲染审批授权记录本地成片批准：final.mp4 为 1920×1080、30fps、18.048 秒，音视频与成片报告全部通过；最终联系表复核潜艇世界内大航迹、水草摆动、物理上升气泡、前后景鱼群及相机视差均保持。仅批准本地最终成片，不执行外部发布。"
     }
   },
-  "workItems": [],
+  "workItems": [
+    {
+      "id": "directing-revision-submarine-scene",
+      "label": "同步导演重编镜头 submarine-scene",
+      "status": "completed",
+      "updatedAt": "2026-07-24T00:15:44.657Z",
+      "artifact": "projects/vox-depth-stack-pilot-submarine-cinematic/directing-revision.json",
+      "note": "已按 registered-depth-stack 主体航迹、水草底部轴心摆动与 rise-drift 气泡同步 project.json；18 秒项目验证 0 error / 0 warning，style/motion proof 已重渲染并逐帧检查。"
+    }
+  ],
   "artifacts": {
     "brief": "projects/vox-depth-stack-pilot-submarine-cinematic/brief.md",
     "project": "projects/vox-depth-stack-pilot-submarine-cinematic/project.json",
@@ -39,7 +48,8 @@
     "final": "dist/vox-depth-stack-pilot-submarine-cinematic/final.mp4",
     "report": "dist/vox-depth-stack-pilot-submarine-cinematic/report.json",
     "contactSheet": "dist/vox-depth-stack-pilot-submarine-cinematic/contact-sheet.jpg",
-    "styleProof": "dist/vox-depth-stack-pilot-submarine-cinematic/style-motion-proof.json"
+    "styleProof": null,
+    "directingRevision": "projects/vox-depth-stack-pilot-submarine-cinematic/directing-revision.json"
   },
   "history": [
     {
@@ -95,6 +105,66 @@
       "action": "final-rendered",
       "stage": "complete",
       "note": "dist/vox-depth-stack-pilot-submarine-cinematic/final.mp4"
+    },
+    {
+      "at": "2026-07-23T23:58:03.626Z",
+      "action": "request-preview-revision",
+      "stage": "asset-production",
+      "note": "用户要求主体、水草、鱼群与气泡建立真实世界内相对运动，替换相机主导的旧预览"
+    },
+    {
+      "at": "2026-07-23T23:58:03.835Z",
+      "action": "revise-preview-directing",
+      "stage": "asset-production",
+      "note": "submarine-scene · projects/vox-depth-stack-pilot-submarine-cinematic/directing-revision.json"
+    },
+    {
+      "at": "2026-07-24T00:04:13.355Z",
+      "action": "work-item-completed",
+      "stage": "asset-production",
+      "note": "directing-revision-submarine-scene · 执行树已同步并通过540帧项目验证"
+    },
+    {
+      "at": "2026-07-24T00:07:19.843Z",
+      "action": "revise-preview-directing",
+      "stage": "asset-production",
+      "note": "submarine-scene · projects/vox-depth-stack-pilot-submarine-cinematic/directing-revision.json"
+    },
+    {
+      "at": "2026-07-24T00:15:44.657Z",
+      "action": "work-item-completed",
+      "stage": "asset-production",
+      "note": "directing-revision-submarine-scene · 已按 registered-depth-stack 主体航迹、水草底部轴心摆动与 rise-drift 气泡同步 project.json；18 秒项目验证 0 error / 0 warning，style/motion proof 已重渲染并逐帧检查。"
+    },
+    {
+      "at": "2026-07-24T00:21:18.049Z",
+      "action": "assets-ready",
+      "stage": "preview",
+      "note": ""
+    },
+    {
+      "at": "2026-07-24T00:22:52.893Z",
+      "action": "preview-rendered",
+      "stage": "human-review",
+      "note": "dist/vox-depth-stack-pilot-submarine-cinematic/preview.mp4"
+    },
+    {
+      "at": "2026-07-24T00:23:47.660Z",
+      "action": "approve-preview",
+      "stage": "final-render",
+      "note": "按用户既有授权完成 human-review：完整 18 秒 preview 技术报告全部通过；逐帧联系表与每秒抽帧确认潜艇相对背景完成左下入场、向右上大跨度穿越及中右部锁定，水草围绕底部轴心左右摆动，气泡从下向上运动，前后景鱼群与相机视差保持清楚层级。"
+    },
+    {
+      "at": "2026-07-24T00:29:04.002Z",
+      "action": "final-rendered",
+      "stage": "complete",
+      "note": "dist/vox-depth-stack-pilot-submarine-cinematic/final.mp4"
+    },
+    {
+      "at": "2026-07-24T00:29:36.189Z",
+      "action": "approve-publish",
+      "stage": "complete",
+      "note": "按用户既有最终渲染审批授权记录本地成片批准：final.mp4 为 1920×1080、30fps、18.048 秒，音视频与成片报告全部通过；最终联系表复核潜艇世界内大航迹、水草摆动、物理上升气泡、前后景鱼群及相机视差均保持。仅批准本地最终成片，不执行外部发布。"
     }
   ]
 }

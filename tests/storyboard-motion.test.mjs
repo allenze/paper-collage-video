@@ -175,6 +175,11 @@ test('v10 compiles one registered depth stack before provider approval', () => {
         '9:16': {x: 0.02, y: 0.04, scale: 0.04, rotationDegrees: 1},
         '1:1': {x: 0.03, y: 0.03, scale: 0.04, rotationDegrees: 1},
       },
+      subjectTravelEnvelope: {
+        '16:9': {x: 0.58, y: 0.32, scale: 0.3, rotationDegrees: 12},
+        '9:16': {x: 0.42, y: 0.4, scale: 0.28, rotationDegrees: 10},
+        '1:1': {x: 0.48, y: 0.36, scale: 0.28, rotationDegrees: 10},
+      },
     },
     semanticRisk: 'topology',
     rationale: 'The three complete registered layers may move only inside their proven responsive reveal envelope.',
@@ -186,6 +191,7 @@ test('v10 compiles one registered depth stack before provider approval', () => {
     storyboard.scenes[0].compositionPlan.layerStacks;
   assert.equal(layerPlan.id, 'boat-waves-package');
   assert.equal(layerPlan.providerImageCalls, 1);
+  assert.equal(layerPlan.subjectTravelEnvelope['16:9'].x, 0.58);
   assert.equal(
     storyboard.directingSummary.generationBudget
       .requiredProviderImageCalls,
@@ -195,6 +201,74 @@ test('v10 compiles one registered depth stack before provider approval', () => {
     storyboard.directingSummary.generationBudget.hardCeiling,
     6,
   );
+});
+
+test('traverse and bottom-pivot sway treatments require their runtime motion signatures', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[0].proofTimeId = 'proof-establish';
+  authored.scenes[0].beats[0].treatments = [{
+    ...staticTreatment({
+      id: 'submarine-traverse',
+      targetId: 'submarine',
+      proofTimeId: 'proof-establish',
+    }),
+    changeClass: 'ambient-motion',
+    motion: {kind: 'continuous-transform', preset: 'traverse'},
+  }];
+  authored.scenes[0].beats[1].treatments = [{
+    ...staticTreatment({
+      id: 'seaweed-sway',
+      targetId: 'seaweed',
+      proofTimeId: 'proof-action',
+    }),
+    changeClass: 'ambient-motion',
+    motion: {kind: 'continuous-transform', preset: 'sway'},
+  }];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
+  assert.ok(
+    storyboard.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'motion:subject-traverse',
+    ),
+  );
+  assert.ok(
+    storyboard.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'motion:bottom-pivot-sway',
+    ),
+  );
+  const runtimeScene = {
+    camera: {preset: 'static'},
+    composition: {
+      nodes: [
+        {
+          id: 'submarine',
+          motion: {
+            keyframes: [
+              {at: 0, x: -0.45, y: 0.28},
+              {at: 1, x: 0.45, y: -0.28},
+            ],
+          },
+        },
+        {
+          id: 'seaweed',
+          motion: {
+            keyframes: [{at: 0, rotation: 0}, {at: 1, rotation: 0}],
+            idle: {preset: 'sway', intensity: 1, cycleSeconds: 3},
+            pivot: {x: 0.5, y: 1},
+          },
+        },
+      ],
+    },
+  };
+  assert.deepEqual(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }), []);
+  runtimeScene.composition.nodes[0].motion.keyframes[1].x = -0.2;
+  runtimeScene.composition.nodes[0].motion.keyframes[1].y = 0.2;
+  assert.ok(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }).some(({code}) => code === 'directing-traverse-span'));
 });
 
 test('style proof planning covers semantic, coupled, and state risks with the fewest source families', () => {
