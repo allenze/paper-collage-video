@@ -46,12 +46,29 @@ separation is part of the approved design.
 `world-travel` is persistent world geometry, not a larger `traverse` or a
 motif loop. Author `axis=x`, direction, distance in viewport widths, strictly
 ordered far/near speeds, ground strip, tracked subject, exact start phase,
+and optionally `activeFrom` as a normalized action cue. Before that cue the
+world is held completely still; the complete authored distance then resolves by
+the scene end. For a tableau that must stay still for its complete duration,
+declare `world.frozen=true` instead; it is mutually exclusive with
+`activeFrom`, preserves depth order and strip coverage, and requires a
+`world-lock-clean` review rather than movement/repetition checks. This is for
+a real held tableau before travel, not a substitute for hiding a moving
+background. Also author
 ordered semantic strip roles, and before/seam/after proof ids. Every
 `world-strip` resolves to at least one viewport width at its authored height.
 The looping group contains those strips plus exactly one asset/state-sequence
 tracked subject; this lets near strips genuinely occlude it without inheriting
 world phase. The renderer expands internal copies. Authors never place repeated
 asset nodes.
+
+For a state family with an opening pose and later cyclic action, author the
+same `playback` mode on every related treatment, then declare the family-level
+`cycles`, `activeFrom`, and ordered `activeStateIds` on one of those treatments.
+The compiler carries the resolved playback plan into the runtime contract and
+rejects a composition whose registered state ids, timing, or playback drifts.
+For a closing hold, declare paired `activeUntil` and `holdStateId`. Use at least
+two alternating registered gait states for a sustained run; a single pose with
+a moving background is not running motion.
 
 Use continuous preset `traverse` for a subject whose world-relative path must be
 materially larger than camera drift; runtime validation requires a normalized

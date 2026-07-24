@@ -81,6 +81,7 @@ export const prepareDirectingRevision = ({
   plan,
   production,
   reportPath,
+  source = 'preview',
   at = new Date().toISOString(),
 }) => {
   const authored = storyboardAuthoringFromCompiled(suppliedStoryboard);
@@ -176,8 +177,9 @@ export const prepareDirectingRevision = ({
   const nextProduction = transitionDirectingRevision(production, {
     changedSceneIds: report.changedSceneIds,
     invalidateStyleProof,
+    source,
     reportPath,
     at,
   });
-  return {storyboard: candidate, production: nextProduction, report};
+  return {storyboard: candidate, production: nextProduction, report: {...report, source}};
 };

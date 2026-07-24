@@ -56,13 +56,15 @@ export const padEvidenceBounds = (
   {width, height},
   padding = 24,
 ) => {
-  const left = clamp(bounds.left - padding, 0, width - 1);
-  const top = clamp(bounds.top - padding, 0, height - 1);
+  const left = clamp(Math.floor(bounds.left - padding), 0, width - 1);
+  const top = clamp(Math.floor(bounds.top - padding), 0, height - 1);
+  const right = clamp(Math.ceil(bounds.left + bounds.width + padding), left + 1, width);
+  const bottom = clamp(Math.ceil(bounds.top + bounds.height + padding), top + 1, height);
   return {
     left,
     top,
-    width: clamp(bounds.width + padding * 2, 1, width - left),
-    height: clamp(bounds.height + padding * 2, 1, height - top),
+    width: right - left,
+    height: bottom - top,
   };
 };
 

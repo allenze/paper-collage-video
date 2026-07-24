@@ -81,6 +81,68 @@ const normalizedRectangleWithinCanvas = ({x, y, width, height} = {}) =>
   x + width <= 1 &&
   y + height <= 1;
 
+const STATE_PLAYBACK_FIELDS = [
+  'cycles',
+  'activeFrom',
+  'activeUntil',
+  'holdStateId',
+  'activeStateIds',
+];
+
+const statePlaybackFromMotion = (motion) => {
+  const playback = {mode: motion.playback};
+  for (const field of STATE_PLAYBACK_FIELDS) {
+    if (motion[field] !== undefined) playback[field] = motion[field];
+  }
+  return playback;
+};
+
+const mergeStatePlayback = (current, next, key) => {
+  if (current.mode !== next.mode) {
+    throw new Error(`状态家族 ${key} 的 playback.mode 必须保持一致。`);
+  }
+  const merged = {...current};
+  for (const field of STATE_PLAYBACK_FIELDS) {
+    if (next[field] === undefined) continue;
+    if (merged[field] !== undefined && JSON.stringify(merged[field]) !== JSON.stringify(next[field])) {
+      throw new Error(`状态家族 ${key} 的 playback.${field} 必须保持一致。`);
+    }
+    merged[field] = next[field];
+  }
+  return merged;
+};
+
+const finalizeStatePlayback = ({playback, states, key}) => {
+  const resolved = {...playback, cycles: playback.cycles ?? 1};
+  if (resolved.mode === 'once' && resolved.cycles !== 1) {
+    throw new Error(`状态家族 ${key} 的 once playback cycles 必须为 1。`);
+  }
+  if (resolved.activeFrom !== undefined && resolved.activeUntil !== undefined && resolved.activeFrom >= resolved.activeUntil) {
+    throw new Error(`状态家族 ${key} 的 activeFrom 必须早于 activeUntil。`);
+  }
+  const stateIndex = new Map(states.map(({id}, index) => [id, index]));
+  if (resolved.holdStateId !== undefined && !stateIndex.has(resolved.holdStateId)) {
+    throw new Error(`状态家族 ${key} 的 holdStateId 必须引用一个已声明状态。`);
+  }
+  if (resolved.activeStateIds !== undefined) {
+    for (const id of resolved.activeStateIds) {
+      if (!stateIndex.has(id)) throw new Error(`状态家族 ${key} 的 activeStateIds 包含未知状态 ${id}。`);
+    }
+    for (let index = 1; index < resolved.activeStateIds.length; index += 1) {
+      if (stateIndex.get(resolved.activeStateIds[index - 1]) >= stateIndex.get(resolved.activeStateIds[index])) {
+        throw new Error(`状态家族 ${key} 的 activeStateIds 必须与状态顺序一致。`);
+      }
+    }
+    const active = new Set(resolved.activeStateIds);
+    for (const state of states) {
+      if (!active.has(state.id) && state.id !== resolved.holdStateId && state.at >= resolved.activeFrom) {
+        throw new Error(`状态家族 ${key} 的前置状态 ${state.id} 必须早于 activeFrom。`);
+      }
+    }
+  }
+  return resolved;
+};
+
 const requiredPatternForPredicate = (predicate) =>
   ['inside', 'on', 'held-by', 'worn-by'].includes(predicate)
     ? 'supported-subject'
@@ -300,7 +362,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (!CONTINUOUS_PRESETS.includes(motion.preset)) {
       addIssue(issues, 'treatment-motion-preset', `未知 continuous preset：${motion.preset}`, `${location}.motion.preset`);
     }
-    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition'].some((key) => motion[key] !== undefined)) {
+    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'continuous-transform 不得夹带 state-sequence 字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'state-sequence') {
@@ -312,6 +374,32 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     }
     if (!['cut', 'crossfade'].includes(motion.transition)) {
       addIssue(issues, 'treatment-state-transition', 'state-sequence transition 无效。', `${location}.motion.transition`);
+    }
+    if (motion.cycles !== undefined && !(Number.isInteger(motion.cycles) && motion.cycles > 0)) {
+      addIssue(issues, 'treatment-state-cycles', 'state-sequence cycles 必须是正整数。', `${location}.motion.cycles`);
+    }
+    if (motion.playback === 'once' && motion.cycles !== undefined && motion.cycles !== 1) {
+      addIssue(issues, 'treatment-state-once-cycles', 'once playback 的 cycles 必须为 1。', `${location}.motion.cycles`);
+    }
+    if (motion.activeFrom !== undefined && !(Number.isFinite(motion.activeFrom) && motion.activeFrom > 0 && motion.activeFrom < 1)) {
+      addIssue(issues, 'treatment-state-active-from', 'state-sequence activeFrom 必须位于 0..1 之间。', `${location}.motion.activeFrom`);
+    }
+    if (motion.activeUntil !== undefined && !(Number.isFinite(motion.activeUntil) && motion.activeUntil > 0 && motion.activeUntil < 1)) {
+      addIssue(issues, 'treatment-state-active-until', 'state-sequence activeUntil 必须位于 0..1 之间。', `${location}.motion.activeUntil`);
+    }
+    if ((motion.activeUntil === undefined) !== (motion.holdStateId === undefined)) {
+      addIssue(issues, 'treatment-state-hold-window', 'activeUntil 与 holdStateId 必须同时声明。', `${location}.motion`);
+    }
+    if (motion.activeFrom !== undefined && motion.activeUntil !== undefined && motion.activeFrom >= motion.activeUntil) {
+      addIssue(issues, 'treatment-state-active-window', 'activeFrom 必须早于 activeUntil。', `${location}.motion`);
+    }
+    if (motion.activeStateIds !== undefined && (
+      motion.activeFrom === undefined ||
+      !Array.isArray(motion.activeStateIds) ||
+      motion.activeStateIds.length < 2 ||
+      new Set(motion.activeStateIds).size !== motion.activeStateIds.length
+    )) {
+      addIssue(issues, 'treatment-state-active-states', 'activeStateIds 需要 activeFrom 和至少两个不重复状态。', `${location}.motion.activeStateIds`);
     }
     if (!normalizedTime(beatAt)) {
       addIssue(issues, 'treatment-state-time', '状态 treatment 必须绑定有效 beat.at。', location);
@@ -329,7 +417,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (motion.transition === 'cut' ? motion.durationSeconds !== 0 : !(Number.isFinite(motion.durationSeconds) && motion.durationSeconds > 0)) {
       addIssue(issues, 'treatment-visibility-duration', 'cut 时长必须为 0，其他 visibility-transition 时长必须大于 0。', `${location}.motion.durationSeconds`);
     }
-    if (['preset', 'poseFamilyId', 'stateId', 'visualChange', 'playback'].some((key) => motion[key] !== undefined)) {
+    if (['preset', 'poseFamilyId', 'stateId', 'visualChange', 'playback', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'visibility-transition 不得夹带连续或状态序列字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'motif-field') {
@@ -369,7 +457,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         }
       }
     }
-    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds'].some((key) => motion[key] !== undefined)) {
+    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds'].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'motif-field 不得夹带状态或显隐字段。', `${location}.motion`);
     }
   } else if (motion && Object.keys(motion).some((key) => key !== 'kind')) {
@@ -417,6 +505,9 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
       !(Number.isFinite(world?.speedRange?.near) && world.speedRange.near > world.speedRange.far) ||
       typeof world?.closedLoop !== 'boolean' ||
       !(Number.isFinite(world?.startPhase) && world.startPhase >= 0 && world.startPhase < 1) ||
+      !(Number.isFinite(world?.activeFrom ?? 0) && (world?.activeFrom ?? 0) >= 0 && (world?.activeFrom ?? 0) < 1) ||
+      (world?.frozen !== undefined && typeof world.frozen !== 'boolean') ||
+      (world?.frozen === true && world?.activeFrom !== undefined) ||
       !nonEmpty(world?.groundStripId) ||
       !nonEmpty(world?.trackedSubjectId) ||
       !['before', 'seam', 'after'].every((key) => nonEmpty(world?.seamProofTimeIds?.[key]))
@@ -524,14 +615,13 @@ const compileScene = (scene) => {
           nodeId: treatment.targetId,
           poseFamilyId: treatment.motion.poseFamilyId,
           states: [],
-          playback: treatment.motion.playback,
+          playback: statePlaybackFromMotion(treatment.motion),
           transition: treatment.motion.transition,
           necessity: treatment.necessity,
           importance: treatment.importance,
         };
-        if (family.playback !== treatment.motion.playback || family.transition !== treatment.motion.transition) {
-          throw new Error(`状态家族 ${key} 的 playback/transition 必须保持一致。`);
-        }
+        if (family.transition !== treatment.motion.transition) throw new Error(`状态家族 ${key} 的 transition 必须保持一致。`);
+        family.playback = mergeStatePlayback(family.playback, statePlaybackFromMotion(treatment.motion), key);
         family.states.push({
           id: treatment.motion.stateId,
           at: beat.at,
@@ -602,6 +692,8 @@ const compileScene = (scene) => {
           seamProofTimeIds: world.seamProofTimeIds,
           closedLoop: world.closedLoop,
           startPhase: world.startPhase,
+          activeFrom: world.activeFrom ?? 0,
+          frozen: world.frozen === true,
           strips: world.strips,
           proofTimeId: treatment.proofTimeId ?? null,
         };
@@ -644,7 +736,18 @@ const compileScene = (scene) => {
     patterns: [...patterns].sort(),
     relationships: [...relationships.values()].sort((left, right) => left.id.localeCompare(right.id)),
     stateSequences: [...stateFamilies.values()]
-      .map(({necessity, importance, ...family}) => ({...family, states: [...family.states].sort((left, right) => left.at - right.at)}))
+      .map(({necessity, importance, ...family}) => {
+        const states = [...family.states].sort((left, right) => left.at - right.at);
+        return {
+          ...family,
+          states,
+          playback: finalizeStatePlayback({
+            playback: family.playback,
+            states,
+            key: `${family.nodeId}::${family.poseFamilyId}`,
+          }),
+        };
+      })
       .sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
     continuousMotions: continuousMotions.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     visibilityEvents: visibilityEvents.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
@@ -927,6 +1030,24 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
   const nodes = new Map(
     flattenCompositionNodes(scene?.composition?.nodes).map(({node}) => [node.id, node]),
   );
+  for (const planned of storyboardScene?.compositionPlan?.stateSequences ?? []) {
+    const node = nodes.get(planned.nodeId);
+    const runtimeShape = node && {
+      poseFamilyId: node.poseFamilyId,
+      states: node.states?.map(({id, at}) => ({id, at})),
+      playback: node.playback,
+      transition: node.transition?.type,
+    };
+    const plannedShape = {
+      poseFamilyId: planned.poseFamilyId,
+      states: planned.states.map(({id, at}) => ({id, at})),
+      playback: planned.playback,
+      transition: planned.transition,
+    };
+    if (node?.kind !== 'state-sequence' || JSON.stringify(runtimeShape) !== JSON.stringify(plannedShape)) {
+      addIssue(issues, 'directing-state-sequence-drift', `状态家族 ${planned.nodeId} 与编译计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
+    }
+  }
   for (const planned of storyboardScene?.compositionPlan?.continuousMotions ?? []) {
     if (planned.preset === 'parallax-camera') {
       const depths = new Set(collectParallaxDepths(scene?.composition?.nodes ?? []).map(({depth}) => depth));
@@ -964,6 +1085,8 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         seamProofTimeIds: environment.seamProofTimeIds,
         closedLoop: environment.travel.closedLoop,
         startPhase: environment.travel.startPhase,
+        activeFrom: environment.travel.activeFrom ?? 0,
+        frozen: environment.travel.frozen === true,
         strips: (node.children ?? [])
           .filter(({kind}) => kind === 'world-strip')
           .map(({id, role, depth}) => ({id, role, depth})),
@@ -978,6 +1101,8 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         seamProofTimeIds: worldPlan.seamProofTimeIds,
         closedLoop: worldPlan.closedLoop,
         startPhase: worldPlan.startPhase,
+        activeFrom: worldPlan.activeFrom ?? 0,
+        frozen: worldPlan.frozen === true,
         strips: worldPlan.strips,
       };
       if (

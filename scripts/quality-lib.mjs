@@ -122,6 +122,7 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'coverage-gap-free',
   'depth-speed-readable',
   'world-motion-resolvable',
+  'world-lock-clean',
   'repetition-cadence-clean',
   'tracked-subject-readable',
 ];
@@ -161,6 +162,16 @@ const COMPOSITE_PROFILES = {
 };
 
 const requiredChecksForGroup = (group) => {
+  if (group.pattern === 'looping-environment' && group.loopingEnvironment?.travel?.frozen === true) {
+    return [
+      'strip-seams-clean',
+      'coverage-gap-free',
+      'depth-speed-readable',
+      'world-lock-clean',
+      'tracked-subject-readable',
+      'final-composition-readable',
+    ];
+  }
   if (group.pattern !== 'supported-subject' || group.support?.layering !== 'subject-front') {
     return COMPOSITE_PROFILES[group.pattern];
   }

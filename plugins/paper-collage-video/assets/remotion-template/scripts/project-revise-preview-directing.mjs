@@ -13,11 +13,12 @@ import {prepareDirectingRevision} from './directing-revision-lib.mjs';
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
 const input = args.find((arg) => arg.startsWith('--input='))?.slice('--input='.length);
+const source = args.find((arg) => arg.startsWith('--source='))?.slice('--source='.length) ?? 'preview';
 const json = args.includes('--json');
 
 try {
   if (!slug || !input) {
-    throw new Error('用法：project:revise-preview-directing -- <slug> --input=<storyboard.json> [--json]');
+    throw new Error('用法：project:revise-preview-directing -- <slug> --input=<storyboard.json> [--source=preview|asset-production] [--json]');
   }
   const [{project}, {paths, state}, currentStoryboard] = await Promise.all([
     loadProject(slug),
@@ -34,6 +35,7 @@ try {
     plan: project.plan,
     production: state,
     reportPath,
+    source,
   });
   await writeJson(storyboardFileFor(slug), result.storyboard);
   await writeJson(path.join(paths.projectDirectory, 'directing-revision.json'), result.report);

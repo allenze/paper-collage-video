@@ -487,11 +487,15 @@ export const transitionWorkItem = (current, id, options = {}) => {
 
 export const transitionDirectingRevision = (current, options = {}) => {
   const action = 'revise-preview-directing';
+  const source = options.source ?? 'preview';
   assertStage(current, ['asset-production'], action);
-  if (current.approvals?.preview?.status !== 'changes-requested') {
+  if (!['preview', 'asset-production'].includes(source)) {
+    throw new Error(`${action} 的来源必须是 preview 或 asset-production。`);
+  }
+  if (source === 'preview' && current.approvals?.preview?.status !== 'changes-requested') {
     throw new Error(`${action} 只能响应已记录的 request-preview-revision。`);
   }
-  if (!(current.history ?? []).some((entry) => entry.action === 'request-preview-revision')) {
+  if (source === 'preview' && !(current.history ?? []).some((entry) => entry.action === 'request-preview-revision')) {
     throw new Error(`${action} 缺少 request-preview-revision 历史证据。`);
   }
   const changedSceneIds = [...new Set(options.changedSceneIds ?? [])];
@@ -531,7 +535,7 @@ export const transitionDirectingRevision = (current, options = {}) => {
     at,
     action,
     stage: state.stage,
-    note: `${changedSceneIds.join(', ')} · ${reportPath}`,
+    note: `${source} · ${changedSceneIds.join(', ')} · ${reportPath}`,
   });
   return state;
 };

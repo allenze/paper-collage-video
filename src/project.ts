@@ -218,8 +218,10 @@ export type CompositionStateSequenceNode = {
   playback: {
     mode: 'once' | 'loop' | 'ping-pong';
     cycles: number;
+    activeFrom?: number;
     activeUntil?: number;
     holdStateId?: string;
+    activeStateIds?: string[];
   };
   transition: {type: 'cut' | 'crossfade'; durationSeconds: number};
   z: number;
@@ -637,6 +639,10 @@ export type LoopingEnvironmentTravel = {
   easing: 'linear';
   closedLoop: boolean;
   startPhase: number;
+  /** Normalized scene cue; phase is held before this point. */
+  activeFrom?: number;
+  /** Reuse registered strips as one locked tableau; never advance the world phase. */
+  frozen?: boolean;
 };
 
 export type CompositionGroupNode = {

@@ -93,7 +93,7 @@ version-conditioned renderer branch.
 
 `theme.canvas` is a required opaque six-digit hex color. The renderer places it beneath every scene-specific background and uses it as the dip cover, so even a translucent scene treatment cannot expose pixels from the outgoing scene.
 
-`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. A loop that must stop on contact may additionally declare `activeUntil` and `holdStateId`; the cycles are distributed across the active interval and the named registered state is held afterward. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
+`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
 Camera-coupled parallax is a first-class rig. Set
 `camera.parallax={enabled:true,strength,focalDepth}` and assign relevant nodes
@@ -116,7 +116,13 @@ travel, ground reference, tracked subject, seam proof ids, depth-derived speed
 range, overscan, and start phase. It contains at least two strips plus exactly
 one asset/state-sequence tracked subject. Camera/parallax offsets are folded
 into strip phase and safe internal scale; they must never translate or shrink
-the viewport-sized carrier into an uncovered edge.
+the viewport-sized carrier into an uncovered edge. An authored-and-compiled
+`travel.frozen=true` is the deliberate exception for a still tableau that
+reuses registered strip assets: it locks world phase and ignores camera offsets
+while retaining layer order; it must not be used to fake a moving world. Its
+quality review uses `world-lock-clean` rather than motion/repetition checks and
+must prove that only the intended foreground subject changes between proof
+frames.
 
 A continuous `traverse` target must span at least `0.45` in normalized parent
 space. A continuous `sway` target must use the `sway` idle primitive and a
@@ -194,7 +200,7 @@ plus before/at/after frames.
   pose-sheet grids. `project:storyboard` deterministically compiles those
   derived fields and default transition recipes, then rejects drift.
 - Scene id, blueprint, compiled `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. Beat-bound, treatment-bound, and state-bound proof intent is immutable.
-- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, and ordered strip roles/depths exactly match the compiler-owned plan. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node.
+- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; after it, the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside scene-boundary intervals.
 - A final state assertion must resolve to one fully opaque state, remain outside any state crossfade for at least that transition duration, and preserve the asserted state through the scene end.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.

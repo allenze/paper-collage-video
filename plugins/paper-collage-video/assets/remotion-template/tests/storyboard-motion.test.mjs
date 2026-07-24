@@ -227,6 +227,7 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
         },
         closedLoop: false,
         startPhase: 0.12,
+        activeFrom: 0.2,
         strips: [
           {id: 'mountain-strip', role: 'far', depth: -0.85},
           {id: 'tree-strip', role: 'mid', depth: -0.2},
@@ -242,6 +243,7 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
   const [world] = storyboard.scenes[0].compositionPlan.loopingEnvironments;
   assert.equal(world.targetId, 'road-world');
   assert.equal(world.trackedSubjectId, 'paper-car');
+  assert.equal(world.activeFrom, 0.2);
   assert.deepEqual(world.seamProofTimeIds, {
     before: 'proof-establish',
     seam: 'proof-action',
@@ -261,6 +263,45 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
       'proof:world-motion',
     ),
   );
+
+  const frozenAuthored = structuredClone(authored);
+  const frozenWorld = frozenAuthored.scenes[0].beats[1].treatments[0].composition.world;
+  delete frozenWorld.activeFrom;
+  frozenWorld.frozen = true;
+  const frozenStoryboard = compileStoryboardDirecting(frozenAuthored, {plan: plan()});
+  const [frozenPlan] = frozenStoryboard.scenes[0].compositionPlan.loopingEnvironments;
+  assert.equal(frozenPlan.frozen, true);
+  assert.deepEqual(validateStoryboard(frozenStoryboard, {slug: 'rhythm-test', plan: plan()}), []);
+  const runtimeScene = {
+    composition: {
+      nodes: [{
+        id: frozenPlan.targetId,
+        kind: 'group',
+        pattern: 'looping-environment',
+        loopingEnvironment: {
+          axis: frozenPlan.axis,
+          groundStripId: frozenPlan.groundStripId,
+          trackedSubjectId: frozenPlan.trackedSubjectId,
+          seamProofTimeIds: frozenPlan.seamProofTimeIds,
+          travel: {
+            direction: frozenPlan.direction,
+            distanceViewports: frozenPlan.distanceViewports,
+            easing: 'linear',
+            closedLoop: frozenPlan.closedLoop,
+            startPhase: frozenPlan.startPhase,
+            frozen: true,
+          },
+          speedRange: frozenPlan.speedRange,
+          overscanPx: 2,
+        },
+        children: frozenPlan.strips.map(({id, role, depth}) => ({id, kind: 'world-strip', role, depth})),
+      }],
+    },
+  };
+  assert.deepEqual(validateDirectingExecution({scene: runtimeScene, storyboardScene: frozenStoryboard.scenes[0]}), []);
+  runtimeScene.composition.nodes[0].loopingEnvironment.travel.frozen = false;
+  assert.ok(validateDirectingExecution({scene: runtimeScene, storyboardScene: frozenStoryboard.scenes[0]})
+    .some(({code}) => code === 'directing-looping-world-drift'));
 });
 
 test('traverse and bottom-pivot sway treatments require their runtime motion signatures', () => {
@@ -663,6 +704,68 @@ test('Cao Chong-style hero actions compile to one context-preserving pose sheet'
     repairPolicy: 'masked-edit-complete-sheet',
   }]);
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan('draft')}), []);
+});
+
+test('state-family authoring compiles a held prelude and registered gait plan that runtime execution must match', () => {
+  const authored = authoredStoryboard();
+  const scene = authored.scenes[0];
+  scene.beats[0].proofTimeId = 'proof-establish';
+  scene.beats[2].proofTimeId = 'proof-final';
+  const base = {
+    targetId: 'hare',
+    importance: 'hero',
+    necessity: 'required',
+    changeClass: 'pose-change',
+    composition: {pattern: 'free'},
+    graphic: null,
+    semanticRisk: 'identity',
+    rationale: 'The hare holds still before alternating two registered running poses.',
+  };
+  scene.beats[0].treatments = [{
+    ...base,
+    id: 'hare-sleep',
+    proofTimeId: 'proof-establish',
+    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'sleep', visualChange: 'Hare sleeps', playback: 'loop', transition: 'cut'},
+  }];
+  scene.beats[1].treatments = [{
+    ...base,
+    id: 'hare-stride-a',
+    proofTimeId: 'proof-action',
+    motion: {
+      kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-a', visualChange: 'Left foreleg forward',
+      playback: 'loop', transition: 'cut', cycles: 3, activeFrom: 0.48, activeStateIds: ['stride-a', 'stride-b'],
+    },
+  }];
+  scene.beats[2].treatments = [{
+    ...base,
+    id: 'hare-stride-b',
+    proofTimeId: 'proof-final',
+    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-b', visualChange: 'Right foreleg forward', playback: 'loop', transition: 'cut'},
+  }];
+  scene.proofTimes[0].stateAssertions = [{nodeId: 'hare', stateId: 'sleep'}];
+  scene.proofTimes[1].stateAssertions = [{nodeId: 'hare', stateId: 'stride-a'}];
+  scene.proofTimes[2].stateAssertions = [{nodeId: 'hare', stateId: 'stride-b'}];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan('draft')});
+  const [family] = storyboard.scenes[0].compositionPlan.stateSequences;
+  assert.deepEqual(family.playback, {
+    mode: 'loop', cycles: 3, activeFrom: 0.48, activeStateIds: ['stride-a', 'stride-b'],
+  });
+  assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan('draft')}), []);
+
+  const runtimeScene = {
+    composition: {
+      nodes: [{
+        id: 'hare', kind: 'state-sequence', poseFamilyId: 'hare-actions',
+        states: family.states.map(({id, at}) => ({id, at})),
+        playback: structuredClone(family.playback),
+        transition: {type: family.transition, durationSeconds: 0},
+      }],
+    },
+  };
+  assert.deepEqual(validateDirectingExecution({scene: runtimeScene, storyboardScene: storyboard.scenes[0]}), []);
+  runtimeScene.composition.nodes[0].playback.activeStateIds = ['stride-b', 'stride-a'];
+  assert.ok(validateDirectingExecution({scene: runtimeScene, storyboardScene: storyboard.scenes[0]})
+    .some(({code}) => code === 'directing-state-sequence-drift'));
 });
 
 test('required hero state families cannot be silently downgraded to fit draft budget', () => {

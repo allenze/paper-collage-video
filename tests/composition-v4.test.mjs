@@ -270,6 +270,42 @@ test('v5 state sequences can loop during motion and hold a registered contact st
   assert.ok(validate(unknownHold, proofTimes).issues.some(({code}) => code === 'composition-sequence-hold-state'));
 });
 
+test('state sequences can hold a prelude, then loop only an authored gait pair', () => {
+  const node = {
+    id: 'hare',
+    kind: 'state-sequence',
+    assetRole: 'character',
+    poseFamilyId: 'hare-actions',
+    registration: {id: 'hare-registration', sourceMasterAssetId: 'hare-sheet', canvas: {width: 100, height: 100}, origin: 'top-left'},
+    states: [
+      {id: 'sleep', src: 'sleep.png', at: 0},
+      {id: 'startled', src: 'startled.png', at: 0.2},
+      {id: 'stride-a', src: 'stride-a.png', at: 0.44},
+      {id: 'stride-b', src: 'stride-b.png', at: 0.72},
+    ],
+    playback: {mode: 'loop', cycles: 3, activeFrom: 0.44, activeStateIds: ['stride-a', 'stride-b']},
+    transition: {type: 'cut', durationSeconds: 0},
+    z: 1,
+    transform: fullTransform(),
+    motion: still(),
+  };
+  const proofTimes = [
+    {id: 'sleep', at: 0.1, stateAssertions: [{nodeId: 'hare', stateId: 'sleep'}]},
+    {id: 'startled', at: 0.22, stateAssertions: [{nodeId: 'hare', stateId: 'startled'}]},
+    {id: 'stride-a', at: 0.45, stateAssertions: [{nodeId: 'hare', stateId: 'stride-a'}]},
+    {id: 'stride-b', at: 0.55, stateAssertions: [{nodeId: 'hare', stateId: 'stride-b'}]},
+  ];
+  assert.equal(resolveSequenceState({node, progress: 0.1}).id, 'sleep');
+  assert.equal(resolveSequenceState({node, progress: 0.22}).id, 'startled');
+  assert.equal(resolveSequenceState({node, progress: 0.45}).id, 'stride-a');
+  assert.equal(resolveSequenceState({node, progress: 0.55}).id, 'stride-b');
+  assert.deepEqual(validate(node, proofTimes).issues, []);
+
+  const unordered = structuredClone(node);
+  unordered.playback.activeStateIds.reverse();
+  assert.ok(validate(unordered, proofTimes).issues.some(({code}) => code === 'composition-sequence-active-state-order'));
+});
+
 test('final state proofs reject crossfades and states that do not hold to scene end', () => {
   const node = {
     id: 'butterfly',

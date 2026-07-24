@@ -28,6 +28,21 @@ export const collectParallaxDepths = (nodes = []) =>
     ...(node?.kind === 'group' ? collectParallaxDepths(node.children ?? []) : []),
   ]);
 
+const collectFrozenWorldDepthNodeIds = (nodes = [], frozenAncestor = false) =>
+  nodes.flatMap((node) => {
+    const frozen = frozenAncestor || (
+      node?.kind === 'group' &&
+      node.pattern === 'looping-environment' &&
+      node.loopingEnvironment?.travel?.frozen === true
+    );
+    return [
+      ...(frozen && node?.depth !== undefined ? [node.id] : []),
+      ...(node?.kind === 'group'
+        ? collectFrozenWorldDepthNodeIds(node.children ?? [], frozen)
+        : []),
+    ];
+  });
+
 const cameraKeyframesForValidation = (camera = {}) =>
   Array.isArray(camera.keyframes) && camera.keyframes.length >= 2
     ? camera.keyframes
@@ -69,9 +84,13 @@ export const validateParallaxRig = ({
     };
     return find(composition?.nodes ?? [])?.depth !== undefined;
   });
+  const frozenWorldDepthNodeIds = new Set(
+    collectFrozenWorldDepthNodeIds(composition?.nodes ?? []),
+  );
 
   if (!parallax?.enabled) {
     for (const node of explicitlyDepthAuthored) {
+      if (frozenWorldDepthNodeIds.has(node.id)) continue;
       add(
         'parallax-depth-without-rig',
         '节点声明 depth 时，镜头必须启用 camera.parallax。',

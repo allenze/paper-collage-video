@@ -155,7 +155,21 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         if (!nonEmpty(sequence.nodeId) || sequenceIds.has(sequence.nodeId)) add('storyboard-sequence-node-id', '状态序列 nodeId 缺失或重复。', `${sequenceLocation}.nodeId`);
         sequenceIds.add(sequence.nodeId);
         if (!nonEmpty(sequence.poseFamilyId)) add('storyboard-sequence-family', '状态序列必须声明 poseFamilyId。', `${sequenceLocation}.poseFamilyId`);
-        if (!['once', 'loop', 'ping-pong'].includes(sequence.playback)) add('storyboard-sequence-playback', '状态序列 playback 无效。', `${sequenceLocation}.playback`);
+        const playback = sequence.playback;
+        if (!['once', 'loop', 'ping-pong'].includes(playback?.mode) || !(Number.isInteger(playback?.cycles) && playback.cycles > 0)) {
+          add('storyboard-sequence-playback', '状态序列 playback 必须声明有效 mode 与正整数 cycles。', `${sequenceLocation}.playback`);
+        }
+        if (playback?.mode === 'once' && playback.cycles !== 1) add('storyboard-sequence-once-cycles', 'once playback 的 cycles 必须为 1。', `${sequenceLocation}.playback.cycles`);
+        if (playback?.activeFrom !== undefined && !(normalizedTime(playback.activeFrom) && playback.activeFrom > 0 && playback.activeFrom < 1)) add('storyboard-sequence-active-from', 'activeFrom 必须位于 0..1 之间。', `${sequenceLocation}.playback.activeFrom`);
+        if ((playback?.activeUntil === undefined) !== (playback?.holdStateId === undefined)) add('storyboard-sequence-hold-window', 'activeUntil 与 holdStateId 必须同时声明。', `${sequenceLocation}.playback`);
+        if (playback?.activeUntil !== undefined && !(normalizedTime(playback.activeUntil) && playback.activeUntil > 0 && playback.activeUntil < 1)) add('storyboard-sequence-active-until', 'activeUntil 必须位于 0..1 之间。', `${sequenceLocation}.playback.activeUntil`);
+        if (playback?.activeFrom !== undefined && playback?.activeUntil !== undefined && playback.activeFrom >= playback.activeUntil) add('storyboard-sequence-active-window', 'activeFrom 必须早于 activeUntil。', `${sequenceLocation}.playback`);
+        if (playback?.activeStateIds !== undefined && (
+          playback.activeFrom === undefined ||
+          !Array.isArray(playback.activeStateIds) ||
+          playback.activeStateIds.length < 2 ||
+          new Set(playback.activeStateIds).size !== playback.activeStateIds.length
+        )) add('storyboard-sequence-active-states', 'activeStateIds 需要 activeFrom 和至少两个不重复状态。', `${sequenceLocation}.playback.activeStateIds`);
         if (!['cut', 'crossfade'].includes(sequence.transition)) add('storyboard-sequence-transition', '状态序列 transition 无效。', `${sequenceLocation}.transition`);
         const stateIds = new Set();
         let previousStateAt = -1;
@@ -169,6 +183,20 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
           if (!nonEmpty(state.visualChange)) add('storyboard-sequence-visual-change', '状态必须描述可见变化。', `${stateLocation}.visualChange`);
         }
         if (sequence.states?.[0]?.at !== 0) add('storyboard-sequence-start', '状态序列必须从 at=0 开始。', `${sequenceLocation}.states[0].at`);
+        if (playback?.holdStateId !== undefined && !stateIds.has(playback.holdStateId)) add('storyboard-sequence-hold-state', 'holdStateId 必须引用一个已声明状态。', `${sequenceLocation}.playback.holdStateId`);
+        if (playback?.activeStateIds !== undefined) {
+          const stateIndex = new Map((sequence.states ?? []).map(({id}, index) => [id, index]));
+          for (const id of playback.activeStateIds) {
+            if (!stateIds.has(id)) add('storyboard-sequence-active-state', `activeStateIds 引用了未知状态 ${id}。`, `${sequenceLocation}.playback.activeStateIds`);
+          }
+          for (let index = 1; index < playback.activeStateIds.length; index += 1) {
+            if (stateIndex.get(playback.activeStateIds[index - 1]) >= stateIndex.get(playback.activeStateIds[index])) add('storyboard-sequence-active-order', 'activeStateIds 必须与 states 的顺序一致。', `${sequenceLocation}.playback.activeStateIds`);
+          }
+          const activeIds = new Set(playback.activeStateIds);
+          for (const state of sequence.states ?? []) {
+            if (!activeIds.has(state.id) && state.id !== playback.holdStateId && state.at >= playback.activeFrom) add('storyboard-sequence-prelude-state', `前置状态 ${state.id} 必须早于 activeFrom。`, `${sequenceLocation}.states`);
+          }
+        }
       }
       if (!Array.isArray(compositionPlan.continuousMotions)) {
         add('storyboard-continuous-motions', 'compositionPlan.continuousMotions 必须是数组。', `${location}.compositionPlan.continuousMotions`);

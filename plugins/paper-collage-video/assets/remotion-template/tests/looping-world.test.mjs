@@ -127,6 +127,28 @@ test('world-strip phase wraps deterministically with gap-free internal copies', 
   }
 });
 
+test('world-strip holds its phase before activeFrom and completes authored travel afterwards', () => {
+  const base = {
+    viewportWidth: 1920,
+    tileWidth: 1920,
+    direction: 'left',
+    distanceViewports: 4,
+    speedFactor: 1,
+    startPhase: 0.25,
+    activeFrom: 0.25,
+  };
+  const hold = resolveWorldStripFrame({...base, progress: 0.2});
+  const cue = resolveWorldStripFrame({...base, progress: 0.25});
+  const halfway = resolveWorldStripFrame({...base, progress: 0.625});
+  const end = resolveWorldStripFrame({...base, progress: 1});
+  assert.equal(hold.travelProgress, 0);
+  assert.equal(cue.travelProgress, 0);
+  assert.equal(hold.cameraCompensatedDisplacement, 0);
+  assert.equal(halfway.travelProgress, 0.5);
+  assert.equal(end.travelProgress, 1);
+  assert.equal(end.cameraCompensatedDisplacement, -4 * 1920);
+});
+
 test('looping-environment validates semantic strips, tracked subject, seam proofs, and monotonic depth speed', () => {
   const strips = [
     {id: 'mountains', role: 'far', depth: -0.8, z: 0},
@@ -162,6 +184,7 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
             easing: 'linear',
             closedLoop: false,
             startPhase: 0.1,
+            activeFrom: 0.2,
           },
           speedRange: {far: 0.2, near: 1.2},
           overscanPx: 2,
@@ -192,6 +215,47 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
     ],
   });
   assert.deepEqual(result.issues.filter(({level}) => level === 'error'), []);
+  const invalidCue = structuredClone(composition);
+  invalidCue.nodes[0].loopingEnvironment.travel.activeFrom = 1;
+  const invalidCueResult = validateCompositionStructure({
+    composition: invalidCue,
+    video: {width: 200, height: 100},
+    proofTimes: [
+      {id: 'before', at: 0.2, stateAssertions: []},
+      {id: 'seam', at: 0.5, stateAssertions: []},
+      {id: 'after', at: 0.8, stateAssertions: []},
+    ],
+  });
+  assert.ok(
+    invalidCueResult.issues.some(({code}) => code === 'composition-looping-travel'),
+  );
+  const frozen = structuredClone(composition);
+  delete frozen.nodes[0].loopingEnvironment.travel.activeFrom;
+  frozen.nodes[0].loopingEnvironment.travel.frozen = true;
+  assert.deepEqual(
+    validateCompositionStructure({
+      composition: frozen,
+      video: {width: 200, height: 100},
+      proofTimes: [
+        {id: 'before', at: 0.2, stateAssertions: []},
+        {id: 'seam', at: 0.5, stateAssertions: []},
+        {id: 'after', at: 0.8, stateAssertions: []},
+      ],
+    }).issues.filter(({level}) => level === 'error'),
+    [],
+  );
+  frozen.nodes[0].loopingEnvironment.travel.activeFrom = 0.2;
+  assert.ok(
+    validateCompositionStructure({
+      composition: frozen,
+      video: {width: 200, height: 100},
+      proofTimes: [
+        {id: 'before', at: 0.2, stateAssertions: []},
+        {id: 'seam', at: 0.5, stateAssertions: []},
+        {id: 'after', at: 0.8, stateAssertions: []},
+      ],
+    }).issues.some(({code}) => code === 'composition-looping-travel'),
+  );
   const invalid = structuredClone(composition);
   invalid.nodes[0].children[2].depth = -0.2;
   const invalidResult = validateCompositionStructure({
@@ -228,6 +292,7 @@ test('world-travel authoring compiles only through looping-environment and scrol
         seamProofTimeIds: {before: 'proof-before', seam: 'proof-seam', after: 'proof-after'},
         closedLoop: false,
         startPhase: 0.1,
+        activeFrom: 0.2,
         strips: [
           {id: 'mountains', role: 'far', depth: -0.8},
           {id: 'trees', role: 'mid', depth: -0.1},

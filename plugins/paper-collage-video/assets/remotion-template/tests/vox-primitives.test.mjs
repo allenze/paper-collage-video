@@ -265,6 +265,24 @@ test('parallax rigs require camera motion and distinct legal depth layers', () =
   );
 });
 
+test('a frozen looping environment retains depth ordering without enabling camera parallax', () => {
+  const frozenWorld = {
+    id: 'still-race-world',
+    kind: 'group',
+    pattern: 'looping-environment',
+    loopingEnvironment: {travel: {frozen: true}},
+    children: [
+      {id: 'far', kind: 'world-strip', depth: -0.7},
+      {id: 'runner', kind: 'state-sequence', depth: 0.2},
+      {id: 'near', kind: 'world-strip', depth: 0.7},
+    ],
+  };
+  assert.deepEqual(validateParallaxRig({
+    camera: {preset: 'static', parallax: {enabled: false}},
+    composition: {nodes: [frozenWorld]},
+  }), []);
+});
+
 test('parallax and motif primitives produce fingerprinted proof targets', async () => {
   const project = {
     slug: 'quality-primitives',

@@ -101,6 +101,9 @@ try {
     output,
     `--props=${path.relative(ROOT, paths.projectFile)}`,
     `--concurrency=${resolveRenderConcurrency()}`,
+    // Render progress emits one update per frame. Keep automated preview/render
+    // runs observable through their final reports without flooding their caller.
+    '--log=error',
   ];
   if (mode === 'preview') {
     args.push(

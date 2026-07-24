@@ -58,6 +58,7 @@ export const resolveWorldStripFrame = ({
   distanceViewports,
   speedFactor,
   startPhase = 0,
+  activeFrom = 0,
   overscanPx = 2,
   phaseOffsetPx = 0,
 }) => {
@@ -79,20 +80,31 @@ export const resolveWorldStripFrame = ({
   if (!(finite(startPhase) && startPhase >= 0 && startPhase < 1)) {
     throw new Error('world-strip startPhase 必须位于 0..1。');
   }
+  if (!(finite(activeFrom) && activeFrom >= 0 && activeFrom < 1)) {
+    throw new Error('world-strip activeFrom 必须位于 0..1。');
+  }
   if (!finite(phaseOffsetPx)) {
     throw new Error('world-strip phaseOffsetPx 必须是有限数字。');
   }
+  // `distanceViewports` describes the complete travel after the cue, not the
+  // whole scene. This makes a held starting tableau truly still while keeping
+  // the authored end phase and seam proof deterministic.
+  const travelProgress = progress <= activeFrom
+    ? 0
+    : (progress - activeFrom) / (1 - activeFrom);
   const signedDistance =
     (direction === 'left' ? -1 : 1) *
     distanceViewports *
     viewportWidth *
     speedFactor *
-    progress;
+    travelProgress;
   const unwrappedPhase = startPhase * tileWidth + signedDistance;
   const renderUnwrappedPhase = unwrappedPhase + phaseOffsetPx;
   const phase = positiveModulo(renderUnwrappedPhase, tileWidth);
   const firstCopyX = phase - tileWidth - overscanPx;
-  const cameraCompensatedDisplacement = signedDistance;
+  const cameraCompensatedDisplacement = Object.is(signedDistance, -0)
+    ? 0
+    : signedDistance;
   return {
     phase,
     phaseNormalized: phase / tileWidth,
@@ -100,6 +112,7 @@ export const resolveWorldStripFrame = ({
     renderUnwrappedPhase,
     firstCopyX,
     cameraCompensatedDisplacement,
+    travelProgress,
     wraps: Math.floor(Math.abs(signedDistance) / tileWidth),
   };
 };

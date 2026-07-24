@@ -401,14 +401,28 @@ export const validateCompositionStructure = ({
       }
       if (!['once', 'loop', 'ping-pong'].includes(node.playback?.mode) || !(Number.isInteger(node.playback?.cycles) && node.playback.cycles > 0)) add('error', 'composition-sequence-playback', 'state-sequence playback 必须声明有效 mode 与正整数 cycles。', `${nodeLocation}.playback`);
       if (node.playback?.mode === 'once' && node.playback.cycles !== 1) add('error', 'composition-sequence-once-cycles', 'once playback 的 cycles 必须为 1。', `${nodeLocation}.playback.cycles`);
-      const segmented = node.playback?.activeUntil !== undefined || node.playback?.holdStateId !== undefined;
-      if (segmented && !(
+      const hasActiveFrom = node.playback?.activeFrom !== undefined;
+      const hasActiveUntil = node.playback?.activeUntil !== undefined || node.playback?.holdStateId !== undefined;
+      if (hasActiveFrom && !(finite(node.playback.activeFrom) && node.playback.activeFrom > 0 && node.playback.activeFrom < 1)) add('error', 'composition-sequence-active-from', 'activeFrom 必须位于 0..1 之间。', `${nodeLocation}.playback.activeFrom`);
+      if (hasActiveUntil && !(
         finite(node.playback?.activeUntil) &&
         node.playback.activeUntil > 0 &&
         node.playback.activeUntil < 1 &&
         nonEmpty(node.playback?.holdStateId)
       )) add('error', 'composition-sequence-segmented-playback', '分段状态序列必须同时声明 0..1 之间的 activeUntil 与 holdStateId。', `${nodeLocation}.playback`);
-      if (segmented && !node.states.some(({id}) => id === node.playback.holdStateId)) add('error', 'composition-sequence-hold-state', `定格状态 ${node.playback?.holdStateId ?? 'none'} 不存在。`, `${nodeLocation}.playback.holdStateId`);
+      if (hasActiveFrom && node.playback?.activeUntil !== undefined && node.playback.activeFrom >= node.playback.activeUntil) add('error', 'composition-sequence-active-window', 'activeFrom 必须早于 activeUntil。', `${nodeLocation}.playback`);
+      if (hasActiveUntil && !node.states.some(({id}) => id === node.playback.holdStateId)) add('error', 'composition-sequence-hold-state', `定格状态 ${node.playback?.holdStateId ?? 'none'} 不存在。`, `${nodeLocation}.playback.holdStateId`);
+      if (node.playback?.activeStateIds !== undefined) {
+        const activeIds = node.playback.activeStateIds;
+        const stateIndex = new Map(node.states.map(({id}, index) => [id, index]));
+        if (!hasActiveFrom || !Array.isArray(activeIds) || activeIds.length < 2 || new Set(activeIds).size !== activeIds.length) add('error', 'composition-sequence-active-states', 'activeStateIds 需要 activeFrom、至少两个不重复状态。', `${nodeLocation}.playback.activeStateIds`);
+        for (const id of activeIds ?? []) if (!stateIndex.has(id)) add('error', 'composition-sequence-active-state', `活动状态 ${id} 不存在。`, `${nodeLocation}.playback.activeStateIds`);
+        for (let index = 1; index < (activeIds?.length ?? 0); index += 1) if (stateIndex.get(activeIds[index - 1]) >= stateIndex.get(activeIds[index])) add('error', 'composition-sequence-active-state-order', 'activeStateIds 必须与 states 的顺序一致。', `${nodeLocation}.playback.activeStateIds`);
+        const activeSet = new Set(activeIds);
+        for (const state of node.states) {
+          if (!activeSet.has(state.id) && state.id !== node.playback?.holdStateId && state.at >= (node.playback?.activeFrom ?? 1)) add('error', 'composition-sequence-prelude-state', `非活动状态 ${state.id} 必须在 activeFrom 前出现，或作为结束定格。`, `${nodeLocation}.states`);
+        }
+      }
       if (!['cut', 'crossfade'].includes(node.transition?.type) || !(finite(node.transition?.durationSeconds) && node.transition.durationSeconds >= 0)) add('error', 'composition-sequence-transition', 'state-sequence transition 无效。', `${nodeLocation}.transition`);
       if (node.transition?.type === 'cut' && node.transition.durationSeconds !== 0) add('error', 'composition-sequence-cut-duration', 'cut 的 durationSeconds 必须为 0。', `${nodeLocation}.transition.durationSeconds`);
       if (node.transition?.type === 'crossfade' && !(node.transition.durationSeconds > 0)) add('error', 'composition-sequence-crossfade-duration', 'crossfade 的 durationSeconds 必须大于 0。', `${nodeLocation}.transition.durationSeconds`);
@@ -912,14 +926,17 @@ export const validateCompositionStructure = ({
 
     if (node.pattern === 'looping-environment') {
       const environment = node.loopingEnvironment;
-      if (
+      const invalidTravel =
         environment?.axis !== 'x' ||
         !['left', 'right'].includes(environment?.travel?.direction) ||
         environment?.travel?.easing !== 'linear' ||
         !(finite(environment?.travel?.distanceViewports) && environment.travel.distanceViewports > 0) ||
         !(finite(environment?.travel?.startPhase) && environment.travel.startPhase >= 0 && environment.travel.startPhase < 1) ||
-        typeof environment?.travel?.closedLoop !== 'boolean'
-      ) {
+        !(finite(environment?.travel?.activeFrom ?? 0) && (environment?.travel?.activeFrom ?? 0) >= 0 && (environment?.travel?.activeFrom ?? 0) < 1) ||
+        (environment?.travel?.frozen !== undefined && typeof environment.travel.frozen !== 'boolean') ||
+        (environment?.travel?.frozen === true && environment?.travel?.activeFrom !== undefined) ||
+        typeof environment?.travel?.closedLoop !== 'boolean';
+      if (invalidTravel) {
         add('error', 'composition-looping-travel', 'looping-environment 必须声明有效 horizontal linear world travel。', `${nodeLocation}.loopingEnvironment.travel`);
       }
       if (
@@ -991,6 +1008,7 @@ export const validateCompositionStructure = ({
       }
       if (
         environment &&
+        !invalidTravel &&
         strips.length > 0 &&
         finite(node.coordinateSpace?.width) &&
         finite(node.coordinateSpace?.height)
@@ -1022,6 +1040,7 @@ export const validateCompositionStructure = ({
             distanceViewports: environment.travel.distanceViewports,
             speedFactor,
             startPhase: environment.travel.startPhase,
+            activeFrom: environment.travel.activeFrom ?? 0,
             overscanPx: environment.overscanPx,
           });
           const coverage = inspectWorldStripCoverage({
@@ -1047,7 +1066,7 @@ export const validateCompositionStructure = ({
             }
           }
         }
-        if (ground) {
+        if (ground && environment.travel.frozen !== true) {
           const groundSpeed = resolveWorldStripSpeedFactor({
             depth: ground.depth,
             far: environment.speedRange.far,
@@ -1083,8 +1102,8 @@ export const validateCompositionStructure = ({
       if (!entry.node.states.some(({id}) => id === assertion.stateId)) add('error', 'composition-sequence-proof-state', `证明 ${proof.id} 引用了不存在的状态 ${assertion.stateId}。`, `${location}.proofTimes#${proof.id}`);
       const resolved = resolveSequenceState({node: entry.node, progress: proof.at});
       if (resolved?.id !== assertion.stateId) add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${assertion.stateId}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
-      const phase = resolveSequencePhase({...entry.node.playback, progress: proof.at});
-      if (entry.node.transition.type === 'crossfade' && resolved?.at === phase && resolved.at > 0) add('error', 'composition-sequence-proof-transition', `证明 ${proof.id} 落在 ${resolved.id} 交叉淡化的起点，此时新状态尚不可见。`, `${location}.proofTimes#${proof.id}`);
+      const layersAtProof = resolveSequenceLayers({node: entry.node, progress: proof.at, durationSeconds});
+      if (entry.node.transition.type === 'crossfade' && layersAtProof.length > 1) add('error', 'composition-sequence-proof-transition', `证明 ${proof.id} 落在 ${resolved?.id ?? 'none'} 的交叉淡化中，此时状态尚未完全可见。`, `${location}.proofTimes#${proof.id}`);
       if (proof.kind === 'final') {
         const stabilitySpan = entry.node.transition.type === 'crossfade'
           ? entry.node.transition.durationSeconds / Math.max(durationSeconds, 1e-9)

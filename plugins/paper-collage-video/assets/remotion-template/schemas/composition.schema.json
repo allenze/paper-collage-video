@@ -276,12 +276,20 @@
       "properties": {
         "mode": {"enum": ["once", "loop", "ping-pong"]},
         "cycles": {"type": "integer", "minimum": 1},
+        "activeFrom": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
         "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
-        "holdStateId": {"type": "string", "minLength": 1}
+        "holdStateId": {"type": "string", "minLength": 1},
+        "activeStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
       },
       "dependentRequired": {
         "activeUntil": ["holdStateId"],
-        "holdStateId": ["activeUntil"]
+        "holdStateId": ["activeUntil"],
+        "activeStateIds": ["activeFrom"]
       },
       "additionalProperties": false
     },
@@ -849,7 +857,9 @@
             "distanceViewports": {"type": "number", "exclusiveMinimum": 0, "maximum": 100},
             "easing": {"const": "linear"},
             "closedLoop": {"type": "boolean"},
-            "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1}
+            "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+            "activeFrom": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+            "frozen": {"type": "boolean"}
           },
           "additionalProperties": false
         },

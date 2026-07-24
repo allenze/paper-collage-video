@@ -33,6 +33,7 @@ export declare const resolveWorldStripFrame: (input: {
   distanceViewports: number;
   speedFactor: number;
   startPhase?: number;
+  activeFrom?: number;
   overscanPx?: number;
   phaseOffsetPx?: number;
 }) => {
@@ -42,6 +43,7 @@ export declare const resolveWorldStripFrame: (input: {
   renderUnwrappedPhase: number;
   firstCopyX: number;
   cameraCompensatedDisplacement: number;
+  travelProgress: number;
   wraps: number;
 };
 

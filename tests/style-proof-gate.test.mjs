@@ -17,12 +17,24 @@ import {
   prepareQualityReport,
   recordQualityReviews,
 } from '../scripts/quality-lib.mjs';
+import {padEvidenceBounds} from '../scripts/asset-evidence-lib.mjs';
 import {ROOT} from '../scripts/project-lib.mjs';
 import {createRuntimeBuildFingerprint} from '../scripts/runtime-build-lib.mjs';
 import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const relativePublicSource = (file) => path.relative(path.join(ROOT, 'public'), file);
 const relativeWorkspaceFile = (file) => path.relative(ROOT, file);
+
+test('evidence padding converts fractional layout bounds into an enclosing integer crop', () => {
+  assert.deepEqual(
+    padEvidenceBounds(
+      {left: 338.4, top: 306.4, width: 576, height: 576},
+      {width: 1920, height: 1080},
+      32,
+    ),
+    {left: 306, top: 274, width: 641, height: 641},
+  );
+});
 const manifestFixture = (projectSlug, assets) => ({
   schemaVersion: 4,
   projectSlug,

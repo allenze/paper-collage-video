@@ -150,6 +150,8 @@
         },
         "closedLoop": {"type": "boolean"},
         "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "activeFrom": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "frozen": {"type": "boolean"},
         "strips": {"type": "array", "minItems": 2, "maxItems": 4, "items": {"$ref": "#/$defs/worldStripIntent"}}
       },
       "additionalProperties": false
@@ -179,6 +181,15 @@
             "distribution": {"enum": ["scattered", "grid", "edge"]},
             "count": {"type": "integer", "minimum": 1, "maximum": 64},
             "cycles": {"type": "number", "exclusiveMinimum": 0, "maximum": 12},
+            "activeFrom": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+            "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+            "holdStateId": {"type": "string", "minLength": 1},
+            "activeStateIds": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
             "bounds": {"$ref": "#/$defs/normalizedRectangle"},
             "exclusionZones": {
               "type": "array",
@@ -348,6 +359,8 @@
         },
         "closedLoop": {"type": "boolean"},
         "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "activeFrom": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "frozen": {"type": "boolean"},
         "strips": {"type": "array", "minItems": 2, "maxItems": 4, "items": {"$ref": "#/$defs/worldStripIntent"}},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },
@@ -384,6 +397,29 @@
       },
       "additionalProperties": false
     },
+    "statePlaybackPlan": {
+      "type": "object",
+      "required": ["mode", "cycles"],
+      "properties": {
+        "mode": {"enum": ["once", "loop", "ping-pong"]},
+        "cycles": {"type": "integer", "minimum": 1},
+        "activeFrom": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "holdStateId": {"type": "string", "minLength": 1},
+        "activeStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      },
+      "dependentRequired": {
+        "activeUntil": ["holdStateId"],
+        "holdStateId": ["activeUntil"],
+        "activeStateIds": ["activeFrom"]
+      },
+      "additionalProperties": false
+    },
     "stateSequence": {
       "type": "object",
       "required": ["nodeId", "poseFamilyId", "states", "playback", "transition"],
@@ -404,7 +440,7 @@
             "additionalProperties": false
           }
         },
-        "playback": {"enum": ["once", "loop", "ping-pong"]},
+        "playback": {"$ref": "#/$defs/statePlaybackPlan"},
         "transition": {"enum": ["cut", "crossfade"]}
       },
       "additionalProperties": false

@@ -16,7 +16,7 @@ A `state-sequence` node contains:
 - `poseFamilyId`: stable semantic identity for the pose/prop family;
 - `registration`: source master, common canvas and top-left origin;
 - ordered `states[]`: state id, public source and normalized activation time;
-- `playback`: `once`, `loop`, or `ping-pong`, plus cycle count; a contact-driven sequence may add `activeUntil` and `holdStateId` so repeated motion ends on one registered state;
+- `playback`: `once`, `loop`, or `ping-pong`, plus cycle count. A sequence may declare `activeFrom` with ordered `activeStateIds` to hold authored prelude poses before a selected registered gait begins; it may additionally add `activeUntil` and `holdStateId` so repeated motion ends on one registered state;
 - `transition`: deterministic `cut` or bounded `crossfade`;
 - one transform/motion/event path applied to the whole family.
 
