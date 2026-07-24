@@ -1,0 +1,134 @@
+# Skill Evolution Backlog
+
+This is the auditable intake for production issues that reveal a reusable
+paper-collage Skill or runtime gap. It is not a substitute for implementation:
+an item stays open until its contract, renderer, validation, proof, tests,
+documentation, and packaged-plugin copy are updated together.
+
+## 2026-07-24 — Cue-gated looping-world travel
+
+- **Origin:** `projects/gui-tu-sai-pao` / 《龟兔赛跑》 preview revision.
+- **Observed failure:** a looping environment starts scrolling at scene frame
+  zero even when its tracked subject is deliberately held in a standing or
+  sleeping pose. This makes a still tableau appear to move and contradicts the
+  narrated action.
+- **Required capability:** an optional normalized `activeFrom` cue on
+  `loopingEnvironment.travel`. The world phase must remain exactly held before
+  the cue; from the cue to the scene end it must complete the authored distance
+  with the same deterministic seams, parallax ordering, and proof coverage.
+- **Acceptance evidence:** schema + authoring compiler + renderer + execution
+  validation + world-motion proof all preserve the cue; a unit test proves a
+  pre-cue hold, mid-travel progress, and full end distance; the packaged Skill
+  documents the behavior and is synchronized.
+- **Status:** implemented and verified in the active worktree: schema,
+  authoring compiler, renderer, execution validator, world-motion proof, unit
+  coverage, packaged documentation, and a fresh project proof now agree on the
+  cue behavior. Retain as a regression criterion until the reviewed Skill
+  update lands.
+
+## 2026-07-24 — Integer evidence crop bounds
+
+- **Origin:** `projects/gui-tu-sai-pao` composition proof.
+- **Observed failure:** fractional normalized layout bounds reached Sharp crop
+  calls as fractional pixels, which rejected otherwise valid proof generation.
+- **Required capability:** evidence padding must produce an enclosing integer
+  crop rectangle without trimming any declared source bound.
+- **Acceptance evidence:** source and packaged test cover fractional bounds;
+  style proof and composition proof complete successfully.
+- **Status:** fixed and verified in the active worktree; retain as a regression
+  criterion until it lands in a reviewed Skill update.
+
+## 2026-07-24 — Limited-animation review rule
+
+- **Origin:** `projects/gui-tu-sai-pao` director review.
+- **Observed failure:** a runner using one static pose plus background motion
+  reads as sliding rather than running; equal apparent turtle/rabbit speed also
+  weakens the story logic.
+- **Required capability:** authoring and quality guidance must require at least
+  two registered alternating action states for a sustained run, and review
+  timing must visibly demonstrate distinct subject speed semantics.
+- **Acceptance evidence:** state-sequence proof samples show both poses in
+  order, while scene assertions identify the intended relative speed and
+  off-screen departure.
+- **Status:** implemented and verified in the active worktree: storyboard
+  authoring now compiles `cycles`, `activeFrom`, and ordered
+  `activeStateIds` into the state-family plan; runtime execution rejects pose,
+  timing, or playback drift; the Skill requires two alternating registered
+  gait states for sustained runs. Generic relative-speed and ordered-race
+  semantic assertions remain tracked below rather than being inferred from a
+  pose sheet alone.
+
+## 2026-07-24 — Scene-world composition continuity and route grounding
+
+- **Origin:** `projects/gui-tu-sai-pao` director review of the first, fourth,
+  and fifth scenes.
+- **Observed failure:** individual scenes can omit the established background,
+  foreground, trees, grass, and route treatment. A bare start/finish line also
+  reads as an unrelated overlay rather than an object in the paper world, while
+  the racers can appear to stand beside or float above the route.
+- **Required capability:** the composition contract and quality scaffold must
+  identify persistent world layers, a subject-safe route band, and in-world
+  race markers. A marker such as a red paper flag labelled `起点` or `终点`
+  must be assessed as part of the same collage language, with a post/base and
+  deliberate scene-relative placement—not merely as text or a line.
+- **Acceptance evidence:** every story scene proves its required world layers
+  and one grounded racer pose; scene contacts show the start and finish marker
+  in the declared visual language and outside the runners' safe staging area.
+- **Status:** captured for the next composition-contract and quality-gate
+  update. The current project uses the approved flag treatment and a shared
+  route band, but the rule is not yet enforced generically.
+
+## 2026-07-24 — Narrative race-event order and direction proof
+
+- **Origin:** `projects/gui-tu-sai-pao` director review of the sleep and
+  finish beats.
+- **Observed failure:** an otherwise plausible cut can begin the sleep scene
+  with both animals together, or make the rabbit visually drift backwards while
+  the turtle crosses. Both contradict the race logic: the rabbit must first
+  establish a large lead, sleep mid-route, and then chase forward while the
+  turtle crosses and the rabbit stops in a defeated pose.
+- **Required capability:** authoring contracts need ordered race-event
+  assertions: overtake, separation/off-screen departure, sleep, turtle pass,
+  wake/chase, finish, and defeated stop. Screen-direction and subject-state
+  proofs must reject a non-narrated backward drift or a finish event in the
+  wrong causal order.
+- **Acceptance evidence:** timeline samples prove each ordered state; a
+  final-scene proof shows the turtle's finish crossing, rabbit forward chase,
+  then rabbit stop/low-head state without a reverse displacement.
+- **Status:** captured for the next semantic-contract and quality-gate update.
+  The current project has authored scene assertions and visual proof, but no
+  reusable ordered-race validator yet.
+
+## 2026-07-24 — Revision-safe scene consolidation and narration continuity
+
+- **Origin:** `projects/gui-tu-sai-pao` recut that merged the initial setup
+  with the rabbit's solo run, and later merged wake/chase with the finish.
+- **Observed failure:** splitting tightly coupled action across separate scenes
+  can introduce duplicate establishing beats and makes the intended causal
+  transition hard to review. Recutting must not force a new paid voice call
+  when the approved narration can be retained and deterministically joined.
+- **Required capability:** preview revision guidance should support a
+  scene-consolidation plan with explicit visual beats, exact existing narration
+  spans, locally derived audio provenance, and retimed proof samples.
+- **Acceptance evidence:** the revised project reports the combined scene's
+  measured audio duration, source tracks, deterministic derivative, transition
+  intent, and post-recut contact sheet; no provider call is attributed to the
+  join.
+- **Status:** captured for the next revision-workflow update. This project
+  records the derived scene-one narration and its measured duration, but the
+  generic revision command does not yet automate the authoring decision.
+
+## 2026-07-24 — Quiet, report-first rendering for long previews
+
+- **Origin:** `projects/gui-tu-sai-pao` preview render.
+- **Observed failure:** one progress update per video frame can overwhelm an
+  automated caller before a long render finishes, obscuring the actual artifact
+  and production state.
+- **Required capability:** normal project preview/render execution must keep
+  error output while suppressing per-frame progress, then publish the artifact
+  path, technical report, contact sheets, and state transition on completion.
+- **Acceptance evidence:** a 1,502-frame preview completes without a progress
+  flood and records the resulting artifact as `human-review`.
+- **Status:** implemented and verified in the active worktree and synchronized
+  to the packaged plugin via Remotion `--log=error`; a fresh preview completed
+  and its report passed.
