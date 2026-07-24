@@ -746,6 +746,15 @@ export type CompositionNode =
 
 export type SceneComposition = {
   coordinateSpace: CoordinateSpace;
+  world?: {
+    id: string;
+    groupId: string;
+    route: {
+      subjectIds: string[];
+      subjectSafeBand: {x: number; y: number; width: number; height: number};
+      markerNodeIds: string[];
+    };
+  };
   nodes: CompositionNode[];
 };
 
@@ -970,6 +979,21 @@ export type PaperCollageProject = {
     mastering: ProjectAudioMastering;
   };
   editorial: EditorialSystem;
+  worlds?: Array<{
+    id: string;
+    sceneIds: string[];
+    requiredStripRoles: Array<'far' | 'mid' | 'ground' | 'near'>;
+  }>;
+  trajectoryContracts?: Array<{
+    id: string;
+    sequence: string[];
+    assertions: Array<
+      | {id: string; kind: 'state-at'; sceneId: string; proofTimeId: string; nodeId: string; stateId: string}
+      | {id: string; kind: 'relative-order'; sceneId: string; proofTimeId: string; leadingNodeId: string; trailingNodeId: string; leadingSide: 'left' | 'right'; minimumGap: number}
+      | {id: string; kind: 'travel'; sceneId: string; proofTimeId: string; nodeId: string; fromProofTimeId: string; toProofTimeId: string; direction: 'left' | 'right'; minimumDelta: number}
+      | {id: string; kind: 'offscreen-at'; sceneId: string; proofTimeId: string; nodeId: string; side: 'left' | 'right'}
+    >;
+  }>;
   scenes: ProjectScene[];
   sceneTransitions: SceneBoundaryTransition[];
 };

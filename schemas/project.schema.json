@@ -30,10 +30,73 @@
     "voice": {"$ref": "#/$defs/voice"},
     "audio": {"$ref": "#/$defs/audio"},
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialProject"},
+    "worlds": {"type": "array", "items": {"$ref": "#/$defs/worldContract"}},
+    "trajectoryContracts": {"type": "array", "items": {"$ref": "#/$defs/trajectoryContract"}},
     "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}},
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}}
   },
   "$defs": {
+    "worldContract": {
+      "type": "object",
+      "required": ["id", "sceneIds", "requiredStripRoles"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "sceneIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "requiredStripRoles": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {"enum": ["far", "mid", "ground", "near"]}
+        }
+      },
+      "additionalProperties": false
+    },
+    "trajectoryAssertion": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "stateId"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "state-at"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "stateId": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "leadingNodeId", "trailingNodeId", "leadingSide", "minimumGap"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "relative-order"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "leadingNodeId": {"type": "string", "minLength": 1}, "trailingNodeId": {"type": "string", "minLength": 1}, "leadingSide": {"enum": ["left", "right"]}, "minimumGap": {"type": "number", "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "fromProofTimeId", "toProofTimeId", "direction", "minimumDelta"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "travel"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "fromProofTimeId": {"type": "string", "minLength": 1}, "toProofTimeId": {"type": "string", "minLength": 1}, "direction": {"enum": ["left", "right"]}, "minimumDelta": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "side"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "offscreen-at"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "side": {"enum": ["left", "right"]}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "trajectoryContract": {
+      "type": "object",
+      "required": ["id", "assertions", "sequence"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "assertions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/trajectoryAssertion"}},
+        "sequence": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
     "plan": {
       "type": "object",
       "required": ["schemaVersion", "slug", "status", "inputMode", "productionProfile", "assetBudget", "motionBudget", "approvedImageBudget", "requested", "resolved", "updatedAt"],

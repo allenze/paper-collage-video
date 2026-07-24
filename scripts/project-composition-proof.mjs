@@ -37,6 +37,7 @@ import {
   activeManifestAssets,
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
+import {summarizeProductionContracts} from './world-trajectory-lib.mjs';
 import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
 import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
 import {
@@ -674,6 +675,7 @@ try {
     frames,
     composites,
     worldMotionProofs: traverseWorldMotionProofs,
+    productionContracts: summarizeProductionContracts(project),
     assetEvidence,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     cache: {

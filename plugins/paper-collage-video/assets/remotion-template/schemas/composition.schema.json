@@ -876,6 +876,26 @@
       },
       "additionalProperties": false
     },
+    "worldRoute": {
+      "type": "object",
+      "required": ["subjectIds", "subjectSafeBand", "markerNodeIds"],
+      "properties": {
+        "subjectIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "subjectSafeBand": {"$ref": "#/$defs/normalizedRectangle"},
+        "markerNodeIds": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "worldBinding": {
+      "type": "object",
+      "required": ["id", "groupId", "route"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "groupId": {"type": "string", "minLength": 1},
+        "route": {"$ref": "#/$defs/worldRoute"}
+      },
+      "additionalProperties": false
+    },
     "groupNode": {
       "type": "object",
       "required": ["id", "kind", "pattern", "z", "coordinateSpace", "transform", "motion", "children"],
@@ -928,6 +948,7 @@
       "required": ["coordinateSpace", "nodes"],
       "properties": {
         "coordinateSpace": {"$ref": "#/$defs/coordinateSpace"},
+        "world": {"$ref": "#/$defs/worldBinding"},
         "nodes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/node"}}
       },
       "additionalProperties": false

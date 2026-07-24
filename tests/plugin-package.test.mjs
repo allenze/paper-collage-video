@@ -114,6 +114,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/prove-alpha-bands.mjs',
   );
   assert.equal(packageJson.scripts['project:plan'], 'node scripts/project-plan.mjs');
+  assert.equal(packageJson.scripts['project:budget'], 'node scripts/project-budget.mjs');
   assert.equal(packageJson.scripts['project:storyboard'], 'node scripts/project-storyboard.mjs');
   assert.equal(packageJson.scripts['project:revise-preview-directing'], 'node scripts/project-revise-preview-directing.mjs');
   assert.equal(packageJson.scripts['project:asset-lifecycle'], 'node scripts/project-asset-lifecycle.mjs');
@@ -128,9 +129,12 @@ test('packaged runtime is lightweight and independent from production projects',
   );
   assert.match(packageJson.scripts['project:quality'], /project-metrics-run\.mjs/);
   assert.match(packageJson.scripts['project:composition-proof'], /category=evidence-render/);
+  assert.match(packageJson.scripts['project:scene-preview'], /scene-preview-render/);
+  assert.equal(packageJson.scripts['project:render-status'], 'node scripts/project-render-status.mjs');
   assert.equal(packageJson.scripts['project:metrics'], 'node scripts/project-metrics.mjs');
   assert.match(packageJson.scripts['project:audio-preflight'], /category=deterministic-check/);
   assert.match(packageJson.scripts['project:audio-calibration'], /category=deterministic-check/);
+  assert.match(packageJson.scripts['project:stitch-narration'], /stitch-narration/);
   assert.equal(packageJson.scripts['project:subtitles'], 'node scripts/project-subtitles.mjs');
   assert.match(packageJson.scripts['style:proof'], /category=evidence-render/);
   assert.equal(
@@ -230,8 +234,11 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/project-metrics.mjs',
     'scripts/project-audio-preflight.mjs',
     'scripts/project-audio-calibration.mjs',
+    'scripts/project-stitch-narration.mjs',
+    'scripts/project-budget.mjs',
     'scripts/project-asset-lifecycle.mjs',
     'scripts/render-cache-lib.mjs',
+    'scripts/render-status-lib.mjs',
     'scripts/runtime-build-lib.mjs',
     'scripts/subtitle-lib.mjs',
     'scripts/project-subtitles.mjs',
@@ -241,13 +248,16 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/registered-family-lib.mjs',
     'scripts/motion-treatment-lib.mjs',
     'scripts/project-composition-proof.mjs',
+    'scripts/project-render-status.mjs',
     'scripts/phase2-proof-lib.mjs',
     'scripts/prepare-phase2-proof.mjs',
     'scripts/project-semantic-contracts.mjs',
     'scripts/project-plan.mjs',
     'scripts/project-storyboard.mjs',
     'scripts/project-revise-preview-directing.mjs',
+    'scripts/project-scene-preview.mjs',
     'scripts/storyboard-lib.mjs',
+    'scripts/world-trajectory-lib.mjs',
     'scripts/render-phase2-proof.mjs',
     'scripts/schema-v10.mjs',
     'scripts/validate_v10_schemas.py',

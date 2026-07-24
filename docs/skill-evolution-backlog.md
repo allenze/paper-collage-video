@@ -74,9 +74,14 @@ documentation, and packaged-plugin copy are updated together.
 - **Acceptance evidence:** every story scene proves its required world layers
   and one grounded racer pose; scene contacts show the start and finish marker
   in the declared visual language and outside the runners' safe staging area.
-- **Status:** captured for the next composition-contract and quality-gate
-  update. The current project uses the approved flag treatment and a shared
-  route band, but the rule is not yet enforced generically.
+- **Status:** implemented as a reusable contract in this update. `worlds[]`
+  requires far/mid/ground/near roles across every bound scene; each
+  `composition.world` binds a looping group, route-safe band, travelers and
+  grounded marker node ids. Project validation and composition-proof reports
+  consume it, and deterministic tests reject a missing depth layer, an
+  out-of-band traveler, or a floating marker. The flag's visual craft
+  (post/base illustration and typography choice) remains a human composite
+  quality judgement rather than a fake pixel-level semantic detector.
 
 ## 2026-07-24 — Narrative race-event order and direction proof
 
@@ -95,9 +100,12 @@ documentation, and packaged-plugin copy are updated together.
 - **Acceptance evidence:** timeline samples prove each ordered state; a
   final-scene proof shows the turtle's finish crossing, rabbit forward chase,
   then rabbit stop/low-head state without a reverse displacement.
-- **Status:** captured for the next semantic-contract and quality-gate update.
-  The current project has authored scene assertions and visual proof, but no
-  reusable ordered-race validator yet.
+- **Status:** implemented as a generic `trajectoryContracts[]` validator in
+  this update. It verifies proof-bound state, relative order/minimum gap,
+  signed travel distance, off-screen exit and non-decreasing film order;
+  deterministic tests reject reverse travel, broken lead separation and a
+  reversed event sequence. A race author still declares its own participants
+  and semantics—there is no rabbit/turtle special case.
 
 ## 2026-07-24 — Revision-safe scene consolidation and narration continuity
 
@@ -114,9 +122,14 @@ documentation, and packaged-plugin copy are updated together.
   measured audio duration, source tracks, deterministic derivative, transition
   intent, and post-recut contact sheet; no provider call is attributed to the
   join.
-- **Status:** captured for the next revision-workflow update. This project
-  records the derived scene-one narration and its measured duration, but the
-  generic revision command does not yet automate the authoring decision.
+- **Status:** partially implemented in this update. `project:stitch-narration`
+  accepts only adjacent source scenes and creates a local WAV derivative plus
+  source-scene provenance, SHA-256, combined text and retimed subtitle spans;
+  it never calls a provider. The creative replacement scene is deliberately
+  still authored and reviewed before it is introduced through director
+  revision, because automatically merging two compositions would otherwise
+  fabricate visual intent. A fully declarative scene-recut authoring command
+  remains an open follow-up.
 
 ## 2026-07-24 — Quiet, report-first rendering for long previews
 
@@ -131,4 +144,7 @@ documentation, and packaged-plugin copy are updated together.
   flood and records the resulting artifact as `human-review`.
 - **Status:** implemented and verified in the active worktree and synchronized
   to the packaged plugin via Remotion `--log=error`; a fresh preview completed
-  and its report passed.
+  and its report passed. This update also adds persisted `project:render-status`
+  lifecycle records, so callers can query phase/artifact/error without
+  re-enabling noisy per-frame logs; it deliberately reports exact percentage
+  as unavailable when the underlying quiet CLI provides no authoritative value.

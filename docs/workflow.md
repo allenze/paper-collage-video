@@ -43,7 +43,7 @@ capability-review
 
 `project:plan --json` 会针对当前幕数返回三个档位的准确基础生图额度、图层源包恢复 reserve、profile 硬上限、姿态母版调用/格数、连续动效目标上限、成片影响和时长权威。单幕默认 profile 硬上限为 draft `4+2=6`、balanced `4+4=8`、full-depth `5+6=11`；它只是规划容量，不是项目的 provider 授权。首次规划时同时传入时长、幕数等写入参数；已有已解析计划时，只传 slug 与 `--json` 即可只读重显选项而不改写项目。概念确认卡与“修改后再继续”路径都直接显示这些结构化选项；批准文件用 `planDecision` 回填档位、时长、幕数和 `human-target` / `content-derived`，并用 `budgetDecision.imageAttemptLimit` 记录不低于 storyboard 预计调用、不高于 profile ceiling 的精确人批上限。Creative Plan v4 把它写入 `approvedImageBudget`，attempt ledger 只按这个更窄上限预留，避免自然语言备注与机器计划漂移。
 
-计划完成后，Codex 先为每个节拍判断可见变化，并用 `project:storyboard` 锁定 schema-v10 `treatments`、统一 edit points、三画幅导演计划与相邻场景边界。边界的 `intent` 只表达连续、地点、时间、焦点、章节、匹配或冲击等叙事目的，独立 `treatment` 表达纸张转场、节奏/冲击硬切或高级编辑匹配；普通意图的 rhythmic cut 与 match cut 必须绑定经过冲突解析的 edit point。动作、持久显隐、组合关系、图形机制、字体、注释、数据图形和语义风险是正交维度：姿态/道具状态变化路由到 `state-sequence`，环境呼吸和镜头变化路由到连续变换，整组相机景深路由到 `depth-parallax`，会暴露隐藏像素的三层差速路由到 `registered-depth-stack`，重复装饰路由到确定性 `motif-field`。相对 rear/subject/front 运动必须先声明 clean-plate / full-silhouette / full-overlay、共享画布、严格深度、源包策略和 16:9 / 9:16 / 1:1 reveal envelope；不允许从一张只含可见像素的合成母图抠层。命令确定性编译 `compositionPlan`、`sourcePackagePlans`、`editPointPlan`、`responsivePlans`、`advancedTransitionPlans`、多维风格证明计划、姿态母版网格、实际 provider 调用、local derivatives、avoided calls 和指纹；Renderer 不含隐藏画幅特例。输入不能手写派生字段。每个节拍显式声明 proof 绑定或 null；必需动作或源包超出档位时阻断并要求提高档位或缩小故事范围，不会偷偷降级。它不增加审批次数，而是与叙事、事实、制作档位、`budgetDecision`、完整 `sourcePackageDecision` 和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入这些决定并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
+计划完成后，Codex 先为每个节拍判断可见变化，并用 `project:storyboard` 锁定 schema-v10 `treatments`、统一 edit points、三画幅导演计划与相邻场景边界。边界的 `intent` 只表达连续、地点、时间、焦点、章节、匹配或冲击等叙事目的，独立 `treatment` 表达纸张转场、节奏/冲击硬切或高级编辑匹配；普通意图的 rhythmic cut 与 match cut 必须绑定经过冲突解析的 edit point。动作、持久显隐、组合关系、图形机制、字体、注释、数据图形和语义风险是正交维度：姿态/道具状态变化路由到 `state-sequence`，环境呼吸和镜头变化路由到连续变换，整组相机景深路由到 `depth-parallax`，会暴露隐藏像素的三层差速路由到 `registered-depth-stack`，重复装饰路由到确定性 `motif-field`。相对 rear/subject/front 运动必须先声明 clean-plate / full-silhouette / full-overlay、共享画布、严格深度、源包策略和 16:9 / 9:16 / 1:1 reveal envelope；不允许从一张只含可见像素的合成母图抠层。需要跨幕持续空间时，根级 `worlds[]` 必须明确 far/mid/ground/near 世界层，逐幕 `composition.world` 必须绑定同一世界、循环环境组、路线安全带、行进主体和地面锚定标记；这阻断了静止镜头中背景滑动、悬浮起终点线和角色脱离跑道。需要可验证的故事运动时，`trajectoryContracts[]` 将姿态、相对领先、方向/距离、离屏和全片 proof 顺序绑定为机器检查，不能把“追赶、超越、入睡、冲线、止步”等因果只留在自然语言里。命令确定性编译 `compositionPlan`、`sourcePackagePlans`、`editPointPlan`、`responsivePlans`、`advancedTransitionPlans`、多维风格证明计划、姿态母版网格、实际 provider 调用、local derivatives、avoided calls 和指纹；Renderer 不含隐藏画幅特例。输入不能手写派生字段。每个节拍显式声明 proof 绑定或 null；必需动作或源包超出档位时阻断并要求提高档位或缩小故事范围，不会偷偷降级。它不增加审批次数，而是与叙事、事实、制作档位、`budgetDecision`、完整 `sourcePackageDecision` 和 text/image/voice provider 一起由人一次确认。`project:confirm-concept` 批量写入这些决定并记录 `capabilities-ready`、`brief-ready`、`approve-concept`，直接进入 `style-review`。
 
 ## 2. 风格与虚构音色确认
 
@@ -55,7 +55,7 @@ capability-review
 
 生成时同时遵守概念批准的精确图片 attempt 上限、profile ceiling、编译后的 `sourcePackagePlans` 与 `poseSheetPlans`；profile ceiling 较大也不能越过更窄的人批 cap。废稿、质量拒绝和生成后放弃的结果在发生额度消耗时同样计数。同一人物或道具的多个状态始终用一次 2x2 或 3x2 注册 sheet 生成并在本地保留统一画布切格/抠图。单格失败先做本地确定性重处理；若必须调用 provider，只能用完整原 sheet 作为上下文做局部 mask 编辑并证明其他格未变，否则整张重生。不得独立生一格再拼回家族。相对运动图层优先用一张 2x2 registered layer sheet 同时提供 reference、完整 rear、完整 subject 和完整 front；provider 不能可靠产出该 sheet 时，才使用一次完整 reference 加三次保留 reference 上下文的 layer edits。flat reference 只能用于重建比较，不能被 mask 冒充隐藏内容完整的成员。派生状态和 layer splits 不重复计为 provider 调用，最终报告列出真实源调用、确定性派生和避免调用。没有完整图层源包时保持 `rigid-locked` 整体运动。角色 generation family 与图层 source family 独立。图片质量逐文件绑定 SHA-256 和语义契约指纹，组合质量绑定成员、变换、reveal envelopes、环境边界、事件、场景交接、证明和语义目标。只读 attempt summary 与 validation report 同时给出 profile ceiling、人批 cap、预计、已用、预留和剩余额度，作为预算 proof。
 
-组装后先运行 `project:composition-proof`。它只重渲染项目、资产或 runtime-build 指纹变化的证明帧/目标，并为普通耦合素材生成 alpha、棋盘格、紧裁和运动压力证据；depth stack 生成 neutral/reference/exploded 和三画幅 reveal-envelope 极值证据。显式 `--force` 会禁用所有证明缓存并写入报告。随后用 `project:quality scaffold` 生成待填写审核批次，检查真实全帧、关系裁切、跨场景人物比较、机构受力链和说明图原分辨率裁切，再用 `record-batch` 记录真实判断。脚手架不会预先通过任何检查。说明图 SVG 的程序噪声滤镜由运行时确定性拒绝。这个内部证据步骤不增加第四个人工门。
+组装后先运行 `project:composition-proof`。它只重渲染项目、资产或 runtime-build 指纹变化的证明帧/目标，并为普通耦合素材生成 alpha、棋盘格、紧裁和运动压力证据；depth stack 生成 neutral/reference/exploded 和三画幅 reveal-envelope 极值证据；报告也写入已验证的世界与轨迹契约摘要。显式 `--force` 会禁用所有证明缓存并写入报告。随后用 `project:quality scaffold` 生成待填写审核批次，检查真实全帧、关系裁切、跨场景人物比较、机构受力链和说明图原分辨率裁切，再用 `record-batch` 记录真实判断。脚手架不会预先通过任何检查。说明图 SVG 的程序噪声滤镜由运行时确定性拒绝。这个内部证据步骤不增加第四个人工门。
 
 素材完成后只运行：
 
@@ -70,6 +70,8 @@ npm run project:assets-ready -- <slug>
 ## 4. 预览、修改与正式交付
 
 人查看预览并批准或用自然语言提出修改。修改会回到 `asset-production`。纯导演调整使用 `project:revise-preview-directing -- <slug> --input=<storyboard.json>`：只允许改节奏、treatments、证明时刻和合法场景边界，重新校验既定 motion budget，保护已批准概念/风格，并自动使旧预览、报告和受影响工作项失效。概念或制作档位变化仍走各自审批路径。
+
+预览阶段需要检查一幕实际构图时，运行 `project:scene-preview -- <slug> --scene=<sceneId>`；它从当前 `project.json` 的真实节点、旁白和运行时独立渲染该幕，而不是用风格样张替代。需要合并相邻幕时，先运行 `project:stitch-narration -- <slug> --scenes=<a,b,...> --target-scene=<new-id>`，它只拼接已批准的本地旁白，记录原幕、SHA-256、连续字幕偏移和明确下一步；随后将经过审阅的合幕 scene 写入导演重编并重新证明。`project:budget` 以一份只读摘要显示 profile ceiling、人批 cap、故事板预计调用、已用、预留、剩余和避免调用。渲染期间可调用 `project:render-status` 查询持久化阶段、artifact 和错误；它只在运行时有正式进度来源时显示百分比，静默 Remotion CLI 会明确报告百分比不可得而不是输出逐帧噪声。
 
 预览批准后运行 `project:render`。正式 MP4、报告、联系表和校验报告通过后，状态直接进入 `complete`。这只表示本地制作完成，不授权任何外部发布。
 

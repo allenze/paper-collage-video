@@ -45,6 +45,7 @@ import {
   inspectAlphaBands,
 } from './alpha-band-lib.mjs';
 import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
+import {validateProductionContracts} from './world-trajectory-lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -1363,6 +1364,10 @@ export const validateProject = async (project, options = {}) => {
         'plan.approvedImageBudget.imageAttemptLimit',
       );
     }
+  }
+
+  for (const issue of validateProductionContracts(project)) {
+    add(issue.level, issue.code, issue.message, issue.location);
   }
 
   const errors = issues.filter(({level}) => level === 'error').length;
