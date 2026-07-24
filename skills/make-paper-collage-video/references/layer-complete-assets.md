@@ -21,6 +21,14 @@ Never label a flat opaque master as `bounded-relative`. If a project needs only
 carrier motion, retain it as `rigid-locked`; do not create a false registered
 family by masking visible fragments.
 
+This finite-canvas decision is separate from a persistent travelling world.
+When a car, train, or boat stays near the focal corridor while mountains,
+trees, road, or shoreline keep moving beyond the viewport, use
+`looping-environment`. Each semantic `world-strip` owns one proved horizontal
+canonical tile and an infinite logical world; the group also owns exactly one
+tracked subject that does not inherit strip phase. Do not enlarge a
+`registered-depth-stack` envelope or duplicate image nodes to simulate this.
+
 ## Compile the Source Package Before Provider Approval
 
 For every layer-aware treatment, author:
@@ -129,6 +137,16 @@ output identity match, and every observed plane passes. It never reserves or
 spends quota and never writes `generation-attempts.jsonl`.
 
 ## Runtime and Provenance
+
+`assets:derive-looping-strip` consumes schema-v1 horizontal strip specs. The
+active source record, canonical period/crop, RGB and alpha edge bands,
+source/render-scale thresholds, three responsive viewport spans, recovery
+policy, output SHA, lifecycle, and derivation fingerprint become one
+`loopingStripBinding`. `exact` accepts already matching edge bands;
+`overlap-crop` selects one declared period deterministically. Recovery order is
+local period/crop correction, a masked edit with the complete original strip
+and both edge neighborhoods visible, then complete-strip regeneration.
+Isolated edge generation and runtime crossfade seam hiding are invalid.
 
 `assets:derive-registered-family` consumes only schema-v2 family specs. Every
 member must:

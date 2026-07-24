@@ -481,10 +481,11 @@
         ],
         "motifFields": [],
         "graphics": [],
-        "layerStacks": []
+        "layerStacks": [],
+        "loopingEnvironments": []
       },
       "directing": {
-        "fingerprint": "3da16adb6b4f304044128244e802c86d388afe038456b60678f4cf11b45037db",
+        "fingerprint": "9911e51fe656aa35ee11d56d104c49daba31f1fc17943efafe32cf3285a2bd71",
         "treatmentCount": 3,
         "riskScore": 13,
         "highestRiskTreatmentId": "show-traveler"
@@ -534,7 +535,7 @@
           "targetId": "traveler",
           "proofTimeId": "proof-action",
           "riskScore": 13,
-          "directingFingerprint": "3da16adb6b4f304044128244e802c86d388afe038456b60678f4cf11b45037db",
+          "directingFingerprint": "9911e51fe656aa35ee11d56d104c49daba31f1fc17943efafe32cf3285a2bd71",
           "sourceFamilyKey": "target:traveler",
           "coverage": [
             "baseline:representative"
@@ -544,8 +545,8 @@
       "sourceFamilyKeys": [
         "target:traveler"
       ],
-      "fingerprint": "e33f0623062623140de4557f134f7636883495506f75f8e16cae963d2e573adb"
+      "fingerprint": "55c7c9a6fdb1e1f5e6c50757c8907e3e1cfffd5cb62dd5def90957808c55e656"
     },
-    "fingerprint": "66619e8772135d8ca30245ae34c3136c8bcfc7ee96aa411e13a633e69564a2c0"
+    "fingerprint": "09e229ab60db0f6d352b0acd52e7cbe123269a5decdae03f2c24634ce77e5464"
   }
 }

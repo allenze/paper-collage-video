@@ -106,12 +106,12 @@ export const validateParallaxRig = ({
     for (const node of items) {
       if (
         parent?.kind === 'group' &&
-        !['free', 'registered-depth-stack'].includes(parent.pattern) &&
+        !['free', 'registered-depth-stack', 'looping-environment'].includes(parent.pattern) &&
         node.depth !== undefined
       ) {
         add(
           'parallax-coupled-child-depth',
-          '除 registered-depth-stack 外，耦合组合的子节点不得单独声明 depth；应由 group 作为景深载体。',
+          '除 registered-depth-stack 与 looping-environment 外，耦合组合的子节点不得单独声明 depth；应由 group 作为景深载体。',
           `${location.replace(/camera\.parallax$/, 'composition')}#${node.id}.depth`,
         );
       }

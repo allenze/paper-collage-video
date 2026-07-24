@@ -7,7 +7,7 @@
 
 当前开发协议为 project/storyboard v10（editorial subsystem 仍为 v9）；旧项目不会自动迁移或回退。v10 保留递归组合、注册源家族、camera-coupled parallax、节奏硬切、确定性 `motif-field`、统一 edit point、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级编辑切换，并新增生图前的 layer-complete source package、`registered-depth-stack`、responsive reveal envelope 和精确 provider/local/avoided 调用账目。所有这些行为都由 authoring、compiled plan、运行时、质量报告和正式证明共同约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
 
-当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.7`。新协议加入节奏故事板、注册组合模式、完整图层源包、provider-native observed key plane、逐格 opaque/chroma-key registered sheet、rejected-output recovery-source、人工批准的精确图片 attempt 上限、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
+当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.8`。新协议加入节奏故事板、注册组合模式、完整图层源包、provider-native observed key plane、逐格 opaque/chroma-key registered sheet、rejected-output recovery-source、人工批准的精确图片 attempt 上限、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、无缝 looping world strips、camera-compensated world-motion proof、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
 
 ## 完整演示
 

@@ -19,6 +19,15 @@ import {
   resolveAnnotationRoute,
   validateDataGraphicNode,
 } from '../src/editorialPrimitives.mjs';
+import {
+  WORLD_STRIP_MIN_VIEWPORT_SPAN,
+  inspectWorldStripCoverage,
+  resolveWorldStripCopies,
+  resolveWorldStripFrame,
+  resolveWorldStripSpeedFactor,
+  resolveWorldStripTileGeometry,
+  validateClosedWorldStripLoop,
+} from '../src/worldStrip.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -139,10 +148,14 @@ export const collectStateSequences = (composition) =>
 export const collectMotifFields = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'motif-field');
 
+export const collectWorldStrips = (composition) =>
+  flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'world-strip');
+
 export const collectCompositionVisualSources = (composition) => [
   ...collectCompositionAssets(composition).map(({node}) => node.src),
   ...collectStateSequences(composition).flatMap(({node}) => node.states.map(({src}) => src)),
   ...collectMotifFields(composition).flatMap(({node}) => node.motifs.map(({src}) => src)),
+  ...collectWorldStrips(composition).map(({node}) => node.src),
 ];
 
 export const pointInPolygon = ([x, y], polygon = []) => {
@@ -229,7 +242,7 @@ export const validateCompositionStructure = ({
   const add = (level, code, message, issueLocation) => issues.push({level, code, message, location: issueLocation});
   if (!composition || typeof composition !== 'object') {
     add('error', 'composition-required', '每个镜头必须声明 composition。', location);
-    return {issues, nodeIds: new Set(), groups: [], assets: [], sequences: [], motifFields: [], freeNodes: []};
+    return {issues, nodeIds: new Set(), groups: [], assets: [], sequences: [], motifFields: [], worldStrips: [], freeNodes: []};
   }
   if (
     composition.coordinateSpace?.width !== video?.width ||
@@ -246,11 +259,12 @@ export const validateCompositionStructure = ({
   const assets = [];
   const sequences = [];
   const motifFields = [];
+  const worldStrips = [];
   for (const {node, parent} of flat) {
     const nodeLocation = `${location}.nodes#${node?.id ?? 'missing'}`;
     if (!nonEmpty(node?.id) || nodeIds.has(node.id)) add('error', 'composition-node-id', '组合节点 id 缺失或重复。', `${nodeLocation}.id`);
     nodeIds.add(node?.id);
-    if (!['asset', 'state-sequence', 'typography', 'shape', 'annotation', 'data-graphic', 'editorial-switch', 'motif-field', 'group'].includes(node?.kind)) {
+    if (!['asset', 'state-sequence', 'typography', 'shape', 'annotation', 'data-graphic', 'editorial-switch', 'motif-field', 'world-strip', 'group'].includes(node?.kind)) {
       add('error', 'composition-node-kind', `未知组合节点 kind：${node?.kind}`, `${nodeLocation}.kind`);
       continue;
     }
@@ -281,6 +295,82 @@ export const validateCompositionStructure = ({
       if (!nonEmpty(node.src)) add('error', 'composition-asset-src', 'asset 节点必须声明 src。', `${nodeLocation}.src`);
       if (!['background', 'environment', 'character', 'prop', 'decorative'].includes(node.assetRole)) add('error', 'composition-asset-role', `未知 assetRole：${node.assetRole}`, `${nodeLocation}.assetRole`);
       if (node.clip && parent?.pattern !== 'registered-environment') add('error', 'composition-clip-parent', '只有 registered-environment 子资产可以声明 clip。', `${nodeLocation}.clip`);
+      continue;
+    }
+
+    if (node.kind === 'world-strip') {
+      worldStrips.push({node, parent});
+      if (parent?.pattern !== 'looping-environment') {
+        add('error', 'composition-world-strip-parent', 'world-strip 只能作为 looping-environment 的直接子节点。', nodeLocation);
+      }
+      if (!['far', 'mid', 'ground', 'near'].includes(node.role)) {
+        add('error', 'composition-world-strip-role', `未知 world-strip role：${node.role}`, `${nodeLocation}.role`);
+      }
+      if (!nonEmpty(node.src)) {
+        add('error', 'composition-world-strip-src', 'world-strip 必须声明 src。', `${nodeLocation}.src`);
+      }
+      const binding = node.loopingStripBinding;
+      if (
+        binding?.schemaVersion !== 1 ||
+        binding?.axis !== 'x' ||
+        binding?.role !== node.role ||
+        !nonEmpty(binding?.stripId) ||
+        !nonEmpty(binding?.sourceAssetId) ||
+        !nonEmpty(binding?.derivationFingerprint)
+      ) {
+        add('error', 'composition-world-strip-binding', 'world-strip 必须绑定当前 schema-v1 horizontal looping strip provenance。', `${nodeLocation}.loopingStripBinding`);
+      }
+      if (!['exact', 'overlap-crop'].includes(binding?.seamStrategy)) {
+        add('error', 'composition-world-strip-strategy', 'world-strip seamStrategy 必须是 exact 或 overlap-crop。', `${nodeLocation}.loopingStripBinding.seamStrategy`);
+      }
+      const output = binding?.output;
+      if (
+        !Number.isInteger(output?.width) ||
+        output.width < 1 ||
+        !Number.isInteger(output?.height) ||
+        output.height < 1
+      ) {
+        add('error', 'composition-world-strip-output', 'world-strip binding 必须声明有效 output dimensions。', `${nodeLocation}.loopingStripBinding.output`);
+      }
+      const transform = node.transform ?? {};
+      if (
+        transform.x !== 0 ||
+        transform.width !== 1 ||
+        transform.anchorX !== 0 ||
+        transform.anchorY !== 0 ||
+        !(finite(transform.height) && transform.height > 0)
+      ) {
+        add('error', 'composition-world-strip-viewport', 'world-strip 必须以 x=0/width=1/top-left anchor 覆盖父级 viewport，并显式声明渲染高度。', `${nodeLocation}.transform`);
+      } else if (
+        Number.isInteger(output?.width) &&
+        output.width > 0 &&
+        Number.isInteger(output?.height) &&
+        output.height > 0 &&
+        finite(parent?.coordinateSpace?.width) &&
+        finite(parent?.coordinateSpace?.height)
+      ) {
+        const geometry = resolveWorldStripTileGeometry({
+          viewportWidth: parent.coordinateSpace.width,
+          viewportHeight: parent.coordinateSpace.height,
+          renderHeight: transform.height * parent.coordinateSpace.height,
+          sourceWidth: output.width,
+          sourceHeight: output.height,
+          overscanPx: parent.loopingEnvironment?.overscanPx ?? 2,
+        });
+        if (geometry.viewportSpan + 1e-9 < WORLD_STRIP_MIN_VIEWPORT_SPAN) {
+          add('error', 'composition-world-strip-span', `world-strip 实际宽度仅 ${geometry.viewportSpan.toFixed(3)} 个 viewport；环境条带至少需要 ${WORLD_STRIP_MIN_VIEWPORT_SPAN}。`, `${nodeLocation}.loopingStripBinding.output`);
+        }
+        if (geometry.viewportSpan + 1e-9 < (binding.minimumViewportSpan ?? Infinity)) {
+          add('error', 'composition-world-strip-binding-span', `world-strip 实际 viewport span ${geometry.viewportSpan.toFixed(3)} 小于 binding 声明的 ${binding.minimumViewportSpan}。`, `${nodeLocation}.loopingStripBinding.minimumViewportSpan`);
+        }
+      }
+      const hasLocalTravel = (node.motion?.keyframes ?? []).some(
+        ({x = 0, y = 0, scale = 1, rotation = 0}) =>
+          x !== 0 || y !== 0 || scale !== 1 || rotation !== 0,
+      );
+      if (hasLocalTravel || (node.motion?.idle && node.motion.idle.preset !== 'still')) {
+        add('error', 'composition-world-strip-duplicate-motion', 'world-strip 的世界位移由父级 loopingEnvironment 独占；节点不得重复关键帧或 idle 位移。', `${nodeLocation}.motion`);
+      }
       continue;
     }
 
@@ -819,6 +909,156 @@ export const validateCompositionStructure = ({
         }
       }
     }
+
+    if (node.pattern === 'looping-environment') {
+      const environment = node.loopingEnvironment;
+      if (
+        environment?.axis !== 'x' ||
+        !['left', 'right'].includes(environment?.travel?.direction) ||
+        environment?.travel?.easing !== 'linear' ||
+        !(finite(environment?.travel?.distanceViewports) && environment.travel.distanceViewports > 0) ||
+        !(finite(environment?.travel?.startPhase) && environment.travel.startPhase >= 0 && environment.travel.startPhase < 1) ||
+        typeof environment?.travel?.closedLoop !== 'boolean'
+      ) {
+        add('error', 'composition-looping-travel', 'looping-environment 必须声明有效 horizontal linear world travel。', `${nodeLocation}.loopingEnvironment.travel`);
+      }
+      if (
+        !(finite(environment?.speedRange?.far) && environment.speedRange.far > 0) ||
+        !(finite(environment?.speedRange?.near) && environment.speedRange.near > environment.speedRange.far)
+      ) {
+        add('error', 'composition-looping-speed-range', 'looping-environment 必须满足 0 < speedRange.far < speedRange.near。', `${nodeLocation}.loopingEnvironment.speedRange`);
+      }
+      if (!(finite(environment?.overscanPx) && environment.overscanPx >= 0 && environment.overscanPx <= 16)) {
+        add('error', 'composition-looping-overscan', 'looping-environment overscanPx 必须位于 0..16。', `${nodeLocation}.loopingEnvironment.overscanPx`);
+      }
+      const strips = (node.children ?? []).filter((child) => child.kind === 'world-strip');
+      const trackedSubject = (node.children ?? []).find(
+        ({id}) => id === environment?.trackedSubjectId,
+      );
+      if (
+        strips.length < 2 ||
+        !trackedSubject ||
+        !['asset', 'state-sequence'].includes(trackedSubject.kind) ||
+        (node.children ?? []).length !== strips.length + 1
+      ) {
+        add(
+          'error',
+          'composition-looping-members',
+          'looping-environment 必须包含至少两个 world-strip，以及唯一一个不继承世界滚动的 asset/state-sequence tracked subject。',
+          `${nodeLocation}.children`,
+        );
+      }
+      const roles = new Set();
+      for (const strip of strips) {
+        if (roles.has(strip.role)) {
+          add('error', 'composition-looping-role-duplicate', `looping-environment role 重复：${strip.role}。`, `${nodeLocation}.children`);
+        }
+        roles.add(strip.role);
+      }
+      const ground = strips.find(({id}) => id === environment?.groundStripId);
+      if (!ground || ground.role !== 'ground') {
+        add('error', 'composition-looping-ground', 'loopingEnvironment.groundStripId 必须指向 role=ground 的 world-strip。', `${nodeLocation}.loopingEnvironment.groundStripId`);
+      }
+      if (
+        !trackedSubject ||
+        !['asset', 'state-sequence'].includes(trackedSubject.kind)
+      ) {
+        add(
+          'error',
+          'composition-looping-tracked-subject',
+          'loopingEnvironment.trackedSubjectId 必须指向组内唯一的 asset/state-sequence 主体，以便远景与近景可分别位于其后方和前方。',
+          `${nodeLocation}.loopingEnvironment.trackedSubjectId`,
+        );
+      }
+      const seamProofs = ['before', 'seam', 'after'].map((key) =>
+        proofTimes.find(({id}) => id === environment?.seamProofTimeIds?.[key]),
+      );
+      if (
+        seamProofs.some((proof) => !proof) ||
+        !(seamProofs[0]?.at < seamProofs[1]?.at && seamProofs[1]?.at < seamProofs[2]?.at)
+      ) {
+        add('error', 'composition-looping-seam-proofs', 'loopingEnvironment 必须绑定按时间递增的 before/seam/after 三个真实 proof time。', `${nodeLocation}.loopingEnvironment.seamProofTimeIds`);
+      }
+      const roleOrder = new Map(['far', 'mid', 'ground', 'near'].map((role, index) => [role, index]));
+      const orderedByDepth = [...strips].sort(
+        (left, right) => roleOrder.get(left.role) - roleOrder.get(right.role),
+      );
+      for (let index = 1; index < orderedByDepth.length; index += 1) {
+        if (!(orderedByDepth[index - 1].depth < orderedByDepth[index].depth)) {
+          add('error', 'composition-looping-depth-order', 'world-strip depth 必须严格递增，才能导出单调世界速度。', `${nodeLocation}.children`);
+          break;
+        }
+      }
+      if (
+        environment &&
+        strips.length > 0 &&
+        finite(node.coordinateSpace?.width) &&
+        finite(node.coordinateSpace?.height)
+      ) {
+        let previousSpeed = -Infinity;
+        for (const strip of orderedByDepth) {
+          const speedFactor = resolveWorldStripSpeedFactor({
+            depth: strip.depth,
+            far: environment.speedRange.far,
+            near: environment.speedRange.near,
+          });
+          if (!(speedFactor > previousSpeed)) {
+            add('error', 'composition-looping-speed-order', 'world-strip 绝对速度必须随 depth 严格增加。', `${nodeLocation}.children`);
+          }
+          previousSpeed = speedFactor;
+          const geometry = resolveWorldStripTileGeometry({
+            viewportWidth: node.coordinateSpace.width,
+            viewportHeight: node.coordinateSpace.height,
+            renderHeight: strip.transform.height * node.coordinateSpace.height,
+            sourceWidth: strip.loopingStripBinding.output.width,
+            sourceHeight: strip.loopingStripBinding.output.height,
+            overscanPx: environment.overscanPx,
+          });
+          const stripFrame = resolveWorldStripFrame({
+            progress: 0.5,
+            viewportWidth: node.coordinateSpace.width,
+            tileWidth: geometry.tileWidth,
+            direction: environment.travel.direction,
+            distanceViewports: environment.travel.distanceViewports,
+            speedFactor,
+            startPhase: environment.travel.startPhase,
+            overscanPx: environment.overscanPx,
+          });
+          const coverage = inspectWorldStripCoverage({
+            copies: resolveWorldStripCopies({
+              firstCopyX: stripFrame.firstCopyX,
+              tileWidth: geometry.tileWidth,
+              copyCount: geometry.copyCount,
+            }),
+            viewportWidth: node.coordinateSpace.width,
+          });
+          if (!coverage.passed) {
+            add('error', 'composition-looping-coverage', `world-strip ${strip.id} 在最坏中间相位出现 ${coverage.uncoveredPixels.toFixed(3)}px 未覆盖。`, `${nodeLocation}.children#${strip.id}`);
+          }
+          if (environment.travel.closedLoop) {
+            const closure = validateClosedWorldStripLoop({
+              distanceViewports: environment.travel.distanceViewports,
+              viewportWidth: node.coordinateSpace.width,
+              speedFactor,
+              tileWidth: geometry.tileWidth,
+            });
+            if (!closure.passed) {
+              add('error', 'composition-looping-closure', `world-strip ${strip.id} 声明 closedLoop，但场景末相位误差为 ${closure.phaseError.toFixed(6)} periods。`, `${nodeLocation}.loopingEnvironment.travel.closedLoop`);
+            }
+          }
+        }
+        if (ground) {
+          const groundSpeed = resolveWorldStripSpeedFactor({
+            depth: ground.depth,
+            far: environment.speedRange.far,
+            near: environment.speedRange.near,
+          });
+          if (environment.travel.distanceViewports * groundSpeed < 1 - 1e-9) {
+            add('error', 'composition-looping-world-displacement', '必需 world travel 必须让 ground strip 在相机补偿后至少移动一个 viewport。', `${nodeLocation}.loopingEnvironment.travel.distanceViewports`);
+          }
+        }
+      }
+    }
   }
   const motifInstanceCount = motifFields.reduce(
     (total, {node}) =>
@@ -863,7 +1103,7 @@ export const validateCompositionStructure = ({
       }
     }
   }
-  return {issues, nodeIds, groups, assets, sequences, motifFields, freeNodes};
+  return {issues, nodeIds, groups, assets, sequences, motifFields, worldStrips, freeNodes};
 };
 
 export const deriveEventTimeline = ({scene, sceneFrom = 0, fps}) =>

@@ -1,6 +1,7 @@
 # VOX Phase 2.5 looping world environments and world-motion proof — dev.8 plan
 
-Status: planned. No runtime implementation or provider call has started.
+Status: implemented for `0.16.0-dev.8`. Engineering provider budget and actual
+provider usage were both zero.
 
 ## 1. Decision
 
@@ -21,8 +22,9 @@ Current registered environment families are still viewport-oriented:
   coverage, or depth-relative world velocity.
 
 A car travelling along a road therefore exposes an architectural gap. Phase
-2.5 will add a separate first-class `looping-environment` relationship whose
-children are `world-strip` nodes. It will not enlarge
+2.5 adds a separate first-class `looping-environment` relationship whose
+children are semantic `world-strip` nodes plus exactly one tracked
+asset/state-sequence subject that does not inherit world phase. It does not enlarge
 `registered-depth-stack` reveal envelopes or hand-author repeated asset nodes.
 
 ## 2. Visible behavior

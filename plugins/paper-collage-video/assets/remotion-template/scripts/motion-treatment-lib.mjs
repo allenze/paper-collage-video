@@ -27,9 +27,10 @@ export const CHANGE_CLASSES = [
   'depth-parallax',
   'depth-layer-separation',
   'decorative-field',
+  'world-travel',
 ];
 export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field'];
-export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'traverse', 'sway', 'parallax-camera'];
+export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'traverse', 'sway', 'parallax-camera', 'scroll-world-x'];
 export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'rise-drift', 'burst', 'orbit'];
 export const MOTIF_FIELD_DISTRIBUTIONS = ['scattered', 'grid', 'edge'];
 export const COMPOSITION_PATTERNS = [
@@ -37,6 +38,7 @@ export const COMPOSITION_PATTERNS = [
   'supported-subject',
   'registered-environment',
   'registered-depth-stack',
+  'looping-environment',
 ];
 export const GRAPHIC_KINDS = ['typography', 'shape', 'annotation', 'data-graphic'];
 export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'reveal', 'route', 'data-state'];
@@ -102,6 +104,11 @@ const routeForChangeClass = {
     proof: true,
   },
   'decorative-field': {motion: 'motif-field', proof: true},
+  'world-travel': {
+    motion: 'continuous-transform',
+    composition: 'looping-environment',
+    proof: true,
+  },
 };
 
 const addIssue = (issues, code, message, location) =>
@@ -112,6 +119,7 @@ export const treatmentRiskScore = (treatment) =>
   (treatment?.motion?.kind === 'state-sequence' ? 5 : 0) +
   (treatment?.composition?.pattern === 'registered-depth-stack' ? 6 : 0) +
   (treatment?.composition?.pattern === 'registered-environment' ? 4 : 0) +
+  (treatment?.composition?.pattern === 'looping-environment' ? 5 : 0) +
   (treatment?.composition?.pattern === 'supported-subject' ? 3 : 0) +
   (IMPORTANCE_SCORE[treatment?.importance] ?? 0) +
   (treatment?.necessity === 'required' ? 1 : 0);
@@ -128,7 +136,7 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   if ((STYLE_SEMANTIC_SEVERITY[treatment.semanticRisk] ?? 0) === highestSemanticSeverity && highestSemanticSeverity > 0) {
     coverage.push(`semantic:${treatment.semanticRisk}`);
   }
-  if (['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(treatment.composition?.pattern)) {
+  if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(treatment.composition?.pattern)) {
     coverage.push(`relationship:${treatment.composition.pattern}`);
   }
   if (treatment.composition?.motionCapability === 'bounded-relative') {
@@ -148,6 +156,10 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   }
   if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
   if (treatment.motion?.kind === 'motif-field') coverage.push('motion:motif-field');
+  if (treatment.motion?.preset === 'scroll-world-x') {
+    coverage.push('motion:looping-world');
+    coverage.push('proof:world-motion');
+  }
   return coverage;
 };
 
@@ -184,7 +196,7 @@ export const compileStyleProofPlan = (scenes) => {
       requiredCoverage.add(coverage);
     }
   }
-  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(compositionPattern))) {
+  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(compositionPattern))) {
     requiredCoverage.add('relationship:coupled');
   }
   const representative = [...candidates].sort((left, right) =>
@@ -369,7 +381,8 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     addIssue(issues, 'treatment-composition-pattern', 'composition.pattern 必须使用受支持的组合模式。', `${location}.composition.pattern`);
   } else if (
     composition.pattern !== 'free' &&
-    composition.pattern !== 'registered-depth-stack'
+    composition.pattern !== 'registered-depth-stack' &&
+    composition.pattern !== 'looping-environment'
   ) {
     const relationship = composition.relationship;
     if (!relationship || typeof relationship !== 'object') {
@@ -394,6 +407,48 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
       location: `${location}.composition`,
     }),
   );
+  if (composition?.pattern === 'looping-environment') {
+    const world = composition.world;
+    if (
+      world?.axis !== 'x' ||
+      !['left', 'right'].includes(world?.direction) ||
+      !(Number.isFinite(world?.distanceViewports) && world.distanceViewports > 0) ||
+      !(Number.isFinite(world?.speedRange?.far) && world.speedRange.far > 0) ||
+      !(Number.isFinite(world?.speedRange?.near) && world.speedRange.near > world.speedRange.far) ||
+      typeof world?.closedLoop !== 'boolean' ||
+      !(Number.isFinite(world?.startPhase) && world.startPhase >= 0 && world.startPhase < 1) ||
+      !nonEmpty(world?.groundStripId) ||
+      !nonEmpty(world?.trackedSubjectId) ||
+      !['before', 'seam', 'after'].every((key) => nonEmpty(world?.seamProofTimeIds?.[key]))
+    ) {
+      addIssue(issues, 'treatment-looping-world', 'looping-environment 必须声明 horizontal direction、travel、单调 speedRange、groundStripId 与 loop phase。', `${location}.composition.world`);
+    }
+    if (!Array.isArray(world?.strips) || world.strips.length < 2) {
+      addIssue(issues, 'treatment-looping-strips', 'looping-environment 至少需要两个语义 strip intent。', `${location}.composition.world.strips`);
+    } else {
+      const ids = new Set();
+      const roles = new Set();
+      let previousDepth = -Infinity;
+      for (const [index, strip] of world.strips.entries()) {
+        const stripLocation = `${location}.composition.world.strips[${index}]`;
+        if (!nonEmpty(strip?.id) || ids.has(strip.id)) addIssue(issues, 'treatment-looping-strip-id', 'world strip id 缺失或重复。', `${stripLocation}.id`);
+        ids.add(strip?.id);
+        if (!['far', 'mid', 'ground', 'near'].includes(strip?.role) || roles.has(strip.role)) addIssue(issues, 'treatment-looping-strip-role', 'world strip role 必须有效且唯一。', `${stripLocation}.role`);
+        roles.add(strip?.role);
+        if (!(Number.isFinite(strip?.depth) && strip.depth >= -1 && strip.depth <= 1 && strip.depth > previousDepth)) {
+          addIssue(issues, 'treatment-looping-strip-depth', 'world strips 必须按严格递增 depth 编排。', `${stripLocation}.depth`);
+        }
+        previousDepth = strip?.depth ?? previousDepth;
+      }
+      const ground = world.strips.find(({id}) => id === world.groundStripId);
+      if (ground?.role !== 'ground') addIssue(issues, 'treatment-looping-ground', 'groundStripId 必须指向 role=ground 的 strip。', `${location}.composition.world.groundStripId`);
+    }
+    if (motion?.preset !== 'scroll-world-x') {
+      addIssue(issues, 'treatment-looping-preset', 'looping-environment 必须使用 scroll-world-x preset。', `${location}.motion.preset`);
+    }
+  } else if (composition?.world !== undefined) {
+    addIssue(issues, 'treatment-world-pattern', 'composition.world 只适用于 looping-environment。', `${location}.composition.world`);
+  }
 
   if (treatment.graphic !== null && treatment.graphic !== undefined) {
     if (!GRAPHIC_KINDS.includes(treatment.graphic?.kind)) {
@@ -441,6 +496,7 @@ const compileScene = (scene) => {
   const motifFields = [];
   const graphics = [];
   const layerStacks = new Map();
+  const loopingEnvironments = new Map();
   const treatments = [];
 
   for (const beat of scene.beats ?? []) {
@@ -530,6 +586,31 @@ const compileScene = (scene) => {
           proofTimeId: treatment.proofTimeId ?? null,
         });
       }
+      if (treatment.composition.pattern === 'looping-environment') {
+        const world = treatment.composition.world;
+        const compiledWorld = {
+          id: treatment.id,
+          treatmentId: treatment.id,
+          sceneId: scene.id,
+          targetId: treatment.targetId,
+          axis: world.axis,
+          direction: world.direction,
+          distanceViewports: world.distanceViewports,
+          speedRange: world.speedRange,
+          groundStripId: world.groundStripId,
+          trackedSubjectId: world.trackedSubjectId,
+          seamProofTimeIds: world.seamProofTimeIds,
+          closedLoop: world.closedLoop,
+          startPhase: world.startPhase,
+          strips: world.strips,
+          proofTimeId: treatment.proofTimeId ?? null,
+        };
+        const prior = loopingEnvironments.get(treatment.targetId);
+        if (prior && JSON.stringify({...prior, id: undefined, treatmentId: undefined, proofTimeId: undefined}) !== JSON.stringify({...compiledWorld, id: undefined, treatmentId: undefined, proofTimeId: undefined})) {
+          throw new Error(`循环世界 ${scene.id}::${treatment.targetId} 在同一镜头中定义不一致。`);
+        }
+        if (!prior) loopingEnvironments.set(treatment.targetId, compiledWorld);
+      }
       const layerStack = compileLayerStackPlan({
         sceneId: scene.id,
         treatment,
@@ -570,6 +651,9 @@ const compileScene = (scene) => {
     motifFields: motifFields.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     graphics: graphics.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     layerStacks: [...layerStacks.values()].sort((left, right) =>
+      left.targetId.localeCompare(right.targetId),
+    ),
+    loopingEnvironments: [...loopingEnvironments.values()].sort((left, right) =>
       left.targetId.localeCompare(right.targetId),
     ),
   };
@@ -865,6 +949,44 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
     const node = nodes.get(planned.nodeId);
     if (!node) {
       addIssue(issues, 'directing-target-missing', `导演计划的连续动效目标不存在：${planned.nodeId}。`, `${location}.composition`);
+    } else if (planned.preset === 'scroll-world-x') {
+      const worldPlan = storyboardScene.compositionPlan.loopingEnvironments?.find(
+        ({targetId}) => targetId === planned.nodeId,
+      );
+      const environment = node.loopingEnvironment;
+      const runtimeShape = environment && {
+        axis: environment.axis,
+        direction: environment.travel.direction,
+        distanceViewports: environment.travel.distanceViewports,
+        speedRange: environment.speedRange,
+        groundStripId: environment.groundStripId,
+        trackedSubjectId: environment.trackedSubjectId,
+        seamProofTimeIds: environment.seamProofTimeIds,
+        closedLoop: environment.travel.closedLoop,
+        startPhase: environment.travel.startPhase,
+        strips: (node.children ?? [])
+          .filter(({kind}) => kind === 'world-strip')
+          .map(({id, role, depth}) => ({id, role, depth})),
+      };
+      const plannedShape = worldPlan && {
+        axis: worldPlan.axis,
+        direction: worldPlan.direction,
+        distanceViewports: worldPlan.distanceViewports,
+        speedRange: worldPlan.speedRange,
+        groundStripId: worldPlan.groundStripId,
+        trackedSubjectId: worldPlan.trackedSubjectId,
+        seamProofTimeIds: worldPlan.seamProofTimeIds,
+        closedLoop: worldPlan.closedLoop,
+        startPhase: worldPlan.startPhase,
+        strips: worldPlan.strips,
+      };
+      if (
+        node.kind !== 'group' ||
+        node.pattern !== 'looping-environment' ||
+        JSON.stringify(runtimeShape) !== JSON.stringify(plannedShape)
+      ) {
+        addIssue(issues, 'directing-looping-world-drift', `循环世界 ${planned.nodeId} 与编译计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
+      }
     } else if (!hasVisibleNodeMotion(node)) {
       addIssue(issues, 'directing-continuous-drift', `导演计划要求 ${planned.nodeId} 执行 ${planned.preset}，但节点没有可见关键帧或 idle。`, `${location}.composition.nodes#${planned.nodeId}.motion`);
     } else if (

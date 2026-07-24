@@ -12,6 +12,9 @@ from referencing import Registry, Resource
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIRECTORY = ROOT / "schemas"
 PROOF_INPUT_DIRECTORY = ROOT / "dist" / "vox-phase2-proof" / "inputs"
+LOOPING_WORLD_INPUT_DIRECTORY = (
+    ROOT / "dist" / "vox-looping-world-proof" / "inputs"
+)
 ASSET_HARDENING_INPUT_DIRECTORY = (
     ROOT
     / "dist"
@@ -72,6 +75,24 @@ try:
         "assets-manifest.schema.json",
     )
     validate(
+        LOOPING_WORLD_INPUT_DIRECTORY / "storyboard-authoring.json",
+        "storyboard-authoring.schema.json",
+    )
+    validate(
+        LOOPING_WORLD_INPUT_DIRECTORY / "storyboard.json",
+        "storyboard.schema.json",
+    )
+    for project in sorted(LOOPING_WORLD_INPUT_DIRECTORY.glob("project-*.json")):
+        validate(project, "project.schema.json")
+    validate(
+        LOOPING_WORLD_INPUT_DIRECTORY / "assets-manifest.json",
+        "assets-manifest.schema.json",
+    )
+    for derivation in sorted(
+        LOOPING_WORLD_INPUT_DIRECTORY.glob("*-derivation.json")
+    ):
+        validate(derivation, "looping-strip.schema.json")
+    validate(
         ASSET_HARDENING_INPUT_DIRECTORY / "registered-family.json",
         "registered-family.schema.json",
     )
@@ -85,6 +106,6 @@ except (FileNotFoundError, KeyError, ValueError) as error:
 
 print(
     "✓ v10 authoring, compiled storyboard, three project contracts, "
-    "asset manifest, registered-family derivation, and rejected-output "
-    "recovery are schema-valid"
+    "asset manifests, looping-strip derivations, registered-family derivation, "
+    "and rejected-output recovery are schema-valid"
 )

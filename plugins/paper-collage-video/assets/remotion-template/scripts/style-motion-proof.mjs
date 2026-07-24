@@ -21,6 +21,7 @@ import {
   activeManifestAssets,
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
+import {buildLoopingWorldProof} from './world-motion-proof-lib.mjs';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -226,7 +227,7 @@ try {
   );
   const coupledGroups = selectedScenes.flatMap((scene) =>
     collectCompositionGroups(scene.composition)
-      .filter(({node}) => ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(node.pattern))
+      .filter(({node}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(node.pattern))
       .map((entry) => ({...entry, sceneId: scene.id})),
   );
   const stateSequences = selectedScenes.flatMap((scene) =>
@@ -236,6 +237,11 @@ try {
   for (const {node: group, sceneId} of coupledGroups) {
     for (const {node} of flattenCompositionNodes(group.children)) {
       if (node.kind === 'asset') memberNodes.set(`${sceneId}:${node.id}:${node.src}`, {
+        node,
+        sceneId,
+        evidenceId: `${sceneId}-${node.id}`,
+      });
+      if (node.kind === 'world-strip') memberNodes.set(`${sceneId}:${node.id}:${node.src}`, {
         node,
         sceneId,
         evidenceId: `${sceneId}-${node.id}`,
@@ -261,6 +267,11 @@ try {
     for (const {node} of flattenCompositionNodes(selected.composition?.nodes)) {
       if (!targetMemberIds.has(node.id)) continue;
       if (node.kind === 'asset') memberNodes.set(`${selected.id}:${node.id}:${node.src}`, {
+        node,
+        sceneId: selected.id,
+        evidenceId: `${selected.id}-${node.id}`,
+      });
+      if (node.kind === 'world-strip') memberNodes.set(`${selected.id}:${node.id}:${node.src}`, {
         node,
         sceneId: selected.id,
         evidenceId: `${selected.id}-${node.id}`,
@@ -375,6 +386,22 @@ try {
         ),
       };
     }
+    let loopingWorldProof = null;
+    if (target.pattern === 'looping-environment') {
+      loopingWorldProof = await buildLoopingWorldProof({
+        root: ROOT,
+        projectSlug: slug,
+        scene: project.scenes.find(({id}) => id === target.sceneId),
+        group: target.group,
+        video: project.video,
+        runtimeBuildFingerprint,
+      });
+      if (!loopingWorldProof.passed) {
+        throw new Error(
+          `looping environment ${target.nodeId} 的 style seam/coverage/world-motion proof 未通过。`,
+        );
+      }
+    }
     composites.push({
       compositeId: target.compositeId,
       pattern: target.pattern,
@@ -383,6 +410,7 @@ try {
       fingerprint: styleFingerprintForTarget(target),
       proofFrames,
       layerStackProof,
+      loopingWorldProof,
     });
   }
 

@@ -141,6 +141,7 @@ Replacing or editing a recorded evidence file also invalidates its review. At th
   responsive lower-left/upper-right subject-only travel pairs and confirm the
   subject crosses the world while rear/front remain locally stable.
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
+- `looping-environment`: every active strip binding matches its manifest derivative; RGB and alpha seams pass at source and render scale; three-tile stitches are clean; 16:9, 9:16, and 1:1 have zero uncovered pixels at worst phase; far-to-near speed is strictly ordered; the ground crosses a real seam and moves at least one camera-compensated viewport; the tracked subject remains readable; and the near strip has a real higher-z overlap band capable of foreground occlusion.
 - `state-sequence`: state order correct, pose registration stable, identity consistent, transition clean, every state bound to a current proof frame.
 - `parallax-rig`: depth order readable, camera coupling clean, registered groups stable, final composition readable.
 - `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable. For `rise-drift`, verify monotonic bottom-to-top travel, slight expansion, and invisible respawn.
@@ -163,7 +164,7 @@ is intact; that remains evidence-backed semantic review.
 
 ## Motion, Visibility, and Event Authoring
 
-The scene camera, camera-coupled depth offset, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship. `motif-field` then expands its fixed-seed instances inside node-local bounds, deterministically rejects protected zones, and proves a closed or invisible loop edge.
+The scene camera, camera-coupled depth offset, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship. `looping-environment` keeps its viewport carrier fixed, folds camera/parallax into the internal strip phase and non-shrinking content scale, and repeats enough copies for gap-free coverage. `motif-field` then expands its fixed-seed instances inside node-local bounds, deterministically rejects protected zones, and proves a closed or invisible loop edge.
 
 Map every approved beat to one or more ordered events. Target the group when the entire registered assembly reacts, or a child for a genuinely local action. `scene.events` schedules both visuals and sound; do not create a second audio event list. A visibility event persists after its window and requires a truthful initial state; an emphasis event is transient. Bind critical events to authored proof ids.
 

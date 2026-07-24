@@ -681,7 +681,7 @@ export const validateAssetRequest = (request) => {
     const surface = request.outputSurface;
     if (
       !isPlainObject(surface) ||
-      !['alpha', 'chroma-key', 'opaque', 'layer-sheet'].includes(surface.mode)
+      !['alpha', 'chroma-key', 'opaque', 'layer-sheet', 'seamless-strip-x'].includes(surface.mode)
     ) {
       errors.push('schema-v7 image request 缺少有效 outputSurface');
     } else {
@@ -717,6 +717,12 @@ export const validateAssetRequest = (request) => {
         )
       ) {
         errors.push('layer-sheet outputSurface 的色键必须逐格声明');
+      }
+      if (
+        surface.mode === 'seamless-strip-x' &&
+        !(Number.isFinite(surface.minimumViewportSpan) && surface.minimumViewportSpan >= 1)
+      ) {
+        errors.push('seamless-strip-x outputSurface 必须声明 minimumViewportSpan>=1');
       }
     }
   }
@@ -766,9 +772,9 @@ export const validateAssetRequest = (request) => {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 compositionBinding');
     const binding = request.compositionBinding;
     if (!binding.sceneId || !binding.nodeId || !binding.outputRole) errors.push('compositionBinding 缺少 sceneId、nodeId 或 outputRole');
-    if (!['free', 'supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
+    if (!['free', 'supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
     if (!Number.isInteger(binding.canvas?.width) || binding.canvas.width < 1 || !Number.isInteger(binding.canvas?.height) || binding.canvas.height < 1) errors.push('compositionBinding.canvas 无效');
-    if (!['provider-generation', 'provider-edit', 'alpha-extraction', 'crop', 'mask-application', 'manual-import'].includes(binding.derivation?.method)) errors.push('compositionBinding.derivation.method 无效');
+    if (!['provider-generation', 'provider-edit', 'alpha-extraction', 'crop', 'seamless-period-crop', 'mask-application', 'manual-import'].includes(binding.derivation?.method)) errors.push('compositionBinding.derivation.method 无效');
     if (binding.pattern !== 'state-sequence' && (request.stateBinding || request.stateSheetBinding || request.stateSheetRecoveryBinding)) errors.push('stateBinding/stateSheetBinding/stateSheetRecoveryBinding 只能用于 state-sequence');
     if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
     if (

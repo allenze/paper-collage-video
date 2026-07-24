@@ -18,6 +18,9 @@ try {
   await runInherited(process.execPath, [
     path.join(ROOT, 'scripts', 'prepare-phase2-proof.mjs'),
   ]);
+  await runInherited(process.execPath, [
+    path.join(ROOT, 'scripts', 'prepare-looping-world-proof.mjs'),
+  ]);
   await runInherited(resolvePythonCommand({root: ROOT}), [
     path.join(ROOT, 'scripts', 'validate_v10_schemas.py'),
   ]);

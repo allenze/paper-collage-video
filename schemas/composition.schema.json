@@ -4,7 +4,7 @@
   "title": "Paper Collage Composition Contract",
   "$defs": {
     "pattern": {
-      "enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack"]
+      "enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "looping-environment"]
     },
     "emphasisAction": {
       "enum": ["pulse", "stamp", "shake", "lift", "settle", "drop-impact", "carve"]
@@ -190,6 +190,73 @@
         "motion": {"$ref": "#/$defs/nodeMotion"},
         "visibility": {"$ref": "#/$defs/nodeVisibility"},
         "clip": {"$ref": "#/$defs/clip"}
+      },
+      "additionalProperties": false
+    },
+    "loopingStripBinding": {
+      "type": "object",
+      "required": ["schemaVersion", "stripId", "role", "sourceAssetId", "axis", "seamStrategy", "source", "canonicalTile", "output", "minimumViewportSpan", "edgeBandPixels", "derivationFingerprint"],
+      "properties": {
+        "schemaVersion": {"const": 1},
+        "stripId": {"type": "string", "minLength": 1},
+        "role": {"enum": ["far", "mid", "ground", "near"]},
+        "sourceAssetId": {"type": "string", "minLength": 1},
+        "axis": {"const": "x"},
+        "seamStrategy": {"enum": ["exact", "overlap-crop"]},
+        "source": {
+          "type": "object",
+          "required": ["sha256", "width", "height", "provider", "adapter", "recordId"],
+          "properties": {
+            "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "width": {"type": "integer", "minimum": 1},
+            "height": {"type": "integer", "minimum": 1},
+            "provider": {"type": "string", "minLength": 1},
+            "adapter": {"type": "string", "minLength": 1},
+            "recordId": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          },
+          "additionalProperties": false
+        },
+        "canonicalTile": {
+          "type": "object",
+          "required": ["left", "top", "width", "height"],
+          "properties": {
+            "left": {"type": "integer", "minimum": 0},
+            "top": {"type": "integer", "minimum": 0},
+            "width": {"type": "integer", "minimum": 1},
+            "height": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        },
+        "output": {
+          "type": "object",
+          "required": ["width", "height", "hasAlpha"],
+          "properties": {
+            "width": {"type": "integer", "minimum": 1},
+            "height": {"type": "integer", "minimum": 1},
+            "hasAlpha": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
+        "minimumViewportSpan": {"type": "number", "minimum": 1},
+        "edgeBandPixels": {"type": "integer", "minimum": 1, "maximum": 128},
+        "derivationFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "worldStripNode": {
+      "type": "object",
+      "required": ["id", "kind", "role", "src", "loopingStripBinding", "z", "depth", "transform", "motion"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"const": "world-strip"},
+        "role": {"enum": ["far", "mid", "ground", "near"]},
+        "src": {"type": "string", "minLength": 1},
+        "loopingStripBinding": {"$ref": "#/$defs/loopingStripBinding"},
+        "z": {"type": "integer"},
+        "depth": {"type": "number", "minimum": -1, "maximum": 1},
+        "transform": {"$ref": "#/$defs/transform"},
+        "motion": {"$ref": "#/$defs/nodeMotion"},
+        "visibility": {"$ref": "#/$defs/nodeVisibility"}
       },
       "additionalProperties": false
     },
@@ -557,6 +624,7 @@
                   {"$ref": "#/$defs/annotationNode"},
                   {"$ref": "#/$defs/dataGraphicNode"},
                   {"$ref": "#/$defs/motifFieldNode"},
+                  {"$ref": "#/$defs/worldStripNode"},
                   {"$ref": "#/$defs/groupNode"}
                 ]
               }
@@ -756,6 +824,48 @@
       ],
       "additionalProperties": false
     },
+    "loopingEnvironment": {
+      "type": "object",
+      "required": ["axis", "groundStripId", "trackedSubjectId", "seamProofTimeIds", "travel", "speedRange", "overscanPx"],
+      "properties": {
+        "axis": {"const": "x"},
+        "groundStripId": {"type": "string", "minLength": 1},
+        "trackedSubjectId": {"type": "string", "minLength": 1},
+        "seamProofTimeIds": {
+          "type": "object",
+          "required": ["before", "seam", "after"],
+          "properties": {
+            "before": {"type": "string", "minLength": 1},
+            "seam": {"type": "string", "minLength": 1},
+            "after": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        "travel": {
+          "type": "object",
+          "required": ["direction", "distanceViewports", "easing", "closedLoop", "startPhase"],
+          "properties": {
+            "direction": {"enum": ["left", "right"]},
+            "distanceViewports": {"type": "number", "exclusiveMinimum": 0, "maximum": 100},
+            "easing": {"const": "linear"},
+            "closedLoop": {"type": "boolean"},
+            "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1}
+          },
+          "additionalProperties": false
+        },
+        "speedRange": {
+          "type": "object",
+          "required": ["far", "near"],
+          "properties": {
+            "far": {"type": "number", "exclusiveMinimum": 0, "maximum": 2},
+            "near": {"type": "number", "exclusiveMinimum": 0, "maximum": 3}
+          },
+          "additionalProperties": false
+        },
+        "overscanPx": {"type": "number", "minimum": 0, "maximum": 16}
+      },
+      "additionalProperties": false
+    },
     "groupNode": {
       "type": "object",
       "required": ["id", "kind", "pattern", "z", "coordinateSpace", "transform", "motion", "children"],
@@ -771,12 +881,13 @@
         "visibility": {"$ref": "#/$defs/nodeVisibility"},
         "registration": {"$ref": "#/$defs/registration"},
         "layerStack": {"$ref": "#/$defs/layerStack"},
+        "loopingEnvironment": {"$ref": "#/$defs/loopingEnvironment"},
         "support": {"$ref": "#/$defs/support"},
         "boundaries": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/boundary"}},
         "children": {
           "type": "array",
           "minItems": 1,
-          "items": {"oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/typographyNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/annotationNode"}, {"$ref": "#/$defs/dataGraphicNode"}, {"$ref": "#/$defs/editorialSwitchNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/groupNode"}]}
+          "items": {"oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/typographyNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/annotationNode"}, {"$ref": "#/$defs/dataGraphicNode"}, {"$ref": "#/$defs/editorialSwitchNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/worldStripNode"}, {"$ref": "#/$defs/groupNode"}]}
         }
       },
       "allOf": [
@@ -791,12 +902,16 @@
         {
           "if": {"properties": {"pattern": {"const": "registered-depth-stack"}}},
           "then": {"required": ["registration", "layerStack"]}
+        },
+        {
+          "if": {"properties": {"pattern": {"const": "looping-environment"}}},
+          "then": {"required": ["loopingEnvironment"]}
         }
       ],
       "additionalProperties": false
     },
     "node": {
-      "oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/typographyNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/annotationNode"}, {"$ref": "#/$defs/dataGraphicNode"}, {"$ref": "#/$defs/editorialSwitchNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/groupNode"}]
+      "oneOf": [{"$ref": "#/$defs/assetNode"}, {"$ref": "#/$defs/stateSequenceNode"}, {"$ref": "#/$defs/typographyNode"}, {"$ref": "#/$defs/shapeNode"}, {"$ref": "#/$defs/annotationNode"}, {"$ref": "#/$defs/dataGraphicNode"}, {"$ref": "#/$defs/editorialSwitchNode"}, {"$ref": "#/$defs/motifFieldNode"}, {"$ref": "#/$defs/worldStripNode"}, {"$ref": "#/$defs/groupNode"}]
     },
     "composition": {
       "type": "object",

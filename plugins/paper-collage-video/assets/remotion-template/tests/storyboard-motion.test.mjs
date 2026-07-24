@@ -203,6 +203,66 @@ test('v10 compiles one registered depth stack before provider approval', () => {
   );
 });
 
+test('v10 compiles one horizontal looping world with compiler-owned strip roles and proof bindings', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[1].treatments[0] = {
+    ...authored.scenes[0].beats[1].treatments[0],
+    id: 'road-world-travel',
+    targetId: 'road-world',
+    changeClass: 'world-travel',
+    motion: {kind: 'continuous-transform', preset: 'scroll-world-x'},
+    composition: {
+      pattern: 'looping-environment',
+      world: {
+        axis: 'x',
+        direction: 'left',
+        distanceViewports: 8,
+        speedRange: {far: 0.18, near: 1.2},
+        groundStripId: 'road-strip',
+        trackedSubjectId: 'paper-car',
+        seamProofTimeIds: {
+          before: 'proof-establish',
+          seam: 'proof-action',
+          after: 'proof-final',
+        },
+        closedLoop: false,
+        startPhase: 0.12,
+        strips: [
+          {id: 'mountain-strip', role: 'far', depth: -0.85},
+          {id: 'tree-strip', role: 'mid', depth: -0.2},
+          {id: 'road-strip', role: 'ground', depth: 0.4},
+          {id: 'grass-strip', role: 'near', depth: 0.9},
+        ],
+      },
+    },
+    semanticRisk: 'decorative',
+    rationale: 'The tracked car stays readable while a seamless paper world moves past it at depth-relative speeds.',
+  };
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
+  const [world] = storyboard.scenes[0].compositionPlan.loopingEnvironments;
+  assert.equal(world.targetId, 'road-world');
+  assert.equal(world.trackedSubjectId, 'paper-car');
+  assert.deepEqual(world.seamProofTimeIds, {
+    before: 'proof-establish',
+    seam: 'proof-action',
+    after: 'proof-final',
+  });
+  assert.deepEqual(
+    world.strips.map(({role}) => role),
+    ['far', 'mid', 'ground', 'near'],
+  );
+  assert.ok(
+    storyboard.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'motion:looping-world',
+    ),
+  );
+  assert.ok(
+    storyboard.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'proof:world-motion',
+    ),
+  );
+});
+
 test('traverse and bottom-pivot sway treatments require their runtime motion signatures', () => {
   const authored = authoredStoryboard();
   authored.scenes[0].beats[0].proofTimeId = 'proof-establish';

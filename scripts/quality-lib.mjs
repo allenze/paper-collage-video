@@ -8,6 +8,7 @@ import {
   collectCompositionGroups,
   collectMotifFields,
   collectStateSequences,
+  collectWorldStrips,
   deriveEventTimeline,
   flattenCompositionNodes,
   hashCompositionValue,
@@ -117,6 +118,12 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'data-reveal-bound',
   'editorial-transition-continuity',
   'responsive-directing-bounded',
+  'strip-seams-clean',
+  'coverage-gap-free',
+  'depth-speed-readable',
+  'world-motion-resolvable',
+  'repetition-cadence-clean',
+  'tracked-subject-readable',
 ];
 
 export const QUALITY_CHECKS = [
@@ -145,6 +152,7 @@ const COMPOSITE_PROFILES = {
   'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
   'parallax-rig': ['depth-order-readable', 'camera-coupling-clean', 'registered-groups-stable', 'final-composition-readable'],
   'motif-field': ['field-density-readable', 'field-bounds-clean', 'field-exclusions-clean', 'field-motion-clean', 'field-loop-clean', 'final-composition-readable'],
+  'looping-environment': ['strip-seams-clean', 'coverage-gap-free', 'depth-speed-readable', 'world-motion-resolvable', 'repetition-cadence-clean', 'tracked-subject-readable', 'final-composition-readable'],
   typography: ['typography-fit-clean', 'typography-timing-bound', 'final-composition-readable'],
   annotation: ['annotation-routing-clean', 'annotation-exclusions-clean', 'proof-time-bound'],
   'data-graphic': ['data-mapping-valid', 'data-reveal-bound', 'proof-time-bound'],
@@ -343,6 +351,13 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
         });
       }
     }
+    for (const {node} of collectWorldStrips(scene.composition)) {
+      add({
+        file: resolvePublicFile(node.src),
+        kind: 'environment',
+        source: `scene:${scene.id}:node:${node.id}`,
+      });
+    }
     for (const {node} of collectCompositionGroups(scene.composition)) {
       for (const boundary of node.boundaries ?? []) {
         for (const maskSrc of [boundary.upperMaskSrc, boundary.lowerMaskSrc].filter(Boolean)) {
@@ -515,6 +530,7 @@ const visualSourcesForNode = (node) => {
   if (node.kind === 'asset') return [node.src];
   if (node.kind === 'state-sequence') return node.states.map(({src}) => src);
   if (node.kind === 'motif-field') return node.motifs.map(({src}) => src);
+  if (node.kind === 'world-strip') return [node.src];
   if (node.kind === 'group') return descendants(node).flatMap(visualSourcesForNode);
   return [];
 };
@@ -668,21 +684,22 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       });
     }
     for (const {node: group} of collectCompositionGroups(scene.composition)) {
-      if (!['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(group.pattern)) continue;
-      const members = descendants(group).filter((node) => ['asset', 'state-sequence'].includes(node.kind));
+      if (!['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(group.pattern)) continue;
+      const members = descendants(group).filter((node) => ['asset', 'state-sequence', 'world-strip'].includes(node.kind));
       const sources = [
-        ...members.flatMap((member) => member.kind === 'asset' ? [member.src] : member.states.map(({src}) => src)),
+        ...members.flatMap((member) => member.kind === 'state-sequence' ? member.states.map(({src}) => src) : [member.src]),
         ...(group.boundaries ?? []).flatMap(({upperMaskSrc, lowerMaskSrc}) => [upperMaskSrc, lowerMaskSrc]),
       ];
       const memberHashes = await hashReferencedFiles(sources);
       const familyRecords = members.flatMap((member) =>
-        (member.kind === 'asset' ? [member.src] : member.states.map(({src}) => src))
+        (member.kind === 'state-sequence' ? member.states.map(({src}) => src) : [member.src])
           .map((source) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(source)))) ?? null),
       );
       const familyProvenance = familyRecords.map((record) => record ? {
         assetId: record.assetId,
         compositionBinding: record.compositionBinding ?? record.request?.compositionBinding ?? null,
         registeredFamilyBinding: record.registeredFamilyBinding ?? null,
+        loopingStripBinding: record.loopingStripBinding ?? null,
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
       const fingerprint = hashCompositionValue({
@@ -1174,6 +1191,46 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       })),
     });
   }
+  if (target.pattern === 'looping-environment') {
+    const strips = target.group.children.filter(({kind}) => kind === 'world-strip');
+    const stripRecords = target.familyRecords.filter(
+      (record) => record?.adapter === 'looping-strip-derivative',
+    );
+    const bindingsCurrent =
+      strips.length >= 2 &&
+      strips.length === stripRecords.length &&
+      stripRecords.every((record) => {
+        const node = strips.find(({src}) =>
+          path.normalize(path.relative(ROOT, resolvePublicFile(src))) ===
+          path.normalize(record?.file ?? ''),
+        );
+        return (
+          record?.adapter === 'looping-strip-derivative' &&
+          record?.lifecycle?.status === 'active' &&
+          node?.loopingStripBinding?.derivationFingerprint ===
+            record.loopingStripBinding?.derivationFingerprint &&
+          node?.role === record.loopingStripBinding?.role
+        );
+      });
+    const worldProof = proofEntry?.loopingWorldProof;
+    checks.push(
+      {
+        id: 'looping-strip-provenance',
+        passed: bindingsCurrent,
+        expected: 'all world-strip nodes bind active deterministic looping-strip derivatives',
+        actual: bindingsCurrent,
+      },
+      {
+        id: 'looping-world-proof',
+        passed:
+          worldProof?.passed === true &&
+          worldProof.coverage?.every(({uncoveredPixels}) => uncoveredPixels === 0) &&
+          worldProof.strips?.every(({seamPassed}) => seamPassed),
+        expected: 'current seam, coverage, depth-speed, wrap, and camera-compensated world-motion proof',
+        actual: worldProof ?? null,
+      },
+    );
+  }
   if (target.pattern === 'event') {
     checks.push(
       {id: 'event-proof-bound', passed: Boolean(target.event.proofTimeId), actual: target.event.proofTimeId ?? null},
@@ -1595,6 +1652,11 @@ export const createQualityReviewScaffold = ({
       compositeId === composite.compositeId,
     );
     const files = (proof?.proofFrames ?? []).flatMap(proofEvidenceFiles);
+    files.push(
+      ...(proof?.loopingWorldProof?.strips ?? [])
+        .map(({derivationReport}) => derivationReport)
+        .filter(Boolean),
+    );
     for (const nodeId of composite.memberNodeIds ?? []) {
       for (const entry of proofAssets.filter((candidate) => candidate.nodeId === nodeId)) {
         files.push(...assetEvidenceFiles(entry));

@@ -13,6 +13,7 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `camera-change` | `continuous-transform` on `scene-camera` | push, pull, pan |
 | `depth-parallax` | `continuous-transform` with `parallax-camera` on `scene-camera` | camera-coupled paper planes at authored depth |
 | `depth-layer-separation` | `registered-depth-stack` with `bounded-relative` | complete rear plate, complete subject, and complete front overlay move within reviewed reveal envelopes; a full-silhouette subject may additionally use a proved `subjectTravelEnvelope` |
+| `world-travel` | `looping-environment` with `scroll-world-x` | tracked vehicle remains readable while seamless mountains, trees, road, and near vegetation cross multiple horizontal wraps |
 | `pose-change` | `state-sequence` | hand moves from chest to pointing at a board |
 | `prop-state-change` | `state-sequence` | page turns, cards change, book lowers |
 | `contact-change` | `supported-subject` | person stands on a boat, book remains in hand |
@@ -41,6 +42,16 @@ envelopes. A free group may add deliberate local depth only when that nested
 separation is part of the approved design.
 
 `motif-field` is decorative only. Author one target with preset (`drift`, `fall-drift`, `rise-drift`, `burst`, or `orbit`), distribution (`scattered`, `grid`, or `edge`), bounded `count<=64`, cycles, normalized placement `bounds`, and explicit rectangle/ellipse `exclusionZones` around titles, faces, labels, and explanatory data. `rise-drift` is the deterministic physical bubble primitive: every instance begins just below the field, moves monotonically upward, expands slightly, and hides its top/bottom respawn. Keep all fields in one scene at or below 192 instances. Runtime supplies a fixed integer seed, 1–8 reviewed motif sources, base size, and bounded scale/rotation/opacity variation. Placement uses deterministic bounded rejection with motif-footprint clearance; loop presets either close geometrically or hide the respawn edge. The renderer expands the instances deterministically; do not author a large array of individual asset nodes.
+
+`world-travel` is persistent world geometry, not a larger `traverse` or a
+motif loop. Author `axis=x`, direction, distance in viewport widths, strictly
+ordered far/near speeds, ground strip, tracked subject, exact start phase,
+ordered semantic strip roles, and before/seam/after proof ids. Every
+`world-strip` resolves to at least one viewport width at its authored height.
+The looping group contains those strips plus exactly one asset/state-sequence
+tracked subject; this lets near strips genuinely occlude it without inheriting
+world phase. The renderer expands internal copies. Authors never place repeated
+asset nodes.
 
 Use continuous preset `traverse` for a subject whose world-relative path must be
 materially larger than camera drift; runtime validation requires a normalized
@@ -144,7 +155,10 @@ composition coupling, importance, and necessity, then compiles a
 `styleProofPlan`. The plan requires coverage for the highest semantic-risk
 classes, each concrete coupled relationship, state-sequence behavior, and
 motif-field behavior, and greedily reuses one source family where it can prove
-multiple facets. If a film has no such high-risk facet, the highest-ranked
+multiple facets. Looping worlds additionally require source/render-scale RGB
+and alpha seam proof, three-ratio worst-phase coverage, depth-speed ordering,
+camera-compensated world displacement, tracked-subject readability, and a real
+near-layer occlusion band. If a film has no such high-risk facet, the highest-ranked
 treatment becomes one `baseline:representative` target so the style gate never
 becomes empty. `style:proof` renders every selected target and binds the report
 to the plan fingerprint. A depth stack is proven as one family through neutral

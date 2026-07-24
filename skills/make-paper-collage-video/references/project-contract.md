@@ -85,7 +85,7 @@ layer package afterward, and storyboard call-count drift invalidates the budget
 approval. A scene has
 `composition.nodes`; nodes are recursive `asset`, `state-sequence`,
 `typography`, `shape`, `annotation`, `data-graphic`, `editorial-switch`,
-`motif-field`, or `group` records. All transforms and keyframe deltas are
+`motif-field`, `world-strip`, or `group` records. All transforms and keyframe deltas are
 normalized to the immediate parent. Older projects are not parsed or migrated;
 regenerate their equivalent output from the latest contract when needed. There
 is no legacy loader, dual schema, deprecated field, compatibility adapter, or
@@ -108,6 +108,15 @@ bounded relative motion because their complete source package has been proven
 against responsive reveal envelopes.
 
 `motif-field` is a first-class decorative node. It owns reviewed motif sources, fixed seed, bounded count, distribution, internal motion preset/cycles, base size, variation ranges, required normalized `bounds`, and explicit rectangle/ellipse `exclusionZones`. Runtime placement uses bounded deterministic rejection with motif-footprint clearance, so title, face, and explanatory-data zones are reproducibly protected. One field expands at most 64 instances; all fields in one scene may total at most 192. `fall-drift`, `rise-drift`, and `burst` hide their wrap point, while `drift` and `orbit` close geometrically; `cycles` affects every preset. `rise-drift` computes a deterministic monotonically upward bottom-to-top lifecycle with slight expansion. Configuration, exclusions, source files, and loop proof are fingerprinted. A motif field is not a semantic crowd, identity family, or substitute for generated pose states.
+
+`world-strip` is valid only as a direct child of `looping-environment`. One
+semantic node binds one active deterministic strip derivative while the
+renderer owns its repeated internal copies. The group owns horizontal world
+travel, ground reference, tracked subject, seam proof ids, depth-derived speed
+range, overscan, and start phase. It contains at least two strips plus exactly
+one asset/state-sequence tracked subject. Camera/parallax offsets are folded
+into strip phase and safe internal scale; they must never translate or shrink
+the viewport-sized carrier into an uncovered edge.
 
 A continuous `traverse` target must span at least `0.45` in normalized parent
 space. A continuous `sway` target must use the `sway` idle primitive and a
@@ -138,6 +147,7 @@ Use only these patterns:
 | `supported-subject` | person in boat, object on table, hand holding prop | rear support, subject, front support, shared registration, contact and occlusion zones |
 | `registered-depth-stack` | independently moving rear, subject, and front planes | clean rear plate, full subject silhouette, full front overlay, shared registration, strict depth, responsive reveal envelopes, and optional subject-only travel envelopes |
 | `registered-environment` | land/water, sky/ground, wall/floor, tabletop edge | shared master canvas, registration, fixed boundary, upper/lower clipped members |
+| `looping-environment` | car/train/boat travelling through a persistent horizontal world | two to four seamless `world-strip` roles, one non-scrolling tracked subject, ground reference, monotonic depth speeds, and before/seam/after proof bindings |
 
 Groups own carrier motion; children own only local motion. Do not repeat the group's world path on attached children. Local z-order is deterministic. The default `between-supports` order is support rear, optional contact shadow, subject, support front. Use `support.layering=subject-front` only when the approved visual language requires the complete subject silhouette to remain above every support member; quality review then proves `subject-front-clear` instead of front occlusion. Registered environment members use the complete master canvas with top-left origin; textures may move within a fixed clip, but the boundary must not move across semantic content.
 
@@ -184,7 +194,7 @@ plus before/at/after frames.
   pose-sheet grids. `project:storyboard` deterministically compiles those
   derived fields and default transition recipes, then rejects drift.
 - Scene id, blueprint, compiled `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. Beat-bound, treatment-bound, and state-bound proof intent is immutable.
-- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node.
+- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, and ordered strip roles/depths exactly match the compiler-owned plan. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside scene-boundary intervals.
 - A final state assertion must resolve to one fully opaque state, remain outside any state crossfade for at least that transition duration, and preserve the asserted state through the scene end.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.

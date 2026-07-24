@@ -20,15 +20,20 @@
       "type": "object",
       "required": ["mode"],
       "properties": {
-        "mode": {"enum": ["alpha", "chroma-key", "opaque", "layer-sheet"]},
+        "mode": {"enum": ["alpha", "chroma-key", "opaque", "layer-sheet", "seamless-strip-x"]},
         "keyColor": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
         "tolerance": {"type": "integer", "minimum": 0, "maximum": 255},
-        "keyPlane": {"$ref": "#/$defs/observedKeyPlane"}
+        "keyPlane": {"$ref": "#/$defs/observedKeyPlane"},
+        "minimumViewportSpan": {"type": "number", "minimum": 1}
       },
       "allOf": [
         {
           "if": {"properties": {"mode": {"const": "chroma-key"}}},
           "then": {"required": ["keyColor"]}
+        },
+        {
+          "if": {"properties": {"mode": {"const": "seamless-strip-x"}}},
+          "then": {"required": ["minimumViewportSpan"]}
         }
       ],
       "additionalProperties": false
@@ -53,7 +58,7 @@
       "properties": {
         "sceneId": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "pattern": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "state-sequence"]},
+        "pattern": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "state-sequence"]},
         "registrationId": {"type": "string", "minLength": 1},
         "sourceMasterAssetId": {"type": "string", "minLength": 1},
         "outputRole": {"type": "string", "minLength": 1},
@@ -70,7 +75,7 @@
           "type": "object",
           "required": ["method"],
           "properties": {
-            "method": {"enum": ["provider-generation", "provider-edit", "alpha-extraction", "crop", "mask-application", "manual-import"]},
+            "method": {"enum": ["provider-generation", "provider-edit", "alpha-extraction", "crop", "seamless-period-crop", "mask-application", "manual-import"]},
             "parentAssetId": {"type": "string", "minLength": 1}
           },
           "additionalProperties": false

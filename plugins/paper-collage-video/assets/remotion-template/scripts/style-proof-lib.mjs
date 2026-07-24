@@ -160,6 +160,27 @@ export const assertStyleProofReady = async (slug) => {
         );
       }
     }
+    if (target.pattern === 'looping-environment') {
+      if (
+        proof.loopingWorldProof?.passed !== true ||
+        proof.loopingWorldProof.coverage?.some(
+          ({uncoveredPixels}) => uncoveredPixels !== 0,
+        ) ||
+        proof.loopingWorldProof.strips?.some(
+          ({seamPassed}) => seamPassed !== true,
+        )
+      ) {
+        throw new Error(
+          `${proof.compositeId} 缺少通过的三画幅 seam/coverage/world-motion 证明。`,
+        );
+      }
+      for (const strip of proof.loopingWorldProof.strips) {
+        await assertEvidenceFile(
+          strip.derivationReport,
+          `${proof.compositeId}.${strip.nodeId}.derivationReport`,
+        );
+      }
+    }
     for (const evidence of selectTargetAssetEvidence({report, target})) {
       for (const field of REQUIRED_ASSET_EVIDENCE) await assertEvidenceFile(evidence[field], `${evidence.nodeId}.${field}`);
     }
@@ -187,6 +208,13 @@ export const assertStyleProofReady = async (slug) => {
         ),
         ...(proof.layerStackProof.artifacts.subjectTravelExtremes ?? []).map(
           ({file}) => file,
+        ),
+      );
+    }
+    if (target.pattern === 'looping-environment') {
+      compositeEvidence.push(
+        ...proof.loopingWorldProof.strips.map(
+          ({derivationReport}) => derivationReport,
         ),
       );
     }

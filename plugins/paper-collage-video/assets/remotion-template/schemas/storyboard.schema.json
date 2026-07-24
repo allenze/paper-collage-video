@@ -110,6 +110,50 @@
       },
       "additionalProperties": false
     },
+    "worldStripIntent": {
+      "type": "object",
+      "required": ["id", "role", "depth"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "role": {"enum": ["far", "mid", "ground", "near"]},
+        "depth": {"type": "number", "minimum": -1, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
+    "loopingWorldIntent": {
+      "type": "object",
+      "required": ["axis", "direction", "distanceViewports", "speedRange", "groundStripId", "trackedSubjectId", "seamProofTimeIds", "closedLoop", "startPhase", "strips"],
+      "properties": {
+        "axis": {"const": "x"},
+        "direction": {"enum": ["left", "right"]},
+        "distanceViewports": {"type": "number", "exclusiveMinimum": 0, "maximum": 100},
+        "speedRange": {
+          "type": "object",
+          "required": ["far", "near"],
+          "properties": {
+            "far": {"type": "number", "exclusiveMinimum": 0, "maximum": 2},
+            "near": {"type": "number", "exclusiveMinimum": 0, "maximum": 3}
+          },
+          "additionalProperties": false
+        },
+        "groundStripId": {"type": "string", "minLength": 1},
+        "trackedSubjectId": {"type": "string", "minLength": 1},
+        "seamProofTimeIds": {
+          "type": "object",
+          "required": ["before", "seam", "after"],
+          "properties": {
+            "before": {"type": "string", "minLength": 1},
+            "seam": {"type": "string", "minLength": 1},
+            "after": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        "closedLoop": {"type": "boolean"},
+        "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "strips": {"type": "array", "minItems": 2, "maxItems": 4, "items": {"$ref": "#/$defs/worldStripIntent"}}
+      },
+      "additionalProperties": false
+    },
     "treatment": {
       "type": "object",
       "required": ["id", "targetId", "importance", "necessity", "changeClass", "motion", "composition", "graphic", "semanticRisk", "proofTimeId", "rationale"],
@@ -118,13 +162,13 @@
         "targetId": {"type": "string", "minLength": 1},
         "importance": {"enum": ["hero", "supporting", "ambient"]},
         "necessity": {"enum": ["required", "enhancement"]},
-        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold", "visibility-change", "depth-parallax", "depth-layer-separation", "decorative-field"]},
+        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold", "visibility-change", "depth-parallax", "depth-layer-separation", "decorative-field", "world-travel"]},
         "motion": {
           "type": "object",
           "required": ["kind"],
           "properties": {
             "kind": {"enum": ["static", "continuous-transform", "state-sequence", "visibility-transition", "motif-field"]},
-            "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera", "fall-drift", "rise-drift", "burst", "orbit"]},
+            "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera", "scroll-world-x", "fall-drift", "rise-drift", "burst", "orbit"]},
             "poseFamilyId": {"type": "string", "minLength": 1},
             "stateId": {"type": "string", "minLength": 1},
             "visualChange": {"type": "string", "minLength": 1},
@@ -148,7 +192,7 @@
           "type": "object",
           "required": ["pattern"],
           "properties": {
-            "pattern": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack"]},
+            "pattern": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "looping-environment"]},
             "relationship": {"$ref": "#/$defs/relationshipIntent"},
             "motionCapability": {"enum": ["rigid-locked", "bounded-relative"]},
             "sourcePackageId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
@@ -160,7 +204,8 @@
               "items": {"$ref": "#/$defs/layerIntent"}
             },
             "revealEnvelope": {"$ref": "#/$defs/layerRevealEnvelope"},
-            "subjectTravelEnvelope": {"$ref": "composition.schema.json#/$defs/subjectTravelEnvelope"}
+            "subjectTravelEnvelope": {"$ref": "composition.schema.json#/$defs/subjectTravelEnvelope"},
+            "world": {"$ref": "#/$defs/loopingWorldIntent"}
           },
           "additionalProperties": false
         },
@@ -241,9 +286,9 @@
     },
     "compositionPlan": {
       "type": "object",
-      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "visibilityEvents", "motifFields", "graphics", "layerStacks"],
+      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "visibilityEvents", "motifFields", "graphics", "layerStacks", "loopingEnvironments"],
       "properties": {
-        "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack"]}},
+        "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "looping-environment"]}},
         "relationships": {
           "type": "array",
           "items": {
@@ -264,7 +309,47 @@
         "visibilityEvents": {"type": "array", "items": {"$ref": "#/$defs/visibilityEvent"}},
         "motifFields": {"type": "array", "items": {"$ref": "#/$defs/motifFieldPlan"}},
         "graphics": {"type": "array", "items": {"$ref": "#/$defs/graphicPlan"}},
-        "layerStacks": {"type": "array", "items": {"$ref": "#/$defs/layerStackPlan"}}
+        "layerStacks": {"type": "array", "items": {"$ref": "#/$defs/layerStackPlan"}},
+        "loopingEnvironments": {"type": "array", "items": {"$ref": "#/$defs/loopingEnvironmentPlan"}}
+      },
+      "additionalProperties": false
+    },
+    "loopingEnvironmentPlan": {
+      "type": "object",
+      "required": ["id", "treatmentId", "sceneId", "targetId", "axis", "direction", "distanceViewports", "speedRange", "groundStripId", "trackedSubjectId", "seamProofTimeIds", "closedLoop", "startPhase", "strips", "proofTimeId"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "treatmentId": {"type": "string", "minLength": 1},
+        "sceneId": {"type": "string", "minLength": 1},
+        "targetId": {"type": "string", "minLength": 1},
+        "axis": {"const": "x"},
+        "direction": {"enum": ["left", "right"]},
+        "distanceViewports": {"type": "number", "exclusiveMinimum": 0, "maximum": 100},
+        "speedRange": {
+          "type": "object",
+          "required": ["far", "near"],
+          "properties": {
+            "far": {"type": "number", "exclusiveMinimum": 0, "maximum": 2},
+            "near": {"type": "number", "exclusiveMinimum": 0, "maximum": 3}
+          },
+          "additionalProperties": false
+        },
+        "groundStripId": {"type": "string", "minLength": 1},
+        "trackedSubjectId": {"type": "string", "minLength": 1},
+        "seamProofTimeIds": {
+          "type": "object",
+          "required": ["before", "seam", "after"],
+          "properties": {
+            "before": {"type": "string", "minLength": 1},
+            "seam": {"type": "string", "minLength": 1},
+            "after": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        "closedLoop": {"type": "boolean"},
+        "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "strips": {"type": "array", "minItems": 2, "maxItems": 4, "items": {"$ref": "#/$defs/worldStripIntent"}},
+        "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },
       "additionalProperties": false
     },
@@ -330,7 +415,7 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera"]},
+        "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera", "scroll-world-x"]},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },

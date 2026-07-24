@@ -4,7 +4,9 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {
   collectCompositionAssets,
+  collectCompositionGroups,
   collectStateSequences,
+  collectWorldStrips,
   deriveEventTimeline,
 } from './composition-lib.mjs';
 import {
@@ -37,6 +39,10 @@ import {
 } from './asset-manifest-lib.mjs';
 import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
 import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
+import {
+  buildLoopingWorldProof,
+  buildTraverseWorldMotionProofs,
+} from './world-motion-proof-lib.mjs';
 
 const args = process.argv.slice(2);
 const [slug] = args.filter((argument) => !argument.startsWith('--'));
@@ -272,6 +278,18 @@ try {
         }),
       });
     }
+    for (const {node, parent} of collectWorldStrips(scene.composition)) {
+      if (parent?.pattern !== 'looping-environment') continue;
+      coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {
+        sceneId: scene.id,
+        node,
+        renderSize: findNodeRenderSize({
+          scene,
+          nodeId: node.id,
+          video: project.video,
+        }),
+      });
+    }
     for (const {node} of collectStateSequences(scene.composition)) {
       for (const state of node.states) {
         coupledNodes.set(`${scene.id}:${node.id}:${state.src}`, {
@@ -488,6 +506,10 @@ try {
             ))
           ).every(Boolean)
         )
+      ) &&
+      (
+        target.pattern !== 'looping-environment' ||
+        cached.loopingWorldProof?.passed === true
       );
     if (reusableComposite) {
       composites.push(cached);
@@ -599,6 +621,22 @@ try {
         ),
       };
     }
+    let loopingWorldProof = null;
+    if (target.pattern === 'looping-environment') {
+      loopingWorldProof = await buildLoopingWorldProof({
+        root: ROOT,
+        projectSlug: slug,
+        scene: project.scenes.find(({id}) => id === target.sceneId),
+        group: target.group,
+        video: project.video,
+        runtimeBuildFingerprint,
+      });
+      if (!loopingWorldProof.passed) {
+        throw new Error(
+          `looping environment ${target.nodeId} 的 seam/coverage/speed/world-motion proof 未通过。`,
+        );
+      }
+    }
     composites.push({
       compositeId: target.compositeId,
       sceneId: target.sceneId,
@@ -606,10 +644,27 @@ try {
       fingerprint: target.fingerprint,
       proofFrames,
       layerStackProof,
+      loopingWorldProof,
     });
     generatedComposites += 1;
   }
 
+  const storyboard = (await fileExists(paths.storyboardFile))
+    ? await readJson(paths.storyboardFile)
+    : null;
+  const traverseWorldMotionProofs = [];
+  if (storyboard) {
+    for (const scene of project.scenes ?? []) {
+      const storyboardScene = storyboard.scenes?.find(({id}) => id === scene.id);
+      traverseWorldMotionProofs.push(
+        ...await buildTraverseWorldMotionProofs({
+          project,
+          scene,
+          storyboardScene,
+        }),
+      );
+    }
+  }
   const report = {
     schemaVersion: 4,
     projectSlug: slug,
@@ -618,6 +673,7 @@ try {
     runtimeBuildFingerprint,
     frames,
     composites,
+    worldMotionProofs: traverseWorldMotionProofs,
     assetEvidence,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     cache: {

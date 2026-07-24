@@ -22,6 +22,7 @@ import type {
   CompositionShapeNode,
   CompositionStateSequenceNode,
   CompositionTypographyNode,
+  CompositionWorldStripNode,
   CoordinateSpace,
   EditorialSystem,
   NormalizedProjectScene,
@@ -41,6 +42,12 @@ import {resolveEmphasisState, resolveIdleState, resolveMotionState, resolveVisib
 import {resolveParallaxState} from './parallax.mjs';
 import {resolveSceneTransitionPresentation} from './sceneTimeline.mjs';
 import {resolveSequenceLayers} from './stateSequence';
+import {
+  resolveWorldStripCopies,
+  resolveWorldStripFrame,
+  resolveWorldStripSpeedFactor,
+  resolveWorldStripTileGeometry,
+} from './worldStrip.mjs';
 
 const clamp = {
   extrapolateLeft: 'clamp',
@@ -428,6 +435,129 @@ const MotifFieldView = ({
   );
 };
 
+const WorldStripView = ({
+  node,
+  parent,
+  progress,
+  frame,
+  fps,
+  events,
+  durationSeconds,
+  seed,
+  renderZ,
+  cameraX,
+  cameraY,
+  cameraZoom,
+  parallax,
+  loopingEnvironment,
+}: {
+  node: CompositionWorldStripNode;
+  parent: CoordinateSpace;
+  progress: number;
+  frame: number;
+  fps: number;
+  events: ProjectEvent[];
+  durationSeconds: number;
+  seed: number;
+  renderZ: number;
+  cameraX: number;
+  cameraY: number;
+  cameraZoom: number;
+  parallax: NormalizedProjectScene['camera']['parallax'];
+  loopingEnvironment: NonNullable<CompositionGroupNode['loopingEnvironment']>;
+}) => {
+  const worldDepth = resolveParallaxState({
+    depth: node.depth,
+    cameraX,
+    cameraY,
+    cameraZoom,
+    parallax,
+  });
+  const resolved = composeNodeTransform({
+    node,
+    parent,
+    progress,
+    frame,
+    fps,
+    events,
+    durationSeconds,
+    seed,
+    cameraX: 0,
+    cameraY: 0,
+    cameraZoom: 1,
+    parallax: parallax ? {...parallax, enabled: false} : undefined,
+  });
+  const containerHeight = resolved.height ?? parent.height;
+  const contentScale = Math.max(1, worldDepth.scale);
+  const renderHeight = containerHeight * contentScale;
+  const geometry = resolveWorldStripTileGeometry({
+    viewportWidth: resolved.width,
+    viewportHeight: parent.height,
+    renderHeight,
+    sourceWidth: node.loopingStripBinding.output.width,
+    sourceHeight: node.loopingStripBinding.output.height,
+    overscanPx: loopingEnvironment.overscanPx,
+  });
+  const speedFactor = resolveWorldStripSpeedFactor({
+    depth: node.depth,
+    far: loopingEnvironment.speedRange.far,
+    near: loopingEnvironment.speedRange.near,
+  });
+  const stripFrame = resolveWorldStripFrame({
+    progress,
+    viewportWidth: resolved.width,
+    tileWidth: geometry.tileWidth,
+    direction: loopingEnvironment.travel.direction,
+    distanceViewports: loopingEnvironment.travel.distanceViewports,
+    speedFactor,
+    startPhase: loopingEnvironment.travel.startPhase,
+    overscanPx: loopingEnvironment.overscanPx,
+    phaseOffsetPx: worldDepth.x,
+  });
+  const copies = resolveWorldStripCopies({
+    firstCopyX: stripFrame.firstCopyX,
+    tileWidth: geometry.tileWidth,
+    copyCount: geometry.copyCount,
+  });
+  return (
+    <div
+      data-composition-node={node.id}
+      data-composition-kind="world-strip"
+      data-world-strip-role={node.role}
+      data-world-strip-phase={stripFrame.phaseNormalized}
+      data-world-strip-speed={speedFactor}
+      data-world-strip-wraps={stripFrame.wraps}
+      data-world-strip-copies={geometry.copyCount}
+      data-world-strip-camera-offset={worldDepth.x}
+      data-world-strip-camera-scale={contentScale}
+      style={{
+        ...containerStyle({node, resolved, renderZ}),
+        height: containerHeight,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+      }}
+    >
+      {copies.map((copy) => (
+        <Img
+          key={`${node.id}-tile-${copy.index}`}
+          alt=""
+          src={staticFile(node.src)}
+          data-world-strip-copy={copy.index}
+          style={{
+            position: 'absolute',
+            left: copy.x,
+            top: containerHeight - renderHeight,
+            width: copy.width,
+            height: renderHeight,
+            maxWidth: 'none',
+            objectFit: 'fill',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 const GroupView = ({
   node,
   parent,
@@ -467,7 +597,24 @@ const GroupView = ({
   rootNodes: CompositionNode[];
   zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+  const loopingWorld = node.pattern === 'looping-environment';
+  const resolved = composeNodeTransform({
+    node,
+    parent,
+    progress,
+    frame,
+    fps,
+    events,
+    durationSeconds,
+    seed,
+    cameraX: loopingWorld ? 0 : cameraX,
+    cameraY: loopingWorld ? 0 : cameraY,
+    cameraZoom: loopingWorld ? 1 : cameraZoom,
+    parallax:
+      loopingWorld && parallax
+        ? {...parallax, enabled: false}
+        : parallax,
+  });
   const ratio = node.coordinateSpace.height / node.coordinateSpace.width;
   const height = resolved.height ?? resolved.width * ratio;
   return (
@@ -510,6 +657,7 @@ const GroupView = ({
             editorial={editorial}
             rootNodes={rootNodes}
             zones={zones}
+            loopingEnvironment={node.loopingEnvironment}
           />
         ))}
     </div>
@@ -536,6 +684,7 @@ const CompositionNodeView = ({
   editorial,
   rootNodes,
   zones,
+  loopingEnvironment,
 }: {
   node: CompositionNode;
   parent: CoordinateSpace;
@@ -556,6 +705,7 @@ const CompositionNodeView = ({
   editorial: EditorialSystem;
   rootNodes: CompositionNode[];
   zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
+  loopingEnvironment?: CompositionGroupNode['loopingEnvironment'];
 }) => {
   if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
   if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax}} />;
@@ -610,6 +760,10 @@ const CompositionNodeView = ({
     );
   }
   if (node.kind === 'motif-field') return <MotifFieldView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax}} />;
+  if (node.kind === 'world-strip') {
+    if (!loopingEnvironment) return null;
+    return <WorldStripView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax, loopingEnvironment}} />;
+  }
   return <ShapeView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax}} />;
 };
 

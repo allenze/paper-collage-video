@@ -587,6 +587,58 @@ export type LayerRevealEnvelope = {
   '1:1': LayerRevealLimit;
 };
 
+export type LoopingStripBinding = {
+  schemaVersion: 1;
+  stripId: string;
+  role: 'far' | 'mid' | 'ground' | 'near';
+  sourceAssetId: string;
+  axis: 'x';
+  seamStrategy: 'exact' | 'overlap-crop';
+  source: {
+    sha256: string;
+    width: number;
+    height: number;
+    provider: string;
+    adapter: string;
+    recordId: string;
+  };
+  canonicalTile: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  output: {
+    width: number;
+    height: number;
+    hasAlpha: boolean;
+  };
+  minimumViewportSpan: number;
+  edgeBandPixels: number;
+  derivationFingerprint: string;
+};
+
+export type CompositionWorldStripNode = {
+  id: string;
+  kind: 'world-strip';
+  role: 'far' | 'mid' | 'ground' | 'near';
+  src: string;
+  loopingStripBinding: LoopingStripBinding;
+  z: number;
+  depth: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
+export type LoopingEnvironmentTravel = {
+  direction: 'left' | 'right';
+  distanceViewports: number;
+  easing: 'linear';
+  closedLoop: boolean;
+  startPhase: number;
+};
+
 export type CompositionGroupNode = {
   id: string;
   kind: 'group';
@@ -594,7 +646,8 @@ export type CompositionGroupNode = {
     | 'free'
     | 'supported-subject'
     | 'registered-environment'
-    | 'registered-depth-stack';
+    | 'registered-depth-stack'
+    | 'looping-environment';
   z: number;
   depth?: number;
   coordinateSpace: CoordinateSpace;
@@ -610,6 +663,22 @@ export type CompositionGroupNode = {
     motionCapability: 'bounded-relative';
     revealEnvelope: LayerRevealEnvelope;
     subjectTravelEnvelope?: LayerRevealEnvelope;
+  };
+  loopingEnvironment?: {
+    axis: 'x';
+    groundStripId: string;
+    trackedSubjectId: string;
+    seamProofTimeIds: {
+      before: string;
+      seam: string;
+      after: string;
+    };
+    travel: LoopingEnvironmentTravel;
+    speedRange: {
+      far: number;
+      near: number;
+    };
+    overscanPx: number;
   };
   support?: {
     subjectId: string;
@@ -666,6 +735,7 @@ export type CompositionNode =
   | CompositionDataGraphicNode
   | CompositionEditorialSwitchNode
   | CompositionMotifFieldNode
+  | CompositionWorldStripNode
   | CompositionGroupNode;
 
 export type SceneComposition = {
