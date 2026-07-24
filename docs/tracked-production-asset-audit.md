@@ -37,10 +37,10 @@ currently tracked working-tree files. The repository currently carries about
 **231 MiB** under `public/`; this is the material source-control bloat, not the
 approximately 7.7 MiB packaged Skill.
 
-## Exact Dependency to Break
+## Resolved Fixture Dependency
 
-`fixtures/transition-gallery/project.json` currently assigns every gallery
-scene this source:
+The audit found that `fixtures/transition-gallery/project.json` had assigned
+every gallery scene this source:
 
 ```text
 projects/last-red-leaf/audio/style-proof-tone.wav
@@ -51,10 +51,25 @@ The resolved local file is
 mono 48 kHz PCM WAV lasting one second. It is not story narration and has no
 reason to remain tied to a personal production.
 
-Before any index-only project removal, create a small independent fixture such
-as `public/fixtures/transition-gallery/style-proof-tone.wav`, point the gallery
-fixture to it, and validate the gallery from a fresh workspace. The original
-local project copy remains untouched.
+This has been resolved without changing the historical local project: an
+identical, SHA-256-verified 1-second test tone now lives at
+`public/fixtures/transition-gallery/style-proof-tone.wav`, and every gallery
+scene refers to `fixtures/transition-gallery/style-proof-tone.wav` instead.
+
+## Phase 3 Implementation
+
+The user explicitly approved index-only removal of all six audited historical
+productions. The migration stages deletion of 497 tracked project/media files
+while keeping every file in the working directory under the Phase 1 ignore
+rules. It does not remove a local file, alter a published release attachment,
+or rewrite Git history.
+
+The historical `zhuang-zhou-meng-die` friction log remains locally available as
+production history. Current reusable behavior is represented by the maintained
+Skill documentation, source tests, and the separate evolution backlog rather
+than by retaining an entire historical production in the distributable source
+tree. Likewise, the current synthetic VOX fixtures are the canonical shared
+coverage; the two historical submarine productions remain local reference work.
 
 ## Non-Dependencies Confirmed
 
@@ -67,19 +82,10 @@ local project copy remains untouched.
   are already ignored or covered by Phase 1's ignore rules. They are not
   candidate uploads.
 
-## Phase 3 Preconditions
+## Post-Migration Verification
 
-Do not perform index-only removal until all applicable preconditions pass:
-
-1. Extract the transition-gallery tone fixture and validate its consumer.
-2. Convert reusable `zhuang-zhou-meng-die` findings into generalized Skill
-   guidance rather than retaining a whole film as documentation.
-3. Compare the two submarine projects against the current VOX fixture suite;
-   add only a minimal synthetic fixture for a still-uncovered behavior.
-4. Update `ASSET_LICENSES.md` as part of the `tie-chu-mo-zhen` index migration.
-5. Present the exact `git rm --cached` path list for approval. That action must
-   preserve local files and must not include any history rewrite.
-
-After Phase 3, a fresh checkout/plugin workspace must validate without root
-historical productions. Historical blob-size reduction is a later, separate
+After committing the staged migration, verify that the transition gallery reads
+the independent fixture, the test suite passes without a source reference to a
+historical project, and the packaged plugin still installs from its own small
+starter fixture. Historical blob-size reduction remains a later, separate
 decision because it requires an explicit history-rewrite plan.

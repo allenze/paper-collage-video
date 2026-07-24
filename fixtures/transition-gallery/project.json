@@ -23,7 +23,7 @@
       "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 1, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     },
     {
@@ -32,7 +32,7 @@
       "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 2, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     },
     {
@@ -41,7 +41,7 @@
       "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 3, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     },
     {
@@ -50,7 +50,7 @@
       "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 4, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     },
     {
@@ -59,7 +59,7 @@
       "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 5, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     },
     {
@@ -68,7 +68,7 @@
       "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 6, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     },
     {
@@ -77,7 +77,7 @@
       "motion": {"blueprint": "chapter-tableau", "intensity": 0, "seed": 7, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     },
     {
@@ -86,7 +86,7 @@
       "motion": {"blueprint": "quiet-lockup", "intensity": 0, "seed": 8, "proofTimes": []},
       "composition": {"coordinateSpace": {"width": 960, "height": 540}, "nodes": []},
       "camera": {"preset": "static", "intensity": 0},
-      "narration": {"src": "projects/last-red-leaf/audio/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
+      "narration": {"src": "fixtures/transition-gallery/style-proof-tone.wav", "startSeconds": 0.8, "durationSeconds": 0.5, "text": ""},
       "subtitles": [], "events": []
     }
   ],

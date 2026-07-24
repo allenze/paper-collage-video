@@ -13,7 +13,8 @@ below or carries its own notice.
 The following material is excluded from the MIT License and is provided under
 the limited permission in this section:
 
-- `public/projects/tie-chu-mo-zhen/**`
+- `public/fixtures/transition-gallery/style-proof-tone.wav`
+- the `tie-chu-mo-zhen-final.mp4` attachment published with the v0.5.0 release
 - `fixtures/starter-demo/*.png`
 - `public/fixtures/vox-phase2-proof/**`
 - `public/textures/**`
