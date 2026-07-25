@@ -6,7 +6,7 @@ Read this only when discovering, confirming, changing, invoking, or recording a 
 
 Run `npm run provider:status -- <slug> --compact-json`, then verify recorded host tool ids against the current registry. `agent-check-required` is expected for a callable host provider; `error` is a real configuration problem. Do not probe availability with a paid call.
 
-Collect text/image/voice selections with the combined concept decision and run `project:confirm-concept`. Use project scope unless the human explicitly asks to remember a workspace-wide choice. Never request or store secrets; command providers name environment variables in `requiredEnv`.
+Collect text/image/voice selections with the combined scenario/concept decision and run `project:confirm-concept`. The initial aspect/style/parallax intake never selects or authorizes providers. Use project scope unless the human explicitly asks to remember a workspace-wide choice. Never request or store secrets; command providers name environment variables in `requiredEnv`.
 
 Use `provider:select` only for an isolated change or fallback. A provider switch or generated-image budget increase returns to the existing human decision; deterministic derivatives within an approved source family do not.
 
@@ -197,11 +197,14 @@ reserve budget, does not append/rewrite the ledger, and does not change the
 attempt status. Derivation may consume that full sheet; isolated member
 recovery remains forbidden.
 
-Creative Plan v4 distinguishes the selected profile's
+Creative Plan v4 distinguishes the selected scenario's complete expected image
+calls, the profile's
 `assetBudget.maxGeneratedImages` planning ceiling from
 `approvedImageBudget.imageAttemptLimit`. The combined concept selection must
-include `budgetDecision.imageAttemptLimit`; `project:confirm-concept` rejects a
-limit below compiled expected calls or above the profile ceiling. Reservation
+include the exact `scenarioDecision` and `budgetDecision.imageAttemptLimit`;
+scenario-bound confirmation requires that cap to equal the approved scenario
+card, cover expected calls including the story-specific style sample, and stay
+below the profile ceiling. Reservation
 must fail when this approval is absent and must enforce the approved cap even
 when the profile ceiling is larger. `provider:attempt summary --json` is the
 read-only proof surface for ceiling, approved cap, used, reserved, and remaining

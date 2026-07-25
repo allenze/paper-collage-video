@@ -6,6 +6,7 @@ import {
   assertAssetManifest,
   createAssetRecordId,
 } from './asset-manifest-lib.mjs';
+import {removeChromaKey} from './chroma-key-lib.mjs';
 import {hashCompositionValue} from './composition-lib.mjs';
 import {resolveWorldStripTileGeometry} from '../src/worldStrip.mjs';
 
@@ -19,7 +20,14 @@ export const LOOPING_STRIP_RECOVERY_POLICY = {
 
 const PROFILES = ['16:9', '9:16', '1:1'];
 const ROLES = ['far', 'mid', 'ground', 'near'];
-const STRATEGIES = ['exact', 'overlap-crop'];
+const STRATEGIES = ['exact', 'overlap-crop', 'mirror-crop'];
+const GROUND_MINIMUM_EDGE_ALPHA_COVERAGE = 0.05;
+const MIRROR_CROP_RENDER_TOLERANCE = {
+  rgbMean: 0.01,
+  rgbMaximum: 0.2,
+  alphaMean: 0.002,
+  alphaMaximum: 0.2,
+};
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -33,6 +41,41 @@ const sameValue = (left, right) =>
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const sha256File = async (file) => sha256(await fs.readFile(file));
 const posixRelative = (root, file) => path.relative(root, file).split(path.sep).join('/');
+
+const DEFAULT_SOURCE_SURFACE = {mode: 'opaque'};
+const validKeyColor = (value) => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+const sourceSurfaceFor = (spec) => spec?.sourceSurface ?? DEFAULT_SOURCE_SURFACE;
+const sameKeyColor = (left, right) => left?.toLowerCase() === right?.toLowerCase();
+const thresholdsForRenderScale = (spec) =>
+  spec.seamStrategy === 'mirror-crop'
+    ? Object.fromEntries(
+      Object.entries(spec.thresholds).map(([key, value]) => [
+        key,
+        Math.max(value, MIRROR_CROP_RENDER_TOLERANCE[key]),
+      ]),
+    )
+    : spec.thresholds;
+
+const validateChromaKeying = (keying) => {
+  if (!isObject(keying)) return '色键 sourceSurface 必须声明 keying';
+  if (!validKeyColor(keying.keyColor)) return '色键 keying.keyColor 必须是 #RRGGBB';
+  if (!(Number.isFinite(keying.transparentThreshold) && keying.transparentThreshold >= 0 && keying.transparentThreshold <= 255)) {
+    return '色键 keying.transparentThreshold 必须位于 0..255';
+  }
+  if (!(Number.isFinite(keying.opaqueThreshold) && keying.opaqueThreshold > keying.transparentThreshold && keying.opaqueThreshold <= 255)) {
+    return '色键 keying.opaqueThreshold 必须大于 transparentThreshold 且不超过 255';
+  }
+  if (!(Number.isFinite(keying.edgeFeather) && keying.edgeFeather >= 0 && keying.edgeFeather <= 8)) {
+    return '色键 keying.edgeFeather 必须位于 0..8';
+  }
+  if (!(Number.isInteger(keying.matteErode) && keying.matteErode >= 0 && keying.matteErode <= 8)) {
+    return '色键 keying.matteErode 必须是 0..8 的整数';
+  }
+  if (!(Number.isInteger(keying.edgePadding) && keying.edgePadding >= 0 && keying.edgePadding <= 64)) {
+    return '色键 keying.edgePadding 必须是 0..64 的整数';
+  }
+  return null;
+};
 
 const validRect = (rect) =>
   isObject(rect) &&
@@ -62,7 +105,7 @@ export const validateLoopingStripSpec = (spec) => {
   if (!slugPattern.test(spec?.projectSlug ?? '')) errors.push('projectSlug 格式无效');
   if (!ROLES.includes(spec?.role)) errors.push('role 必须是 far、mid、ground 或 near');
   if (spec?.axis !== 'x') errors.push('Phase 2.5 只支持 axis=x');
-  if (!STRATEGIES.includes(spec?.seamStrategy)) errors.push('seamStrategy 必须是 exact 或 overlap-crop');
+  if (!STRATEGIES.includes(spec?.seamStrategy)) errors.push('seamStrategy 必须是 exact、overlap-crop 或 mirror-crop');
   if (!validRect(spec?.canonicalTile)) errors.push('canonicalTile 必须是正整数像素矩形');
   if (!(Number.isInteger(spec?.edgeBandPixels) && spec.edgeBandPixels >= 1 && spec.edgeBandPixels <= 128)) {
     errors.push('edgeBandPixels 必须是 1..128 的整数');
@@ -95,6 +138,21 @@ export const validateLoopingStripSpec = (spec) => {
   if (!sameValue(spec?.recoveryPolicy, LOOPING_STRIP_RECOVERY_POLICY)) {
     errors.push('recoveryPolicy 必须保持完整条带上下文，禁止 isolated edge generation');
   }
+  const sourceSurface = sourceSurfaceFor(spec);
+  if (!isObject(sourceSurface) || !['opaque', 'chroma-key'].includes(sourceSurface.mode)) {
+    errors.push('sourceSurface 必须是 opaque 或 chroma-key');
+  } else if (sourceSurface.mode === 'chroma-key') {
+    if (!validKeyColor(sourceSurface.keyColor)) {
+      errors.push('chroma-key sourceSurface 必须声明 #RRGGBB keyColor');
+    }
+    const keyingError = validateChromaKeying(spec?.keying);
+    if (keyingError) errors.push(keyingError);
+    if (spec?.keying && !sameKeyColor(sourceSurface.keyColor, spec.keying.keyColor)) {
+      errors.push('sourceSurface.keyColor 必须与 keying.keyColor 一致');
+    }
+  } else if (spec?.keying !== undefined) {
+    errors.push('opaque sourceSurface 不能声明 keying');
+  }
   if (typeof spec?.applyToProject !== 'boolean') errors.push('applyToProject 必须是 boolean');
   return errors;
 };
@@ -107,7 +165,11 @@ const rawRgba = async (input) => {
   return {data, width: info.width, height: info.height, channels: info.channels};
 };
 
-export const compareHorizontalEdgeBands = async (input, edgeBandPixels) => {
+export const compareHorizontalEdgeBands = async (
+  input,
+  edgeBandPixels,
+  {mirrorRight = false} = {},
+) => {
   const {data, width, height, channels} = await rawRgba(input);
   const band = Math.min(edgeBandPixels, Math.floor(width / 2));
   if (band < 1) throw new Error('条带过窄，无法比较左右边缘。');
@@ -120,10 +182,21 @@ export const compareHorizontalEdgeBands = async (input, edgeBandPixels) => {
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < band; x += 1) {
       const leftOffset = (y * width + x) * channels;
-      const rightOffset = (y * width + width - band + x) * channels;
-      const red = Math.abs(data[leftOffset] - data[rightOffset]);
-      const green = Math.abs(data[leftOffset + 1] - data[rightOffset + 1]);
-      const blue = Math.abs(data[leftOffset + 2] - data[rightOffset + 2]);
+      // mirror-crop repeats through a reflected edge: the last pixel of the
+      // current tile meets the first pixel of the next one. Compare the right
+      // edge in that reflected orientation, otherwise a texture gradient is
+      // incorrectly reported as a seam even though its rendered join is
+      // continuous.
+      const rightX = mirrorRight ? width - 1 - x : width - band + x;
+      const rightOffset = (y * width + rightX) * channels;
+      // Compare premultiplied colour. PNG RGB values in transparent pixels are
+      // not visible and must not turn a harmless resampling fringe into a
+      // false red/green/blue seam failure.
+      const leftAlpha = data[leftOffset + 3] / 255;
+      const rightAlpha = data[rightOffset + 3] / 255;
+      const red = Math.abs(data[leftOffset] * leftAlpha - data[rightOffset] * rightAlpha);
+      const green = Math.abs(data[leftOffset + 1] * leftAlpha - data[rightOffset + 1] * rightAlpha);
+      const blue = Math.abs(data[leftOffset + 2] * leftAlpha - data[rightOffset + 2] * rightAlpha);
       const alpha = Math.abs(data[leftOffset + 3] - data[rightOffset + 3]);
       const rgb = Math.max(red, green, blue);
       const pixel = y * band + x;
@@ -149,6 +222,56 @@ export const compareHorizontalEdgeBands = async (input, edgeBandPixels) => {
   };
 };
 
+// A strip can have a perfectly matching transparent left/right margin while
+// still exposing a large hole whenever tiles repeat. That is harmless for a
+// decorative overlay, but it is invalid for the ground that carries a route.
+// Measure the actual alpha support at both repeat boundaries rather than only
+// comparing the two boundaries to one another.
+export const inspectHorizontalEdgeAlphaCoverage = async (input, edgeBandPixels) => {
+  const {data, width, height, channels} = await rawRgba(input);
+  const band = Math.min(edgeBandPixels, Math.floor(width / 2));
+  if (band < 1) throw new Error('条带过窄，无法检查 ground repeat edge。');
+  const coverageFor = (left) => {
+    let total = 0;
+    for (let y = 0; y < height; y += 1) {
+      for (let index = 0; index < band; index += 1) {
+        const x = left ? index : width - band + index;
+        total += data[(y * width + x) * channels + 3] / 255;
+      }
+    }
+    return total / (band * height);
+  };
+  const left = coverageFor(true);
+  const right = coverageFor(false);
+  return {
+    bandPixels: band,
+    left,
+    right,
+    minimum: Math.min(left, right),
+  };
+};
+
+const deriveTileBuffer = async ({sourceBuffer, spec}) => {
+  const canonical = await sharp(sourceBuffer).extract(spec.canonicalTile).png().toBuffer();
+  if (spec.seamStrategy !== 'mirror-crop') return canonical;
+  const metadata = await sharp(canonical).metadata();
+  const mirrored = await sharp(canonical).flop().png().toBuffer();
+  return sharp({
+    create: {
+      width: metadata.width * 2,
+      height: metadata.height,
+      channels: 4,
+      background: {r: 0, g: 0, b: 0, alpha: 0},
+    },
+  })
+    .composite([
+      {input: canonical, left: 0, top: 0},
+      {input: mirrored, left: metadata.width, top: 0},
+    ])
+    .png()
+    .toBuffer();
+};
+
 export const edgeMetricsPass = (metrics, thresholds) =>
   metrics.rgbMean <= thresholds.rgbMean + 1e-12 &&
   metrics.rgbMaximum <= thresholds.rgbMaximum + 1e-12 &&
@@ -168,13 +291,15 @@ const writeEvidence = async ({
   sourceMetrics,
   evidenceDirectory,
   stripId,
+  mirrorRight = false,
 }) => {
   await fs.mkdir(evidenceDirectory, {recursive: true});
   const tile = sharp(tileBuffer);
   const metadata = await tile.metadata();
   const band = sourceMetrics.bandPixels;
   const left = await sharp(tileBuffer).extract({left: 0, top: 0, width: band, height: metadata.height}).png().toBuffer();
-  const right = await sharp(tileBuffer).extract({left: metadata.width - band, top: 0, width: band, height: metadata.height}).png().toBuffer();
+  const rightRaw = await sharp(tileBuffer).extract({left: metadata.width - band, top: 0, width: band, height: metadata.height}).png().toBuffer();
+  const right = mirrorRight ? await sharp(rightRaw).flop().png().toBuffer() : rightRaw;
   const comparisonFile = path.join(evidenceDirectory, `${stripId}-edge-comparison.png`);
   const stitchFile = path.join(evidenceDirectory, `${stripId}-three-tile-stitch.png`);
   const rgbHeatmapFile = path.join(evidenceDirectory, `${stripId}-rgb-heatmap.png`);
@@ -236,12 +361,37 @@ export const deriveLoopingStrip = async ({
   if (errors.length > 0) throw new Error(errors.join('；'));
   const manifest = assertAssetManifest(structuredClone(manifestInput), spec.projectSlug);
   const sourceRecord = manifest.assets.find(
-    (record) => record.assetId === spec.sourceAssetId && record.lifecycle?.status === 'active',
+    (record) =>
+      record.assetId === spec.sourceAssetId &&
+      ['active', 'recovery-source'].includes(record.lifecycle?.status),
   );
-  if (!sourceRecord) throw new Error(`找不到 active source asset：${spec.sourceAssetId}`);
+  if (!sourceRecord) {
+    throw new Error(`找不到 active 或 recovery-source source asset：${spec.sourceAssetId}`);
+  }
   const sourceFile = resolveInside(root, sourceRecord.file, 'source asset');
   const outputFile = resolveInside(root, spec.output, 'looping strip output');
-  const sourceMetadata = await sharp(sourceFile).metadata();
+  const sourceSurface = sourceSurfaceFor(spec);
+  const sourceRequestSurface = sourceRecord.request?.outputSurface ?? null;
+  if (
+    sourceSurface.mode === 'chroma-key' &&
+    (
+      sourceRequestSurface?.mode !== 'chroma-key' ||
+      !sameKeyColor(sourceRequestSurface.keyColor, sourceSurface.keyColor)
+    )
+  ) {
+    throw new Error(
+      `source asset ${spec.sourceAssetId} 必须保留匹配的 provider chroma-key provenance`,
+    );
+  }
+  let sourceBuffer = await fs.readFile(sourceFile);
+  let keyingMetadata = null;
+  if (sourceSurface.mode === 'chroma-key') {
+    ({buffer: sourceBuffer, metadata: keyingMetadata} = await removeChromaKey({
+      input: sourceFile,
+      ...spec.keying,
+    }));
+  }
+  const sourceMetadata = await sharp(sourceBuffer).metadata();
   if (
     spec.canonicalTile.left + spec.canonicalTile.width > sourceMetadata.width ||
     spec.canonicalTile.top + spec.canonicalTile.height > sourceMetadata.height
@@ -252,18 +402,28 @@ export const deriveLoopingStrip = async ({
   if (sourceRecord.sha256 !== sourceSha256) {
     throw new Error(`source asset ${spec.sourceAssetId} SHA 已变化；请先重新登记来源。`);
   }
-  const tileBuffer = await sharp(sourceFile)
-    .extract(spec.canonicalTile)
-    .png()
-    .toBuffer();
+  const tileBuffer = await deriveTileBuffer({sourceBuffer, spec});
   const tileMetadata = await sharp(tileBuffer).metadata();
-  const sourceMetrics = await compareHorizontalEdgeBands(tileBuffer, spec.edgeBandPixels);
+  const mirrorRight = spec.seamStrategy === 'mirror-crop';
+  const sourceMetrics = await compareHorizontalEdgeBands(
+    tileBuffer,
+    spec.edgeBandPixels,
+    {mirrorRight},
+  );
+  const sourceEdgeAlphaCoverage = await inspectHorizontalEdgeAlphaCoverage(
+    tileBuffer,
+    spec.edgeBandPixels,
+  );
   const sourcePassed = edgeMetricsPass(sourceMetrics, spec.thresholds);
+  const sourceGroundEdgePassed =
+    spec.role !== 'ground' ||
+    sourceEdgeAlphaCoverage.minimum + 1e-12 >= GROUND_MINIMUM_EDGE_ALPHA_COVERAGE;
+  const renderScaleThresholds = thresholdsForRenderScale(spec);
   const renderScale = [];
   for (const viewport of spec.proofViewports) {
     const scaled = await sharp(tileBuffer).resize({height: viewport.renderHeight}).png().toBuffer();
     const scaledBand = Math.max(1, Math.round(spec.edgeBandPixels * viewport.renderHeight / tileMetadata.height));
-    const metrics = await compareHorizontalEdgeBands(scaled, scaledBand);
+    const metrics = await compareHorizontalEdgeBands(scaled, scaledBand, {mirrorRight});
     const geometry = resolveWorldStripTileGeometry({
       viewportWidth: viewport.width,
       viewportHeight: viewport.height,
@@ -283,7 +443,9 @@ export const deriveLoopingStrip = async ({
         alphaMaximum: metrics.alphaMaximum,
         bandPixels: metrics.bandPixels,
       },
-      seamPassed: edgeMetricsPass(metrics, spec.thresholds),
+      edgeAlphaCoverage: await inspectHorizontalEdgeAlphaCoverage(scaled, scaledBand),
+      thresholds: renderScaleThresholds,
+      seamPassed: edgeMetricsPass(metrics, renderScaleThresholds),
       spanPassed: geometry.viewportSpan + 1e-9 >= spec.minimumViewportSpan,
     });
   }
@@ -297,15 +459,32 @@ export const deriveLoopingStrip = async ({
     canonicalTile: spec.canonicalTile,
     edgeBandPixels: spec.edgeBandPixels,
     thresholds: spec.thresholds,
+    renderScaleThresholds,
     minimumViewportSpan: spec.minimumViewportSpan,
     proofViewports: spec.proofViewports,
     recoveryPolicy: spec.recoveryPolicy,
+    sourceSurface,
+    keying: spec.keying ?? null,
   });
-  if (!sourcePassed || renderScale.some(({seamPassed, spanPassed}) => !seamPassed || !spanPassed)) {
+  if (
+    !sourcePassed ||
+    !sourceGroundEdgePassed ||
+    renderScale.some(({seamPassed, spanPassed, edgeAlphaCoverage}) =>
+      !seamPassed ||
+      !spanPassed ||
+      (spec.role === 'ground' && edgeAlphaCoverage.minimum + 1e-12 < GROUND_MINIMUM_EDGE_ALPHA_COVERAGE),
+    )
+  ) {
     const failed = [
       ...(sourcePassed ? [] : ['source-resolution seam']),
+      ...(sourceGroundEdgePassed ? [] : ['source-resolution ground edge alpha coverage']),
       ...renderScale.filter(({seamPassed}) => !seamPassed).map(({profile}) => `${profile} render-scale seam`),
       ...renderScale.filter(({spanPassed}) => !spanPassed).map(({profile}) => `${profile} viewport span`),
+      ...renderScale
+        .filter(({edgeAlphaCoverage}) =>
+          spec.role === 'ground' && edgeAlphaCoverage.minimum + 1e-12 < GROUND_MINIMUM_EDGE_ALPHA_COVERAGE,
+        )
+        .map(({profile}) => `${profile} ground edge alpha coverage`),
     ];
     throw new Error(`looping strip proof 未通过：${failed.join('、')}`);
   }
@@ -313,6 +492,26 @@ export const deriveLoopingStrip = async ({
   await fs.writeFile(outputFile, tileBuffer);
   const outputSha256 = await sha256File(outputFile);
   const outputMetadata = await sharp(outputFile).metadata();
+  const keyingMetadataFile = sourceSurface.mode === 'chroma-key'
+    ? `${outputFile}.key.json`
+    : null;
+  const keyingRecord = keyingMetadataFile
+    ? {
+      schemaVersion: 1,
+      sourceAssetId: spec.sourceAssetId,
+      sourceSha256,
+      sourceSurface,
+      keying: spec.keying,
+      outputSha256,
+      ...keyingMetadata,
+    }
+    : null;
+  if (keyingMetadataFile) {
+    await fs.writeFile(keyingMetadataFile, `${JSON.stringify(keyingRecord, null, 2)}\n`);
+  }
+  const keyingMetadataSha256 = keyingRecord
+    ? sha256(JSON.stringify(keyingRecord))
+    : null;
   const binding = {
     schemaVersion: 1,
     stripId: spec.stripId,
@@ -327,6 +526,9 @@ export const deriveLoopingStrip = async ({
       provider: sourceRecord.provider,
       adapter: sourceRecord.adapter,
       recordId: sourceRecord.recordId,
+      surface: sourceSurface,
+      keying: spec.keying ?? null,
+      keyingMetadataSha256,
     },
     canonicalTile: spec.canonicalTile,
     output: {
@@ -374,6 +576,8 @@ export const deriveLoopingStrip = async ({
       sourceAssetId: spec.sourceAssetId,
       canonicalTile: spec.canonicalTile,
       seamStrategy: spec.seamStrategy,
+      sourceSurface,
+      keying: spec.keying ?? null,
     },
     compositionBinding: {
       sceneId: spec.sceneId,
@@ -408,6 +612,7 @@ export const deriveLoopingStrip = async ({
     sourceMetrics,
     evidenceDirectory,
     stripId: spec.stripId,
+    mirrorRight,
   });
   return {
     manifest,
@@ -424,7 +629,10 @@ export const deriveLoopingStrip = async ({
       localDerivatives: 1,
       avoidedCalls: 1,
       seamStrategy: spec.seamStrategy,
+      sourceSurface,
+      keyingMetadataSha256,
       thresholds: spec.thresholds,
+      renderScaleThresholds,
       sourceMetrics: {
         rgbMean: sourceMetrics.rgbMean,
         rgbMaximum: sourceMetrics.rgbMaximum,
@@ -432,6 +640,9 @@ export const deriveLoopingStrip = async ({
         alphaMaximum: sourceMetrics.alphaMaximum,
         bandPixels: sourceMetrics.bandPixels,
       },
+      sourceEdgeAlphaCoverage,
+      groundMinimumEdgeAlphaCoverage:
+        spec.role === 'ground' ? GROUND_MINIMUM_EDGE_ALPHA_COVERAGE : null,
       renderScale,
       evidence: Object.fromEntries(
         Object.entries(evidence).map(([key, file]) => [key, posixRelative(root, file)]),

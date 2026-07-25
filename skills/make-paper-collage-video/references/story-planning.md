@@ -13,52 +13,95 @@ Read this while resolving duration, scene count, or production profile. Duration
 
 Draft minimum coherent beats and estimate spoken duration before resolving the plan. For Chinese narration, roughly 3.5–4.5 Han characters/second is a planning aid. Reserve time for openings, subtitles, bounded pauses, and transition overlap. Treat an inferred duration as a provisional estimate, never as a quota that must be filled with static tails. Ask only when two explicit constraints are materially incompatible.
 
-## Choose a Production Profile
+## Run Intake Before Cost Planning
 
-| Profile | Final-film effect | Cost shape |
-|---|---|---|
-| `draft` | Critical actions remain; ambient and enhancement motion is restrained | Few environment layers and pose sheets; up to four related states per sheet |
-| `balanced` (default) | Clear depth plus grouped hero-action changes | Moderate layers, pose sheets, graphics, and continuous targets |
-| `full-depth` | Maximum environment parallax and pose detail | More pose families, up to six states per sheet, and more evidence work |
+For a title-only request, run `project:intake -- <slug> --json` immediately
+after `project:new`. Show the three returned local style-card images before the
+Ask Question UI, then collect:
 
-`project:plan` derives both a provider-generation attempt ceiling and a motion
-budget from the profile and scene count. The image ceiling has a base plus a
-source-recovery reserve: for one scene, draft is `4+2=6`, balanced is `4+4=8`,
-and full-depth is `5+6=11`. More scenes scale the reserve explicitly. The
-reserve is a hard upper bound, not an automatic spending target. Count the style
-sample, layer source packages, unique generated backgrounds, pose sheets,
-rejected results, and abandoned results when quota was consumed. Exact reuse,
-registered-sheet splits, masks, and deterministic normalization do not consume
-a new attempt.
+- `16:9` (1920×1080) or `9:16` (1080×1920);
+- `儿童绘本纸片`, `手绘剪纸 / 手绘解释`, or `复古档案拼贴`;
+- parallax preference `auto`, `prefer`, or `minimal`.
+
+The three text-to-image PNGs use the same canonical turtle-and-hare forest
+composition so the comparison isolates visual language. They are bundled,
+versioned, fingerprinted assets: their generation happened once during plugin
+development, while showing them during intake consumes no provider calls. They
+do not replace the later story-specific style sample. Parallax is motion
+treatment, not a fourth visual style. Do not ask the production profile or cost
+in the intake popup.
+
+## Compare Three Story and Production Scenarios
+
+Using only the host model, author one shared story skeleton plus exactly three
+scenario options and run:
 
 ```bash
-npm run project:plan -- <slug> \
-  [--requested-duration=<seconds>] [--requested-scenes=<count>] \
-  --duration=<resolved-seconds> --scenes=<resolved-count> \
-  [--narration-seconds=<estimate>] --profile=<draft|balanced|full-depth> \
-  --rationale="<story and pacing basis>"
+npm run project:scenarios -- <slug> --input=<scenarios.json> --json
 ```
 
-Use `project:plan --json` as the decision source. It returns
-`decision.durationAuthority` plus all three `decision.profileOptions`,
-including exact scene-count-specific base/reserve/hard image ceilings,
-pose-sheet calls/capacity, continuous-target limits, and final-film effects.
-After `project:storyboard`, the compiled generation budget adds exact
-`sourcePackagePlans`, structural provider calls, local derivatives, avoided
-calls, and the remaining reserve. For an already resolved plan,
-`npm run project:plan -- <slug> --json` is read-only and re-displays the same
-options without needing the original write arguments. Show those options as
-direct structured choices in the combined concept/provider decision and again
-if the human selects “modify”; never require them to guess an enum in free text.
-Change the profile only through concept revision or another explicit budget
-decision. Copy the approved `productionProfile`, `durationSeconds`,
-`sceneCount`, and `durationAuthority` into `planDecision`, and copy the compiled
-`sourcePackageDecision`, for `project:confirm-concept`; the command rejects
-stale or mismatched confirmation data.
+If the human supplied duration or scene count, copy it to `requested` and
+preserve it in all three options. Otherwise bind public packages as follows:
+
+| Internal id | User label | Story scope | Production behavior |
+|---|---|---|---|
+| `draft` | 轻量成片 | `concise` | Character/background/optional foreground plus local translate, fade, push/pull, breathe, bob, sway, jitter, tilt, and transitions. Generate only semantic states that transforms cannot represent; no enhancement state family by default. |
+| `balanced` | 均衡动画 | `standard` | Local motion plus key character/prop sequences, normally 2–4 states; selectively layered hero scenes, depth and parallax. |
+| `full-depth` | 完整纵深 | `expanded` | More required and enhancement families, 4–6 states where justified, rear/mid/front/near layers, parallax, looping worlds, weather and purposeful ambient motifs. |
+
+Each option contains duration, scene count, narration estimate, per-scene beat,
+character action, state-family intent, layer inventory, source packages,
+parallax, ambient elements, local-motion targets, provider recommendation, cost
+basis, final-film effect, and these compiled figures:
+
+- style-proof, source-package, and pose-sheet provider calls;
+- exact expected image calls, proposed human-approved cap, and profile hard
+  ceiling;
+- local derivatives and provider calls avoided;
+- `profilePromise` and planned fulfillment.
+
+The card also records factual and rights risks, even when the list is empty.
+The expected count includes the later story-specific style sample. Rejected or
+abandoned attempts count after quota is consumed; exact reuse, registered-sheet
+splits, masks, and deterministic normalization do not. The proposed cap must
+cover expected calls and must not exceed the profile ceiling.
+
+Present the cards together and recommend `均衡动画`, but never select it
+silently. After the human chooses:
+
+```bash
+npm run project:plan -- <slug> --scenario=<draft|balanced|full-depth>
+```
+
+That card choice is the one combined scenario/concept/profile/cap/provider
+approval. Automatically compile the selected storyboard afterwards. If its
+state families and registered source packages match the approved card and its
+complete calls stay inside the card, record the prior selection with
+`project:confirm-concept`; do not add another routine confirmation. Material
+drift returns to this same gate with a revised exact card.
+
+The resulting Creative Plan remains schema v4 but adds `storyScope`,
+`scenarioBinding`, and `profilePromise`. The scenario and option fingerprints
+prevent a stale card from authorizing a changed plan. `project:plan --json`
+re-displays the exact decision. Direct `--duration/--scenes/--profile` planning
+remains a compatibility path, not the default title-only workflow.
+
+The profile has both ceilings and floors. Motion/image budgets cap spending and
+complexity. `profilePromise` requires the storyboard to meet the selected
+state-family, total-state, local-motion, layered-scene, parallax-scene, and
+ambient-scene minimums. A `full-depth` plan cannot pass by rendering a
+`draft`-level film.
+
+Transforms may express emotion, emphasis, spatial translation, entrances,
+camera movement, and ambient loops. They may not impersonate a changed
+silhouette, limb pose, held prop, contact relation, mechanism state, true
+running cycle, waking up, or another semantic state. Those require a registered
+state family or the appropriate coupled composition. The compiler rejects both
+budget overflow and profile under-delivery.
 
 ## Lock the Rhythmic Storyboard
 
-After `project:plan`, create a storyboard input and run:
+After selecting a scenario and running `project:plan`, create a storyboard input and run:
 
 ```bash
 npm run project:storyboard -- <slug> --input=<storyboard.json>

@@ -500,7 +500,7 @@ export const assertRequestSemanticContracts = async (request) => {
       throw new Error('绑定 identity 契约的图像必须声明独立的 generationFamily。');
     }
     const memberIds = new Set(identityContracts.flatMap(({members}) => members.map(({id}) => id)));
-    const unknown = binding.generationFamily.memberIds.filter((id) => !memberIds.has(id));
+    const unknown = binding.generationFamily.identityMemberIds.filter((id) => !memberIds.has(id));
     if (unknown.length) {
       throw new Error(`generationFamily 引用了 identity 契约中不存在的成员：${unknown.join(', ')}`);
     }

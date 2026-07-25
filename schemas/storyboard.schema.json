@@ -151,6 +151,8 @@
         "closedLoop": {"type": "boolean"},
         "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
         "activeFrom": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "easing": {"enum": ["linear", "ease-out"]},
         "frozen": {"type": "boolean"},
         "strips": {"type": "array", "minItems": 2, "maxItems": 4, "items": {"$ref": "#/$defs/worldStripIntent"}}
       },
@@ -360,6 +362,8 @@
         "closedLoop": {"type": "boolean"},
         "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
         "activeFrom": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+        "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "easing": {"enum": ["linear", "ease-out"]},
         "frozen": {"type": "boolean"},
         "strips": {"type": "array", "minItems": 2, "maxItems": 4, "items": {"$ref": "#/$defs/worldStripIntent"}},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
@@ -585,7 +589,7 @@
     },
     "directingSummary": {
       "type": "object",
-      "required": ["profile", "requiredStateFamilies", "enhancementStateFamilies", "totalStateFamilies", "totalStates", "estimatedPoseSheetCalls", "maxStatesInFamily", "continuousTargets", "visibilityTargets", "motifFieldTargets", "graphicTreatments", "coupledRelationships", "avoidedIsolatedStateCalls", "poseSheetPlans", "budget", "generationBudget", "styleProofPlan", "fingerprint"],
+      "required": ["profile", "requiredStateFamilies", "enhancementStateFamilies", "totalStateFamilies", "totalStates", "estimatedPoseSheetCalls", "maxStatesInFamily", "continuousTargets", "localMotionTargets", "visibilityTargets", "motifFieldTargets", "graphicTreatments", "coupledRelationships", "avoidedIsolatedStateCalls", "poseSheetPlans", "budget", "profileFulfillment", "generationBudget", "styleProofPlan", "fingerprint"],
       "properties": {
         "profile": {"oneOf": [{"enum": ["draft", "balanced", "full-depth"]}, {"type": "null"}]},
         "requiredStateFamilies": {"type": "integer", "minimum": 0},
@@ -595,6 +599,7 @@
         "estimatedPoseSheetCalls": {"type": "integer", "minimum": 0},
         "maxStatesInFamily": {"type": "integer", "minimum": 0},
         "continuousTargets": {"type": "integer", "minimum": 0},
+        "localMotionTargets": {"type": "integer", "minimum": 0},
         "visibilityTargets": {"type": "integer", "minimum": 0},
         "motifFieldTargets": {"type": "integer", "minimum": 0},
         "graphicTreatments": {"type": "integer", "minimum": 0},
@@ -604,9 +609,10 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["targetId", "poseFamilyId", "necessity", "stateIds", "grid", "providerCalls", "repairPolicy"],
+            "required": ["targetId", "targetIds", "poseFamilyId", "necessity", "stateIds", "grid", "providerCalls", "repairPolicy"],
             "properties": {
               "targetId": {"type": "string", "minLength": 1},
+              "targetIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
               "poseFamilyId": {"type": "string", "minLength": 1},
               "necessity": {"enum": ["required", "enhancement"]},
               "stateIds": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
@@ -626,6 +632,68 @@
           }
         },
         "budget": {"$ref": "#/$defs/motionBudget"},
+        "profileFulfillment": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["promise", "actual", "passed", "issues"],
+              "properties": {
+                "promise": {
+                  "type": "object",
+                  "required": [
+                    "minRequiredStateFamilies",
+                    "minEnhancementStateFamilies",
+                    "minTotalStates",
+                    "minLocalMotionTargets",
+                    "minLayeredScenes",
+                    "minParallaxScenes",
+                    "minAmbientScenes"
+                  ],
+                  "properties": {
+                    "minRequiredStateFamilies": {"type": "integer", "minimum": 0},
+                    "minEnhancementStateFamilies": {"type": "integer", "minimum": 0},
+                    "minTotalStates": {"type": "integer", "minimum": 0},
+                    "minLocalMotionTargets": {"type": "integer", "minimum": 0},
+                    "minLayeredScenes": {"type": "integer", "minimum": 0},
+                    "minParallaxScenes": {"type": "integer", "minimum": 0},
+                    "minAmbientScenes": {"type": "integer", "minimum": 0}
+                  },
+                  "additionalProperties": false
+                },
+                "actual": {
+                  "type": "object",
+                  "required": [
+                    "requiredStateFamilies",
+                    "enhancementStateFamilies",
+                    "totalStates",
+                    "localMotionTargets",
+                    "layeredScenes",
+                    "parallaxScenes",
+                    "ambientScenes"
+                  ],
+                  "properties": {
+                    "requiredStateFamilies": {"type": "integer", "minimum": 0},
+                    "enhancementStateFamilies": {"type": "integer", "minimum": 0},
+                    "totalStates": {"type": "integer", "minimum": 0},
+                    "localMotionTargets": {"type": "integer", "minimum": 0},
+                    "layeredScenes": {"type": "integer", "minimum": 0},
+                    "parallaxScenes": {"type": "integer", "minimum": 0},
+                    "ambientScenes": {"type": "integer", "minimum": 0}
+                  },
+                  "additionalProperties": false
+                },
+                "passed": {"const": true},
+                "issues": {
+                  "type": "array",
+                  "maxItems": 0,
+                  "items": {"type": "string"}
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
         "generationBudget": {
           "type": "object",
           "required": ["requiredProviderImageCalls", "expectedProviderImageCalls", "sourcePackageProviderCalls", "poseSheetProviderCalls", "localDerivatives", "avoidedCalls", "hardCeiling", "sourcePackagePlans"],

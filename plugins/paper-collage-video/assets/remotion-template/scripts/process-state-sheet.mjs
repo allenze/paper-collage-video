@@ -28,6 +28,60 @@ const workspacePath = (input, label) => {
 
 const sha256 = async (file) => createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
+const explicitExtractionFor = ({spec, state}) =>
+  spec.extraction?.cells.find(({stateId}) => stateId === state.id) ?? null;
+
+const assertExtractionFitsSource = ({cell, sourceMetadata}) => {
+  const rect = cell.sourceRect;
+  if (
+    rect.left + rect.width > sourceMetadata.width ||
+    rect.top + rect.height > sourceMetadata.height
+  ) {
+    throw new Error(
+      `state ${cell.stateId} 的 extraction.sourceRect 越过 provider 原始画布`,
+    );
+  }
+};
+
+const keyBackgroundFor = async ({input, keyColor}) => {
+  if (/^#[0-9a-f]{6}$/i.test(keyColor)) {
+    return {
+      r: Number.parseInt(keyColor.slice(1, 3), 16),
+      g: Number.parseInt(keyColor.slice(3, 5), 16),
+      b: Number.parseInt(keyColor.slice(5, 7), 16),
+      alpha: 1,
+    };
+  }
+  const {data} = await sharp(input)
+    .removeAlpha()
+    .extract({left: 0, top: 0, width: 1, height: 1})
+    .raw()
+    .toBuffer({resolveWithObject: true});
+  return {r: data[0], g: data[1], b: data[2], alpha: 1};
+};
+
+const writeExplicitRegisteredCell = async ({
+  input,
+  destination,
+  cell,
+  canvas,
+  keyBackground,
+}) => {
+  const {sourceRect, placement} = cell;
+  const extend = {
+    top: placement.top,
+    left: placement.left,
+    right: canvas.width - placement.left - sourceRect.width,
+    bottom: canvas.height - placement.top - sourceRect.height,
+    background: keyBackground,
+  };
+  await sharp(input)
+    .extract(sourceRect)
+    .extend(extend)
+    .png()
+    .toFile(destination);
+};
+
 try {
   const [specInput] = process.argv.slice(2).filter((argument) => !argument.startsWith('--'));
   if (!specInput) throw new Error('用法：process-state-sheet.mjs <state-sheet.json>');
@@ -51,17 +105,37 @@ try {
   const recoveryPolicy = sourceBinding.recoveryPolicy;
   if (recoveryPolicy?.strategy !== 'preserve-sheet-context' || recoveryPolicy.localDeterministicFixFirst !== true || recoveryPolicy.isolatedCellGeneration !== 'forbidden' || recoveryPolicy.fallback !== 'full-sheet-regeneration') throw new Error('source state sheet 缺少 preserve-sheet-context 恢复策略');
   const sourceRecovery = source.stateSheetRecoveryBinding ?? source.request?.stateSheetRecoveryBinding ?? null;
+  const sourceMetadata = await sharp(input).metadata();
+  const keyBackground = spec.extraction
+    ? await keyBackgroundFor({input, keyColor: spec.keying.keyColor})
+    : null;
 
   await fs.mkdir(outputDirectory, {recursive: true});
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'paper-collage-state-sheet-'));
   const python = resolvePythonCommand({root: ROOT});
   try {
-    await run(python, [
-      'scripts/split_sheet.py', input, temporary, spec.poseFamilyId, String(spec.states.length),
-      '--columns', String(spec.layout.columns), '--padding', '0', '--suffix', 'registered-key', '--preserve-canvas',
-    ]);
+    if (spec.extraction) {
+      for (const state of spec.states) {
+        const cell = explicitExtractionFor({spec, state});
+        assertExtractionFitsSource({cell, sourceMetadata});
+        await writeExplicitRegisteredCell({
+          input,
+          destination: path.join(temporary, `${spec.poseFamilyId}-${state.id}-registered-key.png`),
+          cell,
+          canvas: spec.extraction.canvas,
+          keyBackground,
+        });
+      }
+    } else {
+      await run(python, [
+        'scripts/split_sheet.py', input, temporary, spec.poseFamilyId, String(spec.states.length),
+        '--columns', String(spec.layout.columns), '--padding', '0', '--suffix', 'registered-key', '--preserve-canvas',
+      ]);
+    }
     for (const [index, state] of spec.states.entries()) {
-      const cell = path.join(temporary, `${spec.poseFamilyId}-${index + 1}-registered-key.png`);
+      const cell = spec.extraction
+        ? path.join(temporary, `${spec.poseFamilyId}-${state.id}-registered-key.png`)
+        : path.join(temporary, `${spec.poseFamilyId}-${index + 1}-registered-key.png`);
       const output = path.join(outputDirectory, stateOutputName({poseFamilyId: spec.poseFamilyId, stateId: state.id}));
       await run(python, [
         'scripts/remove_chroma_key.py', '--input', cell, '--out', output,
@@ -87,6 +161,7 @@ try {
   const familyFingerprint = createStateFamilyFingerprint({sourceSha256, spec, members});
   const recordedAt = new Date().toISOString();
   const derived = members.map(({stateId, sha256: memberSha256, file, stat, metadata}) => {
+    const state = spec.states.find(({id}) => id === stateId);
     const assetId = `${spec.poseFamilyId}-${stateId}`;
     const requestFingerprint = createHash('sha256').update(`${source.requestFingerprint}:${stateId}:${familyFingerprint}`).digest('hex');
     return {
@@ -115,7 +190,17 @@ try {
         sourceMasterAssetId: spec.registration.sourceMasterAssetId,
         outputRole: 'registered-state',
         canvas: {width: metadata.width, height: metadata.height},
-        derivation: {method: 'crop', parentAssetId: spec.sourceAssetId},
+        derivation: {
+          method: spec.extraction ? 'explicit-source-rects' : 'crop',
+          parentAssetId: spec.sourceAssetId,
+          sourceRect: spec.extraction
+            ? explicitExtractionFor({spec, state}).sourceRect
+            : null,
+          placement: spec.extraction
+            ? explicitExtractionFor({spec, state}).placement
+            : null,
+          registrationCanvas: spec.extraction?.canvas ?? null,
+        },
       },
       stateBinding: {poseFamilyId: spec.poseFamilyId, stateId, registrationId: spec.registration.id, sourceMasterAssetId: spec.registration.sourceMasterAssetId},
       stateSheetBinding: null,
@@ -142,7 +227,7 @@ try {
   const providerImageCalls = ['host', 'command'].includes(source.adapter) ? 1 : 0;
   const recoveryTargetCount = sourceRecovery?.targetStateIds?.length ?? derived.length;
   await writeJson(path.join(outputDirectory, `${spec.poseFamilyId}-state-sheet-report.json`), {
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectSlug: spec.projectSlug,
     poseFamilyId: spec.poseFamilyId,
     sourceAssetId: spec.sourceAssetId,
@@ -156,6 +241,10 @@ try {
       ? derived.length - recoveryTargetCount
       : 0,
     isolatedCellGenerationUsed: false,
+    extraction: spec.extraction ?? {
+      mode: 'equal-grid',
+      canvas: {width: members[0]?.metadata.width ?? null, height: members[0]?.metadata.height ?? null},
+    },
     derivedStateCount: derived.length,
     avoidedIndividualCalls: Math.max(0, (sourceRecovery ? recoveryTargetCount : derived.length) - providerImageCalls),
     members: derived.map(({assetId, file, sha256: hash, stateBinding}) => ({assetId, file, sha256: hash, stateBinding})),

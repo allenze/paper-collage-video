@@ -172,6 +172,12 @@ const requiredChecksForGroup = (group) => {
       'final-composition-readable',
     ];
   }
+  if (group.pattern === 'looping-environment' && group.loopingEnvironment?.travel?.activeUntil !== undefined) {
+    return [
+      ...COMPOSITE_PROFILES['looping-environment'],
+      'world-lock-clean',
+    ];
+  }
   if (group.pattern !== 'supported-subject' || group.support?.layering !== 'subject-front') {
     return COMPOSITE_PROFILES[group.pattern];
   }

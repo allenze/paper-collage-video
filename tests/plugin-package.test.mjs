@@ -114,6 +114,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/prove-alpha-bands.mjs',
   );
   assert.equal(packageJson.scripts['project:plan'], 'node scripts/project-plan.mjs');
+  assert.equal(packageJson.scripts['project:intake'], 'node scripts/project-intake.mjs');
+  assert.equal(packageJson.scripts['project:scenarios'], 'node scripts/project-scenarios.mjs');
   assert.equal(packageJson.scripts['project:budget'], 'node scripts/project-budget.mjs');
   assert.equal(packageJson.scripts['project:storyboard'], 'node scripts/project-storyboard.mjs');
   assert.equal(packageJson.scripts['project:revise-preview-directing'], 'node scripts/project-revise-preview-directing.mjs');
@@ -243,6 +245,9 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/subtitle-lib.mjs',
     'scripts/project-subtitles.mjs',
     'scripts/creative-plan-lib.mjs',
+    'scripts/intake-lib.mjs',
+    'scripts/planning-scenario-lib.mjs',
+    'scripts/style-catalog-lib.mjs',
     'scripts/composition-lib.mjs',
     'scripts/derive-registered-family.mjs',
     'scripts/registered-family-lib.mjs',
@@ -253,6 +258,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/prepare-phase2-proof.mjs',
     'scripts/project-semantic-contracts.mjs',
     'scripts/project-plan.mjs',
+    'scripts/project-intake.mjs',
+    'scripts/project-scenarios.mjs',
     'scripts/project-storyboard.mjs',
     'scripts/project-revise-preview-directing.mjs',
     'scripts/project-scene-preview.mjs',
@@ -280,6 +287,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'src/visibilityLifecycle.mjs',
     'src/project.ts',
     'schemas/project.schema.json',
+    'schemas/planning-scenarios.schema.json',
+    'schemas/style-catalog.schema.json',
     'schemas/editorial.schema.json',
     'schemas/semantic-contracts.schema.json',
     'schemas/generation-attempt.schema.json',
@@ -293,6 +302,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/provider-observation.schema.json',
     'schemas/rejected-output-recovery.schema.json',
     'templates/project/production.json',
+    'templates/project/planning-scenarios.json',
     'templates/project/production-metrics.json',
     'templates/project/semantic-contracts.json',
     'templates/project/generation-attempts.jsonl',
@@ -303,10 +313,15 @@ test('packaged runtime is lightweight and independent from production projects',
     'fixtures/phase2-proof-fixture.mjs',
     'public/fixtures/vox-phase2-proof/narration-1.wav',
     'public/fixtures/vox-phase2-proof/narration-1.timing.json',
+    'public/style-catalog/catalog.json',
+    'public/style-catalog/generation-provenance.json',
+    'public/style-catalog/childrens-picture-book-paper.png',
+    'public/style-catalog/hand-drawn-cutout-explainer.png',
+    'public/style-catalog/archival-collage.png',
   ]) {
-    assert.equal(
-      fs.readFileSync(path.join(RUNTIME_ROOT, relative), 'utf8'),
-      fs.readFileSync(path.join(ROOT, relative), 'utf8'),
+    assert.deepEqual(
+      fs.readFileSync(path.join(RUNTIME_ROOT, relative)),
+      fs.readFileSync(path.join(ROOT, relative)),
       `${relative} must be resynced with npm run plugin:sync`,
     );
   }

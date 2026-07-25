@@ -17,7 +17,7 @@
     "sourceAssetId": {"type": "string", "minLength": 1},
     "output": {"type": "string", "minLength": 1},
     "axis": {"const": "x"},
-    "seamStrategy": {"enum": ["exact", "overlap-crop"]},
+    "seamStrategy": {"enum": ["exact", "overlap-crop", "mirror-crop"]},
     "canonicalTile": {
       "type": "object",
       "required": ["left", "top", "width", "height"],

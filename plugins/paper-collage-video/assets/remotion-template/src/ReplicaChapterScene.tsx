@@ -504,6 +504,10 @@ const WorldStripView = ({
     near: loopingEnvironment.speedRange.near,
   });
   const worldIsFrozen = loopingEnvironment.travel.frozen === true;
+  const worldIsLocked = worldIsFrozen || (
+    loopingEnvironment.travel.activeUntil !== undefined &&
+    progress >= loopingEnvironment.travel.activeUntil
+  );
   const stripFrame = resolveWorldStripFrame({
     progress: worldIsFrozen ? 0 : progress,
     viewportWidth: resolved.width,
@@ -513,8 +517,10 @@ const WorldStripView = ({
     speedFactor,
     startPhase: loopingEnvironment.travel.startPhase,
     activeFrom: loopingEnvironment.travel.activeFrom ?? 0,
+    activeUntil: loopingEnvironment.travel.activeUntil ?? 1,
+    easing: loopingEnvironment.travel.easing,
     overscanPx: loopingEnvironment.overscanPx,
-    phaseOffsetPx: worldIsFrozen ? 0 : worldDepth.x,
+    phaseOffsetPx: worldIsLocked ? 0 : worldDepth.x,
   });
   const copies = resolveWorldStripCopies({
     firstCopyX: stripFrame.firstCopyX,
@@ -530,7 +536,7 @@ const WorldStripView = ({
       data-world-strip-speed={speedFactor}
       data-world-strip-wraps={stripFrame.wraps}
       data-world-strip-copies={geometry.copyCount}
-      data-world-strip-camera-offset={worldIsFrozen ? 0 : worldDepth.x}
+      data-world-strip-camera-offset={worldIsLocked ? 0 : worldDepth.x}
       data-world-strip-camera-scale={contentScale}
       style={{
         ...containerStyle({node, resolved, renderZ}),

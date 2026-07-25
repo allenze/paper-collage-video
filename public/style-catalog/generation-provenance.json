@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-07-25",
+  "generator": "Codex built-in image_gen",
+  "generationCount": 3,
+  "purpose": "Bundled visual references for the initial style-selection gate.",
+  "canonicalComposition": "Wide 16:9 forest race path, tortoise at left foreground, hare at right foreground, two framing trees, layered hills and bushes, cloud and sun.",
+  "runtimePolicy": "These files are generated once during plugin development and bundled locally. Showing them during project intake performs zero provider calls.",
+  "images": [
+    {
+      "id": "childrens-picture-book-paper",
+      "file": "childrens-picture-book-paper.png",
+      "sha256": "2b9267a155929bcd742321027a9edbd17e2d2a31414e983e41a584d657a64d23",
+      "method": "text-to-image",
+      "promptSummary": "Premium children's picture-book illustration made from layered handmade paper cutouts, with torn edges, visible fibers, warm colors, and clear rear, middle, and foreground layers."
+    },
+    {
+      "id": "hand-drawn-cutout-explainer",
+      "file": "hand-drawn-cutout-explainer.png",
+      "sha256": "43cb87cc01d9eef777b1b2a3f07b02dd169e67ae9716b90836dfd5875472f4bb",
+      "method": "image edit from the canonical composition",
+      "promptSummary": "Preserve the canonical composition and transform only the visual language into uneven ink contours, pencil and wax-crayon strokes, irregular scissor-cut edges, dry-brush fills, and restrained motion strokes."
+    },
+    {
+      "id": "archival-collage",
+      "file": "archival-collage.png",
+      "sha256": "e96bec7f3d2a318e2459cacd0e53124a5f7c1d938c7043c754e6ea25d66a2b19",
+      "method": "image edit from the canonical composition",
+      "promptSummary": "Preserve the canonical composition and transform only the visual language into aged document collage, lithographic animal shapes, halftone texture, deckled edges, and a muted museum-editorial palette without readable text."
+    }
+  ]
+}

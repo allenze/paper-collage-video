@@ -10,6 +10,7 @@ import {
   assessCreativePlanTimeline,
   validateCreativePlan,
 } from './creative-plan-lib.mjs';
+import {validateIntake} from './intake-lib.mjs';
 import {
   loadStoryboard,
   STORY_BLUEPRINTS,
@@ -83,6 +84,12 @@ export const projectPaths = (slug) => ({
   slug,
   projectDirectory: path.join(ROOT, 'projects', slug),
   projectFile: path.join(ROOT, 'projects', slug, 'project.json'),
+  planningScenariosFile: path.join(
+    ROOT,
+    'projects',
+    slug,
+    'planning-scenarios.json',
+  ),
   productionFile: path.join(ROOT, 'projects', slug, 'production.json'),
   productionMetricsFile: path.join(ROOT, 'projects', slug, 'production-metrics.json'),
   storyboardFile: path.join(ROOT, 'projects', slug, 'storyboard.json'),
@@ -121,6 +128,13 @@ export const loadProject = async (slug) => {
 };
 
 export const deriveTimeline = (project) => deriveSceneTimeline(project);
+
+export const stateSequenceMatchesStoryboardPlan = (actual, planned) =>
+  actual?.poseFamilyId === planned?.poseFamilyId &&
+  JSON.stringify(actual?.playback ?? null) === JSON.stringify(planned?.playback ?? null) &&
+  actual?.transition?.type === planned?.transition &&
+  JSON.stringify((actual?.states ?? []).map(({id, at}) => ({id, at}))) ===
+    JSON.stringify((planned?.states ?? []).map(({id, at}) => ({id, at})));
 
 export const proofOverlapsTransition = ({
   at,
@@ -458,6 +472,27 @@ export const validateProject = async (project, options = {}) => {
   if (!project.title || typeof project.title !== 'string') {
     add('error', 'title', '项目必须有标题。', 'title');
   }
+  if (project.intake !== undefined) {
+    for (const issue of validateIntake(project.intake)) {
+      add('error', 'intake-invalid', issue.message, issue.location);
+    }
+    if (
+      project.intake.status === 'confirmed' &&
+      (
+        (project.intake.aspectRatio === '16:9' &&
+          (project.video?.width !== 1920 || project.video?.height !== 1080)) ||
+        (project.intake.aspectRatio === '9:16' &&
+          (project.video?.width !== 1080 || project.video?.height !== 1920))
+      )
+    ) {
+      add(
+        'error',
+        'intake-video-drift',
+        'video 尺寸必须与已确认 intake.aspectRatio 一致。',
+        'video',
+      );
+    }
+  }
   if (!isPositiveNumber(project.video?.width)) {
     add('error', 'video-width', '视频宽度必须为正数。', 'video.width');
   }
@@ -567,13 +602,20 @@ export const validateProject = async (project, options = {}) => {
         ?.expectedProviderImageCalls ?? 0;
     if (
       approvedImageBudget &&
-      approvedImageBudget.expectedProviderImageCalls !==
-        currentExpectedProviderImageCalls
+      (
+        project.plan?.scenarioBinding
+          ? currentExpectedProviderImageCalls >
+            approvedImageBudget.expectedProviderImageCalls
+          : approvedImageBudget.expectedProviderImageCalls !==
+            currentExpectedProviderImageCalls
+      )
     ) {
       add(
         'error',
         'approved-image-budget-storyboard-drift',
-        `预算审批时预计 ${approvedImageBudget.expectedProviderImageCalls} 次图片 provider 调用，当前 storyboard 预计 ${currentExpectedProviderImageCalls} 次；请重新审批预算。`,
+        project.plan?.scenarioBinding
+          ? `预算审批时全片预计 ${approvedImageBudget.expectedProviderImageCalls} 次图片 provider 调用，当前 storyboard 的结构化素材子集已需要 ${currentExpectedProviderImageCalls} 次；请重新规划并审批预算。`
+          : `预算审批时预计 ${approvedImageBudget.expectedProviderImageCalls} 次图片 provider 调用，当前 storyboard 预计 ${currentExpectedProviderImageCalls} 次；请重新审批预算。`,
         'plan.approvedImageBudget.expectedProviderImageCalls',
       );
     }
@@ -863,12 +905,9 @@ export const validateProject = async (project, options = {}) => {
         add('error', 'composition-sequence-drift', `故事板要求状态序列 ${planned.nodeId}，项目镜头没有实现。`, `${sceneLocation}.composition`);
         continue;
       }
-      if (
-        actual.poseFamilyId !== planned.poseFamilyId ||
-        actual.playback.mode !== planned.playback ||
-        actual.transition.type !== planned.transition ||
-        JSON.stringify(actual.states.map(({id, at}) => ({id, at}))) !== JSON.stringify(planned.states.map(({id, at}) => ({id, at})))
-      ) add('error', 'composition-sequence-drift', `状态序列 ${planned.nodeId} 与故事板计划不一致。`, `${sceneLocation}.composition`);
+      if (!stateSequenceMatchesStoryboardPlan(actual, planned)) {
+        add('error', 'composition-sequence-drift', `状态序列 ${planned.nodeId} 与故事板计划不一致。`, `${sceneLocation}.composition`);
+      }
     }
 
     for (const {node, parent} of compositionResult.sequences) {

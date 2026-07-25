@@ -9,6 +9,7 @@
     "schemaVersion": {"const": 10},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
+    "intake": {"$ref": "#/$defs/intake"},
     "plan": {"$ref": "#/$defs/plan"},
     "quality": {
       "type": "object",
@@ -36,6 +37,92 @@
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}}
   },
   "$defs": {
+    "intake": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "status",
+        "aspectRatio",
+        "visualStylePreset",
+        "parallaxPreference",
+        "styleCatalogVersion",
+        "styleCatalogFingerprint",
+        "confirmedAt",
+        "note",
+        "updatedAt"
+      ],
+      "properties": {
+        "schemaVersion": {"const": 1},
+        "status": {"enum": ["pending", "confirmed"]},
+        "aspectRatio": {
+          "oneOf": [
+            {"type": "null"},
+            {"enum": ["16:9", "9:16"]}
+          ]
+        },
+        "visualStylePreset": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "enum": [
+                "childrens-picture-book-paper",
+                "hand-drawn-cutout-explainer",
+                "archival-collage"
+              ]
+            }
+          ]
+        },
+        "parallaxPreference": {
+          "oneOf": [
+            {"type": "null"},
+            {"enum": ["auto", "prefer", "minimal"]}
+          ]
+        },
+        "styleCatalogVersion": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        },
+        "styleCatalogFingerprint": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          ]
+        },
+        "confirmedAt": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "format": "date-time"}
+          ]
+        },
+        "note": {"type": "string"},
+        "updatedAt": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "profilePromise": {
+      "type": "object",
+      "required": [
+        "minRequiredStateFamilies",
+        "minEnhancementStateFamilies",
+        "minTotalStates",
+        "minLocalMotionTargets",
+        "minLayeredScenes",
+        "minParallaxScenes",
+        "minAmbientScenes"
+      ],
+      "properties": {
+        "minRequiredStateFamilies": {"type": "integer", "minimum": 0},
+        "minEnhancementStateFamilies": {"type": "integer", "minimum": 0},
+        "minTotalStates": {"type": "integer", "minimum": 0},
+        "minLocalMotionTargets": {"type": "integer", "minimum": 0},
+        "minLayeredScenes": {"type": "integer", "minimum": 0},
+        "minParallaxScenes": {"type": "integer", "minimum": 0},
+        "minAmbientScenes": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
     "worldContract": {
       "type": "object",
       "required": ["id", "sceneIds", "requiredStripRoles", "stripSources"],
@@ -128,6 +215,30 @@
         "status": {"enum": ["pending", "resolved"]},
         "inputMode": {"enum": ["none", "duration-only", "scenes-only", "both"]},
         "productionProfile": {"enum": ["draft", "balanced", "full-depth"]},
+        "storyScope": {
+          "enum": ["concise", "standard", "expanded"]
+        },
+        "scenarioBinding": {
+          "type": "object",
+          "required": [
+            "scenarioSetFingerprint",
+            "optionId",
+            "optionFingerprint",
+            "expectedProviderImageCalls",
+            "proposedImageAttemptLimit",
+            "selectedAt"
+          ],
+          "properties": {
+            "scenarioSetFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "optionId": {"enum": ["draft", "balanced", "full-depth"]},
+            "optionFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "expectedProviderImageCalls": {"type": "integer", "minimum": 1},
+            "proposedImageAttemptLimit": {"type": "integer", "minimum": 1},
+            "selectedAt": {"type": "string", "format": "date-time"}
+          },
+          "additionalProperties": false
+        },
+        "profilePromise": {"$ref": "#/$defs/profilePromise"},
         "assetBudget": {
           "oneOf": [
             {"type": "null"},

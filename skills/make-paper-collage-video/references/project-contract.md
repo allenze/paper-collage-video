@@ -26,7 +26,7 @@ Never ask the human to edit machine JSON. Paths in `project.json` are relative t
 
 | Stage | Successful action | Next |
 |---|---|---|
-| `capability-review` | `project:confirm-concept` | `style-review` via provider/brief/concept records |
+| `capability-review` | `project:intake`, `project:scenarios`, then `project:confirm-concept` | `style-review` after intake and combined scenario/profile/budget/provider approval |
 | `style-review` | `approve-style-voice` | `asset-production` |
 | `asset-production` | `project:assets-ready` | `preview` |
 | `preview` | successful `project:preview` | `human-review` |
@@ -95,6 +95,8 @@ version-conditioned renderer branch.
 
 `state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
+One `poseFamilyId` denotes one registered provider state sheet even when a continuous scene uses multiple temporal node instances of that family (for example, a sleeping identity and its later chase). `directingSummary.poseSheetPlans.targetIds` must expose every reuse target, while provider demand, state-sheet calls, and the state-capacity ceiling count the shared family only once. This preserves truthful provider cost evidence without forcing a project-specific animation workaround.
+
 Camera-coupled parallax is a first-class rig. Set
 `camera.parallax={enabled:true,strength,focalDepth}` and assign relevant nodes
 `depth=-1..1`; the renderer composes the global camera once and then adds a
@@ -117,12 +119,17 @@ range, overscan, and start phase. It contains at least two strips plus exactly
 one asset/state-sequence tracked subject. Camera/parallax offsets are folded
 into strip phase and safe internal scale; they must never translate or shrink
 the viewport-sized carrier into an uncovered edge. An authored-and-compiled
-`travel.frozen=true` is the deliberate exception for a still tableau that
-reuses registered strip assets: it locks world phase and ignores camera offsets
-while retaining layer order; it must not be used to fake a moving world. Its
-quality review uses `world-lock-clean` rather than motion/repetition checks and
-must prove that only the intended foreground subject changes between proof
-frames.
+`travel.activeUntil` is the optional terminal cue for a travelling world: the
+phase advances only in its `activeFrom..activeUntil` window, applies its
+declared easing, then remains at the completed phase. The renderer also stops
+camera compensation at that terminal lock. Such a world must pass ordinary
+seam/coverage/depth/repetition proof and `world-lock-clean` evidence at every
+later proof moment. `travel.frozen=true` is the deliberate exception for a
+still tableau that reuses registered strip assets: it locks world phase and
+ignores camera offsets while retaining layer order; it must not be used to fake
+a moving world. A frozen travel is mutually exclusive with both active-window
+cues, and its quality review uses `world-lock-clean` rather than
+motion/repetition checks.
 
 A root `worlds[]` contract binds every participating scene to one four-role
 source map. Each `far`/`mid`/`ground`/`near` `world-strip` must reuse that
@@ -140,7 +147,7 @@ bottom-biased motion pivot; the pivot is independent of registration placement.
 
 The v9 `editorial` contract is also first class. It binds final local audio and timing evidence to cue/edit-point/binding plans, declares reusable typography/annotation/data/switch nodes, compiles three responsive directing plans, and compiles dimension-specific advanced transitions. Read `editorial-system-v9.md` for timing, layout, anchor, descriptor, quality, and proof requirements. Project validation compares the compiled editorial fingerprint with the Storyboard, verifies audio SHA/duration/timing data, checks actual transition targets against match descriptors, and rejects hidden renderer-only aspect-ratio behavior.
 
-When a family needs multiple generated states, create one registered state sheet where practical and run `assets:process-state-sheet`. Every cell keeps the same full canvas; trimming individual silhouettes would destroy registration and cause visible jumping. The derived records share a family fingerprint and do not count as additional provider calls. A failed cell is first reprocessed locally. Provider repair must be a masked edit of the complete original sheet and quality proof must show untargeted cells remained unchanged. If that cannot be guaranteed, regenerate the complete sheet. Independent replacement-cell generation is invalid for a multi-state family.
+When a family needs multiple generated states, create one registered state sheet where practical and run `assets:process-state-sheet`. `generationFamily.identityMemberIds` identifies the recurring character(s) governed by identity contracts, while `generationFamily.stateMemberIds` names the complete ordered pose cells; never overload one list for both meanings. Every state keeps the same destination canvas; trimming individual silhouettes would destroy registration and cause visible jumping. If an otherwise usable provider sheet preserves clean gutters but a full silhouette crosses a nominal equal-grid boundary, the processing spec may declare `extraction.mode=explicit-source-rects`: one non-overlapping in-bounds source rectangle per state, a common destination canvas, and a placement for each rectangle. This is a deterministic full-sheet derivative and must not mix neighboring poses or count as a provider call. The derived records share a family fingerprint and do not count as additional provider calls. A failed cell is first reprocessed locally. Provider repair must be a masked edit of the complete original sheet and quality proof must show untargeted cells remained unchanged. If that cannot be guaranteed, regenerate the complete sheet. Independent replacement-cell generation is invalid for a multi-state family.
 
 A `supported-subject` or `registered-depth-stack` raster family is authored with
 registered-family schema v2 and materialized by
@@ -210,7 +217,7 @@ plus before/at/after frames.
   pose-sheet grids. `project:storyboard` deterministically compiles those
   derived fields and default transition recipes, then rejects drift.
 - Scene id, blueprint, compiled `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. Beat-bound, treatment-bound, and state-bound proof intent is immutable.
-- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; after it, the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
+- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue, optional terminal `activeUntil` lock, or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; when `activeUntil` is present the completed phase remains locked thereafter, otherwise the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence; a terminally locked travelling world must provide both its ordinary world-motion evidence and `world-lock-clean`. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside scene-boundary intervals.
 - A final state assertion must resolve to one fully opaque state, remain outside any state crossfade for at least that transition duration, and preserve the asserted state through the scene end.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.

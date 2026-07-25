@@ -73,13 +73,15 @@ export const validateRejectedOutputRecoverySpec = (spec) => {
     errors.push('source 必须声明 file 与 sha256');
   }
   const cells = spec?.cells ?? [];
-  if (
-    cells.length !== 2 ||
-    new Set(cells.map(({packageRole}) => packageRole)).size !== 2 ||
-    !cells.some(({packageRole}) => packageRole === 'subject') ||
-    !cells.some(({packageRole}) => packageRole === 'support-front')
-  ) {
-    errors.push('cells 必须恰好包含 subject 与 support-front');
+  const roles = new Set(cells.map(({packageRole}) => packageRole));
+  const isStandaloneImage = cells.length === 1 && roles.has('image');
+  const isLayerSheet =
+    cells.length === 2 &&
+    roles.size === 2 &&
+    roles.has('subject') &&
+    roles.has('support-front');
+  if (!isStandaloneImage && !isLayerSheet) {
+    errors.push('cells 必须是单个 image，或恰好包含 subject 与 support-front');
   }
   for (const cell of cells) {
     try {
@@ -184,21 +186,34 @@ export const inspectRejectedOutputRecovery = async ({
   const layoutCells = request.layerPackageBinding?.sheetLayout?.cells ?? [];
   const observations = [];
   for (const recoveryCell of spec.cells) {
-    const requestCell = layoutCells.find(
-      ({packageRole}) => packageRole === recoveryCell.packageRole,
-    );
+    const requestSurface = recoveryCell.packageRole === 'image'
+      ? request.outputSurface
+      : layoutCells.find(
+        ({packageRole}) => packageRole === recoveryCell.packageRole,
+      )?.outputSurface;
     if (
-      requestCell?.outputSurface?.mode !== 'chroma-key' ||
-      !requestCell.outputSurface.keyColor
+      requestSurface?.mode !== 'chroma-key' ||
+      !requestSurface.keyColor
     ) {
       throw new Error(
         `${recoveryCell.packageRole} 必须对应历史 request 的 chroma-key 格`,
       );
     }
+    if (
+      recoveryCell.packageRole === 'image' &&
+      (
+        recoveryCell.sourceRect.left !== 0 ||
+        recoveryCell.sourceRect.top !== 0 ||
+        recoveryCell.sourceRect.width !== media.width ||
+        recoveryCell.sourceRect.height !== media.height
+      )
+    ) {
+      throw new Error('standalone image recovery 必须观测完整 provider 输出画布');
+    }
     const observation = await inspectObservedKeyPlaneFile({
       file: sourceFile,
       rect: recoveryCell.sourceRect,
-      requestedKeyColor: requestCell.outputSurface.keyColor,
+      requestedKeyColor: requestSurface.keyColor,
     });
     observations.push({
       packageRole: recoveryCell.packageRole,

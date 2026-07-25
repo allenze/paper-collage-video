@@ -34,6 +34,8 @@ export declare const resolveWorldStripFrame: (input: {
   speedFactor: number;
   startPhase?: number;
   activeFrom?: number;
+  activeUntil?: number;
+  easing?: 'linear' | 'ease-out';
   overscanPx?: number;
   phaseOffsetPx?: number;
 }) => {

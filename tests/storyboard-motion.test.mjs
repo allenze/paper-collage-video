@@ -8,7 +8,10 @@ import {
 } from '../scripts/storyboard-lib.mjs';
 import {buildCreativePlan} from '../scripts/creative-plan-lib.mjs';
 import {selectStyleProofTarget, validateDirectingExecution} from '../scripts/motion-treatment-lib.mjs';
-import {proofOverlapsTransition} from '../scripts/project-lib.mjs';
+import {
+  proofOverlapsTransition,
+  stateSequenceMatchesStoryboardPlan,
+} from '../scripts/project-lib.mjs';
 import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const plan = (profile = 'balanced') => buildCreativePlan({
@@ -696,6 +699,7 @@ test('Cao Chong-style hero actions compile to one context-preserving pose sheet'
   assert.equal(storyboard.directingSummary.avoidedIsolatedStateCalls, 1);
   assert.deepEqual(storyboard.directingSummary.poseSheetPlans, [{
     targetId: 'cao',
+    targetIds: ['cao'],
     poseFamilyId: 'cao-actions',
     necessity: 'required',
     stateIds: ['holding-book', 'pointing-board'],
@@ -704,6 +708,81 @@ test('Cao Chong-style hero actions compile to one context-preserving pose sheet'
     repairPolicy: 'masked-edit-complete-sheet',
   }]);
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan('draft')}), []);
+});
+
+test('temporal instances that reuse one pose family consume one registered sheet', () => {
+  const authored = authoredStoryboard();
+  const scene = authored.scenes[0];
+  const makeState = ({id, targetId, stateId, proofTimeId}) => ({
+    id,
+    targetId,
+    importance: 'hero',
+    necessity: 'required',
+    changeClass: 'pose-change',
+    motion: {
+      kind: 'state-sequence',
+      poseFamilyId: 'hare-actions',
+      stateId,
+      visualChange: `${targetId} shows ${stateId}`,
+      playback: 'once',
+      transition: 'cut',
+    },
+    composition: {pattern: 'free'},
+    graphic: null,
+    semanticRisk: 'identity',
+    proofTimeId,
+    rationale: 'Temporal handoff reuses the same registered hare state sheet.',
+  });
+  scene.beats[0].proofTimeId = 'proof-establish';
+  scene.beats[0].treatments = [
+    makeState({id: 'hare-run', targetId: 'hare', stateId: 'run', proofTimeId: 'proof-establish'}),
+    makeState({id: 'hare-chaser-run', targetId: 'hare-chaser', stateId: 'run', proofTimeId: 'proof-establish'}),
+  ];
+  scene.beats[1].treatments = [
+    makeState({id: 'hare-sleep', targetId: 'hare', stateId: 'sleep', proofTimeId: 'proof-action'}),
+    makeState({id: 'hare-chaser-concedes', targetId: 'hare-chaser', stateId: 'head-low', proofTimeId: 'proof-action'}),
+  ];
+  scene.proofTimes[0].stateAssertions = [
+    {nodeId: 'hare', stateId: 'run'},
+    {nodeId: 'hare-chaser', stateId: 'run'},
+  ];
+  scene.proofTimes[1].stateAssertions = [
+    {nodeId: 'hare', stateId: 'sleep'},
+    {nodeId: 'hare-chaser', stateId: 'head-low'},
+  ];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan('draft')});
+  assert.equal(storyboard.scenes[0].compositionPlan.stateSequences.length, 2);
+  assert.equal(storyboard.directingSummary.estimatedPoseSheetCalls, 1);
+  assert.equal(storyboard.directingSummary.totalStateFamilies, 1);
+  assert.deepEqual(storyboard.directingSummary.poseSheetPlans, [{
+    targetId: 'hare',
+    targetIds: ['hare', 'hare-chaser'],
+    poseFamilyId: 'hare-actions',
+    necessity: 'required',
+    stateIds: ['head-low', 'run', 'sleep'],
+    grid: {columns: 2, rows: 2},
+    providerCalls: 1,
+    repairPolicy: 'masked-edit-complete-sheet',
+  }]);
+  assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan('draft')}), []);
+});
+
+test('project-level state-plan comparison checks the full playback contract', () => {
+  const planned = {
+    poseFamilyId: 'hare-actions',
+    states: [{id: 'sleep', at: 0}, {id: 'run-a', at: 0.2}, {id: 'run-b', at: 0.4}],
+    playback: {mode: 'loop', cycles: 3, activeFrom: 0.2, activeUntil: 0.8, holdStateId: 'sleep', activeStateIds: ['run-a', 'run-b']},
+    transition: 'cut',
+  };
+  const actual = {
+    poseFamilyId: 'hare-actions',
+    states: structuredClone(planned.states),
+    playback: structuredClone(planned.playback),
+    transition: {type: 'cut', durationSeconds: 0},
+  };
+  assert.equal(stateSequenceMatchesStoryboardPlan(actual, planned), true);
+  actual.playback.cycles = 2;
+  assert.equal(stateSequenceMatchesStoryboardPlan(actual, planned), false);
 });
 
 test('state-family authoring compiles a held prelude and registered gait plan that runtime execution must match', () => {

@@ -793,9 +793,9 @@ export const validateAssetRequest = (request) => {
       if (!isPlainObject(generationFamily)) errors.push('state-sequence 图像必须声明 semanticBinding.generationFamily');
       if (state && generationFamily && (
         generationFamily.familyId !== state.poseFamilyId ||
-        !generationFamily.memberIds?.includes(state.stateId)
+        !generationFamily.stateMemberIds?.includes(state.stateId)
       )) errors.push('stateBinding 必须属于 semanticBinding.generationFamily');
-      if (state && generationFamily?.memberIds?.length > 1 && ['provider-generation', 'provider-edit'].includes(binding.derivation?.method)) {
+      if (state && generationFamily?.stateMemberIds?.length > 1 && ['provider-generation', 'provider-edit'].includes(binding.derivation?.method)) {
         errors.push('多状态姿态族禁止独立单格 provider 生成；请使用完整 stateSheetBinding 或带整表上下文的 stateSheetRecoveryBinding');
       }
       if (state && recovery) errors.push('独立 stateBinding 不得声明 stateSheetRecoveryBinding');
@@ -812,7 +812,7 @@ export const validateAssetRequest = (request) => {
         }
         if (generationFamily && (
           generationFamily.familyId !== sheet.poseFamilyId ||
-          !sameMembers(generationFamily.memberIds, sheet.states.map(({stateId}) => stateId))
+          !sameMembers(generationFamily.stateMemberIds, sheet.states.map(({stateId}) => stateId))
         )) errors.push('stateSheetBinding 必须与 semanticBinding.generationFamily 使用同一 family 和成员集合');
         if (recovery) {
           const allStateIds = sheet.states.map(({stateId}) => stateId);
@@ -1100,11 +1100,11 @@ export const validateAssetRequest = (request) => {
         errors.push('identity-critical 必须声明独立的 generationFamily');
       } else if (
         !binding.generationFamily.familyId ||
-        !Array.isArray(binding.generationFamily.memberIds) ||
-        binding.generationFamily.memberIds.length === 0 ||
+        !Array.isArray(binding.generationFamily.identityMemberIds) ||
+        binding.generationFamily.identityMemberIds.length === 0 ||
         !Array.isArray(binding.generationFamily.referenceAssetIds)
       ) {
-        errors.push('generationFamily 必须声明 familyId、memberIds 和 referenceAssetIds');
+        errors.push('generationFamily 必须声明 familyId、identityMemberIds 和 referenceAssetIds');
       }
     }
     const requiredSemanticChecks = requiredChecksForSemanticBinding(binding);

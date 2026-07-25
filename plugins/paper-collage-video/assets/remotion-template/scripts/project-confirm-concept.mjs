@@ -19,6 +19,13 @@ import {
 } from './production-state.mjs';
 import {assertStoryboardReady} from './storyboard-lib.mjs';
 import {assertSourcePackageDecision} from './layer-source-plan-lib.mjs';
+import {
+  assertPlanningScenariosReady,
+  assertScenarioDecision,
+  assertStoryboardMatchesScenario,
+} from './planning-scenario-lib.mjs';
+import {assertIntakeConfirmed} from './intake-lib.mjs';
+import {readJson} from './project-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -69,7 +76,38 @@ try {
   const {project} = await loadProject(slug);
   assertCreativePlanReady(project.plan, {slug});
   const confirmedPlan = assertConfirmedPlanDecision(payload.planDecision, project.plan);
+  let confirmedScenario = null;
+  let selectedScenarioOption = null;
+  if (project.plan.scenarioBinding) {
+    assertIntakeConfirmed(project.intake);
+    const scenarios = assertPlanningScenariosReady(
+      await readJson(paths.planningScenariosFile),
+      {slug, intake: project.intake},
+    );
+    confirmedScenario = assertScenarioDecision(
+      payload.scenarioDecision,
+      scenarios,
+      project.plan.productionProfile,
+    );
+    selectedScenarioOption = scenarios.options.find(
+      ({id}) => id === project.plan.productionProfile,
+    );
+    if (
+      payload.budgetDecision?.imageAttemptLimit !==
+      confirmedScenario.proposedImageAttemptLimit
+    ) {
+      throw new Error(
+        `budgetDecision.imageAttemptLimit 必须等于用户在 scenario 卡确认的 ${confirmedScenario.proposedImageAttemptLimit} 次。`,
+      );
+    }
+  }
   const storyboard = await assertStoryboardReady(slug, project.plan);
+  if (selectedScenarioOption) {
+    assertStoryboardMatchesScenario(
+      selectedScenarioOption,
+      storyboard.directingSummary,
+    );
+  }
   const confirmedSourcePackages = assertSourcePackageDecision(
     payload.sourcePackageDecision,
     storyboard.directingSummary,
@@ -111,6 +149,11 @@ try {
   console.log(
     `✓ 已锁定制作规格：${confirmedPlan.productionProfile} · ${confirmedPlan.durationSeconds}s · ${confirmedPlan.sceneCount} 幕 · ${confirmedPlan.durationAuthority}`,
   );
+  if (confirmedScenario) {
+    console.log(
+      `✓ 已锁定 scenario：${confirmedScenario.storyScope} · expected ${confirmedScenario.expectedProviderImageCalls} · approved cap ${confirmedScenario.proposedImageAttemptLimit} · hard ceiling ${confirmedScenario.profileHardCeiling}`,
+    );
+  }
   console.log(
     `✓ 已锁定分层 source packages：结构最低 ${confirmedSourcePackages.requiredProviderImageCalls} 次图片调用 · 预计 ${confirmedSourcePackages.expectedProviderImageCalls} 次 · profile hard ceiling ${confirmedSourcePackages.hardCeiling ?? '未设置'}`,
   );

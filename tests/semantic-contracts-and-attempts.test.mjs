@@ -194,7 +194,7 @@ test('schema-v7 image requests classify semantic risk independently from composi
     semanticBinding: {
       riskClass: 'identity-critical',
       contractIds: ['recurring-cast'],
-      generationFamily: {familyId: 'cast-family', memberIds: ['member-a', 'member-b'], referenceAssetIds: []},
+      generationFamily: {familyId: 'cast-family', identityMemberIds: ['member-a', 'member-b'], referenceAssetIds: []},
     },
   }));
   assert.throws(
@@ -241,7 +241,7 @@ test('multi-contract images inherit checks and identity family rules from every 
     await assert.rejects(() => loadAssetRequest(path.relative(ROOT, requestFile)), /绑定 identity 契约.*generationFamily/);
 
     request.semanticBinding.generationFamily = {
-      familyId: 'cast-family', memberIds: ['member-a', 'member-b'], referenceAssetIds: [],
+      familyId: 'cast-family', identityMemberIds: ['member-a', 'member-b'], referenceAssetIds: [],
     };
     await fs.writeFile(requestFile, `${JSON.stringify(request, null, 2)}\n`);
     await assert.rejects(() => loadAssetRequest(path.relative(ROOT, requestFile)), /不得省略任一绑定契约要求/);

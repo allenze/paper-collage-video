@@ -79,6 +79,20 @@ test('creative planning supports all four partial-input modes', () => {
 });
 
 test('production profiles set explicit generated-image budgets', () => {
+  assert.deepEqual(deriveMotionBudget('full-depth', 1), {
+    maxPoseSheetCalls: 2,
+    maxStatesPerSheet: 6,
+    maxContinuousTargets: 6,
+  });
+  assert.deepEqual(deriveAssetBudget('full-depth', 1), {
+    backgrounds: 1,
+    environmentLayers: 2,
+    characterSheets: 2,
+    styleSamples: 1,
+    baseImageAttempts: 6,
+    layerPackageAttemptReserve: 6,
+    maxGeneratedImages: 12,
+  });
   assert.deepEqual(deriveAssetBudget('draft', 6), {
     backgrounds: 6,
     environmentLayers: 2,

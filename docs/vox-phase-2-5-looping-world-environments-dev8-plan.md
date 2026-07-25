@@ -229,6 +229,13 @@ Initial seam strategies:
 2. `overlap-crop` — the provider source contains a declared repeated overlap;
    the derivation CLI selects one canonical period and crops it
    deterministically.
+3. `mirror-crop` — a complete, textured source crop has usable continuous
+   interior coverage but transparent presentation margins. The derivation
+   concatenates that declared crop with its horizontal mirror, so both repeat
+   seams reuse the same source-edge pixels. This is a deterministic full-crop
+   transformation, not runtime edge painting or a provider repair. It is
+   especially suitable for a paper road whose provider canvas contains a
+   centered, ragged-edged strip.
 
 Runtime crossfade, clone-brush repair, and unrecorded manual edge painting are
 not formal seam strategies.

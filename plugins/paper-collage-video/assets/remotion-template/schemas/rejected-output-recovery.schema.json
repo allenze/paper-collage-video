@@ -32,13 +32,13 @@
     "reason": {"type": "string", "minLength": 1},
     "cells": {
       "type": "array",
-      "minItems": 2,
+      "minItems": 1,
       "maxItems": 2,
       "items": {
         "type": "object",
         "required": ["packageRole", "sourceRect", "keyPlane"],
         "properties": {
-          "packageRole": {"enum": ["subject", "support-front"]},
+          "packageRole": {"enum": ["image", "subject", "support-front"]},
           "sourceRect": {
             "type": "object",
             "required": ["left", "top", "width", "height"],

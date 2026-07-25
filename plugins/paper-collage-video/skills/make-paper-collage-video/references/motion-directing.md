@@ -47,11 +47,15 @@ separation is part of the approved design.
 motif loop. Author `axis=x`, direction, distance in viewport widths, strictly
 ordered far/near speeds, ground strip, tracked subject, exact start phase,
 and optionally `activeFrom` as a normalized action cue. Before that cue the
-world is held completely still; the complete authored distance then resolves by
-the scene end. For a tableau that must stay still for its complete duration,
-declare `world.frozen=true` instead; it is mutually exclusive with
-`activeFrom`, preserves depth order and strip coverage, and requires a
-`world-lock-clean` review rather than movement/repetition checks. This is for
+world is held completely still. Declare `activeUntil` when its complete
+authored distance must ease to a terminal phase and remain locked for the rest
+of the scene: it must be after `activeFrom`, freezes the resolved strip phase
+and camera compensation after the cue, and requires both ordinary world-motion
+proof and a `world-lock-clean` review. Without `activeUntil`, the distance
+resolves by scene end. For a tableau that must stay still for its complete
+duration, declare `world.frozen=true` instead; it is mutually exclusive with
+both active-window cues, preserves depth order and strip coverage, and requires
+a `world-lock-clean` review rather than movement/repetition checks. This is for
 a real held tableau before travel, not a substitute for hiding a moving
 background. Also author
 ordered semantic strip roles, and before/seam/after proof ids. Every
@@ -116,7 +120,10 @@ Creative Plan v4 gives each production profile two planning ceilings:
 - `motionBudget`: pose-sheet calls, cells per sheet, and continuous-motion targets.
 
 For a one-scene project the default hard ceilings are draft `4+2=6`, balanced
-`4+4=8`, and full-depth `5+6=11` image attempts. The profile ceiling is not
+`4+4=8`, and full-depth `6+6=12` image attempts. Full-depth reserves two
+independent pose-sheet families in a one-scene film when two recurring hero
+identities need real alternate states; never combine unrelated identities into
+one sheet to fit a scene-count heuristic. The profile ceiling is not
 permission to spend automatically: concept approval binds the exact
 `sourcePackageDecision` plus `budgetDecision.imageAttemptLimit`. The approved
 cap must cover compiled expected calls, cannot exceed the profile ceiling, and

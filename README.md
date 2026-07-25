@@ -82,15 +82,16 @@ codex plugin add paper-collage-video@paper-collage-video
 用 $make-paper-collage-video 做一条约 30 秒的玄奘西行纸片分层视频。
 ```
 
-Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于插件包中。它按当前阶段加载必要 reference。新项目先锁定逐幕节拍与证明时刻，再把故事板、概念、制作档位/素材预算和三类 provider 放进同一次确认；之后只在风格/虚构音色和预览节点停下来。正式成片在本地技术验收通过后即完成交付，只有真正上传、发送或发布时才请求一次外部操作授权。中断后用精简的 `project:resume` 从未完成批次继续。
+Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于插件包中。标题型请求先用三张内置对比图选择画幅、视觉风格和视差偏好，再比较轻量成片、均衡动画、完整纵深三个故事/制作/成本方案；选定方案、精确预算和 provider 后才允许任何图片调用。之后只在故事专属风格/虚构音色/运动证明和预览节点停下来。正式成片在本地技术验收通过后即完成交付，只有真正上传、发送或发布时才请求一次外部操作授权。中断后用精简的 `project:resume` 从未完成批次继续。
 
 ## 人在流程中的位置
 
-正常制作一条新视频时，人参与三个内容节点：
+正常制作一条新视频时，人参与四个内容节点：
 
-1. 口述主题后，一次确认概念、Storyboard v10 导演节拍/完整图层源包与意图路由的不透明场景边界、时长/幕数、`draft|balanced|full-depth` 制作档位、base/reserve 图片硬上限、精确 source-package 调用账目、动作预算和文本/生图/虚构语音 provider。
-2. 确认一张风格样张、短试听和必要时的 3–5 秒动作证明。
-3. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
+1. 选择 16:9 / 9:16、三种内置视觉风格之一和分层视差偏好。
+2. 比较三档故事与制作方案，一次确认所选 scenario、Storyboard v10、精确图片上限和文本/生图/虚构语音 provider。
+3. 确认故事专属风格样张、短试听和 3–5 秒动作证明。
+4. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
 最终视频和验收报告由系统自动交付；本地完成不等于允许外部发布。
 
@@ -139,6 +140,7 @@ npm run project:new -- silk-road --title="玄奘西行"
 projects/silk-road/
   assets-manifest.json
   brief.md
+  planning-scenarios.json
   production.json
   project.json
   storyboard.json
@@ -161,7 +163,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。Codex 使用当前宿主模型准备临时概念，不调用未确认的外部/付费 provider；Creative Plan v4 解析时长、幕数、base + layer reserve 图片 profile ceiling、精确人批 attempt cap 与动作预算，Storyboard v10 再把逐节拍导演 treatments、完整 rear/subject/front 源包、统一 edit points、三画幅 composition profiles 与高级切换编译为组合计划、持久可见性事件、状态序列、图形目标、姿态母版网格、多维风格证明计划、provider/local/avoided 调用账目和指纹。相对景深运动必须在生图前锁定 clean plate、full silhouette、full overlay、共享画布、严格层级和 16:9/9:16/1:1 reveal envelopes；一张 flat master 不能再被抠成缺失隐藏像素的独立运动层。人一次确认故事板、概念、精确 `sourcePackageDecision`、`budgetDecision.imageAttemptLimit` 和三类 provider 后，`project:confirm-concept` 组合记录这些决定并直接进入 `style-review`。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。`project:intake` 用三张内置文生图风格卡收集画幅、视觉风格和视差偏好；风格卡在插件开发时一次生成并随包分发，用户选择时不调用 provider。`project:scenarios` 再用共同故事骨架比较轻量成片、均衡动画和完整纵深的时长、幕数、动作、分层、预计调用、建议 cap 和 hard ceiling，全程不调用 provider。选定方案后，Creative Plan v4 写入 scenario 指纹和 `profilePromise`，Storyboard v10 同时检查制作上限与质量下限。人一次确认 `scenarioDecision`、故事板、概念、精确 `sourcePackageDecision`、`budgetDecision.imageAttemptLimit` 和三类 provider 后，`project:confirm-concept` 才允许进入故事专属风格样张阶段。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -172,7 +174,9 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | 命令 | 作用 |
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
-| `npm run project:plan -- <slug> ...` | 保留用户时长/幕数，补全缺失项并确定制作档位、图片预算和动作预算 |
+| `npm run project:intake -- <slug> --json` | 输出画幅、三张内置风格卡与视差偏好的初始选择 |
+| `npm run project:scenarios -- <slug> --input=<file> --json` | 编译共同故事骨架和三档故事/制作/成本卡 |
+| `npm run project:plan -- <slug> --scenario=<id>` | 将人选中的 scenario 锁定为 Creative Plan、预算上限和质量下限 |
 | `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v10 节拍 treatments、layer source packages、edit points、三画幅导演计划、高级切换、多维风格证明与证明时刻 |
 | `npm run project:revise-preview-directing -- <slug> --input=<file>` | 在预览退回后保护概念/风格并按既定 motion budget 正式重编导演字段 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |

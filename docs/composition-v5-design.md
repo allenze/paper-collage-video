@@ -37,13 +37,13 @@ Masked repair requests must bind the source sheet as both `derivation.parentAsse
 `npm run assets:process-state-sheet -- <state-sheet.json>` then:
 
 1. verifies the sheet was already recorded as one provider output;
-2. splits row-major cells while preserving every cell's full canvas;
+2. splits row-major cells while preserving every cell's full canvas. If a provider has kept clean inter-pose gutters but allowed a silhouette to cross a nominal equal-grid edge, declare `extraction.mode=explicit-source-rects`: one non-overlapping source rectangle per declared state plus one common destination canvas and placement. This is a deterministic re-registration of the complete recorded sheet, not an isolated repair or a new provider call;
 3. removes the uniform key locally;
 4. verifies identical output dimensions;
 5. records each state as a deterministic derivative with one family fingerprint;
 6. writes a report containing provider calls, derived states, and avoided individual calls.
 
-Preserving the full cell canvas is mandatory: trimming each silhouette independently destroys registration and creates visible jumps. Unrelated identities must not be packed together merely to fill the grid. If one cell fails review, provider repair may target only that cell's mask but must receive the complete original sheet as context and prove accepted cells unchanged; otherwise regenerate the complete sheet. Never splice an independently generated replacement cell into the family.
+Preserving one common destination canvas is mandatory: trimming each silhouette independently destroys registration and creates visible jumps. Explicit source rectangles must be non-overlapping, in-bounds, and each fit at its declared placement on that common canvas; this prevents a neighboring pose from silently entering a local derivative. Unrelated identities must not be packed together merely to fill the grid. If one cell fails review, provider repair may target only that cell's mask but must receive the complete original sheet as context and prove accepted cells unchanged; otherwise regenerate the complete sheet. Never splice an independently generated replacement cell into the family.
 
 ## Dynamic graphics
 

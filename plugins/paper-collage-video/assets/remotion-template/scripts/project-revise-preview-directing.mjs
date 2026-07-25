@@ -18,7 +18,7 @@ const json = args.includes('--json');
 
 try {
   if (!slug || !input) {
-    throw new Error('用法：project:revise-preview-directing -- <slug> --input=<storyboard.json> [--source=preview|asset-production] [--json]');
+    throw new Error('用法：project:revise-preview-directing -- <slug> --input=<storyboard.json> [--source=style-review|preview|asset-production] [--json]');
   }
   const [{project}, {paths, state}, currentStoryboard] = await Promise.all([
     loadProject(slug),

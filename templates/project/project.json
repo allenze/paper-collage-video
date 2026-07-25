@@ -3,6 +3,18 @@
   "schemaVersion": 10,
   "slug": "{{slug}}",
   "title": "{{title}}",
+  "intake": {
+    "schemaVersion": 1,
+    "status": "pending",
+    "aspectRatio": null,
+    "visualStylePreset": null,
+    "parallaxPreference": null,
+    "styleCatalogVersion": null,
+    "styleCatalogFingerprint": null,
+    "confirmedAt": null,
+    "note": "",
+    "updatedAt": "{{createdAt}}"
+  },
   "plan": {
     "schemaVersion": 4,
     "slug": "{{slug}}",

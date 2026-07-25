@@ -320,8 +320,8 @@ export const validateCompositionStructure = ({
       ) {
         add('error', 'composition-world-strip-binding', 'world-strip 必须绑定当前 schema-v1 horizontal looping strip provenance。', `${nodeLocation}.loopingStripBinding`);
       }
-      if (!['exact', 'overlap-crop'].includes(binding?.seamStrategy)) {
-        add('error', 'composition-world-strip-strategy', 'world-strip seamStrategy 必须是 exact 或 overlap-crop。', `${nodeLocation}.loopingStripBinding.seamStrategy`);
+      if (!['exact', 'overlap-crop', 'mirror-crop'].includes(binding?.seamStrategy)) {
+        add('error', 'composition-world-strip-strategy', 'world-strip seamStrategy 必须是 exact、overlap-crop 或 mirror-crop。', `${nodeLocation}.loopingStripBinding.seamStrategy`);
       }
       const output = binding?.output;
       if (
@@ -929,12 +929,13 @@ export const validateCompositionStructure = ({
       const invalidTravel =
         environment?.axis !== 'x' ||
         !['left', 'right'].includes(environment?.travel?.direction) ||
-        environment?.travel?.easing !== 'linear' ||
+        !['linear', 'ease-out'].includes(environment?.travel?.easing) ||
         !(finite(environment?.travel?.distanceViewports) && environment.travel.distanceViewports > 0) ||
         !(finite(environment?.travel?.startPhase) && environment.travel.startPhase >= 0 && environment.travel.startPhase < 1) ||
         !(finite(environment?.travel?.activeFrom ?? 0) && (environment?.travel?.activeFrom ?? 0) >= 0 && (environment?.travel?.activeFrom ?? 0) < 1) ||
+        (environment?.travel?.activeUntil !== undefined && (!(finite(environment.travel.activeUntil) && environment.travel.activeUntil > 0 && environment.travel.activeUntil < 1) || environment.travel.activeUntil <= (environment.travel.activeFrom ?? 0))) ||
         (environment?.travel?.frozen !== undefined && typeof environment.travel.frozen !== 'boolean') ||
-        (environment?.travel?.frozen === true && environment?.travel?.activeFrom !== undefined) ||
+        (environment?.travel?.frozen === true && (environment?.travel?.activeFrom !== undefined || environment?.travel?.activeUntil !== undefined)) ||
         typeof environment?.travel?.closedLoop !== 'boolean';
       if (invalidTravel) {
         add('error', 'composition-looping-travel', 'looping-environment 必须声明有效 horizontal linear world travel。', `${nodeLocation}.loopingEnvironment.travel`);
@@ -1041,6 +1042,8 @@ export const validateCompositionStructure = ({
             speedFactor,
             startPhase: environment.travel.startPhase,
             activeFrom: environment.travel.activeFrom ?? 0,
+            activeUntil: environment.travel.activeUntil ?? 1,
+            easing: environment.travel.easing,
             overscanPx: environment.overscanPx,
           });
           const coverage = inspectWorldStripCoverage({

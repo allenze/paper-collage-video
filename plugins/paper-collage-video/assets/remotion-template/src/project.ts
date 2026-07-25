@@ -595,7 +595,7 @@ export type LoopingStripBinding = {
   role: 'far' | 'mid' | 'ground' | 'near';
   sourceAssetId: string;
   axis: 'x';
-  seamStrategy: 'exact' | 'overlap-crop';
+  seamStrategy: 'exact' | 'overlap-crop' | 'mirror-crop';
   source: {
     sha256: string;
     width: number;
@@ -636,11 +636,13 @@ export type CompositionWorldStripNode = {
 export type LoopingEnvironmentTravel = {
   direction: 'left' | 'right';
   distanceViewports: number;
-  easing: 'linear';
+  easing: 'linear' | 'ease-out';
   closedLoop: boolean;
   startPhase: number;
   /** Normalized scene cue; phase is held before this point. */
   activeFrom?: number;
+  /** Normalized scene lock; phase remains at the completed travel after this point. */
+  activeUntil?: number;
   /** Reuse registered strips as one locked tableau; never advance the world phase. */
   frozen?: boolean;
 };

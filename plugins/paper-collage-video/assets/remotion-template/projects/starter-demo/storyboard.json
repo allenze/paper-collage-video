@@ -503,6 +503,7 @@
     "estimatedPoseSheetCalls": 0,
     "maxStatesInFamily": 0,
     "continuousTargets": 0,
+    "localMotionTargets": 1,
     "visibilityTargets": 1,
     "motifFieldTargets": 0,
     "graphicTreatments": 0,
@@ -514,6 +515,7 @@
       "maxStatesPerSheet": 4,
       "maxContinuousTargets": 2
     },
+    "profileFulfillment": null,
     "generationBudget": {
       "requiredProviderImageCalls": 0,
       "expectedProviderImageCalls": 0,
@@ -547,6 +549,6 @@
       ],
       "fingerprint": "55c7c9a6fdb1e1f5e6c50757c8907e3e1cfffd5cb62dd5def90957808c55e656"
     },
-    "fingerprint": "09e229ab60db0f6d352b0acd52e7cbe123269a5decdae03f2c24634ce77e5464"
+    "fingerprint": "879a0088dc58aee152a55c2d78c81f854f9ad823dbfd9b24c3e2ef6d001194ff"
   }
 }

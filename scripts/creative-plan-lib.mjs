@@ -11,19 +11,19 @@ export const PRODUCTION_PROFILES = ['draft', 'balanced', 'full-depth'];
 
 export const PRODUCTION_PROFILE_DEFINITIONS = {
   draft: {
-    label: '草稿',
-    summary: '优先低成本迭代；保留必需动作，压缩增强姿态、环境层和环境呼吸目标。',
-    finalImpact: '关键动作仍可使用状态母版，次要动作更克制，适合先验证故事与节奏。',
+    label: '轻量成片',
+    summary: '以零成本本地运动为主；只为无法用变换表达的必要语义动作生成状态。',
+    finalImpact: '不是静态幻灯片：角色和镜头仍会移动、呼吸、渐显与转场，但动作细节和景深更克制。',
   },
   balanced: {
-    label: '均衡',
-    summary: '默认档位；关键场景独立分层，并为主要动作保留成组姿态母版。',
-    finalImpact: '主要镜头有前中后景、明确动作变化和适量图形强调。',
+    label: '均衡动画',
+    summary: '本地运动与关键状态序列结合；主要动作通常使用 2–4 格状态，并选择性分层。',
+    finalImpact: '主要动作真正发生变化，关键镜头具备前中后景、视差和适量环境生命。',
   },
   'full-depth': {
     label: '完整纵深',
-    summary: '最高制作深度；增加环境层、动作家族、状态格数和组合证明工作。',
-    finalImpact: '最大化环境视差与角色动作细节，制作时间和生成额度最高。',
+    summary: '更完整的动作家族、4–6 格关键状态、丰富层次、视差、循环世界和环境生命。',
+    finalImpact: '角色动作更细，空间更深，天气与环境元素更丰富；只增加服务叙事的细节。',
   },
 };
 
@@ -38,7 +38,10 @@ export const deriveMotionBudget = (productionProfile, sceneCount) => {
     maxPoseSheetCalls: {
       draft: Math.max(1, Math.ceil(sceneCount / 4)),
       balanced: Math.max(1, Math.ceil(sceneCount / 2)),
-      'full-depth': sceneCount,
+      // A single continuous shot can still contain two independently animated
+      // hero identities. Do not make authors collapse them into one unrelated
+      // state sheet merely because the film has one scene.
+      'full-depth': Math.max(2, sceneCount),
     }[productionProfile],
     maxStatesPerSheet: {
       draft: 4,
@@ -117,6 +120,9 @@ export const summarizeConceptDecision = (plan) => {
     assetBudget: plan.assetBudget,
     motionBudget: plan.motionBudget,
     approvedImageBudget: plan.approvedImageBudget,
+    storyScope: plan.storyScope ?? null,
+    scenarioBinding: plan.scenarioBinding ?? null,
+    profilePromise: plan.profilePromise ?? null,
     profileOptions: summarizeProductionProfiles(plan.resolved.sceneCount),
   };
 };
@@ -158,8 +164,16 @@ export const assertApprovedImageBudgetDecision = (
   if (!Number.isInteger(imageAttemptLimit) || imageAttemptLimit < 0) {
     throw new Error('budgetDecision.imageAttemptLimit 必须是非负整数。');
   }
-  const expectedProviderImageCalls =
+  const storyboardProviderImageCalls =
     directingSummary?.generationBudget?.expectedProviderImageCalls ?? 0;
+  const expectedProviderImageCalls =
+    plan?.scenarioBinding?.expectedProviderImageCalls ??
+    storyboardProviderImageCalls;
+  if (storyboardProviderImageCalls > expectedProviderImageCalls) {
+    throw new Error(
+      `当前 storyboard 的结构化素材预计 ${storyboardProviderImageCalls} 次图片调用，超过所选 scenario 的全片预计 ${expectedProviderImageCalls} 次；请重新规划并审批。`,
+    );
+  }
   const profileHardCeiling = plan?.assetBudget?.maxGeneratedImages;
   if (!Number.isInteger(profileHardCeiling) || profileHardCeiling < 0) {
     throw new Error('当前 Creative Plan 缺少有效的图片 profile hard ceiling。');
@@ -396,6 +410,22 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
     }
     if (
       plan.approvedImageBudget &&
+      plan.scenarioBinding &&
+      (
+        plan.approvedImageBudget.expectedProviderImageCalls !==
+          plan.scenarioBinding.expectedProviderImageCalls ||
+        plan.approvedImageBudget.imageAttemptLimit !==
+          plan.scenarioBinding.proposedImageAttemptLimit
+      )
+    ) {
+      add(
+        'plan-approved-scenario-budget-drift',
+        '批准预算必须与人工选择的 scenario expected calls 和 proposed cap 一致。',
+        'plan.approvedImageBudget',
+      );
+    }
+    if (
+      plan.approvedImageBudget &&
       expectedBudget &&
       plan.approvedImageBudget.imageAttemptLimit >
         expectedBudget.maxGeneratedImages
@@ -429,6 +459,98 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
         'plan.motionBudget',
       );
     }
+  }
+  if (
+    plan.storyScope !== undefined &&
+    !['concise', 'standard', 'expanded'].includes(plan.storyScope)
+  ) {
+    add(
+      'plan-story-scope',
+      'plan.storyScope 必须是 concise、standard 或 expanded。',
+      'plan.storyScope',
+    );
+  }
+  if (plan.scenarioBinding !== undefined) {
+    const binding = plan.scenarioBinding;
+    const expectedScope = {
+      draft: 'concise',
+      balanced: 'standard',
+      'full-depth': 'expanded',
+    }[plan.productionProfile];
+    if (plan.storyScope !== expectedScope) {
+      add(
+        'plan-scenario-story-scope',
+        `scenario-bound ${plan.productionProfile} 计划的 storyScope 必须为 ${expectedScope}。`,
+        'plan.storyScope',
+      );
+    }
+    if (binding.optionId !== plan.productionProfile) {
+      add(
+        'plan-scenario-profile',
+        'scenarioBinding.optionId 必须与 productionProfile 一致。',
+        'plan.scenarioBinding.optionId',
+      );
+    }
+    for (const key of ['scenarioSetFingerprint', 'optionFingerprint']) {
+      if (!/^[a-f0-9]{64}$/.test(binding[key] ?? '')) {
+        add(
+          'plan-scenario-fingerprint',
+          `scenarioBinding.${key} 必须是 sha256。`,
+          `plan.scenarioBinding.${key}`,
+        );
+      }
+    }
+    if (!isPositiveInteger(binding.expectedProviderImageCalls)) {
+      add(
+        'plan-scenario-expected-calls',
+        'scenarioBinding.expectedProviderImageCalls 必须是正整数。',
+        'plan.scenarioBinding.expectedProviderImageCalls',
+      );
+    }
+    if (
+      !isPositiveInteger(binding.proposedImageAttemptLimit) ||
+      binding.proposedImageAttemptLimit < binding.expectedProviderImageCalls ||
+      binding.proposedImageAttemptLimit > plan.assetBudget?.maxGeneratedImages
+    ) {
+      add(
+        'plan-scenario-proposed-cap',
+        'scenario proposed cap 必须覆盖预计调用且不超过 profile hard ceiling。',
+        'plan.scenarioBinding.proposedImageAttemptLimit',
+      );
+    }
+    if (!isDateTime(binding.selectedAt)) {
+      add(
+        'plan-scenario-selected-at',
+        'scenarioBinding.selectedAt 必须是有效时间。',
+        'plan.scenarioBinding.selectedAt',
+      );
+    }
+    const promise = plan.profilePromise;
+    const promiseKeys = [
+      'minRequiredStateFamilies',
+      'minEnhancementStateFamilies',
+      'minTotalStates',
+      'minLocalMotionTargets',
+      'minLayeredScenes',
+      'minParallaxScenes',
+      'minAmbientScenes',
+    ];
+    if (
+      !promise ||
+      promiseKeys.some((key) => !isNonNegativeInteger(promise[key]))
+    ) {
+      add(
+        'plan-profile-promise',
+        'scenario-bound 计划必须包含完整的非负 profilePromise。',
+        'plan.profilePromise',
+      );
+    }
+  } else if (plan.storyScope !== undefined || plan.profilePromise !== undefined) {
+    add(
+      'plan-scenario-fields-without-binding',
+      'storyScope 与 profilePromise 只能随 scenarioBinding 一起出现。',
+      'plan',
+    );
   }
   if (
     isPositiveNumber(requestedDuration) &&

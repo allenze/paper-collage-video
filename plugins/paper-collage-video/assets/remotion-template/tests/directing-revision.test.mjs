@@ -42,6 +42,27 @@ test('preview directing revision preserves approvals and invalidates derived art
   assert.equal(result.production.workItems.some(({id}) => id === 'directing-revision-scene-01'), true);
 });
 
+test('style-review directing revision preserves the approved concept before style approval exists', async () => {
+  const {storyboard, project, production} = await loadFixture();
+  const supplied = structuredClone(storyboard);
+  supplied.scenes[0].beats[1].treatments[0].rationale += ' 在风格审查中调整可见变化的执行节奏。';
+  const styleReview = structuredClone(production);
+  styleReview.stage = 'style-review';
+  styleReview.approvals.styleAndVoice = {status: 'pending', decidedAt: null, note: ''};
+  const result = prepareDirectingRevision({
+    currentStoryboard: storyboard,
+    suppliedStoryboard: supplied,
+    plan: project.plan,
+    production: styleReview,
+    reportPath: 'projects/directing-revision-fixture/directing-revision.json',
+    source: 'style-review',
+    at: '2026-07-25T01:00:00.000Z',
+  });
+  assert.equal(result.production.stage, 'style-review');
+  assert.equal(result.production.approvals.styleAndVoice.status, 'pending');
+  assert.equal(result.report.source, 'style-review');
+});
+
 test('preview directing revision rejects protected concept changes and no-op input', async () => {
   const {storyboard, project, production} = await loadFixture();
   const conceptChange = structuredClone(storyboard);

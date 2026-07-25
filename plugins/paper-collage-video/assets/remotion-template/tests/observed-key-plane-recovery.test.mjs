@@ -344,3 +344,74 @@ test('rejected output becomes an auditable recovery source without mutating its 
     recorded.ledgerSha256After,
   );
 });
+
+test('rejected standalone chroma-key output recovers only from one full-canvas observed plane', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-recovery-'));
+  const slug = 'standalone-recovery';
+  const sourceRelative = `public/projects/${slug}/assets/grass.png`;
+  const sourceFile = path.join(root, sourceRelative);
+  await fs.mkdir(path.dirname(sourceFile), {recursive: true});
+  await sharp(Buffer.from(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="160" height="90">
+      <rect width="100%" height="100%" fill="#f509eb"/>
+      <path d="M0 90 Q30 45 58 90 Q92 35 125 90 Q143 48 160 90Z" fill="#4f7a42"/>
+    </svg>
+  `)).png().toFile(sourceFile);
+  const sourceSha256 = await sha256File(sourceFile);
+  const requestRelative = `projects/${slug}/requests/grass.json`;
+  const request = {
+    schemaVersion: 7,
+    projectSlug: slug,
+    assetId: 'standalone-grass',
+    capability: 'image',
+    output: sourceRelative,
+    prompt: 'fixture',
+    outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 24},
+    compositionBinding: {
+      sceneId: 'scene', nodeId: 'world', pattern: 'looping-environment',
+      outputRole: 'near-foreground-strip-source', canvas: {width: 160, height: 90},
+      derivation: {method: 'provider-generation'},
+    },
+    semanticBinding: {riskClass: 'decorative', contractIds: []},
+  };
+  const attemptId = 'img-22222222-2222-4222-8222-222222222222';
+  const ledgerEvent = {
+    schemaVersion: 1, attemptId, event: 'closed', status: 'rejected',
+    projectSlug: slug, assetId: request.assetId, provider: 'fixture-provider',
+    model: 'fixture-model', requestFingerprint: generationRequestFingerprint(request),
+    quotaConsumed: true, output: sourceRelative, outputSha256: null,
+    note: 'strict boundary mismatch', at: '2026-07-24T00:00:00.000Z',
+  };
+  const projectDirectory = path.join(root, 'projects', slug);
+  const ledgerFile = path.join(projectDirectory, 'generation-attempts.jsonl');
+  await Promise.all([
+    writeJson(path.join(root, requestRelative), request),
+    writeJson(path.join(projectDirectory, 'assets-manifest.json'), {
+      schemaVersion: 4, projectSlug: slug, assets: [],
+    }),
+    fs.mkdir(projectDirectory, {recursive: true}).then(() =>
+      fs.writeFile(ledgerFile, `${JSON.stringify(ledgerEvent)}\n`, 'utf8')),
+  ]);
+  const spec = {
+    schemaVersion: 1, projectSlug: slug, attemptId,
+    historicalRequest: requestRelative,
+    source: {file: sourceRelative, sha256: sourceSha256},
+    recoveryAssetId: request.assetId, reason: 'fixture-standalone-observed-plane',
+    cells: [{
+      packageRole: 'image', sourceRect: {left: 0, top: 0, width: 160, height: 90},
+      keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'},
+    }],
+  };
+  const provider = {
+    id: 'fixture-provider', adapter: 'host', tool: 'fixture-image', model: 'fixture-model',
+  };
+  const inspected = await inspectRejectedOutputRecovery({root, spec, provider});
+  assert.equal(inspected.record.lifecycle.status, 'recovery-source');
+  assert.deepEqual(inspected.recovery.observedKeyColors, {image: '#f509eb'});
+  const invalid = structuredClone(spec);
+  invalid.cells[0].sourceRect.width = 159;
+  await assert.rejects(
+    () => inspectRejectedOutputRecovery({root, spec: invalid, provider}),
+    /完整 provider 输出画布/,
+  );
+});

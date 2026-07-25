@@ -2,6 +2,18 @@ import {createHash} from 'node:crypto';
 
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 
+const validRect = (rect) =>
+  Number.isInteger(rect?.left) && rect.left >= 0 &&
+  Number.isInteger(rect?.top) && rect.top >= 0 &&
+  Number.isInteger(rect?.width) && rect.width >= 2 &&
+  Number.isInteger(rect?.height) && rect.height >= 2;
+
+const rectsOverlap = (left, right) =>
+  left.left < right.left + right.width &&
+  right.left < left.left + left.width &&
+  left.top < right.top + right.height &&
+  right.top < left.top + left.height;
+
 export const validateStateSheetSpec = (spec) => {
   const errors = [];
   if (spec?.schemaVersion !== 1) errors.push('schemaVersion 必须为 1');
@@ -27,6 +39,45 @@ export const validateStateSheetSpec = (spec) => {
   }
   if (spec?.states?.length > columns * rows) errors.push('states 数量超过 sheet 容量');
   if (!nonEmpty(spec?.keying?.keyColor) || !Number.isInteger(spec?.keying?.matteErode) || spec.keying.matteErode < 0 || spec.keying.matteErode > 8) errors.push('keying 无效');
+  if (spec?.extraction !== undefined) {
+    const extraction = spec.extraction;
+    if (extraction?.mode !== 'explicit-source-rects') errors.push('extraction.mode 必须为 explicit-source-rects');
+    if (!Number.isInteger(extraction?.canvas?.width) || extraction.canvas.width < 2 || !Number.isInteger(extraction?.canvas?.height) || extraction.canvas.height < 2) {
+      errors.push('extraction.canvas 必须声明正整数 width/height');
+    }
+    if (!Array.isArray(extraction?.cells) || extraction.cells.length !== (spec.states?.length ?? 0)) {
+      errors.push('extraction.cells 必须与 states 一一对应');
+    } else {
+      const stateIds = new Set((spec.states ?? []).map(({id}) => id));
+      const extractionIds = new Set();
+      for (const cell of extraction.cells) {
+        const stateId = cell?.stateId ?? 'unknown';
+        const placement = cell?.placement;
+        const sourceRect = cell?.sourceRect;
+        if (!stateIds.has(cell?.stateId) || extractionIds.has(cell?.stateId)) errors.push(`extraction cell ${stateId} 必须唯一对应一个 state`);
+        extractionIds.add(cell?.stateId);
+        if (!validRect(sourceRect)) errors.push(`extraction cell ${stateId} sourceRect 无效`);
+        if (!Number.isInteger(placement?.left) || placement.left < 0 || !Number.isInteger(placement?.top) || placement.top < 0) {
+          errors.push(`extraction cell ${stateId} placement 无效`);
+        } else if (
+          validRect(sourceRect) &&
+          (
+            placement.left + sourceRect.width > extraction.canvas?.width ||
+            placement.top + sourceRect.height > extraction.canvas?.height
+          )
+        ) {
+          errors.push(`extraction cell ${stateId} 必须完全落在统一注册画布内`);
+        }
+      }
+      for (let index = 0; index < extraction.cells.length; index += 1) {
+        for (let other = index + 1; other < extraction.cells.length; other += 1) {
+          if (validRect(extraction.cells[index].sourceRect) && validRect(extraction.cells[other].sourceRect) && rectsOverlap(extraction.cells[index].sourceRect, extraction.cells[other].sourceRect)) {
+            errors.push('extraction.sourceRect 不得重叠，以免把相邻姿态混入同一派生状态');
+          }
+        }
+      }
+    }
+  }
   return errors;
 };
 
@@ -40,6 +91,8 @@ export const createStateFamilyFingerprint = ({sourceSha256, spec, members}) =>
       registration: spec.registration,
       layout: spec.layout,
       states: spec.states,
+      extraction: spec.extraction ?? null,
+      keying: spec.keying,
       members: members
         .map(({stateId, sha256, file = null}) => ({stateId, sha256, file}))
         .sort((left, right) => left.stateId.localeCompare(right.stateId)),

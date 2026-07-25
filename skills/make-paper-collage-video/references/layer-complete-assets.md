@@ -73,9 +73,11 @@ One single-scene profile reserves:
 |---|---:|---:|---:|
 | `draft` | 4 | 2 | 6 |
 | `balanced` | 4 | 4 | 8 |
-| `full-depth` | 5 | 6 | 11 |
+| `full-depth` | 6 | 6 | 12 |
 
-The reserve scales with scene count. The compiler rejects a storyboard whose
+For `full-depth`, a one-scene competitive or dialogue story can reserve two
+independent hero pose-sheet families; it must not combine unrelated identities
+merely to fit the scene count. The reserve scales with scene count. The compiler rejects a storyboard whose
 structural minimum exceeds the ceiling.
 
 ## Source Strategies
@@ -129,12 +131,18 @@ the complete source package.
 
 A provider output already closed as `rejected` is never edited back into the
 ledger. A schema-v1 rejected-output recovery spec may name the historical
-request, exact raw file/SHA, attempt id, keyed cell rectangles, and `flat-v1`
-policy. `provider:recover-rejected-source --check` is read-only. Without
+request, exact raw file/SHA, attempt id, and `flat-v1` observations. A
+standalone chroma-key output uses exactly one full-canvas `image` observation;
+a registered layer sheet uses its `subject` and `support-front` keyed-cell
+rectangles. `provider:recover-rejected-source --check` is read-only. Without
 `--check`, it may append one manifest record with lifecycle `recovery-source`
 only after the attempt remains `rejected`, quota remains consumed, request and
 output identity match, and every observed plane passes. It never reserves or
 spends quota and never writes `generation-attempts.jsonl`.
+An accepted `recovery-source` may be the parent of a deterministic derivative
+(such as a keyed looping strip); the derivative records that exact recovered
+parent and may enter the current execution tree, while the rejected ledger
+event remains unchanged.
 
 ## Runtime and Provenance
 
@@ -143,10 +151,20 @@ active source record, canonical period/crop, RGB and alpha edge bands,
 source/render-scale thresholds, three responsive viewport spans, recovery
 policy, output SHA, lifecycle, and derivation fingerprint become one
 `loopingStripBinding`. `exact` accepts already matching edge bands;
-`overlap-crop` selects one declared period deterministically. Recovery order is
-local period/crop correction, a masked edit with the complete original strip
-and both edge neighborhoods visible, then complete-strip regeneration.
-Isolated edge generation and runtime crossfade seam hiding are invalid.
+`overlap-crop` selects one declared period deterministically. `mirror-crop`
+concatenates a declared complete interior crop with its horizontal mirror so a
+paper road with transparent presentation margins repeats without exposing a
+white/empty gap; it remains a recorded local derivative, never a runtime
+clone-brush. A provider-native
+`chroma-key` source may be used for a sparse mid/ground/near strip only when
+the spec declares the matching `sourceSurface.keyColor` plus deterministic
+`keying` thresholds; the derivation verifies the active source request's
+color-key provenance, produces a real-alpha tile, and records the keying
+metadata hash beside the strip binding. `opaque` remains the default for a
+full far plate. Recovery order is local key/period/crop correction, a masked
+edit with the complete original strip and both edge neighborhoods visible, then
+complete-strip regeneration. Isolated edge generation and runtime crossfade
+seam hiding are invalid.
 
 `assets:derive-registered-family` consumes only schema-v2 family specs. Every
 member must:

@@ -59,6 +59,8 @@ export const resolveWorldStripFrame = ({
   speedFactor,
   startPhase = 0,
   activeFrom = 0,
+  activeUntil = 1,
+  easing = 'linear',
   overscanPx = 2,
   phaseOffsetPx = 0,
 }) => {
@@ -83,15 +85,27 @@ export const resolveWorldStripFrame = ({
   if (!(finite(activeFrom) && activeFrom >= 0 && activeFrom < 1)) {
     throw new Error('world-strip activeFrom 必须位于 0..1。');
   }
+  if (!(finite(activeUntil) && activeUntil > activeFrom && activeUntil <= 1)) {
+    throw new Error('world-strip activeUntil 必须晚于 activeFrom，且位于 0..1。');
+  }
+  if (!['linear', 'ease-out'].includes(easing)) {
+    throw new Error('world-strip easing 必须是 linear 或 ease-out。');
+  }
   if (!finite(phaseOffsetPx)) {
     throw new Error('world-strip phaseOffsetPx 必须是有限数字。');
   }
-  // `distanceViewports` describes the complete travel after the cue, not the
-  // whole scene. This makes a held starting tableau truly still while keeping
-  // the authored end phase and seam proof deterministic.
-  const travelProgress = progress <= activeFrom
+  // `distanceViewports` describes the complete travel inside its explicit
+  // active window. The phase is held before `activeFrom` and after
+  // `activeUntil`, which supports one continuous take that settles into a
+  // genuinely static tableau without replacing the canonical strips.
+  const windowProgress = progress <= activeFrom
     ? 0
-    : (progress - activeFrom) / (1 - activeFrom);
+    : progress >= activeUntil
+      ? 1
+      : (progress - activeFrom) / (activeUntil - activeFrom);
+  const travelProgress = easing === 'ease-out'
+    ? 1 - (1 - windowProgress) ** 2
+    : windowProgress;
   const signedDistance =
     (direction === 'left' ? -1 : 1) *
     distanceViewports *

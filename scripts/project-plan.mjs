@@ -4,7 +4,17 @@ import {
   PRODUCTION_PROFILES,
   summarizeConceptDecision,
 } from './creative-plan-lib.mjs';
-import {assertSlug, loadProject, writeJson} from './project-lib.mjs';
+import {assertIntakeConfirmed} from './intake-lib.mjs';
+import {
+  assertPlanningScenariosReady,
+  buildCreativePlanFromScenario,
+} from './planning-scenario-lib.mjs';
+import {
+  assertSlug,
+  loadProject,
+  readJson,
+  writeJson,
+} from './project-lib.mjs';
 import {loadProduction} from './production-state.mjs';
 
 const args = process.argv.slice(2);
@@ -36,6 +46,13 @@ const printPlan = ({project, json}) => {
   );
   console.log(`  目标幕数：${project.plan.resolved.sceneCount}`);
   console.log(`  制作档位：${project.plan.productionProfile}`);
+  if (project.plan.scenarioBinding) {
+    console.log(`  叙事范围：${project.plan.storyScope}`);
+    console.log(`  scenario：${project.plan.scenarioBinding.optionId} · ${project.plan.scenarioBinding.optionFingerprint}`);
+    console.log(
+      `  scenario 图片调用：预计 ${project.plan.scenarioBinding.expectedProviderImageCalls} · 建议批准上限 ${project.plan.scenarioBinding.proposedImageAttemptLimit}`,
+    );
+  }
   console.log(
     `  生图 profile ceiling：基础 ${project.plan.assetBudget.baseImageAttempts} + 分层 source-package 预留 ${project.plan.assetBudget.layerPackageAttemptReserve} = 最多 ${project.plan.assetBudget.maxGeneratedImages} 次计费尝试`,
   );
@@ -57,16 +74,44 @@ try {
   assertSlug(slug);
   const durationSeconds = optionalNumber('--duration');
   const sceneCount = optionalNumber('--scenes', {integer: true});
+  const scenarioId = valueFor('--scenario');
   const {paths, project} = await loadProject(slug);
   if (
+    scenarioId === undefined &&
     durationSeconds === null &&
     sceneCount === null &&
     project.plan?.status === 'resolved'
   ) {
     printPlan({project, json});
+  } else if (scenarioId !== undefined) {
+    if (!PRODUCTION_PROFILES.includes(scenarioId)) {
+      throw new Error(`--scenario 必须是 ${PRODUCTION_PROFILES.join('|')}。`);
+    }
+    if (durationSeconds !== null || sceneCount !== null) {
+      throw new Error('--scenario 不能与 --duration 或 --scenes 同时使用。');
+    }
+    const {state} = await loadProduction(slug);
+    if (!['capability-review', 'brief', 'concept-review'].includes(state.stage)) {
+      throw new Error(
+        `project:plan 只能在 capability-review、brief 或 concept-review 阶段运行；当前为 ${state.stage}。`,
+      );
+    }
+    assertIntakeConfirmed(project.intake);
+    const scenarios = assertPlanningScenariosReady(
+      await readJson(paths.planningScenariosFile),
+      {slug, intake: project.intake},
+    );
+    project.plan = buildCreativePlanFromScenario({
+      slug,
+      scenarios,
+      optionId: scenarioId,
+    });
+    await writeJson(paths.projectFile, project);
+    printPlan({project, json});
   } else if (durationSeconds === null || sceneCount === null) {
     throw new Error(
-      '用法：project:plan -- <slug> --duration=<补全时长秒数> --scenes=<补全幕数> ' +
+      '推荐：project:plan -- <slug> --scenario=draft|balanced|full-depth；兼容直接规划：' +
+        'project:plan -- <slug> --duration=<补全时长秒数> --scenes=<补全幕数> ' +
         '[--requested-duration=<用户指定秒数>] [--requested-scenes=<用户指定幕数>] ' +
         `[--narration-seconds=<预计旁白秒数>] [--profile=${PRODUCTION_PROFILES.join('|')}] ` +
         '--rationale=<计算依据>；已有计划可用 project:plan -- <slug> --json 只读查看。',

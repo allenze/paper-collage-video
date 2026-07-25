@@ -506,8 +506,10 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
       typeof world?.closedLoop !== 'boolean' ||
       !(Number.isFinite(world?.startPhase) && world.startPhase >= 0 && world.startPhase < 1) ||
       !(Number.isFinite(world?.activeFrom ?? 0) && (world?.activeFrom ?? 0) >= 0 && (world?.activeFrom ?? 0) < 1) ||
+      (world?.activeUntil !== undefined && (!(Number.isFinite(world.activeUntil) && world.activeUntil > 0 && world.activeUntil < 1) || world.activeUntil <= (world.activeFrom ?? 0))) ||
+      !['linear', 'ease-out'].includes(world?.easing ?? 'linear') ||
       (world?.frozen !== undefined && typeof world.frozen !== 'boolean') ||
-      (world?.frozen === true && world?.activeFrom !== undefined) ||
+      (world?.frozen === true && (world?.activeFrom !== undefined || world?.activeUntil !== undefined)) ||
       !nonEmpty(world?.groundStripId) ||
       !nonEmpty(world?.trackedSubjectId) ||
       !['before', 'seam', 'after'].every((key) => nonEmpty(world?.seamProofTimeIds?.[key]))
@@ -693,6 +695,10 @@ const compileScene = (scene) => {
           closedLoop: world.closedLoop,
           startPhase: world.startPhase,
           activeFrom: world.activeFrom ?? 0,
+          ...(world.activeUntil === undefined
+            ? {}
+            : {activeUntil: world.activeUntil}),
+          easing: world.easing ?? 'linear',
           frozen: world.frozen === true,
           strips: world.strips,
           proofTimeId: treatment.proofTimeId ?? null,
@@ -778,13 +784,19 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
   );
   const stateFamilyMap = new Map();
   for (const treatment of treatments.filter(({motion}) => motion.kind === 'state-sequence')) {
-    const key = `${treatment.targetId}::${treatment.motion.poseFamilyId}`;
+    // A poseFamilyId denotes one registered provider sheet. A continuous scene may
+    // intentionally use several temporal instances of that same family (for
+    // example, a sleeping hare and the later chase) without creating another
+    // provider-family obligation. Count the sheet once while retaining every
+    // target that reuses it for reporting.
+    const key = treatment.motion.poseFamilyId;
     const family = stateFamilyMap.get(key) ?? {
-      targetId: treatment.targetId,
+      targetIds: new Set(),
       poseFamilyId: treatment.motion.poseFamilyId,
       necessity: 'enhancement',
       stateIds: new Set(),
     };
+    family.targetIds.add(treatment.targetId);
     family.stateIds.add(treatment.motion.stateId);
     if (treatment.necessity === 'required') family.necessity = 'required';
     stateFamilyMap.set(key, family);
@@ -792,10 +804,11 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
   const families = [...stateFamilyMap.values()];
   const poseSheetPlans = families
     .map((family) => ({
-      targetId: family.targetId,
+      targetId: [...family.targetIds].sort()[0],
+      targetIds: [...family.targetIds].sort(),
       poseFamilyId: family.poseFamilyId,
       necessity: family.necessity,
-      stateIds: [...family.stateIds],
+      stateIds: [...family.stateIds].sort(),
       grid: family.stateIds.size <= 4
         ? {columns: 2, rows: 2}
         : {columns: 3, rows: 2},
@@ -806,6 +819,16 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
   const uniqueContinuousTargets = new Set(
     treatments.filter(({motion}) => motion.kind === 'continuous-transform').map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
   );
+  const uniqueLocalMotionTargets = new Set(
+    treatments
+      .filter(
+        ({motion, graphic}) =>
+          ['continuous-transform', 'visibility-transition', 'motif-field'].includes(
+            motion.kind,
+          ) || Boolean(graphic),
+      )
+      .map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
+  );
   return {
     requiredStateFamilies: families.filter(({necessity}) => necessity === 'required').length,
     enhancementStateFamilies: families.filter(({necessity}) => necessity === 'enhancement').length,
@@ -814,6 +837,7 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
     estimatedPoseSheetCalls: families.length,
     maxStatesInFamily: Math.max(0, ...families.map(({stateIds}) => stateIds.size)),
     continuousTargets: uniqueContinuousTargets.size,
+    localMotionTargets: uniqueLocalMotionTargets.size,
     visibilityTargets: new Set(
       treatments.filter(({motion}) => motion.kind === 'visibility-transition').map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
     ).size,
@@ -825,6 +849,69 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
     avoidedIsolatedStateCalls: families.reduce((sum, family) => sum + Math.max(0, family.stateIds.size - 1), 0),
     poseSheetPlans,
     budget: motionBudget,
+  };
+};
+
+export const summarizeProfileFulfillment = (scenes, demand, promise = null) => {
+  if (!promise) return null;
+  const actual = {
+    requiredStateFamilies: demand.requiredStateFamilies,
+    enhancementStateFamilies: demand.enhancementStateFamilies,
+    totalStates: demand.totalStates,
+    localMotionTargets: demand.localMotionTargets,
+    layeredScenes: scenes.filter(
+      (scene) =>
+        (scene.compositionPlan?.layerStacks?.length ?? 0) > 0 ||
+        (scene.compositionPlan?.patterns ?? []).some((pattern) =>
+          [
+            'registered-environment',
+            'registered-depth-stack',
+            'looping-environment',
+          ].includes(pattern),
+        ),
+    ).length,
+    parallaxScenes: scenes.filter((scene) =>
+      scene.beats.some((beat) =>
+        beat.treatments.some(
+          (treatment) =>
+            treatment.changeClass === 'depth-parallax' ||
+            treatment.motion?.preset === 'parallax-camera',
+        ),
+      ),
+    ).length,
+    ambientScenes: scenes.filter((scene) =>
+      scene.beats.some((beat) =>
+        beat.treatments.some(
+          (treatment) =>
+            treatment.motion?.kind === 'motif-field' ||
+            (
+              treatment.importance === 'ambient' &&
+              treatment.motion?.kind !== 'static'
+            ),
+        ),
+      ),
+    ).length,
+  };
+  const mapping = {
+    minRequiredStateFamilies: 'requiredStateFamilies',
+    minEnhancementStateFamilies: 'enhancementStateFamilies',
+    minTotalStates: 'totalStates',
+    minLocalMotionTargets: 'localMotionTargets',
+    minLayeredScenes: 'layeredScenes',
+    minParallaxScenes: 'parallaxScenes',
+    minAmbientScenes: 'ambientScenes',
+  };
+  const issues = Object.entries(mapping)
+    .filter(([promiseKey, actualKey]) => actual[actualKey] < promise[promiseKey])
+    .map(
+      ([promiseKey, actualKey]) =>
+        `${actualKey}: actual ${actual[actualKey]}, promised minimum ${promise[promiseKey]}`,
+    );
+  return {
+    promise,
+    actual,
+    passed: issues.length === 0,
+    issues,
   };
 };
 
@@ -923,6 +1010,28 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     error.issues = budgetIssues;
     throw error;
   }
+  const profileFulfillment = summarizeProfileFulfillment(
+    scenes,
+    demand,
+    plan?.profilePromise ?? null,
+  );
+  if (profileFulfillment && !profileFulfillment.passed) {
+    addIssue(
+      budgetIssues,
+      'directing-profile-under-delivery',
+      `${plan.productionProfile} storyboard 未履行已批准档位的质量下限：${profileFulfillment.issues.join('；')}。`,
+      'directingSummary.profileFulfillment',
+    );
+  }
+  if (budgetIssues.length > 0) {
+    const error = new Error(
+      budgetIssues
+        .map(({location, message}) => `${location}: ${message}`)
+        .join('\n'),
+    );
+    error.issues = budgetIssues;
+    throw error;
+  }
   const styleProofPlan = compileStyleProofPlan(scenes);
   const generationBudget = summarizeLayerSourcePackages(scenes, {
     poseSheetCalls: demand.estimatedPoseSheetCalls,
@@ -952,6 +1061,7 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
   const directingSummary = {
     profile: plan?.productionProfile ?? null,
     ...demand,
+    profileFulfillment,
     generationBudget,
     styleProofPlan,
   };
@@ -1086,6 +1196,8 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         closedLoop: environment.travel.closedLoop,
         startPhase: environment.travel.startPhase,
         activeFrom: environment.travel.activeFrom ?? 0,
+        activeUntil: environment.travel.activeUntil ?? null,
+        easing: environment.travel.easing,
         frozen: environment.travel.frozen === true,
         strips: (node.children ?? [])
           .filter(({kind}) => kind === 'world-strip')
@@ -1102,6 +1214,8 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         closedLoop: worldPlan.closedLoop,
         startPhase: worldPlan.startPhase,
         activeFrom: worldPlan.activeFrom ?? 0,
+        activeUntil: worldPlan.activeUntil ?? null,
+        easing: worldPlan.easing,
         frozen: worldPlan.frozen === true,
         strips: worldPlan.strips,
       };

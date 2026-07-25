@@ -11,6 +11,7 @@ import {
   resolveWorldStripSpeedFactor,
   resolveWorldStripTileGeometry,
 } from '../src/worldStrip.mjs';
+import {resolveSequenceState} from './state-sequence-lib.mjs';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 const clamp01 = (value) => clamp(value, 0, 1);
@@ -124,8 +125,7 @@ const alphaBoundsForSource = async (source) => {
 const sourceForNode = (node, progress) => {
   if (node.kind === 'asset') return node.src;
   if (node.kind !== 'state-sequence') return null;
-  const states = [...node.states].sort((left, right) => left.at - right.at);
-  return [...states].reverse().find(({at}) => at <= progress)?.src ?? states[0]?.src ?? null;
+  return resolveSequenceState({node, progress})?.src ?? null;
 };
 
 export const resolveTargetViewportSnapshot = async ({
@@ -283,6 +283,13 @@ export const buildLoopingWorldProof = async ({
   const frozen = environment.travel.frozen === true;
   const proofById = new Map((scene.motion?.proofTimes ?? []).map((proof) => [proof.id, proof]));
   const seamProofs = ['before', 'seam', 'after'].map((key) => proofById.get(environment.seamProofTimeIds[key]));
+  const activeUntil = environment.travel.activeUntil ?? null;
+  const lockProofs = frozen
+    ? (scene.motion?.proofTimes ?? [])
+    : activeUntil === null
+      ? []
+      : (scene.motion?.proofTimes ?? []).filter(({at}) => at >= activeUntil);
+  const requiresWorldLock = frozen || activeUntil !== null;
   const strips = [];
   const coverage = [];
   for (const strip of group.children.filter(({kind}) => kind === 'world-strip')) {
@@ -309,6 +316,8 @@ export const buildLoopingWorldProof = async ({
         speedFactor,
         startPhase: environment.travel.startPhase,
         activeFrom: environment.travel.activeFrom ?? 0,
+        activeUntil: environment.travel.activeUntil ?? 1,
+        easing: environment.travel.easing,
         overscanPx: environment.overscanPx,
       });
       const proofCoverage = inspectWorldStripCoverage({
@@ -327,6 +336,28 @@ export const buildLoopingWorldProof = async ({
         unwrappedPeriod: cleanNumber(frame.unwrappedPhase / activeGeometry.tileWidth),
         cameraCompensatedDisplacement: cleanNumber(frame.cameraCompensatedDisplacement),
         uncoveredPixels: cleanNumber(proofCoverage.uncoveredPixels),
+      };
+    });
+    const lockedSnapshots = lockProofs.map((proof) => {
+      const frame = resolveWorldStripFrame({
+        progress: frozen ? 0 : proof.at,
+        viewportWidth: group.coordinateSpace.width,
+        tileWidth: activeGeometry.tileWidth,
+        direction: environment.travel.direction,
+        distanceViewports: environment.travel.distanceViewports,
+        speedFactor,
+        startPhase: environment.travel.startPhase,
+        activeFrom: environment.travel.activeFrom ?? 0,
+        activeUntil: environment.travel.activeUntil ?? 1,
+        easing: environment.travel.easing,
+        overscanPx: environment.overscanPx,
+      });
+      return {
+        proofTimeId: proof.id,
+        at: proof.at,
+        travelProgress: cleanNumber(frame.travelProgress),
+        phase: cleanNumber(frame.phaseNormalized),
+        cameraCompensatedDisplacement: cleanNumber(frame.cameraCompensatedDisplacement),
       };
     });
     const derivationReportFile = path.join(
@@ -359,6 +390,7 @@ export const buildLoopingWorldProof = async ({
       seamPassed,
       derivationReport: derivationReport ? path.relative(root, derivationReportFile) : null,
       snapshots,
+      lockedSnapshots,
     });
     for (const profile of profiles) {
       const renderHeight = strip.transform.height * profile.height;
@@ -400,11 +432,13 @@ export const buildLoopingWorldProof = async ({
     ? Math.floor(ground.snapshots[0].unwrappedPeriod) !==
       Math.floor(ground.snapshots.at(-1).unwrappedPeriod)
     : false;
-  const worldLockClean = frozen && strips.every(({snapshots}) =>
-    snapshots.every(({travelProgress, cameraCompensatedDisplacement}) =>
-      travelProgress === 0 && cameraCompensatedDisplacement === 0,
-    ),
-  );
+  const worldLockClean = requiresWorldLock && strips.every(({lockedSnapshots}) => {
+    const expectedProgress = frozen ? 0 : 1;
+    const expectedDisplacement = lockedSnapshots[0]?.cameraCompensatedDisplacement;
+    return lockedSnapshots.length > 0 && lockedSnapshots.every(({travelProgress, cameraCompensatedDisplacement}) =>
+      travelProgress === expectedProgress && cameraCompensatedDisplacement === expectedDisplacement,
+    );
+  });
   const trackedSubjectProof = await buildTargetWorldMotionProof({
     scene,
     nodeId: environment.trackedSubjectId,
@@ -478,7 +512,10 @@ export const buildLoopingWorldProof = async ({
     groupId: group.id,
     trackedSubjectId: environment.trackedSubjectId,
     activeFrom: environment.travel.activeFrom ?? 0,
+    activeUntil,
+    easing: environment.travel.easing,
     frozen,
+    lockProofTimeIds: lockProofs.map(({id}) => id),
     runtimeBuildFingerprint,
     strips,
     coverage,
@@ -501,9 +538,8 @@ export const buildLoopingWorldProof = async ({
     strips.length >= 2 &&
     strips.every(({seamPassed}) => seamPassed) &&
     speedOrdered &&
-    (frozen
-      ? worldLockClean
-      : groundCrossedSeam && groundTotalWorldDisplacement >= video.width) &&
+    (frozen || (groundCrossedSeam && groundTotalWorldDisplacement >= video.width)) &&
+    (!requiresWorldLock || worldLockClean) &&
     coverage.every(({uncoveredPixels, viewportSpan}) =>
       uncoveredPixels === 0 && viewportSpan >= 1,
     ) &&

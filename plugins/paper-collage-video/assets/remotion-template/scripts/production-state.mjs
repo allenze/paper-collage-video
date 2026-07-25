@@ -74,7 +74,7 @@ const HUMAN_DECISION_ACTIONS = new Set([
 
 const nextActionByStage = {
   'capability-review':
-    '准备概念、故事板、制作档位与 provider 方案；请人一次确认后直接进入风格样张',
+    '先完成画幅/视觉风格/视差 intake；再比较三档故事与制作方案，并一次确认档位、预算上限和 provider',
   brief: '完善 brief.md，运行 project:plan 并锁定 storyboard，再记录 brief-ready',
   'concept-review': '向人展示文案、分镜和素材清单；确认后记录 approve-concept',
   'style-review': '展示风格样张、虚构音色及所需拓扑证据；确认且证明通过后记录 approve-style-voice',
@@ -89,10 +89,10 @@ const nextActionByStage = {
 const stageControlByStage = {
   'capability-review': {
     mode: 'wait-human',
-    gate: 'providers',
+    gate: 'intake-or-scenario',
     requiredDecision:
-      '请一次确认概念、故事板、制作档位与 text/image/voice provider 方案，或给出修改意见。',
-    expectedArtifacts: ['brief', 'plan', 'storyboard', 'providers'],
+      '若 intake 未确认，请选择画幅、视觉风格和视差偏好；否则请一次确认 scenario、制作档位、精确图片上限与 text/image/voice provider。',
+    expectedArtifacts: ['intake', 'planningScenarios', 'brief', 'plan', 'storyboard', 'providers'],
   },
   brief: {
     mode: 'auto-continue',
@@ -108,8 +108,8 @@ const stageControlByStage = {
   'style-review': {
     mode: 'wait-human',
     gate: 'styleAndVoice',
-    requiredDecision: '请明确批准风格样张、虚构音色和所需运动拓扑，或给出修改意见。',
-    expectedArtifacts: ['styleSample', 'voiceAudition', 'topologyProofWhenRequired'],
+    requiredDecision: '请明确批准故事专属风格样张、虚构音色和 3–5 秒运动/拓扑证明，或给出修改意见。',
+    expectedArtifacts: ['storySpecificStyleSample', 'voiceAudition', 'motionProof3To5Seconds', 'topologyProofWhenRequired'],
   },
   'asset-production': {
     mode: 'auto-continue',
@@ -216,8 +216,43 @@ export const assessHandoff = (state, options = {}) => {
   };
 };
 
-export const summarizeResumeState = (state, plan = null, storyboard = null) => {
+export const summarizeResumeState = (
+  state,
+  plan = null,
+  storyboard = null,
+  context = {},
+) => {
   const control = getStageControl(state);
+  let capabilityAutoContinue = false;
+  if (state.stage === 'capability-review') {
+    if (context.intake?.status !== 'confirmed') {
+      control.gate = 'intake';
+      control.requiredDecision =
+        '请选择 16:9 / 9:16、三种内置视觉风格之一，以及分层视差偏好。';
+      control.expectedArtifacts = ['styleCatalog', 'intake'];
+    } else if (context.planningScenarios?.status !== 'ready') {
+      capabilityAutoContinue = true;
+      control.mode = 'auto-continue';
+      control.mayEndTurn = false;
+      control.requiresHumanDecision = false;
+      control.gate = 'scenario-planning';
+      control.requiredDecision = null;
+      control.nextCommand =
+        `npm run project:scenarios -- ${state.slug} --input=<scenarios.json> --json`;
+      control.expectedArtifacts = ['intake', 'commonStory', 'planningScenarios'];
+    } else {
+      control.gate = 'scenario-profile-budget-providers';
+      control.requiredDecision =
+        '请在三档方案中选择一个，并一次确认对应的故事范围、制作档位、精确图片上限和 text/image/voice provider。';
+      control.expectedArtifacts = [
+        'planningScenarios',
+        'brief',
+        'plan',
+        'storyboard',
+        'providers',
+      ];
+    }
+  }
   const remaining = (state.workItems ?? [])
     .filter(({status}) => status !== 'completed')
     .map(({id, label, status, artifact, note}) => ({
@@ -227,7 +262,9 @@ export const summarizeResumeState = (state, plan = null, storyboard = null) => {
       artifact,
       note,
     }));
-  const handoff = assessHandoff(state);
+  const handoff = capabilityAutoContinue
+    ? {allowed: false, reason: 'auto-continue'}
+    : assessHandoff(state);
   const nextCommand =
     state.stage === 'asset-production'
       ? remaining.length === 0
@@ -237,7 +274,8 @@ export const summarizeResumeState = (state, plan = null, storyboard = null) => {
   return {
     slug: state.slug,
     stage: state.stage,
-    productionProfile: plan?.productionProfile ?? null,
+    productionProfile:
+      plan?.status === 'pending' ? null : plan?.productionProfile ?? null,
     storyboard,
     control: {
       mode: control.mode,
@@ -488,9 +526,13 @@ export const transitionWorkItem = (current, id, options = {}) => {
 export const transitionDirectingRevision = (current, options = {}) => {
   const action = 'revise-preview-directing';
   const source = options.source ?? 'preview';
-  assertStage(current, ['asset-production'], action);
-  if (!['preview', 'asset-production'].includes(source)) {
-    throw new Error(`${action} 的来源必须是 preview 或 asset-production。`);
+  if (!['style-review', 'preview', 'asset-production'].includes(source)) {
+    throw new Error(`${action} 的来源必须是 style-review、preview 或 asset-production。`);
+  }
+  if (source === 'style-review') {
+    assertStage(current, ['style-review'], action);
+  } else {
+    assertStage(current, ['asset-production'], action);
   }
   if (source === 'preview' && current.approvals?.preview?.status !== 'changes-requested') {
     throw new Error(`${action} 只能响应已记录的 request-preview-revision。`);
@@ -508,7 +550,7 @@ export const transitionDirectingRevision = (current, options = {}) => {
   const reportPath = (options.reportPath ?? '').trim();
   if (!reportPath) throw new Error(`${action} 必须记录 directing-revision 报告路径。`);
   assertApproved(state, 'concept', action);
-  assertApproved(state, 'styleAndVoice', action);
+  if (source !== 'style-review') assertApproved(state, 'styleAndVoice', action);
 
   for (const key of ['validationReport', 'preview', 'final', 'report', 'contactSheet']) {
     state.artifacts[key] = null;

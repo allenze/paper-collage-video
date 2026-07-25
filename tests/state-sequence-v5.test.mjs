@@ -15,6 +15,7 @@ import {
   summarizeActualPoseSheets,
   validateStateSheetSpec,
 } from '../scripts/state-sheet-lib.mjs';
+import {resolveTargetViewportSnapshot} from '../scripts/world-motion-proof-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -59,7 +60,8 @@ const sheetRequest = () => ({
     contractIds: ['reader-identity'],
     generationFamily: {
       familyId: 'reader-poses',
-      memberIds: ['reading', 'turning', 'pointing', 'book-down'],
+      identityMemberIds: ['reader'],
+      stateMemberIds: ['reading', 'turning', 'pointing', 'book-down'],
       referenceAssetIds: ['reader-master'],
     },
   },
@@ -72,7 +74,7 @@ test('a single provider request can contractually cover a registered pose sheet'
   changed.stateSheetBinding.states[3].column = 0;
   assert.throws(() => validateAssetRequest(changed), /重复或越界/);
   const familyDrift = structuredClone(request);
-  familyDrift.semanticBinding.generationFamily.memberIds.pop();
+  familyDrift.semanticBinding.generationFamily.stateMemberIds.pop();
   assert.throws(() => validateAssetRequest(familyDrift), /同一 family 和成员集合/);
   const fingerprint = createRequestFingerprint({request, providerId: 'host-image', model: 'fixture'});
   const changedFingerprint = createRequestFingerprint({request: changed, providerId: 'host-image', model: 'fixture'});
@@ -241,6 +243,25 @@ test('registered sheet processing preserves row-major cells and produces stable 
   const invalid = structuredClone(spec);
   invalid.states[2].column = 1;
   assert.ok(validateStateSheetSpec(invalid).length > 0);
+
+  const explicit = structuredClone(spec);
+  explicit.extraction = {
+    mode: 'explicit-source-rects',
+    canvas: {width: 140, height: 100},
+    cells: explicit.states.map(({id}, index) => ({
+      stateId: id,
+      sourceRect: {left: index * 100, top: 0, width: 100, height: 100},
+      placement: {left: 0, top: 0},
+    })),
+  };
+  assert.deepEqual(validateStateSheetSpec(explicit), []);
+  const overlap = structuredClone(explicit);
+  overlap.extraction.cells[1].sourceRect.left = 80;
+  assert.ok(validateStateSheetSpec(overlap).some((error) => error.includes('不得重叠')));
+  assert.notEqual(
+    createStateFamilyFingerprint({sourceSha256: 'source', spec, members}),
+    createStateFamilyFingerprint({sourceSha256: 'source', spec: explicit, members}),
+  );
 });
 
 test('state sheet processor turns one recorded provider image into registered local states', async (context) => {
@@ -297,7 +318,7 @@ test('state sheet processor turns one recorded provider image into registered lo
     assert.equal(processed.status, 0, processed.stderr);
     const report = JSON.parse(await fs.readFile(path.join(outputDirectory, 'reader-poses-state-sheet-report.json'), 'utf8'));
     assert.equal(report.providerImageCalls, 1);
-    assert.equal(report.schemaVersion, 2);
+    assert.equal(report.schemaVersion, 3);
     assert.equal(report.generationMode, 'initial-family-sheet');
     assert.equal(report.isolatedCellGenerationUsed, false);
     assert.equal(report.derivedStateCount, 2);
@@ -326,5 +347,118 @@ test('state sheet processor turns one recorded provider image into registered lo
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
+test('explicit registered source rects preserve a full silhouette that crosses a nominal grid boundary', async (context) => {
+  const python = resolvePythonCommand({root: ROOT});
+  const dependencies = spawnSync(python, ['-c', 'import numpy; from PIL import Image'], {cwd: ROOT});
+  if (dependencies.status !== 0) return context.skip('numpy and Pillow are not installed');
+  const slug = `state-sheet-explicit-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const input = path.join(publicDirectory, 'reader-sheet.png');
+  const outputDirectory = path.join(publicDirectory, 'states');
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(publicDirectory, {recursive: true});
+    await sharp({create: {width: 220, height: 100, channels: 3, background: '#ff00ff'}})
+      .composite([
+        {input: Buffer.from('<svg width="120" height="100"><rect x="12" y="28" width="102" height="50" rx="18" fill="#3b7d42"/></svg>'), left: 0, top: 0},
+        {input: Buffer.from('<svg width="100" height="100"><rect x="12" y="20" width="76" height="60" rx="14" fill="#d48a32"/></svg>'), left: 120, top: 0},
+      ])
+      .png().toFile(input);
+    const sourceSha256 = createHash('sha256').update(await fs.readFile(input)).digest('hex');
+    const binding = {
+      poseFamilyId: 'reader-poses', registrationId: 'reader-registration', sourceMasterAssetId: 'reader-master',
+      layout: {columns: 2, rows: 1},
+      states: [{stateId: 'reading', row: 0, column: 0}, {stateId: 'pointing', row: 0, column: 1}],
+      recoveryPolicy: {
+        strategy: 'preserve-sheet-context', localDeterministicFixFirst: true,
+        isolatedCellGeneration: 'forbidden', fallback: 'full-sheet-regeneration',
+      },
+    };
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
+      schemaVersion: 4,
+      projectSlug: slug,
+      assets: [{
+        recordId: '2'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+        assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
+        requestFingerprint: 'b'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+        recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
+        stateSheetBinding: binding, familyFingerprint: null,
+      }],
+    }, null, 2)}\n`);
+    const specFile = path.join(projectDirectory, 'reader-state-sheet.json');
+    await fs.writeFile(specFile, `${JSON.stringify({
+      schemaVersion: 1, projectSlug: slug, sceneId: 'scene-1', nodeId: 'reader', poseFamilyId: 'reader-poses',
+      sourceAssetId: 'reader-sheet', input: path.relative(ROOT, input), outputDirectory: path.relative(ROOT, outputDirectory),
+      registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-master'},
+      layout: {columns: 2, rows: 1}, states: [{id: 'reading', row: 0, column: 0}, {id: 'pointing', row: 0, column: 1}],
+      keying: {keyColor: '#ff00ff', matteErode: 1},
+      extraction: {
+        mode: 'explicit-source-rects', canvas: {width: 120, height: 100},
+        cells: [
+          {stateId: 'reading', sourceRect: {left: 0, top: 0, width: 120, height: 100}, placement: {left: 0, top: 0}},
+          {stateId: 'pointing', sourceRect: {left: 120, top: 0, width: 100, height: 100}, placement: {left: 0, top: 0}},
+        ],
+      },
+    }, null, 2)}\n`);
+    const processed = spawnSync(process.execPath, ['scripts/process-state-sheet.mjs', path.relative(ROOT, specFile)], {cwd: ROOT, encoding: 'utf8'});
+    assert.equal(processed.status, 0, processed.stderr);
+    const reading = path.join(outputDirectory, 'reader-poses-reading.png');
+    const pointing = path.join(outputDirectory, 'reader-poses-pointing.png');
+    const [readingPixels, pointingPixels] = await Promise.all([
+      sharp(reading).ensureAlpha().raw().toBuffer({resolveWithObject: true}),
+      sharp(pointing).ensureAlpha().raw().toBuffer({resolveWithObject: true}),
+    ]);
+    assert.equal(readingPixels.info.width, 120);
+    assert.equal(pointingPixels.info.width, 120);
+    const alphaAt = ({data, info}, x, y) => data[(y * info.width + x) * 4 + 3];
+    assert.ok(alphaAt(readingPixels, 110, 52) > 200, 'wide first pose remains intact past nominal 110px grid edge');
+    assert.ok(alphaAt(pointingPixels, 86, 52) > 200, 'second pose remains registered on the shared 120px canvas');
+    assert.equal(alphaAt(pointingPixels, 119, 52), 0, 'source-rect padding stays keyed transparent rather than becoming an opaque band');
+    const manifest = JSON.parse(await fs.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'));
+    const derived = manifest.assets.filter(({adapter}) => adapter === 'registered-sheet-cell');
+    assert.deepEqual(derived.map(({compositionBinding}) => compositionBinding.derivation.method), ['explicit-source-rects', 'explicit-source-rects']);
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
+test('world-motion proof resolves a looping state sequence through its hold state', async () => {
+  const slug = `state-proof-${process.pid}`;
+  const directory = path.join(ROOT, 'public', 'projects', slug);
+  const run = path.join(directory, 'run.png');
+  const sleep = path.join(directory, 'sleep.png');
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await Promise.all([
+      sharp({create: {width: 24, height: 24, channels: 4, background: '#3b7d42ff'}}).png().toFile(run),
+      sharp({create: {width: 24, height: 24, channels: 4, background: '#d48a32ff'}}).png().toFile(sleep),
+    ]);
+    const node = {
+      id: 'runner', kind: 'state-sequence', poseFamilyId: 'runner-poses',
+      registration: {id: 'runner-registration', sourceMasterAssetId: 'runner-sheet', canvas: {width: 24, height: 24}, origin: 'top-left'},
+      states: [
+        {id: 'sleep', src: `projects/${slug}/sleep.png`, at: 0},
+        {id: 'run-a', src: `projects/${slug}/run.png`, at: 0.01},
+      ],
+      playback: {mode: 'loop', cycles: 2, activeFrom: 0.01, activeUntil: 0.3, holdStateId: 'sleep', activeStateIds: ['run-a']},
+      transition: {type: 'cut', durationSeconds: 0}, z: 2, depth: 0,
+      transform: {x: 0.2, y: 0.5, width: 0.2, height: 0.2, anchorX: 0, anchorY: 0},
+      motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    };
+    const scene = {
+      camera: {preset: 'static'},
+      composition: {nodes: [node]},
+    };
+    const snapshot = await resolveTargetViewportSnapshot({
+      scene, nodeId: 'runner', progress: 0.38, video: {width: 100, height: 100},
+    });
+    assert.equal(snapshot.source, `projects/${slug}/sleep.png`);
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
   }
 });

@@ -6,17 +6,18 @@ Read this before presenting or recording a human gate, making a material paid ca
 
 Require explicit decisions for:
 
-1. Combined concept, duration/scenes, production profile/budget, facts, and provider plan.
-2. Representative visual style, fictional voice, and optional motion proof.
-3. Rendered preview and requested creative changes.
+1. Initial intake: `16:9|9:16`, one of three built-in visual styles, and text-only parallax preference.
+2. Combined scenario, story scope, duration/scenes, production profile, exact budget cap, facts, and provider plan.
+3. Story-specific visual sample, fictional voice, and 3–5 second motion/topology proof.
+4. Rendered preview and requested creative changes.
 
-The combined first decision may authorize both providers and concept when the request clearly names both. Preserve the human's wording. If approval is ambiguous, ask one concise question.
+The first intake never authorizes provider spend. The combined second decision may authorize both providers and concept when the request clearly names both. Preserve the human's wording. If approval is ambiguous, ask one concise question.
 
 Do not create a fourth default gate after final render. Local final delivery completes the creation task.
 
 ## Cost Boundary
 
-- Before combined concept approval, use only the current host model for a provisional draft; do not invoke an unconfirmed external/paid provider.
+- Before combined scenario/concept approval, use only the current host model for the common story and three scenarios; do not invoke an unconfirmed external/paid provider. Built-in style cards are versioned local text-to-image PNG assets and consume no provider calls when shown during intake.
 - Before style approval, classify and contract any identity-, topology-,
   mechanism-, or diagram-critical sample, then create at most one representative
   source package, a short fictional-voice audition, and one 3–5 second proof
@@ -31,8 +32,8 @@ Do not create a fourth default gate after final render. Local final delivery com
 - After style approval, produce autonomously within the approved asset budget.
 - Reuse exact-match assets and deterministic local processing before regeneration.
 - Disclose the compiled source-package strategy, base/reserve/hard ceiling,
-  proposed exact image-attempt cap, provider calls, local derivatives, and
-  avoided calls at the decision that authorizes them. Record the cap as
+  one story-specific style-sample call, proposed exact image-attempt cap,
+  provider calls, local derivatives, and avoided calls at the decision that authorizes them. Record the cap as
   `budgetDecision.imageAttemptLimit`; the profile ceiling alone is not provider
   authorization.
 

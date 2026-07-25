@@ -118,21 +118,21 @@ export const createLoopingWorldPlan = () => ({
   assetBudget: {
     backgrounds: 1,
     environmentLayers: 2,
-    characterSheets: 1,
+    characterSheets: 2,
     styleSamples: 1,
-    baseImageAttempts: 5,
+    baseImageAttempts: 6,
     layerPackageAttemptReserve: 6,
-    maxGeneratedImages: 11,
+    maxGeneratedImages: 12,
   },
   motionBudget: {
-    maxPoseSheetCalls: 1,
+    maxPoseSheetCalls: 2,
     maxStatesPerSheet: 6,
     maxContinuousTargets: 6,
   },
   approvedImageBudget: {
     imageAttemptLimit: 0,
     expectedProviderImageCalls: 0,
-    profileHardCeiling: 11,
+    profileHardCeiling: 12,
     approvedAt: LOOPING_WORLD_UPDATED_AT,
   },
   requested: {

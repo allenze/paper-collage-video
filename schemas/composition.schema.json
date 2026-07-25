@@ -202,7 +202,7 @@
         "role": {"enum": ["far", "mid", "ground", "near"]},
         "sourceAssetId": {"type": "string", "minLength": 1},
         "axis": {"const": "x"},
-        "seamStrategy": {"enum": ["exact", "overlap-crop"]},
+        "seamStrategy": {"enum": ["exact", "overlap-crop", "mirror-crop"]},
         "source": {
           "type": "object",
           "required": ["sha256", "width", "height", "provider", "adapter", "recordId"],
@@ -212,7 +212,51 @@
             "height": {"type": "integer", "minimum": 1},
             "provider": {"type": "string", "minLength": 1},
             "adapter": {"type": "string", "minLength": 1},
-            "recordId": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+            "recordId": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "surface": {
+              "type": "object",
+              "required": ["mode"],
+              "properties": {
+                "mode": {"enum": ["opaque", "chroma-key"]},
+                "keyColor": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}
+              },
+              "allOf": [
+                {
+                  "if": {"properties": {"mode": {"const": "chroma-key"}}},
+                  "then": {"required": ["keyColor"]}
+                }
+              ],
+              "additionalProperties": false
+            },
+            "keying": {
+              "oneOf": [
+                {"type": "null"},
+                {
+                  "type": "object",
+                  "required": [
+                    "keyColor",
+                    "transparentThreshold",
+                    "opaqueThreshold",
+                    "edgeFeather",
+                    "matteErode",
+                    "edgePadding"
+                  ],
+                  "properties": {
+                    "keyColor": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
+                    "transparentThreshold": {"type": "number", "minimum": 0, "maximum": 255},
+                    "opaqueThreshold": {"type": "number", "exclusiveMinimum": 0, "maximum": 255},
+                    "edgeFeather": {"type": "number", "minimum": 0, "maximum": 8},
+                    "matteErode": {"type": "integer", "minimum": 0, "maximum": 8},
+                    "edgePadding": {"type": "integer", "minimum": 0, "maximum": 64}
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "keyingMetadataSha256": {
+              "type": ["string", "null"],
+              "pattern": "^[a-f0-9]{64}$"
+            }
           },
           "additionalProperties": false
         },
@@ -855,10 +899,11 @@
           "properties": {
             "direction": {"enum": ["left", "right"]},
             "distanceViewports": {"type": "number", "exclusiveMinimum": 0, "maximum": 100},
-            "easing": {"const": "linear"},
+            "easing": {"enum": ["linear", "ease-out"]},
             "closedLoop": {"type": "boolean"},
             "startPhase": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
             "activeFrom": {"type": "number", "minimum": 0, "exclusiveMaximum": 1},
+            "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
             "frozen": {"type": "boolean"}
           },
           "additionalProperties": false

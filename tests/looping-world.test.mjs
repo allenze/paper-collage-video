@@ -149,6 +149,30 @@ test('world-strip holds its phase before activeFrom and completes authored trave
   assert.equal(end.cameraCompensatedDisplacement, -4 * 1920);
 });
 
+test('world-strip eases to and permanently holds its completed phase after activeUntil', () => {
+  const base = {
+    viewportWidth: 1920,
+    tileWidth: 1920,
+    direction: 'left',
+    distanceViewports: 2,
+    speedFactor: 1,
+    startPhase: 0.1,
+    activeFrom: 0.2,
+    activeUntil: 0.6,
+    easing: 'ease-out',
+  };
+  const before = resolveWorldStripFrame({...base, progress: 0.15});
+  const midway = resolveWorldStripFrame({...base, progress: 0.4});
+  const lock = resolveWorldStripFrame({...base, progress: 0.6});
+  const late = resolveWorldStripFrame({...base, progress: 0.95});
+  assert.equal(before.travelProgress, 0);
+  assert.ok(midway.travelProgress > 0.5, 'ease-out should cover more than half the route halfway through its active window');
+  assert.equal(lock.travelProgress, 1);
+  assert.equal(late.travelProgress, 1);
+  assert.equal(late.phase, lock.phase);
+  assert.equal(late.cameraCompensatedDisplacement, lock.cameraCompensatedDisplacement);
+});
+
 test('looping-environment validates semantic strips, tracked subject, seam proofs, and monotonic depth speed', () => {
   const strips = [
     {id: 'mountains', role: 'far', depth: -0.8, z: 0},
@@ -181,10 +205,11 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
           travel: {
             direction: 'left',
             distanceViewports: 8,
-            easing: 'linear',
             closedLoop: false,
             startPhase: 0.1,
             activeFrom: 0.2,
+            activeUntil: 0.8,
+            easing: 'ease-out',
           },
           speedRange: {far: 0.2, near: 1.2},
           overscanPx: 2,
@@ -229,8 +254,22 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
   assert.ok(
     invalidCueResult.issues.some(({code}) => code === 'composition-looping-travel'),
   );
+  const invalidLock = structuredClone(composition);
+  invalidLock.nodes[0].loopingEnvironment.travel.activeUntil = 0.1;
+  assert.ok(
+    validateCompositionStructure({
+      composition: invalidLock,
+      video: {width: 200, height: 100},
+      proofTimes: [
+        {id: 'before', at: 0.2, stateAssertions: []},
+        {id: 'seam', at: 0.5, stateAssertions: []},
+        {id: 'after', at: 0.8, stateAssertions: []},
+      ],
+    }).issues.some(({code}) => code === 'composition-looping-travel'),
+  );
   const frozen = structuredClone(composition);
   delete frozen.nodes[0].loopingEnvironment.travel.activeFrom;
+  delete frozen.nodes[0].loopingEnvironment.travel.activeUntil;
   frozen.nodes[0].loopingEnvironment.travel.frozen = true;
   assert.deepEqual(
     validateCompositionStructure({
@@ -293,6 +332,8 @@ test('world-travel authoring compiles only through looping-environment and scrol
         closedLoop: false,
         startPhase: 0.1,
         activeFrom: 0.2,
+        activeUntil: 0.8,
+        easing: 'ease-out',
         strips: [
           {id: 'mountains', role: 'far', depth: -0.8},
           {id: 'trees', role: 'mid', depth: -0.1},
@@ -314,7 +355,7 @@ test('world-travel authoring compiles only through looping-environment and scrol
   );
 });
 
-test('looping strip derivation preserves provenance and proves source/render seams at three ratios', async () => {
+test('looping strip derivation accepts a recovery source and proves source/render seams at three ratios', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'looping-strip-test-'));
   try {
     const publicDirectory = path.join(root, 'public');
@@ -357,9 +398,9 @@ test('looping strip derivation preserves provenance and proves source/render sea
       compositionBinding: null,
       familyFingerprint: null,
       lifecycle: {
-        status: 'active',
+        status: 'recovery-source',
         changedAt: '2026-07-24T00:00:00.000Z',
-        reason: 'fixture',
+        reason: 'fixture observed provider-native color plane',
         supersededBy: null,
       },
     };
@@ -406,6 +447,215 @@ test('looping strip derivation preserves provenance and proves source/render sea
     assert.equal(result.binding.source.recordId, sourceRecord.recordId);
     assert.equal(result.binding.minimumViewportSpan, 2);
     assert.ok(await fs.stat(path.join(root, result.report.evidence.stitchFile)));
+  } finally {
+    await fs.rm(root, {recursive: true, force: true});
+  }
+});
+
+test('ground strips reject matching transparent presentation margins and mirror-crop a continuous paper road deterministically', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'looping-ground-edge-test-'));
+  try {
+    const publicDirectory = path.join(root, 'public');
+    await fs.mkdir(publicDirectory, {recursive: true});
+    const width = 400;
+    const height = 100;
+    const pixels = Buffer.alloc(width * height * 4);
+    for (let y = 42; y < 82; y += 1) {
+      for (let x = 56; x < 344; x += 1) {
+        const offset = (y * width + x) * 4;
+        pixels[offset] = 190;
+        pixels[offset + 1] = 135;
+        pixels[offset + 2] = 70;
+        pixels[offset + 3] = 255;
+      }
+    }
+    const sourceFile = path.join(publicDirectory, 'road-source.png');
+    await sharp(pixels, {raw: {width, height, channels: 4}}).png().toFile(sourceFile);
+    const sourceBytes = await fs.readFile(sourceFile);
+    const sourceRecord = {
+      recordId: 'h'.repeat(64),
+      assetId: 'road-source',
+      capability: 'image',
+      file: 'public/road-source.png',
+      provider: 'local-fixture',
+      adapter: 'manual',
+      tool: null,
+      model: null,
+      externalId: null,
+      attemptId: null,
+      requestFingerprint: 'i'.repeat(64),
+      reusedFrom: null,
+      sha256: hash(sourceBytes),
+      sizeBytes: sourceBytes.length,
+      media: {width, height, format: 'png', hasAlpha: true},
+      recordedAt: '2026-07-24T00:00:00.000Z',
+      request: {},
+      compositionBinding: null,
+      familyFingerprint: null,
+      lifecycle: {
+        status: 'active',
+        changedAt: '2026-07-24T00:00:00.000Z',
+        reason: 'fixture',
+        supersededBy: null,
+      },
+    };
+    const base = {
+      schemaVersion: 1,
+      projectSlug: 'looping-test',
+      sceneId: 'scene-01',
+      groupId: 'road-world',
+      nodeId: 'road',
+      stripId: 'road',
+      assetId: 'road-loop',
+      role: 'ground',
+      sourceAssetId: 'road-source',
+      output: 'public/road-loop.png',
+      axis: 'x',
+      edgeBandPixels: 4,
+      thresholds: {rgbMean: 0, rgbMaximum: 0, alphaMean: 0, alphaMaximum: 0},
+      minimumViewportSpan: 1,
+      proofViewports: [
+        {profile: '16:9', width: 200, height: 100, renderHeight: 100},
+        {profile: '9:16', width: 100, height: 200, renderHeight: 100},
+        {profile: '1:1', width: 100, height: 100, renderHeight: 100},
+      ],
+      recoveryPolicy: LOOPING_STRIP_RECOVERY_POLICY,
+      applyToProject: false,
+    };
+    const manifest = {schemaVersion: 4, projectSlug: 'looping-test', assets: [sourceRecord]};
+    await assert.rejects(
+      deriveLoopingStrip({
+        root,
+        manifest,
+        spec: {...base, seamStrategy: 'exact', canonicalTile: {left: 0, top: 0, width, height}},
+      }),
+      /ground edge alpha coverage/,
+    );
+    const result = await deriveLoopingStrip({
+      root,
+      manifest,
+      spec: {
+        ...base,
+        seamStrategy: 'mirror-crop',
+        canonicalTile: {left: 100, top: 0, width: 200, height},
+      },
+    });
+    assert.equal(result.report.passed, true);
+    assert.equal(result.report.seamStrategy, 'mirror-crop');
+    assert.ok(result.report.sourceEdgeAlphaCoverage.minimum >= 0.05);
+    assert.equal(result.binding.output.width, 400);
+  } finally {
+    await fs.rm(root, {recursive: true, force: true});
+  }
+});
+
+test('looping strip derives a real alpha tile from an explicitly proven chroma-key source', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'looping-strip-chroma-test-'));
+  try {
+    const publicDirectory = path.join(root, 'public');
+    await fs.mkdir(publicDirectory, {recursive: true});
+    const width = 400;
+    const height = 100;
+    const pixels = Buffer.alloc(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const offset = (y * width + x) * 4;
+        const tree = x >= 120 && x < 280 && y >= 24;
+        pixels[offset] = tree ? 70 : 255;
+        pixels[offset + 1] = tree ? 112 : 0;
+        pixels[offset + 2] = tree ? 78 : 255;
+        pixels[offset + 3] = 255;
+      }
+    }
+    const sourceFile = path.join(publicDirectory, 'tree-source.png');
+    await sharp(pixels, {raw: {width, height, channels: 4}}).png().toFile(sourceFile);
+    const sourceBytes = await fs.readFile(sourceFile);
+    const sourceRecord = {
+      recordId: 'f'.repeat(64),
+      assetId: 'tree-source',
+      capability: 'image',
+      file: 'public/tree-source.png',
+      provider: 'host-image',
+      adapter: 'host',
+      tool: null,
+      model: null,
+      externalId: null,
+      attemptId: 'img-fixture',
+      requestFingerprint: 'g'.repeat(64),
+      reusedFrom: null,
+      sha256: hash(sourceBytes),
+      sizeBytes: sourceBytes.length,
+      media: {width, height, format: 'png', hasAlpha: false},
+      recordedAt: '2026-07-24T00:00:00.000Z',
+      request: {outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 24}},
+      compositionBinding: null,
+      familyFingerprint: null,
+      lifecycle: {
+        status: 'active',
+        changedAt: '2026-07-24T00:00:00.000Z',
+        reason: 'fixture',
+        supersededBy: null,
+      },
+    };
+    const spec = {
+      schemaVersion: 1,
+      projectSlug: 'looping-test',
+      sceneId: 'scene-01',
+      groupId: 'road-world',
+      nodeId: 'trees',
+      stripId: 'trees',
+      assetId: 'trees-loop',
+      role: 'mid',
+      sourceAssetId: 'tree-source',
+      output: 'public/trees-loop.png',
+      axis: 'x',
+      seamStrategy: 'exact',
+      canonicalTile: {left: 0, top: 0, width, height},
+      edgeBandPixels: 4,
+      thresholds: {
+        rgbMean: 0,
+        rgbMaximum: 0,
+        alphaMean: 0,
+        alphaMaximum: 0,
+      },
+      minimumViewportSpan: 2,
+      proofViewports: [
+        {profile: '16:9', width: 200, height: 100, renderHeight: 100},
+        {profile: '9:16', width: 100, height: 200, renderHeight: 100},
+        {profile: '1:1', width: 100, height: 100, renderHeight: 100},
+      ],
+      recoveryPolicy: LOOPING_STRIP_RECOVERY_POLICY,
+      sourceSurface: {mode: 'chroma-key', keyColor: '#ff00ff'},
+      keying: {
+        keyColor: '#ff00ff',
+        transparentThreshold: 18,
+        opaqueThreshold: 95,
+        edgeFeather: 0.6,
+        matteErode: 1,
+        edgePadding: 6,
+      },
+      applyToProject: false,
+    };
+    const result = await deriveLoopingStrip({
+      root,
+      spec,
+      manifest: {schemaVersion: 4, projectSlug: 'looping-test', assets: [sourceRecord]},
+    });
+    assert.equal(result.record.media.hasAlpha, true);
+    assert.equal(result.binding.source.surface.mode, 'chroma-key');
+    assert.equal(result.report.sourceSurface.mode, 'chroma-key');
+    assert.match(result.binding.source.keyingMetadataSha256, /^[a-f0-9]{64}$/);
+    assert.equal(
+      await fs.stat(path.join(root, 'public', 'trees-loop.png.key.json')).then(() => true),
+      true,
+    );
+    const alpha = await sharp(path.join(root, 'public', 'trees-loop.png'))
+      .ensureAlpha()
+      .extractChannel(3)
+      .raw()
+      .toBuffer();
+    assert.ok(alpha.some((value) => value === 0));
+    assert.ok(alpha.some((value) => value === 255));
   } finally {
     await fs.rm(root, {recursive: true, force: true});
   }

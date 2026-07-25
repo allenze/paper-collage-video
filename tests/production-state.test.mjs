@@ -195,6 +195,21 @@ test('directing revision is a gated preview-return transition', () => {
   }), /只能响应已记录/);
 });
 
+test('directing revision can correct execution topology during style review without fabricating style approval', () => {
+  const current = makeState('style-review');
+  current.approvals.concept = approval('approved', '概念已确认');
+  current.approvals.styleAndVoice = approval('pending');
+  const next = transitionDirectingRevision(current, {
+    source: 'style-review',
+    changedSceneIds: ['scene-01'],
+    reportPath: 'projects/test-film/directing-revision.json',
+    at: '2026-07-25T01:00:00.000Z',
+  });
+  assert.equal(next.stage, 'style-review');
+  assert.equal(next.approvals.styleAndVoice.status, 'pending');
+  assert.equal(next.history.at(-1).note.startsWith('style-review'), true);
+});
+
 test('a successful final render completes local delivery without publication approval', () => {
   const current = makeState('final-render');
   current.approvals.preview = approval('approved', '预览通过');
