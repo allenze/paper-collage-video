@@ -8,7 +8,14 @@ Rendering chooses a CPU-aware concurrency automatically, capped at eight pages. 
 
 If the Skill path injected into the current task names a cache version that is missing or differs from the installed plugin registry, do not search for the newest directory and continue implicitly. The task snapshot is stale: report both versions and start a new Codex task so Skill instructions and packaged runtime are loaded from one version. A bootstrapped workspace doctor also compares its marker version with its package version.
 
-`runtime-build.json` is the executable identity for proof and render behavior. Version strings alone are insufficient: source, packaged template, and installed cache must agree on both `packageVersion` and `fingerprint`. After Skill/runtime changes, run `npm run plugin:sync`, install that packaged version, compare the installed manifest, and bootstrap a fresh workspace before claiming the upgrade is active.
+`runtime-build.json` is the executable identity for proof and render behavior.
+Version strings alone are insufficient: source, packaged template, and installed
+cache must agree on `packageVersion`, the complete `fingerprint`, and its named
+`surfaces`. The `composition-proof` surface deliberately excludes subtitle-only
+implementation files, so it may remain stable while the complete fingerprint
+changes. After Skill/runtime changes, run `npm run plugin:sync`, install that
+packaged version, compare the installed manifest, and bootstrap a fresh workspace
+before claiming the upgrade is active.
 
 The packaged runtime includes deterministic no-provider acceptance fixtures for registered families and rectangular alpha residue:
 

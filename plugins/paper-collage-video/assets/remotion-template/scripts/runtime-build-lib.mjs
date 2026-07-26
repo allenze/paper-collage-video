@@ -114,6 +114,7 @@ export const RUNTIME_BUILD_INPUTS = [
   'src/EditorialNodes.tsx',
   'src/ReplicaChapterScene.tsx',
   'src/SceneTransitionOverlay.tsx',
+  'src/SubtitleOverlay.tsx',
   'src/motion.ts',
   'src/editorialPrimitives.mjs',
   'src/motifField.mjs',
@@ -127,31 +128,98 @@ export const RUNTIME_BUILD_INPUTS = [
   'src/visibilityLifecycle.mjs',
 ];
 
+export const RUNTIME_SURFACE_INPUTS = {
+  'composition-proof': RUNTIME_BUILD_INPUTS.filter((relative) => ![
+    'scripts/audio-calibration-lib.mjs',
+    'scripts/audio-preflight-lib.mjs',
+    'scripts/project-audio-calibration.mjs',
+    'scripts/project-report.mjs',
+    'scripts/project-subtitles.mjs',
+    'scripts/subtitle-contract-lib.mjs',
+    'scripts/subtitle-lib.mjs',
+    'src/SubtitleOverlay.tsx',
+    'src/subtitleSurface.mjs',
+    'src/subtitleSurface.d.mts',
+  ].includes(relative)),
+};
+
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 
-export const createRuntimeBuildManifest = async ({root = RUNTIME_ROOT} = {}) => {
-  const files = {};
-  for (const relative of RUNTIME_BUILD_INPUTS) {
-    if (relative === 'package.json') {
-      const packageJson = JSON.parse(await fs.readFile(path.join(root, relative), 'utf8'));
-      files[relative] = sha256(JSON.stringify({
-        version: packageJson.version,
-        dependencies: packageJson.dependencies,
-        devDependencies: packageJson.devDependencies,
-      }));
-    } else {
-      files[relative] = sha256(await fs.readFile(path.join(root, relative)));
-    }
+const digestRuntimeInput = async ({
+  root,
+  relative,
+  includePackageVersion,
+}) => {
+  if (relative !== 'package.json') {
+    return sha256(await fs.readFile(path.join(root, relative)));
   }
+  const packageJson = JSON.parse(
+    await fs.readFile(path.join(root, relative), 'utf8'),
+  );
+  return sha256(JSON.stringify({
+    ...(includePackageVersion ? {version: packageJson.version} : {}),
+    dependencies: packageJson.dependencies,
+    devDependencies: packageJson.devDependencies,
+  }));
+};
+
+const fingerprintRuntimeInputs = async ({
+  root,
+  inputs,
+  includePackageVersion,
+}) => {
+  const files = {};
+  for (const relative of inputs) {
+    files[relative] = await digestRuntimeInput({
+      root,
+      relative,
+      includePackageVersion,
+    });
+  }
+  return {
+    files,
+    fingerprint: sha256(
+      Object.entries(files).map(([file, digest]) => `${file}\0${digest}`).join('\n'),
+    ),
+  };
+};
+
+export const createRuntimeSurfaceFingerprint = async (
+  surface,
+  {root = RUNTIME_ROOT} = {},
+) => {
+  const inputs = RUNTIME_SURFACE_INPUTS[surface];
+  if (!inputs) throw new Error(`未知 runtime surface：${surface}`);
+  return (
+    await fingerprintRuntimeInputs({
+      root,
+      inputs,
+      includePackageVersion: false,
+    })
+  ).fingerprint;
+};
+
+export const createRuntimeBuildManifest = async ({root = RUNTIME_ROOT} = {}) => {
+  const build = await fingerprintRuntimeInputs({
+    root,
+    inputs: RUNTIME_BUILD_INPUTS,
+    includePackageVersion: true,
+  });
   const packageJson = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
-  const fingerprint = sha256(
-    Object.entries(files).map(([file, digest]) => `${file}\0${digest}`).join('\n'),
+  const surfaces = Object.fromEntries(
+    await Promise.all(
+      Object.keys(RUNTIME_SURFACE_INPUTS).map(async (surface) => [
+        surface,
+        await createRuntimeSurfaceFingerprint(surface, {root}),
+      ]),
+    ),
   );
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     packageVersion: packageJson.version,
-    fingerprint,
-    files,
+    fingerprint: build.fingerprint,
+    surfaces,
+    files: build.files,
   };
 };
 

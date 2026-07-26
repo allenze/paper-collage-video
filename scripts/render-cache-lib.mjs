@@ -3,7 +3,7 @@ import {createReadStream} from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
-  collectCompositionVisualSources,
+  collectRuntimeVisibleCompositionSources,
   collectCompositionGroups,
   hashCompositionValue,
 } from './composition-lib.mjs';
@@ -16,7 +16,10 @@ import {
   resolvePublicFile,
   writeJson,
 } from './project-lib.mjs';
-import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {
+  createRuntimeBuildFingerprint,
+  createRuntimeSurfaceFingerprint,
+} from './runtime-build-lib.mjs';
 
 export const hashFileStream = async (file) =>
   new Promise((resolve, reject) => {
@@ -36,8 +39,36 @@ const hashPublicSources = async (sources) => {
   return result;
 };
 
+const runtimeVisibleNodes = (nodes = []) =>
+  nodes
+    .filter(
+      (node) =>
+        !(
+          node.kind === 'group' &&
+          node.renderParticipation === 'derivation-only'
+        ),
+    )
+    .map((node) =>
+      node.kind === 'group'
+        ? {...node, children: runtimeVisibleNodes(node.children)}
+        : node.kind === 'editorial-switch'
+          ? {
+              ...node,
+              panels: node.panels.map((panel) => ({
+                ...panel,
+                node:
+                  runtimeVisibleNodes([panel.node])[0] ?? panel.node,
+              })),
+            }
+          : node,
+    );
+
 const visualScene = (scene) => ({
   ...scene,
+  composition: {
+    ...scene.composition,
+    nodes: runtimeVisibleNodes(scene.composition?.nodes),
+  },
   narration: {
     startSeconds: scene.narration.startSeconds,
     durationSeconds: scene.narration.durationSeconds,
@@ -46,14 +77,40 @@ const visualScene = (scene) => ({
   events: (scene.events ?? []).map(({sound: _sound, ...event}) => event),
 });
 
+const compositionProofScene = (scene) => ({
+  ...visualScene(scene),
+  narration: {
+    startSeconds: scene.narration.startSeconds,
+    durationSeconds: scene.narration.durationSeconds,
+  },
+  subtitles: [],
+  appearance: {
+    ...scene.appearance,
+    subtitles: {variant: 'hidden'},
+  },
+});
+
+export const createCompositionProofProject = (project) => ({
+  ...structuredClone(project),
+  scenes: (project.scenes ?? []).map((scene) => ({
+    ...structuredClone(scene),
+    subtitles: [],
+    appearance: {
+      ...structuredClone(scene.appearance ?? {}),
+      subtitles: {variant: 'hidden'},
+    },
+  })),
+});
+
 export const createVisualFingerprint = async (project, mode) => {
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   const sources = [project.theme.texture, project.theme.fontFile];
   for (const scene of project.scenes ?? []) {
     sources.push(
-      ...collectCompositionVisualSources(scene.composition),
+      ...collectRuntimeVisibleCompositionSources(scene.composition),
     );
-    for (const {node} of collectCompositionGroups(scene.composition)) {
+    for (const {node, renderParticipation} of collectCompositionGroups(scene.composition)) {
+      if (renderParticipation !== 'visible') continue;
       for (const boundary of node.boundaries ?? []) {
         sources.push(boundary.upperMaskSrc, boundary.lowerMaskSrc);
       }
@@ -76,13 +133,18 @@ export const createSceneProofFingerprint = async ({
   scene,
   proof,
   absoluteFrame,
+  surface = 'final-visual',
 }) => {
-  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
+  const runtimeFingerprint =
+    surface === 'composition-proof'
+      ? await createRuntimeSurfaceFingerprint('composition-proof')
+      : await createRuntimeBuildFingerprint();
   const sources = [project.theme.texture, project.theme.fontFile];
   sources.push(
-    ...collectCompositionVisualSources(scene.composition),
+    ...collectRuntimeVisibleCompositionSources(scene.composition),
   );
-  for (const {node} of collectCompositionGroups(scene.composition)) {
+  for (const {node, renderParticipation} of collectCompositionGroups(scene.composition)) {
+    if (renderParticipation !== 'visible') continue;
     for (const boundary of node.boundaries ?? []) {
       sources.push(boundary.upperMaskSrc, boundary.lowerMaskSrc);
     }
@@ -90,11 +152,15 @@ export const createSceneProofFingerprint = async ({
   return hashCompositionValue({
     video: project.video,
     theme: project.theme,
-    scene: visualScene(scene),
+    scene:
+      surface === 'composition-proof'
+        ? compositionProofScene(scene)
+        : visualScene(scene),
     proof,
     absoluteFrame,
     sourceHashes: await hashPublicSources(sources),
-    runtimeBuildFingerprint,
+    runtimeSurface: surface,
+    runtimeFingerprint,
   });
 };
 

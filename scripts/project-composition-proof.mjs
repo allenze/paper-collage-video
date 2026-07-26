@@ -31,8 +31,14 @@ import {
   collectCompositeQualityTargets,
   compositionProofReportPath,
 } from './quality-lib.mjs';
-import {createSceneProofFingerprint} from './render-cache-lib.mjs';
-import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {
+  createCompositionProofProject,
+  createSceneProofFingerprint,
+} from './render-cache-lib.mjs';
+import {
+  createRuntimeBuildFingerprint,
+  createRuntimeSurfaceFingerprint,
+} from './runtime-build-lib.mjs';
 import {
   activeManifestAssets,
   assertAssetManifest,
@@ -155,6 +161,11 @@ try {
   const evidenceDirectory = path.join(outputDirectory, 'evidence');
   await fs.mkdir(evidenceDirectory, {recursive: true});
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
+  const runtimeSurfaceFingerprint =
+    await createRuntimeSurfaceFingerprint('composition-proof');
+  const proofProject = createCompositionProofProject(project);
+  const proofProjectFile = path.join(outputDirectory, 'project.json');
+  await writeJson(proofProjectFile, proofProject);
 
   const reportFile = compositionProofReportPath(slug);
   const previous = (await fileExists(reportFile))
@@ -213,6 +224,7 @@ try {
         scene,
         proof,
         absoluteFrame,
+        surface: 'composition-proof',
       });
       const cached = previousFrames.get(`active:${key}`);
       const reusable =
@@ -232,7 +244,7 @@ try {
           'src/index.ts',
           'Paper-Collage',
           file,
-          `--props=${path.relative(ROOT, paths.projectFile)}`,
+          `--props=${path.relative(ROOT, proofProjectFile)}`,
           `--frame=${absoluteFrame}`,
           `--concurrency=${resolveRenderConcurrency()}`,
         ]);
@@ -257,10 +269,13 @@ try {
   }
 
   const sceneById = new Map(timeline.scenes.map((scene) => [scene.id, scene]));
-  const targets = await collectCompositeQualityTargets(project);
+  const targets = (await collectCompositeQualityTargets(project)).filter(
+    ({reviewScope}) => reviewScope === 'runtime-visible',
+  );
   const coupledNodes = new Map();
   for (const scene of project.scenes ?? []) {
-    for (const {node, parent} of collectCompositionAssets(scene.composition)) {
+    for (const {node, parent, renderParticipation} of collectCompositionAssets(scene.composition)) {
+      if (renderParticipation !== 'visible') continue;
       if (
         !parent ||
         ![
@@ -279,7 +294,8 @@ try {
         }),
       });
     }
-    for (const {node, parent} of collectWorldStrips(scene.composition)) {
+    for (const {node, parent, renderParticipation} of collectWorldStrips(scene.composition)) {
+      if (renderParticipation !== 'visible') continue;
       if (parent?.pattern !== 'looping-environment') continue;
       coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {
         sceneId: scene.id,
@@ -291,7 +307,8 @@ try {
         }),
       });
     }
-    for (const {node} of collectStateSequences(scene.composition)) {
+    for (const {node, renderParticipation} of collectStateSequences(scene.composition)) {
+      if (renderParticipation !== 'visible') continue;
       for (const state of node.states) {
         coupledNodes.set(`${scene.id}:${node.id}:${state.src}`, {
           sceneId: scene.id,
@@ -347,7 +364,7 @@ try {
     const cached = responsiveVariants.get(profileId);
     if (cached) return cached;
     const responsiveProject = applyResponsiveDirectingPlan({
-      ...structuredClone(project),
+      ...structuredClone(proofProject),
       video: {
         ...project.video,
         width: target.responsive.width,
@@ -402,6 +419,7 @@ try {
       scene,
       proof,
       absoluteFrame,
+      surface: 'composition-proof',
     });
     const cached = previousFrames.get(key);
     const reusable =
@@ -630,7 +648,7 @@ try {
         scene: project.scenes.find(({id}) => id === target.sceneId),
         group: target.group,
         video: project.video,
-        runtimeBuildFingerprint,
+        runtimeBuildFingerprint: runtimeSurfaceFingerprint,
       });
       if (!loopingWorldProof.passed) {
         throw new Error(
@@ -672,6 +690,10 @@ try {
     generatedAt: new Date().toISOString(),
     scope: 'project',
     runtimeBuildFingerprint,
+    runtimeSurface: {
+      id: 'composition-proof',
+      fingerprint: runtimeSurfaceFingerprint,
+    },
     frames,
     composites,
     worldMotionProofs: traverseWorldMotionProofs,

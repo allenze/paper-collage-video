@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/quality-report.schema.json",
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "projectSlug": "starter-demo",
   "updatedAt": "2026-01-01T00:00:00.000Z",
   "eventTimeline": [
@@ -53,6 +53,7 @@
       "sources": [
         "scene:starter:node:background"
       ],
+      "reviewScope": "runtime-visible",
       "semanticBinding": null,
       "registeredFamilyBinding": null,
       "stateSheetBinding": null,
@@ -60,6 +61,8 @@
       "recoverySourceFile": null,
       "recoverySourceSha256": null,
       "recoveryEvidenceFiles": [],
+      "manifestRecordId": null,
+      "manifestSha256": null,
       "semanticContractFingerprints": {},
       "sha256": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
       "fingerprint": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
@@ -150,6 +153,7 @@
       "sources": [
         "scene:starter:node:traveler"
       ],
+      "reviewScope": "runtime-visible",
       "semanticBinding": null,
       "registeredFamilyBinding": null,
       "stateSheetBinding": null,
@@ -157,6 +161,8 @@
       "recoverySourceFile": null,
       "recoverySourceSha256": null,
       "recoveryEvidenceFiles": [],
+      "manifestRecordId": null,
+      "manifestSha256": null,
       "semanticContractFingerprints": {},
       "sha256": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
       "fingerprint": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
@@ -257,7 +263,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
-      "fingerprint": "4159febf1db93028804b045c61426a718143669b9a386530889e24d35a0d175b",
+      "fingerprint": "1a5300a9803274a8eee1bcbc4d21d8fd743859ea8e9e53ca6455bcb419c741c9",
       "proofTimeIds": [
         "proof-establish"
       ],
@@ -278,6 +284,7 @@
           }
         }
       ],
+      "reviewScope": "runtime-visible",
       "requiredChecks": [
         "visual-event-visible",
         "sound-event-bound",
@@ -290,8 +297,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "4159febf1db93028804b045c61426a718143669b9a386530889e24d35a0d175b",
-            "actual": "4159febf1db93028804b045c61426a718143669b9a386530889e24d35a0d175b"
+            "expected": "1a5300a9803274a8eee1bcbc4d21d8fd743859ea8e9e53ca6455bcb419c741c9",
+            "actual": "1a5300a9803274a8eee1bcbc4d21d8fd743859ea8e9e53ca6455bcb419c741c9"
           },
           {
             "id": "proof-artifacts-present",
@@ -339,7 +346,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "fa68dd4364ec2771470f7fc185f31cb023bd33736f0066df4044339ddeaea941",
-      "fingerprint": "8d6696d6ff9e9fd037621d0586ee49bf80cf1045afb828014fa1b20f1c9ef029",
+      "fingerprint": "a16d650dfc5fe266cd9951df8cd47c34f8d678d7a35b77a7fc8d8ed674582f10",
       "proofTimeIds": [
         "proof-action"
       ],
@@ -360,6 +367,7 @@
           }
         }
       ],
+      "reviewScope": "runtime-visible",
       "requiredChecks": [
         "visual-event-visible",
         "sound-event-bound",
@@ -372,8 +380,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "8d6696d6ff9e9fd037621d0586ee49bf80cf1045afb828014fa1b20f1c9ef029",
-            "actual": "8d6696d6ff9e9fd037621d0586ee49bf80cf1045afb828014fa1b20f1c9ef029"
+            "expected": "a16d650dfc5fe266cd9951df8cd47c34f8d678d7a35b77a7fc8d8ed674582f10",
+            "actual": "a16d650dfc5fe266cd9951df8cd47c34f8d678d7a35b77a7fc8d8ed674582f10"
           },
           {
             "id": "proof-artifacts-present",
@@ -421,7 +429,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "2fd24fa9491ccc0c2497848473aad57bcaf7b25b24fed12aba11410e8117968e",
-      "fingerprint": "691a67e8fe90d92211d170c589b63f67fdb5ce6f9336baeb6e404776d5d96b50",
+      "fingerprint": "af2ffbf9c7e106e194f54adba0da3e0336ba85ea22977e4deedd41223b87fe72",
       "proofTimeIds": [
         "proof-final"
       ],
@@ -442,6 +450,7 @@
           }
         }
       ],
+      "reviewScope": "runtime-visible",
       "requiredChecks": [
         "visual-event-visible",
         "sound-event-bound",
@@ -454,8 +463,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "691a67e8fe90d92211d170c589b63f67fdb5ce6f9336baeb6e404776d5d96b50",
-            "actual": "691a67e8fe90d92211d170c589b63f67fdb5ce6f9336baeb6e404776d5d96b50"
+            "expected": "af2ffbf9c7e106e194f54adba0da3e0336ba85ea22977e4deedd41223b87fe72",
+            "actual": "af2ffbf9c7e106e194f54adba0da3e0336ba85ea22977e4deedd41223b87fe72"
           },
           {
             "id": "proof-artifacts-present",
@@ -492,5 +501,5 @@
       "status": "passed"
     }
   ],
-  "reviewSurfaceFingerprint": "32c522285d2358d3f1eb53a8dcf8e35683355dd21f2d2e7536b69a4f3132c584"
+  "reviewSurfaceFingerprint": "3ebdb832ff76fe70cd6334bcb48957be71e47d299f3f71118425011ca1418cbc"
 }

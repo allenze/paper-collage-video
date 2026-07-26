@@ -19,17 +19,28 @@ export const resolveParallaxState = ({
 };
 
 export const collectParallaxDepths = (nodes = []) =>
-  nodes.flatMap((node) => [
+  nodes.flatMap((node) => (
+    node?.kind === 'group' &&
+    node.renderParticipation === 'derivation-only'
+      ? []
+      : [
     {
       id: node?.id,
       kind: node?.kind,
       depth: node?.depth ?? 0,
     },
     ...(node?.kind === 'group' ? collectParallaxDepths(node.children ?? []) : []),
-  ]);
+      ]
+  ));
 
 const collectFrozenWorldDepthNodeIds = (nodes = [], frozenAncestor = false) =>
   nodes.flatMap((node) => {
+    if (
+      node?.kind === 'group' &&
+      node.renderParticipation === 'derivation-only'
+    ) {
+      return [];
+    }
     const frozen = frozenAncestor || (
       node?.kind === 'group' &&
       node.pattern === 'looping-environment' &&

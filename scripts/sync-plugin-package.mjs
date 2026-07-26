@@ -202,6 +202,7 @@ for (const entry of [
   'src/motion.ts',
   'src/ReplicaChapterScene.tsx',
   'src/SceneTransitionOverlay.tsx',
+  'src/SubtitleOverlay.tsx',
   'src/index.ts',
   'src/motifField.mjs',
   'src/motifField.d.mts',
@@ -231,6 +232,7 @@ for (const entry of [
   'tests/production-state.test.mjs',
   'tests/directing-revision.test.mjs',
   'tests/quality-motion-runtime.test.mjs',
+  'tests/runtime-surface-scope.test.mjs',
   'tests/storyboard-motion.test.mjs',
   'tests/looping-world.test.mjs',
   'tests/vox-primitives.test.mjs',
@@ -726,7 +728,7 @@ await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 5,
+    schemaVersion: 6,
     projectSlug: 'starter-demo',
     updatedAt: at,
     reviewSurfaceFingerprint:

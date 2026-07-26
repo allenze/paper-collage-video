@@ -958,6 +958,7 @@
         "id": {"type": "string", "minLength": 1},
         "kind": {"const": "group"},
         "pattern": {"$ref": "#/$defs/pattern"},
+        "renderParticipation": {"enum": ["visible", "derivation-only"]},
         "z": {"type": "integer"},
         "depth": {"type": "number", "minimum": -1, "maximum": 1},
         "coordinateSpace": {"$ref": "#/$defs/coordinateSpace"},

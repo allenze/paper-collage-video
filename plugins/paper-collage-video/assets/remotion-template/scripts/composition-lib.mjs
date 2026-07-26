@@ -126,15 +126,33 @@ export const stableStringify = (value) => {
 export const hashCompositionValue = (value) =>
   createHash('sha256').update(stableStringify(value)).digest('hex');
 
-export const flattenCompositionNodes = (nodes = [], parent = null) =>
-  nodes.flatMap((node) => [
-    {node, parent},
+export const flattenCompositionNodes = (
+  nodes = [],
+  parent = null,
+  inheritedRenderParticipation = 'visible',
+) =>
+  nodes.flatMap((node) => {
+    const renderParticipation =
+      node.kind === 'group'
+        ? node.renderParticipation ?? inheritedRenderParticipation
+        : inheritedRenderParticipation;
+    return [
+    {node, parent, renderParticipation},
     ...(node.kind === 'group'
-      ? flattenCompositionNodes(node.children ?? [], node)
+      ? flattenCompositionNodes(
+          node.children ?? [],
+          node,
+          renderParticipation,
+        )
       : node.kind === 'editorial-switch'
-        ? flattenCompositionNodes((node.panels ?? []).map(({node: panel}) => panel), node)
+        ? flattenCompositionNodes(
+            (node.panels ?? []).map(({node: panel}) => panel),
+            node,
+            renderParticipation,
+          )
       : []),
-  ]);
+    ];
+  });
 
 export const collectCompositionGroups = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'group');
@@ -157,6 +175,21 @@ export const collectCompositionVisualSources = (composition) => [
   ...collectMotifFields(composition).flatMap(({node}) => node.motifs.map(({src}) => src)),
   ...collectWorldStrips(composition).map(({node}) => node.src),
 ];
+
+export const collectRuntimeVisibleCompositionSources = (composition) =>
+  flattenCompositionNodes(composition?.nodes)
+    .filter(({renderParticipation}) => renderParticipation === 'visible')
+    .flatMap(({node}) => {
+      if (node.kind === 'asset') return [node.src];
+      if (node.kind === 'state-sequence') {
+        return node.states.map(({src}) => src);
+      }
+      if (node.kind === 'motif-field') {
+        return node.motifs.map(({src}) => src);
+      }
+      if (node.kind === 'world-strip') return [node.src];
+      return [];
+    });
 
 export const pointInPolygon = ([x, y], polygon = []) => {
   let inside = false;
@@ -242,7 +275,7 @@ export const validateCompositionStructure = ({
   const add = (level, code, message, issueLocation) => issues.push({level, code, message, location: issueLocation});
   if (!composition || typeof composition !== 'object') {
     add('error', 'composition-required', '每个镜头必须声明 composition。', location);
-    return {issues, nodeIds: new Set(), groups: [], assets: [], sequences: [], motifFields: [], worldStrips: [], freeNodes: []};
+    return {issues, nodeIds: new Set(), derivationOnlyNodeIds: new Set(), groups: [], assets: [], sequences: [], motifFields: [], worldStrips: [], freeNodes: []};
   }
   if (
     composition.coordinateSpace?.width !== video?.width ||
@@ -255,15 +288,19 @@ export const validateCompositionStructure = ({
   const flat = flattenCompositionNodes(composition.nodes);
   const freeNodes = flat.filter(({node, parent}) => parent === null && node.kind !== 'group');
   const nodeIds = new Set();
+  const derivationOnlyNodeIds = new Set();
   const groups = [];
   const assets = [];
   const sequences = [];
   const motifFields = [];
   const worldStrips = [];
-  for (const {node, parent} of flat) {
+  for (const {node, parent, renderParticipation} of flat) {
     const nodeLocation = `${location}.nodes#${node?.id ?? 'missing'}`;
     if (!nonEmpty(node?.id) || nodeIds.has(node.id)) add('error', 'composition-node-id', '组合节点 id 缺失或重复。', `${nodeLocation}.id`);
     nodeIds.add(node?.id);
+    if (renderParticipation === 'derivation-only') {
+      derivationOnlyNodeIds.add(node?.id);
+    }
     if (!['asset', 'state-sequence', 'typography', 'shape', 'annotation', 'data-graphic', 'editorial-switch', 'motif-field', 'world-strip', 'group'].includes(node?.kind)) {
       add('error', 'composition-node-kind', `未知组合节点 kind：${node?.kind}`, `${nodeLocation}.kind`);
       continue;
@@ -273,6 +310,17 @@ export const validateCompositionStructure = ({
       add('error', 'composition-node-depth', '节点 depth 必须位于 -1..1。', `${nodeLocation}.depth`);
     }
     validateTransform(node.transform, `${nodeLocation}.transform`, add);
+    if (
+      node.transform?.opacity === 0 &&
+      renderParticipation !== 'derivation-only'
+    ) {
+      add(
+        'error',
+        'composition-zero-opacity-source',
+        '永久 opacity=0 的节点不是可见执行内容；技术来源组必须显式声明 renderParticipation=derivation-only。',
+        `${nodeLocation}.transform.opacity`,
+      );
+    }
     validateMotionKeyframes(node.motion?.keyframes, `${nodeLocation}.motion.keyframes`, add);
     if (node.visibility !== undefined && !['visible', 'hidden'].includes(node.visibility?.initial)) {
       add('error', 'composition-node-visibility', 'visibility.initial 必须是 visible 或 hidden。', `${nodeLocation}.visibility.initial`);
@@ -667,8 +715,44 @@ export const validateCompositionStructure = ({
       continue;
     }
 
-    groups.push({node, parent});
+    groups.push({node, parent, renderParticipation});
     if (!COMPOSITION_PATTERNS.includes(node.pattern)) add('error', 'composition-pattern', `未知组合模式：${node.pattern}`, `${nodeLocation}.pattern`);
+    if (
+      node.renderParticipation !== undefined &&
+      !['visible', 'derivation-only'].includes(node.renderParticipation)
+    ) {
+      add(
+        'error',
+        'composition-render-participation',
+        'group.renderParticipation 必须是 visible 或 derivation-only。',
+        `${nodeLocation}.renderParticipation`,
+      );
+    }
+    if (
+      node.renderParticipation === 'derivation-only' &&
+      (
+        parent !== null ||
+        !['supported-subject', 'registered-depth-stack'].includes(node.pattern)
+      )
+    ) {
+      add(
+        'error',
+        'composition-derivation-only-scope',
+        'derivation-only 只能用于顶层 supported-subject 或 registered-depth-stack 技术来源组。',
+        `${nodeLocation}.renderParticipation`,
+      );
+    }
+    if (
+      node.renderParticipation === 'derivation-only' &&
+      node.visibility !== undefined
+    ) {
+      add(
+        'error',
+        'composition-derivation-only-visibility',
+        'derivation-only 组不参与运行时显隐，不能声明 visibility。',
+        `${nodeLocation}.visibility`,
+      );
+    }
     if (!(finite(node.coordinateSpace?.width) && node.coordinateSpace.width > 0 && finite(node.coordinateSpace?.height) && node.coordinateSpace.height > 0)) add('error', 'composition-group-space', 'group.coordinateSpace 必须是有效画布。', `${nodeLocation}.coordinateSpace`);
     if (!Array.isArray(node.children) || node.children.length === 0) add('error', 'composition-group-children', 'group 至少需要一个 child。', `${nodeLocation}.children`);
 
@@ -1102,6 +1186,15 @@ export const validateCompositionStructure = ({
         add('error', 'composition-sequence-proof-node', `证明 ${proof.id} 引用了不存在的状态序列 ${assertion.nodeId}。`, `${location}.proofTimes#${proof.id}`);
         continue;
       }
+      if (derivationOnlyNodeIds.has(assertion.nodeId)) {
+        add(
+          'error',
+          'composition-derivation-only-proof',
+          `证明 ${proof.id} 不能引用 derivation-only 状态序列 ${assertion.nodeId}。`,
+          `${location}.proofTimes#${proof.id}`,
+        );
+        continue;
+      }
       if (!entry.node.states.some(({id}) => id === assertion.stateId)) add('error', 'composition-sequence-proof-state', `证明 ${proof.id} 引用了不存在的状态 ${assertion.stateId}。`, `${location}.proofTimes#${proof.id}`);
       const resolved = resolveSequenceState({node: entry.node, progress: proof.at});
       if (resolved?.id !== assertion.stateId) add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${assertion.stateId}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
@@ -1125,7 +1218,7 @@ export const validateCompositionStructure = ({
       }
     }
   }
-  return {issues, nodeIds, groups, assets, sequences, motifFields, worldStrips, freeNodes};
+  return {issues, nodeIds, derivationOnlyNodeIds, groups, assets, sequences, motifFields, worldStrips, freeNodes};
 };
 
 export const deriveEventTimeline = ({scene, sceneFrom = 0, fps}) =>

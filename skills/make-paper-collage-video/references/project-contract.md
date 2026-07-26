@@ -92,6 +92,15 @@ regenerate their equivalent output from the latest contract when needed. There
 is no legacy loader, dual schema, deprecated field, compatibility adapter, or
 version-conditioned renderer branch.
 
+A top-level `supported-subject` or `registered-depth-stack` group may explicitly
+declare `renderParticipation=derivation-only` when it exists only to bind a
+registered technical source family. The renderer omits that complete subtree;
+it cannot satisfy profile/directing promises, receive events or proof
+assertions, or act as semantic/style evidence. Do not use `opacity=0` as this
+contract. Visible derived consumers own composition, occlusion, depth,
+responsive, and semantic review; the derivation-only family owns deterministic
+completeness, provenance, and derivation integrity.
+
 `theme.canvas` is a required opaque six-digit hex color. The renderer places it beneath every scene-specific background and uses it as the dip cover, so even a translucent scene treatment cannot expose pixels from the outgoing scene.
 
 `state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
@@ -255,6 +264,6 @@ Fix a wrong mask, crop, anchor, registration, or derivative without another huma
 Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion,
 extraction, layer/state-sheet processing, editorial/directing compilation,
 proof, attempt accounting, or report logic ad hoc. Only the current Creative
-Plan v4, project/storyboard schema v10, quality-report schema v4, asset-request
+Plan v4, project/storyboard schema v10, quality-report schema v6, asset-request
 schema v7, registered-family schema v2, and current style-proof contract are
 supported; older contracts are intentionally not migrated or executed.

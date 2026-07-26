@@ -5,7 +5,20 @@ authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
-`quality-report.json` v5 contains `eventTimeline`, current `assets`, `composites`, non-current `assetHistory`, and one `reviewSurfaceFingerprint` over the exact review targets, technical results, and evidence hashes. Manifest records marked `superseded`, `rejected`, or `recovery-source` stay auditable but do not enter the current pass denominator unless the execution tree still reaches that file. A passing file does not prove that a person is inside a boat or trees remain above water. Both current quality scopes must pass.
+`quality-report.json` v6 contains `eventTimeline`, current `assets`,
+`composites`, non-current `assetHistory`, per-entry `reviewScope`, and one
+`reviewSurfaceFingerprint` over the exact review targets, technical results, and
+evidence hashes. A visible consumer uses `runtime-visible`; an active provider or
+source asset not yet in the execution tree uses `source-asset`. A top-level
+coupled source family declared `renderParticipation=derivation-only` is never
+rendered and receives only deterministic source completeness, provenance, and
+registered-derivation checks—no human composition, occlusion, depth, or
+responsive review. If the same file also reaches a visible consumer,
+`runtime-visible` wins. Manifest records marked `superseded`, `rejected`, or
+`recovery-source` stay auditable but do not enter the current pass denominator
+unless the execution tree still reaches that file. A passing file does not prove
+that a person is inside a boat or trees remain above water. Both current quality
+scopes must pass.
 
 Run `project:quality <slug> prepare` after files exist. Then generate a fillable review batch with `project:quality <slug> scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`. The scaffold lists required/pending checks and current evidence paths but never pre-populates `passedChecks`; inspect original-resolution assets in small same-type batches, make real decisions, and record the edited file. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
 
@@ -131,6 +144,14 @@ npm run project:quality -- <slug> record-batch --input=<reviews.json> --quiet
 
 Never pass a semantic check merely to unblock production. Changing a member, mask, group transform, boundary, anchor, keyframe, event, scene transition, or proof time changes the composite fingerprint and invalidates that review.
 Replacing or editing a recorded evidence file also invalidates its review. At the style gate, each member review must reference that proof bundle's alpha mask, checkerboard, tight crop, and motion-stress sheet; the composite review must reference its full/crop/debug proof frames and member motion-stress sheets. An unrelated screenshot cannot satisfy the gate.
+
+Composition-proof fingerprints use the `composition-proof` runtime surface
+rather than the complete package identity. That surface excludes subtitle-only
+renderer and subtitle-contract files, and the proof command renders a dedicated
+project input with subtitles removed. A subtitle-only change therefore
+invalidates final visual/subtitle evidence while preserving current asset and
+composition reviews. Changes to composition, proof, quality, schema, or shared
+renderer inputs still invalidate the affected proof targets.
 
 ## Pattern-Specific Review
 

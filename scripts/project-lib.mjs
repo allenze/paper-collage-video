@@ -893,13 +893,24 @@ export const validateProject = async (project, options = {}) => {
     }
 
     const actualPatterns = new Set(
-      compositionResult.groups.map(({node}) => node.pattern),
+      compositionResult.groups
+        .filter(
+          ({renderParticipation}) => renderParticipation === 'visible',
+        )
+        .map(({node}) => node.pattern),
     );
     if (compositionResult.freeNodes.length > 0) {
       actualPatterns.add('free');
     }
 
-    const actualSequences = new Map(compositionResult.sequences.map(({node}) => [node.id, node]));
+    const actualSequences = new Map(
+      compositionResult.sequences
+        .filter(
+          ({node}) =>
+            !compositionResult.derivationOnlyNodeIds.has(node.id),
+        )
+        .map(({node}) => [node.id, node]),
+    );
     for (const planned of storyboardScene?.compositionPlan?.stateSequences ?? []) {
       const actual = actualSequences.get(planned.nodeId);
       if (!actual) {
@@ -1174,7 +1185,14 @@ export const validateProject = async (project, options = {}) => {
         );
       }
       const visual = event.visual;
-      if (!validTargets.has(event.targetId) && !(event.targetId === 'scene' && visual?.kind === 'hold')) add('error', 'scene-event-target', `event 目标必须是存在的组合节点；只有 hold 可使用 scene：${event.targetId}`, `${eventLocation}.targetId`);
+      if (compositionResult.derivationOnlyNodeIds.has(event.targetId)) {
+        add(
+          'error',
+          'scene-event-derivation-only-target',
+          `event 不能指向不参与渲染的 derivation-only 节点：${event.targetId}`,
+          `${eventLocation}.targetId`,
+        );
+      } else if (!validTargets.has(event.targetId) && !(event.targetId === 'scene' && visual?.kind === 'hold')) add('error', 'scene-event-target', `event 目标必须是存在的组合节点；只有 hold 可使用 scene：${event.targetId}`, `${eventLocation}.targetId`);
       if (visual === null) {
         if (!event.sound) add('error', 'scene-event-empty', 'visual=null 的 event 必须包含 sound。', `${eventLocation}.visual`);
       } else if (visual?.kind === 'visibility') {

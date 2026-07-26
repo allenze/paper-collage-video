@@ -656,6 +656,7 @@ export type CompositionGroupNode = {
     | 'registered-environment'
     | 'registered-depth-stack'
     | 'looping-environment';
+  renderParticipation?: 'visible' | 'derivation-only';
   z: number;
   depth?: number;
   coordinateSpace: CoordinateSpace;

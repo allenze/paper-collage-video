@@ -4,7 +4,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {
   collectCompositionAssets,
-  collectCompositionVisualSources,
+  collectRuntimeVisibleCompositionSources,
   collectCompositionGroups,
   collectMotifFields,
   collectStateSequences,
@@ -29,7 +29,7 @@ import {
   requiredChecksForSemanticBinding,
   validateSemanticEvidenceTargets,
 } from './semantic-contract-lib.mjs';
-import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {createRuntimeSurfaceFingerprint} from './runtime-build-lib.mjs';
 import {
   activeManifestAssets,
   assertAssetManifest,
@@ -305,6 +305,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     kind,
     source,
     requiredChecks,
+    reviewScope = 'source-asset',
     semanticBinding = null,
     registeredFamilyBinding = null,
     stateSheetBinding = null,
@@ -312,13 +313,32 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     recoverySourceFile = null,
     recoverySourceSha256 = null,
     recoveryEvidenceFiles = [],
+    manifestRecordId = null,
+    manifestSha256 = null,
   }) => {
     const relativeFile = path.relative(ROOT, file);
     const existing = byFile.get(relativeFile);
     if (existing) {
       existing.sources = [...new Set([...existing.sources, source])];
       if (['background', 'environment', 'character', 'prop', 'mechanism', 'diagram'].includes(kind)) existing.kind = kind;
-      if (requiredChecks?.length) existing.requiredChecks = [...new Set([...(existing.requiredChecks ?? []), ...requiredChecks])];
+      if (reviewScope === 'runtime-visible') {
+        existing.reviewScope = 'runtime-visible';
+      } else if (
+        existing.reviewScope !== 'runtime-visible' &&
+        (
+          reviewScope === 'derivation-only' ||
+          existing.reviewScope === 'derivation-only'
+        )
+      ) {
+        existing.reviewScope = 'derivation-only';
+      }
+      if (existing.reviewScope === 'derivation-only') {
+        existing.requiredChecks = [];
+      } else if (requiredChecks !== undefined) {
+        existing.requiredChecks = [
+          ...new Set([...(existing.requiredChecks ?? []), ...requiredChecks]),
+        ];
+      }
       if (assetId) existing.assetId = assetId;
       if (semanticBinding) existing.semanticBinding = semanticBinding;
       if (registeredFamilyBinding) {
@@ -329,6 +349,8 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       if (recoverySourceFile) existing.recoverySourceFile = recoverySourceFile;
       if (recoverySourceSha256) existing.recoverySourceSha256 = recoverySourceSha256;
       if (recoveryEvidenceFiles.length) existing.recoveryEvidenceFiles = recoveryEvidenceFiles;
+      if (manifestRecordId) existing.manifestRecordId = manifestRecordId;
+      if (manifestSha256) existing.manifestSha256 = manifestSha256;
       return;
     }
     byFile.set(relativeFile, {
@@ -336,6 +358,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       file: relativeFile,
       kind,
       sources: [source],
+      reviewScope,
       semanticBinding,
       registeredFamilyBinding,
       stateSheetBinding,
@@ -343,21 +366,37 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       recoverySourceFile,
       recoverySourceSha256,
       recoveryEvidenceFiles,
-      ...(requiredChecks?.length ? {requiredChecks} : {}),
+      manifestRecordId,
+      manifestSha256,
+      ...(requiredChecks !== undefined ? {requiredChecks} : {}),
     });
   };
 
   for (const scene of project.scenes ?? []) {
-    for (const {node, parent} of collectCompositionAssets(scene.composition)) {
-      const topologyChecks = parent && ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(parent.pattern)
+    for (const {node, parent, renderParticipation} of collectCompositionAssets(scene.composition)) {
+      const topologyChecks = renderParticipation === 'visible' &&
+        parent && ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(parent.pattern)
         ? [...(QUALITY_PROFILES[node.assetRole] ?? QUALITY_PROFILES.image), ...TOPOLOGY_ASSET_CHECKS]
-        : null;
-      add({file: resolvePublicFile(node.src), kind: node.assetRole, source: `scene:${scene.id}:node:${node.id}`, requiredChecks: topologyChecks});
+        : renderParticipation === 'derivation-only'
+          ? []
+          : undefined;
+      add({
+        file: resolvePublicFile(node.src),
+        kind: node.assetRole,
+        source: `scene:${scene.id}:node:${node.id}`,
+        requiredChecks: topologyChecks,
+        reviewScope: renderParticipation === 'derivation-only'
+          ? 'derivation-only'
+          : 'runtime-visible',
+      });
     }
-    for (const {node, parent} of collectStateSequences(scene.composition)) {
-      const topologyChecks = parent && ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(parent.pattern)
+    for (const {node, parent, renderParticipation} of collectStateSequences(scene.composition)) {
+      const topologyChecks = renderParticipation === 'visible' &&
+        parent && ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(parent.pattern)
         ? [...(QUALITY_PROFILES[node.assetRole] ?? QUALITY_PROFILES.image), ...TOPOLOGY_ASSET_CHECKS]
-        : null;
+        : renderParticipation === 'derivation-only'
+          ? []
+          : undefined;
       for (const state of node.states) {
         add({
           assetId: `${node.poseFamilyId}:${state.id}`,
@@ -365,6 +404,9 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
           kind: node.assetRole,
           source: `scene:${scene.id}:node:${node.id}`,
           requiredChecks: topologyChecks,
+          reviewScope: renderParticipation === 'derivation-only'
+            ? 'derivation-only'
+            : 'runtime-visible',
         });
       }
     }
@@ -373,12 +415,14 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
         file: resolvePublicFile(node.src),
         kind: 'environment',
         source: `scene:${scene.id}:node:${node.id}`,
+        reviewScope: 'runtime-visible',
       });
     }
-    for (const {node} of collectCompositionGroups(scene.composition)) {
+    for (const {node, renderParticipation} of collectCompositionGroups(scene.composition)) {
+      if (renderParticipation !== 'visible') continue;
       for (const boundary of node.boundaries ?? []) {
         for (const maskSrc of [boundary.upperMaskSrc, boundary.lowerMaskSrc].filter(Boolean)) {
-          add({file: resolvePublicFile(maskSrc), kind: 'environment', source: `scene:${scene.id}:boundary:${boundary.id}`});
+          add({file: resolvePublicFile(maskSrc), kind: 'environment', source: `scene:${scene.id}:boundary:${boundary.id}`, reviewScope: 'runtime-visible'});
         }
       }
     }
@@ -414,6 +458,8 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       recoverySourceFile: recoverySource?.file ?? null,
       recoverySourceSha256: recoverySource?.sha256 ?? null,
       recoveryEvidenceFiles: [record.file, recoverySource?.file, recoveryMask?.file].filter(Boolean),
+      manifestRecordId: record.recordId,
+      manifestSha256: record.sha256,
     });
   }
 
@@ -439,6 +485,20 @@ const inspectTechnicalQuality = async ({asset, project}) => {
     {id: 'file-exists', passed: stat.size > 0, actual: stat.size},
     {id: 'dimensions-readable', passed: Boolean(metadata.width && metadata.height), actual: `${metadata.width ?? 0}x${metadata.height ?? 0}`},
   ];
+  if (asset.reviewScope === 'derivation-only') {
+    checks.push({
+      id: 'derivation-provenance-current',
+      passed:
+        typeof asset.manifestRecordId === 'string' &&
+        asset.manifestRecordId.length > 0 &&
+        asset.manifestSha256 === await hashFile(file),
+      expected: asset.manifestSha256,
+      actual: {
+        recordId: asset.manifestRecordId,
+        sha256: await hashFile(file),
+      },
+    });
+  }
   if (asset.kind === 'background') {
     const scale = project.quality?.minimumAssetScale ?? 1;
     const minimumWidth = Math.round(project.video.width * scale);
@@ -564,7 +624,8 @@ const hashReferencedFiles = async (sources) => {
 const findNode = (scene, id) => flattenCompositionNodes(scene.composition?.nodes).find(({node}) => node.id === id)?.node ?? null;
 
 export const collectCompositeQualityTargets = async (project, {manifest = null} = {}) => {
-  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
+  const runtimeSurfaceFingerprint =
+    await createRuntimeSurfaceFingerprint('composition-proof');
   const assetManifest = manifest ?? await readManifest(project);
   const recordsByFile = new Map((assetManifest.assets ?? []).map((record) => [path.normalize(record.file), record]));
   const targets = [];
@@ -573,12 +634,16 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       ({fromSceneId, toSceneId}) => fromSceneId === scene.id || toSceneId === scene.id,
     );
     if (scene.camera?.parallax?.enabled) {
-      const nodes = flattenCompositionNodes(scene.composition?.nodes).map(({node}) => node);
-      const memberHashes = await hashReferencedFiles(collectCompositionVisualSources(scene.composition));
+      const nodes = flattenCompositionNodes(scene.composition?.nodes)
+        .filter(({renderParticipation}) => renderParticipation === 'visible')
+        .map(({node}) => node);
+      const memberHashes = await hashReferencedFiles(
+        collectRuntimeVisibleCompositionSources(scene.composition),
+      );
       const proofTimes = scene.motion?.proofTimes ?? [];
       const depthMap = nodes.map(({id, kind, depth = 0}) => ({id, kind, depth}));
       const fingerprint = hashCompositionValue({
-        runtimeBuildFingerprint,
+        runtimeSurfaceFingerprint,
         sceneId: scene.id,
         parallax: scene.camera.parallax,
         camera: scene.camera,
@@ -598,15 +663,17 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         fingerprint,
         proofTimeIds: proofTimes.map(({id}) => id),
         requiredChecks: COMPOSITE_PROFILES['parallax-rig'],
+        reviewScope: 'runtime-visible',
         parallax: scene.camera.parallax,
         depthMap,
       });
     }
-    for (const {node} of collectMotifFields(scene.composition)) {
+    for (const {node, renderParticipation} of collectMotifFields(scene.composition)) {
+      if (renderParticipation !== 'visible') continue;
       const proofTimes = scene.motion?.proofTimes ?? [];
       const memberHashes = await hashReferencedFiles(node.motifs.map(({src}) => src));
       const fingerprint = hashCompositionValue({
-        runtimeBuildFingerprint,
+        runtimeSurfaceFingerprint,
         sceneId: scene.id,
         node,
         proofTimes,
@@ -626,16 +693,19 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         fingerprint,
         proofTimeIds: proofTimes.map(({id}) => id),
         requiredChecks: COMPOSITE_PROFILES['motif-field'],
+        reviewScope: 'runtime-visible',
         motifField: node,
       });
     }
     for (const {node} of flattenCompositionNodes(scene.composition?.nodes).filter(
-      ({node: candidate}) => ['typography', 'annotation', 'data-graphic'].includes(candidate.kind),
+      ({node: candidate, renderParticipation}) =>
+        renderParticipation === 'visible' &&
+        ['typography', 'annotation', 'data-graphic'].includes(candidate.kind),
     )) {
       const pattern = node.kind;
       const proofTimes = scene.motion?.proofTimes ?? [];
       const fingerprint = hashCompositionValue({
-        runtimeBuildFingerprint,
+        runtimeSurfaceFingerprint,
         sceneId: scene.id,
         node,
         editorialFingerprint: project.editorial?.fingerprint ?? null,
@@ -653,6 +723,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         fingerprint,
         proofTimeIds: proofTimes.map(({id}) => id),
         requiredChecks: COMPOSITE_PROFILES[pattern],
+        reviewScope: 'runtime-visible',
         editorialNode: node,
         sceneNodes: scene.composition?.nodes ?? [],
         video: project.video,
@@ -662,7 +733,8 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         )?.exclusionZones ?? [],
       });
     }
-    for (const {node} of collectStateSequences(scene.composition)) {
+    for (const {node, renderParticipation} of collectStateSequences(scene.composition)) {
+      if (renderParticipation !== 'visible') continue;
       const proofTimes = (scene.motion?.proofTimes ?? []).filter((proof) =>
         (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
       );
@@ -675,7 +747,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
       const fingerprint = hashCompositionValue({
-        runtimeBuildFingerprint,
+        runtimeSurfaceFingerprint,
         sceneId: scene.id,
         node,
         proofTimes,
@@ -696,11 +768,12 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         fingerprint,
         proofTimeIds: proofTimes.map(({id}) => id),
         requiredChecks: COMPOSITE_PROFILES['state-sequence'],
+        reviewScope: 'runtime-visible',
         sequence: node,
         stateRecords,
       });
     }
-    for (const {node: group} of collectCompositionGroups(scene.composition)) {
+    for (const {node: group, renderParticipation} of collectCompositionGroups(scene.composition)) {
       if (!['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(group.pattern)) continue;
       const members = descendants(group).filter((node) => ['asset', 'state-sequence', 'world-strip'].includes(node.kind));
       const sources = [
@@ -719,17 +792,28 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         loopingStripBinding: record.loopingStripBinding ?? null,
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
-      const fingerprint = hashCompositionValue({
-        runtimeBuildFingerprint,
-        sceneId: scene.id,
-        group,
-        proofTimes: scene.motion?.proofTimes ?? [],
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
-        camera: scene.camera,
-        affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === group.id),
-        memberHashes,
-        familyProvenance,
-      });
+      const fingerprint = hashCompositionValue(
+        renderParticipation === 'derivation-only'
+          ? {
+              runtimeSurfaceFingerprint,
+              sceneId: scene.id,
+              reviewScope: renderParticipation,
+              group,
+              memberHashes,
+              familyProvenance,
+            }
+          : {
+              runtimeSurfaceFingerprint,
+              sceneId: scene.id,
+              group,
+              proofTimes: scene.motion?.proofTimes ?? [],
+              timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+              camera: scene.camera,
+              affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === group.id),
+              memberHashes,
+              familyProvenance,
+            },
+      );
       targets.push({
         compositeId: `group:${scene.id}:${group.id}`,
         sceneId: scene.id,
@@ -739,8 +823,18 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         memberHashes,
         compositionHash: hashCompositionValue(group),
         fingerprint,
-        proofTimeIds: (scene.motion?.proofTimes ?? []).map(({id}) => id),
-        requiredChecks: requiredChecksForGroup(group),
+        proofTimeIds:
+          renderParticipation === 'derivation-only'
+            ? []
+            : (scene.motion?.proofTimes ?? []).map(({id}) => id),
+        requiredChecks:
+          renderParticipation === 'derivation-only'
+            ? []
+            : requiredChecksForGroup(group),
+        reviewScope:
+          renderParticipation === 'derivation-only'
+            ? 'derivation-only'
+            : 'runtime-visible',
         group,
         familyRecords,
       });
@@ -752,10 +846,10 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         ? targetNode.kind === 'state-sequence'
           ? targetNode.states.map(({src}) => src)
           : visualSourcesForNode(targetNode)
-        : collectCompositionVisualSources(scene.composition);
+        : collectRuntimeVisibleCompositionSources(scene.composition);
       const memberHashes = await hashReferencedFiles(targetSources);
       const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === event.proofTimeId) ?? null;
-      const fingerprint = hashCompositionValue({runtimeBuildFingerprint, sceneId: scene.id, event, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions}, camera: scene.camera, memberHashes});
+      const fingerprint = hashCompositionValue({runtimeSurfaceFingerprint, sceneId: scene.id, event, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions}, camera: scene.camera, memberHashes});
       targets.push({
         compositeId: `event:${scene.id}:${event.id}`,
         sceneId: scene.id,
@@ -767,6 +861,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         fingerprint,
         proofTimeIds: event.proofTimeId ? [event.proofTimeId] : [],
         requiredChecks: COMPOSITE_PROFILES.event,
+        reviewScope: 'runtime-visible',
         event,
       });
     }
@@ -784,12 +879,13 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       memberHashes: [],
       compositionHash: hashCompositionValue(transition),
       fingerprint: hashCompositionValue({
-        runtimeBuildFingerprint,
+        runtimeSurfaceFingerprint,
         editorialFingerprint: project.editorial.fingerprint,
         transition,
       }),
       proofTimeIds: transition.proofFrameIds,
       requiredChecks: COMPOSITE_PROFILES['editorial-transition'],
+      reviewScope: 'runtime-visible',
       editorialTransition: transition,
     });
   }
@@ -828,7 +924,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       memberHashes: [],
       compositionHash: hashCompositionValue(responsive),
       fingerprint: hashCompositionValue({
-        runtimeBuildFingerprint,
+        runtimeSurfaceFingerprint,
         editorialFingerprint: project.editorial.fingerprint,
         responsive,
         proofShots,
@@ -840,6 +936,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       ],
       proofShots,
       requiredChecks: COMPOSITE_PROFILES['responsive-directing'],
+      reviewScope: 'runtime-visible',
       responsive,
     });
   }
@@ -861,13 +958,25 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         for (const shot of proofShots) {
           const scene = sceneById.get(shot.sceneId);
           if (!scene) throw new Error(`${contract.id}/${evidenceTarget.id} 引用了未知场景 ${shot.sceneId}。`);
-          const targetNode = shot.nodeId === 'scene' ? null : findNode(scene, shot.nodeId);
+          const targetEntry = shot.nodeId === 'scene'
+            ? null
+            : flattenCompositionNodes(scene.composition?.nodes)
+                .find(({node}) => node.id === shot.nodeId) ?? null;
+          const targetNode = targetEntry?.node ?? null;
           if (shot.nodeId !== 'scene' && !targetNode) {
             throw new Error(`${contract.id}/${evidenceTarget.id} 引用了未知节点 ${shot.nodeId}。`);
           }
+          if (targetEntry?.renderParticipation === 'derivation-only') {
+            throw new Error(
+              `${contract.id}/${evidenceTarget.id} 不能把 derivation-only 节点 ${shot.nodeId} 作为可见语义证据。`,
+            );
+          }
           const nodes = targetNode
             ? (['asset', 'state-sequence'].includes(targetNode.kind) ? [targetNode] : descendants(targetNode).filter(({kind}) => ['asset', 'state-sequence'].includes(kind)))
-            : flattenCompositionNodes(scene.composition?.nodes).map(({node}) => node).filter(({kind}) => ['asset', 'state-sequence'].includes(kind));
+            : flattenCompositionNodes(scene.composition?.nodes)
+                .filter(({renderParticipation}) => renderParticipation === 'visible')
+                .map(({node}) => node)
+                .filter(({kind}) => ['asset', 'state-sequence'].includes(kind));
           sources.push(...nodes.flatMap((node) => node.kind === 'asset' ? [node.src] : node.states.map(({src}) => src)));
           memberNodeIds.push(...nodes.map(({id}) => id));
           sceneEvidence.push({
@@ -880,7 +989,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         }
         const memberHashes = await hashReferencedFiles(sources);
         const fingerprint = hashCompositionValue({
-          runtimeBuildFingerprint,
+          runtimeSurfaceFingerprint,
           contract,
           evidenceTarget,
           contractFingerprint: semanticContracts.fingerprints.get(contract.id),
@@ -899,6 +1008,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
           proofTimeIds: [...new Set(proofShots.flatMap(({proofTimeIds}) => proofTimeIds))],
           proofShots,
           requiredChecks: evidenceTarget.checks,
+          reviewScope: 'runtime-visible',
           contractId: contract.id,
           contractKind: contract.kind,
         });
@@ -909,7 +1019,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
 };
 
 export const collectStyleProofTargets = async (project, directingTarget) => {
-  const allTargets = await collectCompositeQualityTargets(project);
+  const allTargets = (await collectCompositeQualityTargets(project)).filter(
+    ({reviewScope}) => reviewScope === 'runtime-visible',
+  );
   const matchesDirectingTarget = (target) => {
     const shots = target.proofShots ?? [{
       sceneId: target.sceneId,
@@ -925,8 +1037,17 @@ export const collectStyleProofTargets = async (project, directingTarget) => {
   if (formalTargets.length > 0) return formalTargets;
 
   const scene = (project.scenes ?? []).find(({id}) => id === directingTarget.sceneId);
+  const targetEntry = scene && directingTarget.targetId !== 'scene-camera'
+    ? flattenCompositionNodes(scene.composition?.nodes)
+        .find(({node}) => node.id === directingTarget.targetId) ?? null
+    : null;
+  if (targetEntry?.renderParticipation === 'derivation-only') {
+    throw new Error(
+      `style proof 不能把 derivation-only 节点 ${directingTarget.targetId} 当作可见导演目标。`,
+    );
+  }
   const targetNode = scene && directingTarget.targetId !== 'scene-camera'
-    ? findNode(scene, directingTarget.targetId)
+    ? targetEntry?.node ?? null
     : null;
   const nodes = targetNode
     ? (['asset', 'state-sequence', 'motif-field'].includes(targetNode.kind)
@@ -935,7 +1056,8 @@ export const collectStyleProofTargets = async (project, directingTarget) => {
     : [];
   const sources = nodes.flatMap(visualSourcesForNode);
   const memberHashes = await hashReferencedFiles(sources);
-  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
+  const runtimeSurfaceFingerprint =
+    await createRuntimeSurfaceFingerprint('composition-proof');
   const proofTimes = scene?.motion?.proofTimes ?? [];
   return [{
     compositeId: `style-target:${directingTarget.sceneId}:${directingTarget.targetId}`,
@@ -946,7 +1068,7 @@ export const collectStyleProofTargets = async (project, directingTarget) => {
     memberHashes,
     compositionHash: hashCompositionValue(targetNode ?? {targetId: directingTarget.targetId}),
     fingerprint: hashCompositionValue({
-      runtimeBuildFingerprint,
+      runtimeSurfaceFingerprint,
       directingTarget,
       sceneId: scene?.id,
       targetNode,
@@ -956,6 +1078,7 @@ export const collectStyleProofTargets = async (project, directingTarget) => {
     }),
     proofTimeIds: proofTimes.map(({id}) => id),
     requiredChecks: [],
+    reviewScope: 'runtime-visible',
     styleOnly: true,
   }];
 };
@@ -977,6 +1100,63 @@ const alphaCoverageInPolygon = async (source, polygon) => {
 };
 
 export const inspectCompositeTechnical = async ({target, proofReport}) => {
+  if (target.reviewScope === 'derivation-only') {
+    const registration = target.group.registration;
+    const registeredFamily = assertRegisteredFamilyRecords({
+      records: target.familyRecords,
+      registration,
+      pattern: target.group.pattern,
+      sourcePackageId:
+        target.group.pattern === 'registered-depth-stack'
+          ? target.group.layerStack?.sourcePackageId
+          : null,
+    });
+    const expectedCompleteness = {
+      'support-rear': 'clean-plate',
+      subject: 'full-silhouette',
+      'support-front': 'full-overlay',
+    };
+    const rolesMatchNodes = target.familyRecords.every((record) => {
+      const binding = record?.registeredFamilyBinding;
+      return target.group.children.some((node) =>
+        node.id === binding?.nodeId &&
+        node.slot === binding?.slot &&
+        binding?.role === binding?.slot &&
+        (
+          target.group.pattern !== 'registered-depth-stack' ||
+          binding?.completeness === expectedCompleteness[binding?.role]
+        ),
+      );
+    });
+    const provenanceCurrent = target.familyRecords.every((record) => {
+      const binding = record?.registeredFamilyBinding;
+      const node = target.group.children.find(
+        (candidate) => candidate.id === binding?.nodeId,
+      );
+      return (
+        node?.kind === 'asset' &&
+        target.memberHashes[node.src] === record?.sha256
+      );
+    });
+    const checks = [
+      {
+        id: 'derivation-family-complete',
+        passed: registeredFamily.passed && rolesMatchNodes,
+        expected: 'one complete registered three-member source family',
+        actual: {
+          errors: registeredFamily.errors,
+          rolesMatchNodes,
+        },
+      },
+      {
+        id: 'derivation-provenance-current',
+        passed: provenanceCurrent,
+        expected: 'manifest hashes match every derivation-only member',
+        actual: provenanceCurrent,
+      },
+    ];
+    return {passed: checks.every(({passed}) => passed), checks, proofFrames: []};
+  }
   const proofEntry = proofReport?.composites?.find(({compositeId}) => compositeId === target.compositeId);
   const proofFrames = proofEntry?.proofFrames ?? [];
   const artifactsPresent = proofFrames.length > 0 && (await Promise.all(
@@ -1416,6 +1596,7 @@ const qualityEntryId = (entry) => entry.assetId ?? entry.compositeId;
 export const qualityReviewTargetFingerprint = (entry) =>
   hashCompositionValue({
     id: qualityEntryId(entry),
+    reviewScope: entry.reviewScope,
     contentFingerprint: entry.fingerprint ?? entry.sha256 ?? null,
     requiredChecks: entry.requiredChecks ?? [],
     technical: entry.technical ?? null,
@@ -1431,7 +1612,7 @@ export const refreshQualityReviewSurfaceFingerprint = (report) => {
     }))
     .sort((left, right) => left.id.localeCompare(right.id));
   report.reviewSurfaceFingerprint = hashCompositionValue({
-    contract: 'quality-review-surface-v1',
+    contract: 'quality-review-surface-v2',
     projectSlug: report.projectSlug,
     entries,
   });
@@ -1488,7 +1669,13 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const inspectedAssets = await Promise.all(assets.map(async (asset) => {
     const absoluteFile = assertWorkspaceFile(asset.file);
     const sha256 = (await fileExists(absoluteFile)) ? await hashFile(absoluteFile) : null;
-    const requiredChecks = [...new Set(asset.requiredChecks?.length ? asset.requiredChecks : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image)];
+    const requiredChecks = [
+      ...new Set(
+        asset.requiredChecks !== undefined
+          ? asset.requiredChecks
+          : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image,
+      ),
+    ];
     const unknownChecks = requiredChecks.filter((check) => !ASSET_QUALITY_CHECKS.includes(check));
     if (unknownChecks.length) throw new Error(`${asset.assetId} 含未知资产质量检查：${unknownChecks.join(', ')}`);
     const fingerprint = asset.semanticBinding ||
@@ -1502,6 +1689,9 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
           stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
           registeredFamilyBinding: asset.registeredFamilyBinding,
           recoverySourceSha256: asset.recoverySourceSha256,
+          reviewScope: asset.reviewScope,
+          manifestRecordId: asset.manifestRecordId,
+          manifestSha256: asset.manifestSha256,
         })
       : sha256;
     const review = await preservedReview({previous: previousAssets.get(asset.assetId), fingerprint, requiredChecks});
@@ -1538,6 +1728,7 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
       fingerprint: target.fingerprint,
       proofTimeIds: target.proofTimeIds,
       proofFrames: technical.proofFrames,
+      reviewScope: target.reviewScope,
       requiredChecks: target.requiredChecks,
       technical: {passed: technical.passed, checks: technical.checks},
       ...review,
@@ -1547,7 +1738,7 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const timeline = deriveTimeline(project);
   const report = {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 5,
+    schemaVersion: 6,
     projectSlug: slug,
     updatedAt: new Date().toISOString(),
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),

@@ -199,7 +199,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:asset-lifecycle -- <slug> --asset=<id> --status=<active|rejected|recovery-source> --reason=<原因>` | 保留溯源并明确资产是否进入当前质量分母 |
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
-| `npm run project:composition-proof -- <slug> [--force]` | 按项目、资产与 runtime-build 指纹增量生成关系/语义证明；`--force` 显式禁用全部证明缓存 |
+| `npm run project:composition-proof -- <slug> [--force]` | 用无字幕 proof 输入和 `composition-proof` runtime surface 指纹增量生成关系/语义证明；字幕独立改动不清空资产/组合审核，`--force` 显式禁用全部证明缓存 |
 | `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v10 composition/v9 editorial 校验、证明指纹与双质量门和阶段推进 |
 | `npm run project:audio-calibration -- <slug> propose` | 为当前旁白与时间线生成带指纹的响度校准草案 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |

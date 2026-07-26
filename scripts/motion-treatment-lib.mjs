@@ -1137,11 +1137,26 @@ const traverseSpan = (node) => {
 
 export const validateDirectingExecution = ({scene, storyboardScene, location = 'scene'}) => {
   const issues = [];
-  const nodes = new Map(
-    flattenCompositionNodes(scene?.composition?.nodes).map(({node}) => [node.id, node]),
+  const flattenedNodes = flattenCompositionNodes(scene?.composition?.nodes);
+  const nodes = new Map(flattenedNodes.map(({node}) => [node.id, node]));
+  const derivationOnlyNodeIds = new Set(
+    flattenedNodes
+      .filter(
+        ({renderParticipation}) => renderParticipation === 'derivation-only',
+      )
+      .map(({node}) => node.id),
   );
   for (const planned of storyboardScene?.compositionPlan?.stateSequences ?? []) {
     const node = nodes.get(planned.nodeId);
+    if (derivationOnlyNodeIds.has(planned.nodeId)) {
+      addIssue(
+        issues,
+        'directing-derivation-only-target',
+        `导演计划不能由 derivation-only 状态家族 ${planned.nodeId} 履行。`,
+        `${location}.composition.nodes#${planned.nodeId}`,
+      );
+      continue;
+    }
     const runtimeShape = node && {
       poseFamilyId: node.poseFamilyId,
       states: node.states?.map(({id, at}) => ({id, at})),
@@ -1180,6 +1195,13 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
     const node = nodes.get(planned.nodeId);
     if (!node) {
       addIssue(issues, 'directing-target-missing', `导演计划的连续动效目标不存在：${planned.nodeId}。`, `${location}.composition`);
+    } else if (derivationOnlyNodeIds.has(planned.nodeId)) {
+      addIssue(
+        issues,
+        'directing-derivation-only-target',
+        `导演计划不能由 derivation-only 节点 ${planned.nodeId} 履行。`,
+        `${location}.composition.nodes#${planned.nodeId}`,
+      );
     } else if (planned.preset === 'scroll-world-x') {
       const worldPlan = storyboardScene.compositionPlan.loopingEnvironments?.find(
         ({targetId}) => targetId === planned.nodeId,

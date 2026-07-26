@@ -195,7 +195,7 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.deepEqual(starterProject.sceneTransitions, []);
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
   assert.equal(starterManifest.schemaVersion, 4);
-  assert.equal(starterQuality.schemaVersion, 5);
+  assert.equal(starterQuality.schemaVersion, 6);
   assert.match(starterQuality.reviewSurfaceFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(starterQuality.eventTimeline.length, 3);
   assert.equal(starterQuality.composites.length, 3);
@@ -286,6 +286,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'src/motion.ts',
     'src/ReplicaChapterScene.tsx',
     'src/SceneTransitionOverlay.tsx',
+    'src/SubtitleOverlay.tsx',
     'src/sceneTimeline.mjs',
     'src/subtitleSurface.mjs',
     'src/subtitleSurface.d.mts',
