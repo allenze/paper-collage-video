@@ -40,6 +40,13 @@ scenario options and run:
 npm run project:scenarios -- <slug> --input=<scenarios.json> --json
 ```
 
+The shared skeleton must enumerate every story-critical visible action in
+`commonStory.semanticActions`. Each option must cover each action explicitly
+through one registered state, one local-motion target, or one compiled layer
+package. The scenario compiler resolves that route against the option's actual
+scene and rejects merely counting a pose family whose required state never
+appears.
+
 If the human supplied duration or scene count, copy it to `requested` and
 preserve it in all three options. Otherwise bind public packages as follows:
 

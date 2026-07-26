@@ -460,6 +460,8 @@
           "stateAssertions": []
         }
       ],
+      "motionPolicy": "standard",
+      "staticRationale": null,
       "compositionPlan": {
         "patterns": [
           "free"

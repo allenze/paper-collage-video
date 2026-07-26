@@ -9,6 +9,9 @@ import {
   resolveSequenceState,
 } from './state-sequence-lib.mjs';
 import {
+  inspectStateAnchorRegistration,
+} from './state-sheet-lib.mjs';
+import {
   MAX_MOTIF_INSTANCES_PER_FIELD,
   MAX_MOTIF_INSTANCES_PER_SCENE,
   resolveMotifFieldInstances,
@@ -428,6 +431,14 @@ export const validateCompositionStructure = ({
       if (!nonEmpty(node.poseFamilyId)) add('error', 'composition-pose-family', 'state-sequence 必须声明 poseFamilyId。', `${nodeLocation}.poseFamilyId`);
       if (!node.registration || !nonEmpty(node.registration.id) || !nonEmpty(node.registration.sourceMasterAssetId)) add('error', 'composition-sequence-registration', 'state-sequence 必须声明可追溯的 registration。', `${nodeLocation}.registration`);
       if (!(finite(node.registration?.canvas?.width) && node.registration.canvas.width > 0 && finite(node.registration?.canvas?.height) && node.registration.canvas.height > 0)) add('error', 'composition-sequence-canvas', 'state-sequence registration.canvas 必须是有效画布。', `${nodeLocation}.registration.canvas`);
+      if (
+        !Array.isArray(node.anchorPolicy?.requiredAnchorIds) ||
+        node.anchorPolicy.requiredAnchorIds.length < 1 ||
+        new Set(node.anchorPolicy.requiredAnchorIds).size !== node.anchorPolicy.requiredAnchorIds.length ||
+        !(finite(node.anchorPolicy?.maximumDrift) && node.anchorPolicy.maximumDrift >= 0 && node.anchorPolicy.maximumDrift <= 0.1)
+      ) {
+        add('error', 'composition-sequence-anchor-policy', 'state-sequence 必须声明 requiredAnchorIds 与 0..0.1 maximumDrift。', `${nodeLocation}.anchorPolicy`);
+      }
       if (!Array.isArray(node.states) || node.states.length < 2) {
         add('error', 'composition-sequence-states', 'state-sequence 至少需要两个状态。', `${nodeLocation}.states`);
       } else {
@@ -438,8 +449,36 @@ export const validateCompositionStructure = ({
           if (!nonEmpty(state.id) || stateIds.has(state.id)) add('error', 'composition-sequence-state-id', '状态 id 缺失或重复。', `${stateLocation}.id`);
           stateIds.add(state.id);
           if (!nonEmpty(state.src)) add('error', 'composition-sequence-state-src', '状态必须声明 src。', `${stateLocation}.src`);
+          if (!['left', 'right', 'front', 'back', 'neutral'].includes(state.facing)) add('error', 'composition-sequence-state-facing', '状态 facing 无效。', `${stateLocation}.facing`);
+          const anchors = new Map((state.anchors ?? []).map((anchor) => [anchor.id, anchor]));
+          if (
+            !Array.isArray(state.anchors) ||
+            anchors.size !== state.anchors.length ||
+            node.anchorPolicy?.requiredAnchorIds?.some((id) => !anchors.has(id)) ||
+            (state.anchors ?? []).some(({id, x, y}) =>
+              !nonEmpty(id) || !finite(x) || x < 0 || x > 1 || !finite(y) || y < 0 || y > 1)
+          ) {
+            add('error', 'composition-sequence-state-anchors', '每个状态必须声明唯一归一化 anchors 并覆盖 anchorPolicy。', `${stateLocation}.anchors`);
+          }
+          if (!nonEmpty(state.identityReferenceAssetId) || !/^[a-f0-9]{64}$/.test(state.identityReferenceSha256 ?? '')) {
+            add('error', 'composition-sequence-state-identity-reference', '每个状态必须绑定 identityReferenceAssetId 与 SHA-256。', stateLocation);
+          }
           if (!finite(state.at) || state.at < 0 || state.at > 1 || state.at <= previousAt) add('error', 'composition-sequence-state-at', '状态 at 必须位于 0..1 且严格递增。', `${stateLocation}.at`);
           previousAt = state.at;
+        }
+        const identityReferences = new Set(
+          node.states.map(({identityReferenceAssetId, identityReferenceSha256}) =>
+            `${identityReferenceAssetId}:${identityReferenceSha256}`),
+        );
+        if (identityReferences.size !== 1) {
+          add('error', 'composition-sequence-identity-reference-drift', '同一状态族必须共享一个身份参考及其 SHA-256。', `${nodeLocation}.states`);
+        }
+        const anchorProof = inspectStateAnchorRegistration({
+          states: node.states,
+          anchorPolicy: node.anchorPolicy,
+        });
+        if (!anchorProof.passed) {
+          add('error', 'composition-sequence-anchor-drift', '逐状态 anchor 漂移超过 anchorPolicy.maximumDrift。', `${nodeLocation}.states`);
         }
         if (node.states[0]?.at !== 0) add('error', 'composition-sequence-start', '状态序列必须从 at=0 开始。', `${nodeLocation}.states[0].at`);
         const coverage = collectSequenceProofCoverage({node, proofTimes});
@@ -1034,43 +1073,81 @@ export const validateCompositionStructure = ({
         add('error', 'composition-looping-overscan', 'looping-environment overscanPx 必须位于 0..16。', `${nodeLocation}.loopingEnvironment.overscanPx`);
       }
       const strips = (node.children ?? []).filter((child) => child.kind === 'world-strip');
-      const trackedSubject = (node.children ?? []).find(
-        ({id}) => id === environment?.trackedSubjectId,
-      );
+      const subjectBindings = environment?.subjectBindings ?? [];
+      const subjectIds = new Set(subjectBindings.map(({nodeId}) => nodeId));
+      const subjects = (node.children ?? []).filter(({id}) => subjectIds.has(id));
+      const trackedBindings = subjectBindings.filter(({role}) => role === 'tracked');
       if (
         strips.length < 2 ||
-        !trackedSubject ||
-        !['asset', 'state-sequence'].includes(trackedSubject.kind) ||
-        (node.children ?? []).length !== strips.length + 1
+        subjectBindings.length < 1 ||
+        subjects.length !== subjectBindings.length ||
+        subjects.some(({kind}) => !['asset', 'state-sequence'].includes(kind)) ||
+        trackedBindings.length !== 1 ||
+        (node.children ?? []).length !== strips.length + subjectBindings.length
       ) {
         add(
           'error',
           'composition-looping-members',
-          'looping-environment 必须包含至少两个 world-strip，以及唯一一个不继承世界滚动的 asset/state-sequence tracked subject。',
+          'looping-environment 必须只包含至少两个 world-strip 与 subjectBindings 中声明的 asset/state-sequence 主体，且只能有一个 tracked 主体。',
           `${nodeLocation}.children`,
         );
       }
       const roles = new Set();
+      const expectedSurfaceRole = {
+        far: 'backdrop',
+        mid: 'scenery',
+        ground: 'walkable-ground',
+        near: 'foreground-occluder',
+      };
       for (const strip of strips) {
         if (roles.has(strip.role)) {
           add('error', 'composition-looping-role-duplicate', `looping-environment role 重复：${strip.role}。`, `${nodeLocation}.children`);
         }
         roles.add(strip.role);
+        if (strip.surfaceRole !== expectedSurfaceRole[strip.role]) {
+          add(
+            'error',
+            'composition-looping-surface-role',
+            `world-strip ${strip.id} 的 role=${strip.role} 必须绑定 surfaceRole=${expectedSurfaceRole[strip.role] ?? 'valid-role'}。`,
+            `${nodeLocation}.children#${strip.id}.surfaceRole`,
+          );
+        }
       }
       const ground = strips.find(({id}) => id === environment?.groundStripId);
       if (!ground || ground.role !== 'ground') {
         add('error', 'composition-looping-ground', 'loopingEnvironment.groundStripId 必须指向 role=ground 的 world-strip。', `${nodeLocation}.loopingEnvironment.groundStripId`);
       }
-      if (
-        !trackedSubject ||
-        !['asset', 'state-sequence'].includes(trackedSubject.kind)
-      ) {
+      if (trackedBindings.length !== 1) {
         add(
           'error',
           'composition-looping-tracked-subject',
-          'loopingEnvironment.trackedSubjectId 必须指向组内唯一的 asset/state-sequence 主体，以便远景与近景可分别位于其后方和前方。',
-          `${nodeLocation}.loopingEnvironment.trackedSubjectId`,
+          'loopingEnvironment.subjectBindings 必须且只能声明一个 role=tracked 的可读性主体。',
+          `${nodeLocation}.loopingEnvironment.subjectBindings`,
         );
+      }
+      const subjectBindingIds = new Set();
+      for (const [index, binding] of subjectBindings.entries()) {
+        const subject = subjects.find(({id}) => id === binding.nodeId);
+        if (
+          !nonEmpty(binding.nodeId) ||
+          subjectBindingIds.has(binding.nodeId) ||
+          !['tracked', 'participant'].includes(binding.role) ||
+          !['screen', 'world'].includes(binding.anchorMode) ||
+          !['behind-near', 'above-near'].includes(binding.nearOcclusion) ||
+          !Array.isArray(binding.proofTimeIds) ||
+          binding.proofTimeIds.length < 2 ||
+          new Set(binding.proofTimeIds).size !== binding.proofTimeIds.length ||
+          binding.proofTimeIds.some((id) => !proofTimes.some((proof) => proof.id === id)) ||
+          !subject
+        ) {
+          add(
+            'error',
+            'composition-looping-subject-binding',
+            '每个 subjectBinding 必须唯一绑定组内 asset/state-sequence，并声明有效 role、anchorMode 与 nearOcclusion。',
+            `${nodeLocation}.loopingEnvironment.subjectBindings[${index}]`,
+          );
+        }
+        subjectBindingIds.add(binding.nodeId);
       }
       const seamProofs = ['before', 'seam', 'after'].map((key) =>
         proofTimes.find(({id}) => id === environment?.seamProofTimeIds?.[key]),

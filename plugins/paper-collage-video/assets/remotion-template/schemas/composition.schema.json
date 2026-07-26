@@ -289,11 +289,14 @@
     },
     "worldStripNode": {
       "type": "object",
-      "required": ["id", "kind", "role", "src", "loopingStripBinding", "z", "depth", "transform", "motion"],
+      "required": ["id", "kind", "role", "surfaceRole", "src", "loopingStripBinding", "z", "depth", "transform", "motion"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "kind": {"const": "world-strip"},
         "role": {"enum": ["far", "mid", "ground", "near"]},
+        "surfaceRole": {
+          "enum": ["backdrop", "scenery", "walkable-ground", "foreground-occluder"]
+        },
         "src": {"type": "string", "minLength": 1},
         "loopingStripBinding": {"$ref": "#/$defs/loopingStripBinding"},
         "z": {"type": "integer"},
@@ -306,11 +309,50 @@
     },
     "sequenceState": {
       "type": "object",
-      "required": ["id", "src", "at"],
+      "required": ["id", "src", "at", "facing", "anchors", "identityReferenceAssetId", "identityReferenceSha256"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "src": {"type": "string", "minLength": 1},
-        "at": {"type": "number", "minimum": 0, "maximum": 1}
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "facing": {"enum": ["left", "right", "front", "back", "neutral"]},
+        "anchors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/stateAnchor"}
+        },
+        "identityReferenceAssetId": {"type": "string", "minLength": 1},
+        "identityReferenceSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "stateAnchor": {
+      "type": "object",
+      "required": ["id", "x", "y"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "x": {"type": "number", "minimum": 0, "maximum": 1},
+        "y": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
+    "stateAnchorPolicy": {
+      "type": "object",
+      "required": ["requiredAnchorIds", "maximumDrift"],
+      "properties": {
+        "requiredAnchorIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "maximumDrift": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.1
+        }
       },
       "additionalProperties": false
     },
@@ -358,13 +400,14 @@
     },
     "stateSequenceNode": {
       "type": "object",
-      "required": ["id", "kind", "assetRole", "poseFamilyId", "registration", "states", "playback", "transition", "z", "transform", "motion"],
+      "required": ["id", "kind", "assetRole", "poseFamilyId", "registration", "anchorPolicy", "states", "playback", "transition", "z", "transform", "motion"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "kind": {"const": "state-sequence"},
         "assetRole": {"enum": ["character", "prop", "decorative"]},
         "poseFamilyId": {"type": "string", "minLength": 1},
         "registration": {"$ref": "#/$defs/registration"},
+        "anchorPolicy": {"$ref": "#/$defs/stateAnchorPolicy"},
         "states": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/sequenceState"}},
         "playback": {"$ref": "#/$defs/sequencePlayback"},
         "transition": {"$ref": "#/$defs/sequenceTransition"},
@@ -878,11 +921,31 @@
     },
     "loopingEnvironment": {
       "type": "object",
-      "required": ["axis", "groundStripId", "trackedSubjectId", "seamProofTimeIds", "travel", "speedRange", "overscanPx"],
+      "required": ["axis", "groundStripId", "subjectBindings", "seamProofTimeIds", "travel", "speedRange", "overscanPx"],
       "properties": {
         "axis": {"const": "x"},
         "groundStripId": {"type": "string", "minLength": 1},
-        "trackedSubjectId": {"type": "string", "minLength": 1},
+        "subjectBindings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["nodeId", "role", "anchorMode", "nearOcclusion", "proofTimeIds"],
+            "properties": {
+              "nodeId": {"type": "string", "minLength": 1},
+              "role": {"enum": ["tracked", "participant"]},
+              "anchorMode": {"enum": ["screen", "world"]},
+              "nearOcclusion": {"enum": ["behind-near", "above-near"]},
+              "proofTimeIds": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              }
+            },
+            "additionalProperties": false
+          }
+        },
         "seamProofTimeIds": {
           "type": "object",
           "required": ["before", "seam", "after"],

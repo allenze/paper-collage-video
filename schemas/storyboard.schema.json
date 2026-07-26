@@ -112,17 +112,38 @@
     },
     "worldStripIntent": {
       "type": "object",
-      "required": ["id", "role", "depth"],
+      "required": ["id", "role", "surfaceRole", "depth"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "role": {"enum": ["far", "mid", "ground", "near"]},
+        "surfaceRole": {
+          "enum": ["backdrop", "scenery", "walkable-ground", "foreground-occluder"]
+        },
         "depth": {"type": "number", "minimum": -1, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
+    "worldSubjectBinding": {
+      "type": "object",
+      "required": ["nodeId", "role", "anchorMode", "nearOcclusion", "proofTimeIds"],
+      "properties": {
+        "nodeId": {"type": "string", "minLength": 1},
+        "role": {"enum": ["tracked", "participant"]},
+        "anchorMode": {"enum": ["screen", "world"]},
+        "nearOcclusion": {"enum": ["behind-near", "above-near"]}
+        ,
+        "proofTimeIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
       },
       "additionalProperties": false
     },
     "loopingWorldIntent": {
       "type": "object",
-      "required": ["axis", "direction", "distanceViewports", "speedRange", "groundStripId", "trackedSubjectId", "seamProofTimeIds", "closedLoop", "startPhase", "strips"],
+      "required": ["axis", "direction", "distanceViewports", "speedRange", "groundStripId", "subjectBindings", "seamProofTimeIds", "closedLoop", "startPhase", "strips"],
       "properties": {
         "axis": {"const": "x"},
         "direction": {"enum": ["left", "right"]},
@@ -137,7 +158,11 @@
           "additionalProperties": false
         },
         "groundStripId": {"type": "string", "minLength": 1},
-        "trackedSubjectId": {"type": "string", "minLength": 1},
+        "subjectBindings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/worldSubjectBinding"}
+        },
         "seamProofTimeIds": {
           "type": "object",
           "required": ["before", "seam", "after"],
@@ -282,13 +307,20 @@
     },
     "compiledScene": {
       "type": "object",
-      "required": ["id", "title", "narrativeRole", "message", "blueprint", "estimatedDurationSeconds", "beats", "proofTimes", "compositionPlan", "directing"],
+      "required": ["id", "title", "narrativeRole", "message", "blueprint", "motionPolicy", "staticRationale", "estimatedDurationSeconds", "beats", "proofTimes", "compositionPlan", "directing"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "title": {"type": "string", "minLength": 1},
         "narrativeRole": {"type": "string", "minLength": 1},
         "message": {"type": "string", "minLength": 1},
         "blueprint": {"enum": ["layered-reveal", "map-journey", "archive-stack", "character-procession", "discovery-wipe", "transformation-tableau", "chapter-tableau", "quiet-lockup"]},
+        "motionPolicy": {"enum": ["standard", "locked-static"]},
+        "staticRationale": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        },
         "estimatedDurationSeconds": {"type": "number", "exclusiveMinimum": 0},
         "beats": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/beat"}},
         "proofTimes": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/proofTime"}},
@@ -329,7 +361,7 @@
     },
     "loopingEnvironmentPlan": {
       "type": "object",
-      "required": ["id", "treatmentId", "sceneId", "targetId", "axis", "direction", "distanceViewports", "speedRange", "groundStripId", "trackedSubjectId", "seamProofTimeIds", "closedLoop", "startPhase", "strips", "proofTimeId"],
+      "required": ["id", "treatmentId", "sceneId", "targetId", "axis", "direction", "distanceViewports", "speedRange", "groundStripId", "subjectBindings", "seamProofTimeIds", "closedLoop", "startPhase", "strips", "proofTimeId"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "treatmentId": {"type": "string", "minLength": 1},
@@ -348,7 +380,11 @@
           "additionalProperties": false
         },
         "groundStripId": {"type": "string", "minLength": 1},
-        "trackedSubjectId": {"type": "string", "minLength": 1},
+        "subjectBindings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/worldSubjectBinding"}
+        },
         "seamProofTimeIds": {
           "type": "object",
           "required": ["before", "seam", "after"],

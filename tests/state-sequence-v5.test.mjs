@@ -7,7 +7,10 @@ import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {createRequestFingerprint, inspectStateSheetRecoveryMask, validateAssetRequest} from '../scripts/provider-lib.mjs';
-import {inspectUntargetedSheetCells} from '../scripts/quality-lib.mjs';
+import {
+  inspectCompositeTechnical,
+  inspectUntargetedSheetCells,
+} from '../scripts/quality-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
@@ -18,6 +21,12 @@ import {
 import {resolveTargetViewportSnapshot} from '../scripts/world-motion-proof-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const anchorPolicy = {requiredAnchorIds: ['ground-contact'], maximumDrift: 0.02};
+const stateContract = (state) => ({
+  ...state,
+  facing: 'right',
+  anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+});
 
 const sheetRequest = () => ({
   schemaVersion: 7,
@@ -41,13 +50,15 @@ const sheetRequest = () => ({
     poseFamilyId: 'reader-poses',
     registrationId: 'reader-registration',
     sourceMasterAssetId: 'reader-master',
+    identityReferenceAssetId: 'reader-master',
+    anchorPolicy,
     layout: {columns: 2, rows: 2},
     states: [
       {stateId: 'reading', row: 0, column: 0},
       {stateId: 'turning', row: 0, column: 1},
       {stateId: 'pointing', row: 1, column: 0},
       {stateId: 'book-down', row: 1, column: 1},
-    ],
+    ].map(stateContract),
     recoveryPolicy: {
       strategy: 'preserve-sheet-context',
       localDeterministicFixFirst: true,
@@ -90,6 +101,9 @@ test('multi-state provider requests reject isolated cells and require context-pr
     stateId: 'pointing',
     registrationId: 'reader-registration',
     sourceMasterAssetId: 'reader-master',
+    facing: 'right',
+    anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+    identityReferenceAssetId: 'reader-master',
   };
   assert.throws(
     () => validateAssetRequest(isolated),
@@ -224,13 +238,15 @@ test('registered sheet processing preserves row-major cells and produces stable 
     input: 'public/projects/fixture-project/assets/reader-state-sheet.png',
     outputDirectory: 'public/projects/fixture-project/assets/reader-poses',
     registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-master'},
+    identityReference: {assetId: 'reader-master'},
+    anchorPolicy,
     layout: {columns: 2, rows: 2},
     states: [
       {id: 'reading', row: 0, column: 0},
       {id: 'turning', row: 0, column: 1},
       {id: 'pointing', row: 1, column: 0},
       {id: 'book-down', row: 1, column: 1},
-    ],
+    ].map(stateContract),
     keying: {keyColor: 'auto', matteErode: 1},
   };
   assert.deepEqual(validateStateSheetSpec(spec), []);
@@ -243,6 +259,9 @@ test('registered sheet processing preserves row-major cells and produces stable 
   const invalid = structuredClone(spec);
   invalid.states[2].column = 1;
   assert.ok(validateStateSheetSpec(invalid).length > 0);
+  const drifted = structuredClone(spec);
+  drifted.states[2].anchors[0].x = 0.7;
+  assert.ok(validateStateSheetSpec(drifted).some((error) => error.includes('anchor 漂移')));
 
   const explicit = structuredClone(spec);
   explicit.extraction = {
@@ -288,8 +307,12 @@ test('state sheet processor turns one recorded provider image into registered lo
     const sourceSha256 = createHash('sha256').update(await fs.readFile(input)).digest('hex');
     const binding = {
       poseFamilyId: 'reader-poses', registrationId: 'reader-registration', sourceMasterAssetId: 'reader-master',
+      identityReferenceAssetId: 'reader-master', anchorPolicy,
       layout: {columns: 2, rows: 1},
-      states: [{stateId: 'reading', row: 0, column: 0}, {stateId: 'pointing', row: 0, column: 1}],
+      states: [
+        {stateId: 'reading', row: 0, column: 0},
+        {stateId: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
       recoveryPolicy: {
         strategy: 'preserve-sheet-context', localDeterministicFixFirst: true,
         isolatedCellGeneration: 'forbidden', fallback: 'full-sheet-regeneration',
@@ -298,27 +321,41 @@ test('state sheet processor turns one recorded provider image into registered lo
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
       schemaVersion: 4,
       projectSlug: slug,
-      assets: [{
-        recordId: '1'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
-        assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
-        requestFingerprint: 'a'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
-        recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
-        stateSheetBinding: binding, familyFingerprint: null,
-      }],
+      assets: [
+        {
+          recordId: '1'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+          assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
+          requestFingerprint: 'a'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
+          stateSheetBinding: binding, familyFingerprint: null,
+        },
+        {
+          recordId: '9'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'identity-reference', supersededBy: null},
+          assetId: 'reader-master', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'manual',
+          requestFingerprint: '9'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: null, compositionBinding: null,
+        },
+      ],
     }, null, 2)}\n`);
     const specFile = path.join(projectDirectory, 'reader-state-sheet.json');
     await fs.writeFile(specFile, `${JSON.stringify({
       schemaVersion: 1, projectSlug: slug, sceneId: 'scene-1', nodeId: 'reader', poseFamilyId: 'reader-poses',
       sourceAssetId: 'reader-sheet', input: path.relative(ROOT, input), outputDirectory: path.relative(ROOT, outputDirectory),
       registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-master'},
-      layout: {columns: 2, rows: 1}, states: [{id: 'reading', row: 0, column: 0}, {id: 'pointing', row: 0, column: 1}],
+      identityReference: {assetId: 'reader-master'}, anchorPolicy,
+      layout: {columns: 2, rows: 1}, states: [
+        {id: 'reading', row: 0, column: 0},
+        {id: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
       keying: {keyColor: '#ff00ff', matteErode: 1},
     }, null, 2)}\n`);
     const processed = spawnSync(process.execPath, ['scripts/process-state-sheet.mjs', path.relative(ROOT, specFile)], {cwd: ROOT, encoding: 'utf8'});
     assert.equal(processed.status, 0, processed.stderr);
     const report = JSON.parse(await fs.readFile(path.join(outputDirectory, 'reader-poses-state-sheet-report.json'), 'utf8'));
     assert.equal(report.providerImageCalls, 1);
-    assert.equal(report.schemaVersion, 3);
+    assert.equal(report.schemaVersion, 4);
+    assert.equal(report.anchorRegistrationProof.passed, true);
+    assert.equal(report.identityReference.assetId, 'reader-master');
     assert.equal(report.generationMode, 'initial-family-sheet');
     assert.equal(report.isolatedCellGenerationUsed, false);
     assert.equal(report.derivedStateCount, 2);
@@ -371,8 +408,12 @@ test('explicit registered source rects preserve a full silhouette that crosses a
     const sourceSha256 = createHash('sha256').update(await fs.readFile(input)).digest('hex');
     const binding = {
       poseFamilyId: 'reader-poses', registrationId: 'reader-registration', sourceMasterAssetId: 'reader-master',
+      identityReferenceAssetId: 'reader-master', anchorPolicy,
       layout: {columns: 2, rows: 1},
-      states: [{stateId: 'reading', row: 0, column: 0}, {stateId: 'pointing', row: 0, column: 1}],
+      states: [
+        {stateId: 'reading', row: 0, column: 0},
+        {stateId: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
       recoveryPolicy: {
         strategy: 'preserve-sheet-context', localDeterministicFixFirst: true,
         isolatedCellGeneration: 'forbidden', fallback: 'full-sheet-regeneration',
@@ -381,20 +422,32 @@ test('explicit registered source rects preserve a full silhouette that crosses a
     await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
       schemaVersion: 4,
       projectSlug: slug,
-      assets: [{
-        recordId: '2'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
-        assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
-        requestFingerprint: 'b'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
-        recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
-        stateSheetBinding: binding, familyFingerprint: null,
-      }],
+      assets: [
+        {
+          recordId: '2'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+          assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
+          requestFingerprint: 'b'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
+          stateSheetBinding: binding, familyFingerprint: null,
+        },
+        {
+          recordId: '8'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'identity-reference', supersededBy: null},
+          assetId: 'reader-master', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'manual',
+          requestFingerprint: '8'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: null, compositionBinding: null,
+        },
+      ],
     }, null, 2)}\n`);
     const specFile = path.join(projectDirectory, 'reader-state-sheet.json');
     await fs.writeFile(specFile, `${JSON.stringify({
       schemaVersion: 1, projectSlug: slug, sceneId: 'scene-1', nodeId: 'reader', poseFamilyId: 'reader-poses',
       sourceAssetId: 'reader-sheet', input: path.relative(ROOT, input), outputDirectory: path.relative(ROOT, outputDirectory),
       registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-master'},
-      layout: {columns: 2, rows: 1}, states: [{id: 'reading', row: 0, column: 0}, {id: 'pointing', row: 0, column: 1}],
+      identityReference: {assetId: 'reader-master'}, anchorPolicy,
+      layout: {columns: 2, rows: 1}, states: [
+        {id: 'reading', row: 0, column: 0},
+        {id: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
       keying: {keyColor: '#ff00ff', matteErode: 1},
       extraction: {
         mode: 'explicit-source-rects', canvas: {width: 120, height: 100},
@@ -424,6 +477,95 @@ test('explicit registered source rects preserve a full silhouette that crosses a
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
+test('state-sequence quality requires current anchors, facing, and identity references', async () => {
+  const slug = `state-quality-${process.pid}`;
+  const directory = path.join(ROOT, 'public', 'projects', slug);
+  const evidenceFile = path.join(directory, 'anchors.png');
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await sharp({
+      create: {width: 24, height: 24, channels: 4, background: '#3b7d42ff'},
+    }).png().toFile(evidenceFile);
+    const evidenceSha256 = createHash('sha256')
+      .update(await fs.readFile(evidenceFile))
+      .digest('hex');
+    const relativeEvidence = path.relative(ROOT, evidenceFile);
+    const identitySha256 = 'd'.repeat(64);
+    const states = ['reading', 'pointing'].map((id, index) => ({
+      id,
+      src: `projects/${slug}/${id}.png`,
+      at: index * 0.5,
+      facing: 'right',
+      anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+      identityReferenceAssetId: 'reader-master',
+      identityReferenceSha256: identitySha256,
+    }));
+    const stateRecords = states.map((state) => ({
+      lifecycle: {status: 'active'},
+      media: {width: 24, height: 24},
+      stateBinding: {
+        poseFamilyId: 'reader-poses',
+        stateId: state.id,
+        registrationId: 'reader-registration',
+        facing: state.facing,
+        anchors: state.anchors,
+        identityReferenceAssetId: state.identityReferenceAssetId,
+        identityReferenceSha256: state.identityReferenceSha256,
+        anchorEvidence: {file: relativeEvidence, sha256: evidenceSha256},
+      },
+    }));
+    const target = {
+      compositeId: 'state-sequence:scene:reader',
+      fingerprint: 'f'.repeat(64),
+      pattern: 'state-sequence',
+      proofTimeIds: ['proof-reading', 'proof-pointing'],
+      sequence: {
+        poseFamilyId: 'reader-poses',
+        registration: {
+          id: 'reader-registration',
+          canvas: {width: 24, height: 24},
+        },
+        anchorPolicy,
+        states,
+      },
+      stateRecords,
+      identityReferenceRecords: states.map(() => ({
+        lifecycle: {status: 'active'},
+        sha256: identitySha256,
+      })),
+    };
+    const proofReport = {
+      composites: [{
+        compositeId: target.compositeId,
+        fingerprint: target.fingerprint,
+        proofFrames: target.proofTimeIds.map((proofTimeId) => ({
+          proofTimeId,
+          fullFrame: relativeEvidence,
+          crop: relativeEvidence,
+        })),
+      }],
+    };
+    const current = await inspectCompositeTechnical({target, proofReport});
+    assert.equal(current.passed, true);
+    assert.ok(current.checks.some(
+      ({id, passed}) => id === 'state-anchor-registration' && passed,
+    ));
+
+    const staleIdentity = structuredClone(target);
+    staleIdentity.identityReferenceRecords[1].sha256 = 'e'.repeat(64);
+    const rejected = await inspectCompositeTechnical({
+      target: staleIdentity,
+      proofReport,
+    });
+    assert.equal(rejected.passed, false);
+    assert.ok(rejected.checks.some(
+      ({id, passed}) => id === 'state-identity-reference' && !passed,
+    ));
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
   }
 });
 

@@ -545,7 +545,55 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
         'plan.profilePromise',
       );
     }
-  } else if (plan.storyScope !== undefined || plan.profilePromise !== undefined) {
+    const revision = plan.profilePromiseRevision;
+    if (revision !== undefined) {
+      const immutableKeys = [
+        'minRequiredStateFamilies',
+        'minEnhancementStateFamilies',
+        'minTotalStates',
+        'minLayeredScenes',
+      ];
+      const reducibleKeys = [
+        'minLocalMotionTargets',
+        'minParallaxScenes',
+        'minAmbientScenes',
+      ];
+      if (
+        !revision ||
+        typeof revision !== 'object' ||
+        !revision.authorizationId ||
+        !/^[a-f0-9]{64}$/.test(revision.authorizationFingerprint ?? '') ||
+        !Array.isArray(revision.lockedSceneIds) ||
+        revision.lockedSceneIds.length < 1 ||
+        new Set(revision.lockedSceneIds).size !== revision.lockedSceneIds.length ||
+        !Array.isArray(revision.equivalentQualityEvidence) ||
+        revision.equivalentQualityEvidence.length < 1 ||
+        !isDateTime(revision.decidedAt) ||
+        promiseKeys.some(
+          (key) =>
+            !isNonNegativeInteger(revision.original?.[key]) ||
+            !isNonNegativeInteger(revision.recalculated?.[key]),
+        ) ||
+        immutableKeys.some(
+          (key) => revision.recalculated[key] !== revision.original[key],
+        ) ||
+        reducibleKeys.some(
+          (key) => revision.recalculated[key] > revision.original[key],
+        ) ||
+        JSON.stringify(promise) !== JSON.stringify(revision.recalculated)
+      ) {
+        add(
+          'plan-profile-promise-revision',
+          'profilePromiseRevision 必须绑定人工授权、locked-static 镜头、等价质量说明，并且只能下调局部动效/视差/环境动效下限。',
+          'plan.profilePromiseRevision',
+        );
+      }
+    }
+  } else if (
+    plan.storyScope !== undefined ||
+    plan.profilePromise !== undefined ||
+    plan.profilePromiseRevision !== undefined
+  ) {
     add(
       'plan-scenario-fields-without-binding',
       'storyScope 与 profilePromise 只能随 scenarioBinding 一起出现。',

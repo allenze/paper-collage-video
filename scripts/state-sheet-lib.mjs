@@ -14,6 +14,49 @@ const rectsOverlap = (left, right) =>
   left.top < right.top + right.height &&
   right.top < left.top + left.height;
 
+const validFacing = (value) =>
+  ['left', 'right', 'front', 'back', 'neutral'].includes(value);
+
+const anchorMap = (anchors) =>
+  new Map((anchors ?? []).map((anchor) => [anchor.id, anchor]));
+
+export const inspectStateAnchorRegistration = ({states, anchorPolicy}) => {
+  const requiredAnchorIds = anchorPolicy?.requiredAnchorIds ?? [];
+  const maximumDrift = anchorPolicy?.maximumDrift;
+  const perAnchor = requiredAnchorIds.map((anchorId) => {
+    const points = states.map((state) => ({
+      stateId: state.id ?? state.stateId,
+      point: anchorMap(state.anchors).get(anchorId) ?? null,
+    }));
+    const first = points[0]?.point;
+    const maximumObservedDrift = first
+      ? Math.max(
+          0,
+          ...points.map(({point}) =>
+            point ? Math.hypot(point.x - first.x, point.y - first.y) : Infinity,
+          ),
+        )
+      : Infinity;
+    return {
+      anchorId,
+      points,
+      maximumObservedDrift,
+      passed:
+        Number.isFinite(maximumObservedDrift) &&
+        maximumObservedDrift <= maximumDrift + 1e-9,
+    };
+  });
+  return {
+    requiredAnchorIds,
+    maximumAllowedDrift: maximumDrift,
+    perAnchor,
+    passed:
+      requiredAnchorIds.length > 0 &&
+      Number.isFinite(maximumDrift) &&
+      perAnchor.every(({passed}) => passed),
+  };
+};
+
 export const validateStateSheetSpec = (spec) => {
   const errors = [];
   if (spec?.schemaVersion !== 1) errors.push('schemaVersion 必须为 1');
@@ -23,6 +66,18 @@ export const validateStateSheetSpec = (spec) => {
   const {columns, rows} = spec?.layout ?? {};
   if (!Number.isInteger(columns) || columns < 1 || !Number.isInteger(rows) || rows < 1) errors.push('layout 必须声明正整数 columns/rows');
   if (!nonEmpty(spec?.registration?.id) || !nonEmpty(spec?.registration?.sourceMasterAssetId)) errors.push('registration 不完整');
+  if (!nonEmpty(spec?.identityReference?.assetId)) errors.push('identityReference.assetId 不能为空');
+  if (
+    !Array.isArray(spec?.anchorPolicy?.requiredAnchorIds) ||
+    spec.anchorPolicy.requiredAnchorIds.length < 1 ||
+    new Set(spec.anchorPolicy.requiredAnchorIds).size !== spec.anchorPolicy.requiredAnchorIds.length ||
+    spec.anchorPolicy.requiredAnchorIds.some((id) => !nonEmpty(id)) ||
+    !Number.isFinite(spec?.anchorPolicy?.maximumDrift) ||
+    spec.anchorPolicy.maximumDrift < 0 ||
+    spec.anchorPolicy.maximumDrift > 0.1
+  ) {
+    errors.push('anchorPolicy 必须声明唯一 requiredAnchorIds 与 0..0.1 maximumDrift');
+  }
   if (!Array.isArray(spec?.states) || spec.states.length < 2) errors.push('states 至少需要两个状态');
   const ids = new Set();
   const cells = new Set();
@@ -32,12 +87,38 @@ export const validateStateSheetSpec = (spec) => {
     if (!nonEmpty(state.id) || ids.has(state.id)) errors.push('state id 缺失或重复');
     if (state.row !== expectedRow || state.column !== expectedColumn) errors.push(`state ${state.id ?? index} 必须按行优先连续排布在 ${expectedRow}:${expectedColumn}`);
     if (state.row >= rows || state.column >= columns) errors.push(`state ${state.id ?? index} 格位越界`);
+    if (!validFacing(state.facing)) errors.push(`state ${state.id ?? index} facing 无效`);
+    const anchors = anchorMap(state.anchors);
+    if (
+      !Array.isArray(state.anchors) ||
+      anchors.size !== state.anchors.length ||
+      spec.anchorPolicy?.requiredAnchorIds?.some((id) => !anchors.has(id)) ||
+      (state.anchors ?? []).some(
+        ({id, x, y}) =>
+          !nonEmpty(id) ||
+          !Number.isFinite(x) ||
+          x < 0 ||
+          x > 1 ||
+          !Number.isFinite(y) ||
+          y < 0 ||
+          y > 1,
+      )
+    ) {
+      errors.push(`state ${state.id ?? index} anchors 必须唯一、归一化并覆盖 anchorPolicy`);
+    }
     const cell = `${state.row}:${state.column}`;
     if (cells.has(cell)) errors.push(`格位 ${cell} 重复`);
     ids.add(state.id);
     cells.add(cell);
   }
   if (spec?.states?.length > columns * rows) errors.push('states 数量超过 sheet 容量');
+  const anchorRegistration = inspectStateAnchorRegistration({
+    states: spec?.states ?? [],
+    anchorPolicy: spec?.anchorPolicy,
+  });
+  if (!anchorRegistration.passed) {
+    errors.push('逐状态 anchor 漂移超过 anchorPolicy.maximumDrift');
+  }
   if (!nonEmpty(spec?.keying?.keyColor) || !Number.isInteger(spec?.keying?.matteErode) || spec.keying.matteErode < 0 || spec.keying.matteErode > 8) errors.push('keying 无效');
   if (spec?.extraction !== undefined) {
     const extraction = spec.extraction;
@@ -89,6 +170,8 @@ export const createStateFamilyFingerprint = ({sourceSha256, spec, members}) =>
       sourceSha256,
       poseFamilyId: spec.poseFamilyId,
       registration: spec.registration,
+      identityReference: spec.identityReference,
+      anchorPolicy: spec.anchorPolicy,
       layout: spec.layout,
       states: spec.states,
       extraction: spec.extraction ?? null,

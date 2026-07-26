@@ -181,6 +181,91 @@ const validateCommonStory = (story) => {
   if (!Array.isArray(story.beats) || story.beats.length < 3) {
     throw new Error('commonStory.beats 至少需要三个共同故事节拍。');
   }
+  if (!Array.isArray(story.semanticActions) || story.semanticActions.length < 1) {
+    throw new Error('commonStory.semanticActions 至少需要一个必须被画面执行的关键动作。');
+  }
+  const ids = new Set();
+  for (const [index, action] of story.semanticActions.entries()) {
+    if (
+      !action ||
+      typeof action !== 'object' ||
+      typeof action.id !== 'string' ||
+      !action.id.trim() ||
+      ids.has(action.id)
+    ) {
+      throw new Error(`commonStory.semanticActions[${index}].id 缺失或重复。`);
+    }
+    if (typeof action.summary !== 'string' || !action.summary.trim()) {
+      throw new Error(`commonStory.semanticActions[${index}].summary 必须说明可见结果。`);
+    }
+    if (!['registered-state', 'local-motion', 'layer-package'].includes(action.requiredExecution)) {
+      throw new Error(`commonStory.semanticActions[${index}].requiredExecution 无效。`);
+    }
+    ids.add(action.id);
+  }
+};
+
+const compileSemanticActionCoverage = ({option, semanticActions}) => {
+  const supplied = option.semanticActionCoverage;
+  if (!Array.isArray(supplied) || supplied.length !== semanticActions.length) {
+    throw new Error(
+      `${option.id}.semanticActionCoverage 必须逐一覆盖全部 ${semanticActions.length} 个共同故事关键动作。`,
+    );
+  }
+  const actionById = new Map(semanticActions.map((action) => [action.id, action]));
+  const seen = new Set();
+  for (const [index, coverage] of supplied.entries()) {
+    const action = actionById.get(coverage?.actionId);
+    if (!action || seen.has(coverage.actionId)) {
+      throw new Error(`${option.id}.semanticActionCoverage[${index}] 引用了未知或重复的 actionId。`);
+    }
+    if (coverage.execution !== action.requiredExecution) {
+      throw new Error(
+        `${option.id}.${coverage.actionId} 必须使用 ${action.requiredExecution}，不得用 ${coverage.execution ?? 'missing'} 替代。`,
+      );
+    }
+    const scene = option.scenes.find(({id}) => id === coverage.sceneId);
+    if (!scene) {
+      throw new Error(`${option.id}.${coverage.actionId} 必须绑定当前 scenario 的 sceneId。`);
+    }
+    if (typeof coverage.targetId !== 'string' || !coverage.targetId.trim()) {
+      throw new Error(`${option.id}.${coverage.actionId}.targetId 不能为空。`);
+    }
+    if (typeof coverage.visibleResult !== 'string' || !coverage.visibleResult.trim()) {
+      throw new Error(`${option.id}.${coverage.actionId}.visibleResult 必须说明观众实际看见什么。`);
+    }
+    if (coverage.execution === 'registered-state') {
+      const family = scene.stateFamilies?.find(
+        ({id}) => id === coverage.stateRef?.poseFamilyId,
+      );
+      if (!family || !family.states?.includes(coverage.stateRef?.stateId)) {
+        throw new Error(
+          `${option.id}.${coverage.actionId} 必须绑定 ${coverage.sceneId} 中真实规划的 poseFamilyId/stateId。`,
+        );
+      }
+    } else if (coverage.execution === 'local-motion') {
+      if (
+        !scene.localMotionTargets?.some(
+          ({targetId}) => targetId === coverage.localMotionTargetId,
+        )
+      ) {
+        throw new Error(
+          `${option.id}.${coverage.actionId} 必须绑定 ${coverage.sceneId} 中真实规划的 localMotionTargetId。`,
+        );
+      }
+    } else if (
+      !scene.sourcePackages?.some(({id}) => id === coverage.sourcePackageId)
+    ) {
+      throw new Error(
+        `${option.id}.${coverage.actionId} 必须绑定 ${coverage.sceneId} 中真实规划的 sourcePackageId。`,
+      );
+    }
+    seen.add(coverage.actionId);
+  }
+  return supplied.map((coverage) => ({
+    ...coverage,
+    visibleResult: coverage.visibleResult.trim(),
+  }));
 };
 
 const compileProviderEstimate = (option, assetBudget) => {
@@ -247,6 +332,7 @@ const compileOption = ({
   option,
   requested,
   intake,
+  semanticActions,
 }) => {
   if (!PRODUCTION_PROFILES.includes(option.id)) {
     throw new Error(`scenario id 必须是 ${PRODUCTION_PROFILES.join(', ')}。`);
@@ -294,6 +380,10 @@ const compileOption = ({
       `${option.id} scenario 未履行档位承诺：${plannedFulfillment.issues.join('；')}。`,
     );
   }
+  const semanticActionCoverage = compileSemanticActionCoverage({
+    option,
+    semanticActions,
+  });
   const providerEstimate = compileProviderEstimate(option, assetBudget);
   if (
     !Array.isArray(option.factsAndRightsRisks) ||
@@ -312,6 +402,7 @@ const compileOption = ({
     estimatedNarrationSeconds: option.estimatedNarrationSeconds,
     rationale: String(option.rationale ?? '').trim(),
     scenes: option.scenes,
+    semanticActionCoverage,
     profilePromise,
     plannedFulfillment,
     providerEstimate,
@@ -360,6 +451,7 @@ export const buildPlanningScenarios = ({
       option: input.options.find((candidate) => candidate.id === id),
       requested,
       intake,
+      semanticActions: input.commonStory.semanticActions,
     }),
   );
   const stable = {
@@ -475,6 +567,15 @@ export const assertStoryboardMatchesScenario = (
     throw new Error(
       'storyboard 的姿态母版家族、必要性或状态清单与用户批准的 scenario 卡不一致。',
     );
+  }
+  for (const coverage of option.semanticActionCoverage ?? []) {
+    if (coverage.execution !== 'registered-state') continue;
+    const family = compiledFamilies.get(coverage.stateRef.poseFamilyId);
+    if (!family?.stateIds?.includes(coverage.stateRef.stateId)) {
+      throw new Error(
+        `storyboard 未执行批准的关键动作 ${coverage.actionId}：缺少 ${coverage.stateRef.poseFamilyId}/${coverage.stateRef.stateId}。`,
+      );
+    }
   }
   const scenarioSources = new Map(
     option.scenes.flatMap((scene) =>

@@ -91,6 +91,13 @@ const makeOption = ({
       localMotionCount,
     }),
   );
+  const semanticScene = scenes.at(-1);
+  const apologyFamily = {
+    id: 'hare-apology',
+    necessity: 'required',
+    states: ['upright', 'apologizing'],
+  };
+  semanticScene.stateFamilies.push(apologyFamily);
   const familyCount = new Set(
     scenes.flatMap(({stateFamilies: families}) =>
       families.map(({id: familyId}) => familyId),
@@ -105,6 +112,17 @@ const makeOption = ({
     estimatedNarrationSeconds: durationSeconds - 6,
     rationale: `${storyScope} 范围与 ${id} 制作深度相匹配`,
     scenes,
+    semanticActionCoverage: [{
+      actionId: 'hare-apologizes',
+      sceneId: semanticScene.id,
+      targetId: 'hare',
+      execution: 'registered-state',
+      stateRef: {
+        poseFamilyId: apologyFamily.id,
+        stateId: 'apologizing',
+      },
+      visibleResult: '兔子低头并将前爪收在胸前，明确呈现道歉姿态。',
+    }],
     proposedImageAttemptLimit: expected + 2,
     providerRecommendation: {
       text: 'current-host-model',
@@ -135,6 +153,11 @@ const makeScenarioInput = () => ({
     theme: '稳定坚持胜过骄傲轻敌',
     ending: '兔子承认错误，乌龟与伙伴一起庆祝。',
     beats: ['提出比赛', '兔子领先并休息', '乌龟持续前进', '乌龟获胜'],
+    semanticActions: [{
+      id: 'hare-apologizes',
+      summary: '结尾必须看见兔子以明确姿态向乌龟道歉。',
+      requiredExecution: 'registered-state',
+    }],
   },
   options: [
     makeOption({
@@ -295,9 +318,9 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
       providerEstimate.hardCeiling,
     ]),
     [
-      [5, 7, 15],
-      [9, 11, 38],
-      [16, 18, 81],
+      [6, 8, 15],
+      [10, 12, 38],
+      [17, 19, 81],
     ],
   );
   assert.ok(scenarios.options.every(({plannedFulfillment}) => plannedFulfillment.passed));
@@ -322,7 +345,7 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
   });
   assert.deepEqual(validateCreativePlan(plan, {slug: 'gui-tu-sai-pao'}), []);
   assert.equal(plan.storyScope, 'standard');
-  assert.equal(plan.scenarioBinding.expectedProviderImageCalls, 9);
+  assert.equal(plan.scenarioBinding.expectedProviderImageCalls, 10);
   assert.deepEqual(
     scenarioDecisionFor(scenarios, 'balanced'),
     {
@@ -332,8 +355,8 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
       storyScope: 'standard',
       durationSeconds: 54,
       sceneCount: 6,
-      expectedProviderImageCalls: 9,
-      proposedImageAttemptLimit: 11,
+      expectedProviderImageCalls: 10,
+      proposedImageAttemptLimit: 12,
       profileHardCeiling: 38,
     },
   );
@@ -362,7 +385,7 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
   assert.deepEqual(
     assertStoryboardMatchesScenario(balanced, directingSummary),
     {
-      poseFamilyCount: 2,
+      poseFamilyCount: 3,
       sourcePackageCount: 3,
       structuralProviderImageCalls: 5,
     },
@@ -374,6 +397,42 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
         poseSheetPlans: directingSummary.poseSheetPlans.slice(0, 1),
       }),
     /姿态母版家族/,
+  );
+  const missingApology = structuredClone(directingSummary);
+  missingApology.poseSheetPlans = missingApology.poseSheetPlans.map((family) =>
+    family.poseFamilyId === 'hare-apology'
+      ? {...family, stateIds: ['upright']}
+      : family,
+  );
+  assert.throws(
+    () => assertStoryboardMatchesScenario(balanced, missingApology),
+    /姿态母版家族|关键动作/,
+  );
+});
+
+test('scenario rejects a key semantic action that is counted but not visibly executed', async () => {
+  const catalog = await loadStyleCatalog({root: ROOT});
+  const intake = confirmIntake({
+    selection: {
+      aspectRatio: '16:9',
+      visualStylePreset: 'hand-drawn-cutout-explainer',
+      parallaxPreference: 'auto',
+    },
+    catalog,
+    at,
+  });
+  const input = makeScenarioInput();
+  for (const option of input.options) {
+    option.semanticActionCoverage[0].stateRef.stateId = 'bowing';
+  }
+  assert.throws(
+    () => buildPlanningScenarios({
+      slug: 'semantic-action-gap',
+      intake,
+      input,
+      at,
+    }),
+    /poseFamilyId\/stateId/,
   );
 });
 

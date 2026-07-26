@@ -35,10 +35,21 @@
           "narrativeRole": {"type": "string", "minLength": 1},
           "message": {"type": "string", "minLength": 1},
           "blueprint": {"enum": ["layered-reveal", "map-journey", "archive-stack", "character-procession", "discovery-wipe", "transformation-tableau", "chapter-tableau", "quiet-lockup"]},
+          "motionPolicy": {"enum": ["standard", "locked-static"]},
+          "staticRationale": {"type": "string", "minLength": 1},
           "estimatedDurationSeconds": {"type": "number", "exclusiveMinimum": 0},
           "beats": {"type": "array", "minItems": 3, "items": {"$ref": "storyboard.schema.json#/$defs/beat"}},
           "proofTimes": {"type": "array", "minItems": 3, "items": {"$ref": "storyboard.schema.json#/$defs/proofTime"}}
         },
+        "allOf": [
+          {
+            "if": {
+              "required": ["motionPolicy"],
+              "properties": {"motionPolicy": {"const": "locked-static"}}
+            },
+            "then": {"required": ["staticRationale"]}
+          }
+        ],
         "additionalProperties": false
       }
     },

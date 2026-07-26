@@ -38,6 +38,15 @@ The combined confirmation is the normal path. Composition proof is machine evide
 
 After `request-preview-revision`, a directing-only change uses `project:revise-preview-directing`. It preserves approved concept/style semantics, recompiles the edited authoring fields against the existing motion budget, records `directing-revision.json`, invalidates old render/proof artifacts, and creates execution-sync work items. Concept, factual, provider, or production-profile changes still require their owning approval path.
 
+When the human explicitly authorizes scene-scoped semantic changes, use
+`project:revise-preview-semantic --authorization=<file>`. The authorization
+names the exact scenes and evidence. The command preserves the approved
+provider budget, rejects unauthorized story/style changes, records the concept
+fingerprint delta, and invalidates every dependent style, proof, preview, final,
+report, and contact-sheet artifact. A `locked-static` scene may lower only the
+three motion-scene floors recorded in `profilePromiseRevision`; state-family,
+layer, call, and semantic-action promises remain fixed.
+
 `approve-style-voice` requires a current schema-v6
 `style-motion-proof.json` with `scope=style`, bound to the compiler-owned
 multidimensional `styleProofPlan` fingerprint and its complete target list. The
@@ -103,7 +112,7 @@ completeness, provenance, and derivation integrity.
 
 `theme.canvas` is a required opaque six-digit hex color. The renderer places it beneath every scene-specific background and uses it as the dip cover, so even a translucent scene treatment cannot expose pixels from the outgoing scene.
 
-`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
+`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, an `anchorPolicy`, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Every state declares facing, normalized anchors, and an identity-reference asset id plus SHA-256. The state-sheet processor verifies the current identity asset, rejects anchor drift, and writes fingerprinted per-state anchor overlays before registering derived cells. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
 One `poseFamilyId` denotes one registered provider state sheet even when a continuous scene uses multiple temporal node instances of that family (for example, a sleeping identity and its later chase). `directingSummary.poseSheetPlans.targetIds` must expose every reuse target, while provider demand, state-sheet calls, and the state-capacity ceiling count the shared family only once. This preserves truthful provider cost evidence without forcing a project-specific animation workaround.
 
@@ -122,11 +131,14 @@ against responsive reveal envelopes.
 `motif-field` is a first-class decorative node. It owns reviewed motif sources, fixed seed, bounded count, distribution, internal motion preset/cycles, base size, variation ranges, required normalized `bounds`, and explicit rectangle/ellipse `exclusionZones`. Runtime placement uses bounded deterministic rejection with motif-footprint clearance, so title, face, and explanatory-data zones are reproducibly protected. One field expands at most 64 instances; all fields in one scene may total at most 192. `fall-drift`, `rise-drift`, and `burst` hide their wrap point, while `drift` and `orbit` close geometrically; `cycles` affects every preset. `rise-drift` computes a deterministic monotonically upward bottom-to-top lifecycle with slight expansion. Configuration, exclusions, source files, and loop proof are fingerprinted. A motif field is not a semantic crowd, identity family, or substitute for generated pose states.
 
 `world-strip` is valid only as a direct child of `looping-environment`. One
-semantic node binds one active deterministic strip derivative while the
-renderer owns its repeated internal copies. The group owns horizontal world
-travel, ground reference, tracked subject, seam proof ids, depth-derived speed
-range, overscan, and start phase. It contains at least two strips plus exactly
-one asset/state-sequence tracked subject. Camera/parallax offsets are folded
+semantic node binds one active deterministic strip derivative, declares a
+visible `surfaceRole`, and lets the renderer own repeated internal copies. The
+group owns horizontal world travel, ground reference, seam proof ids,
+depth-derived speed range, overscan, start phase, and explicit
+`subjectBindings`. It contains at least two strips, exactly one tracked
+asset/state-sequence, and zero or more participant assets/state-sequences.
+Subjects independently choose screen or world anchoring and their relation to
+the near strip. Camera/parallax offsets are folded
 into strip phase and safe internal scale; they must never translate or shrink
 the viewport-sized carrier into an uncovered edge. An authored-and-compiled
 `travel.activeUntil` is the optional terminal cue for a travelling world: the

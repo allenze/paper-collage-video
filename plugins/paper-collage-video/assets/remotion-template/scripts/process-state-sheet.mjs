@@ -9,6 +9,7 @@ import {ROOT, fileExists, readJson, writeJson} from './project-lib.mjs';
 import {resolvePythonCommand} from './python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
+  inspectStateAnchorRegistration,
   stateOutputName,
   validateStateSheetSpec,
 } from './state-sheet-lib.mjs';
@@ -82,6 +83,28 @@ const writeExplicitRegisteredCell = async ({
     .toFile(destination);
 };
 
+const writeAnchorOverlay = async ({input, output, anchors, width, height}) => {
+  const marks = anchors.map(({id, x, y}, index) => {
+    const cx = Math.round(x * width);
+    const cy = Math.round(y * height);
+    const color = ['#ff3b30', '#007aff', '#34c759', '#ff9500'][index % 4];
+    return `
+      <circle cx="${cx}" cy="${cy}" r="8" fill="none" stroke="${color}" stroke-width="3"/>
+      <line x1="${cx - 14}" y1="${cy}" x2="${cx + 14}" y2="${cy}" stroke="${color}" stroke-width="2"/>
+      <line x1="${cx}" y1="${cy - 14}" x2="${cx}" y2="${cy + 14}" stroke="${color}" stroke-width="2"/>
+      <text x="${cx + 11}" y="${cy - 11}" fill="${color}" font-size="18">${id.replace(/[<>&"]/g, '')}</text>
+    `;
+  }).join('');
+  await sharp(input)
+    .composite([{
+      input: Buffer.from(
+        `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${marks}</svg>`,
+      ),
+    }])
+    .png()
+    .toFile(output);
+};
+
 try {
   const [specInput] = process.argv.slice(2).filter((argument) => !argument.startsWith('--'));
   if (!specInput) throw new Error('用法：process-state-sheet.mjs <state-sheet.json>');
@@ -100,8 +123,30 @@ try {
   if (!source || path.resolve(ROOT, source.file) !== input) throw new Error('sourceAssetId 必须指向 provider 已登记的 sheet input');
   const sourceBinding = source.stateSheetBinding ?? source.request?.stateSheetBinding;
   if (!sourceBinding || sourceBinding.poseFamilyId !== spec.poseFamilyId || sourceBinding.layout.columns !== spec.layout.columns || sourceBinding.layout.rows !== spec.layout.rows) throw new Error('state sheet spec 必须匹配 source asset 的 stateSheetBinding');
-  const sourceStates = sourceBinding.states?.map(({stateId, row, column}) => ({id: stateId, row, column})) ?? [];
+  const sourceStates = sourceBinding.states?.map(
+    ({stateId, row, column, facing, anchors}) => ({
+      id: stateId,
+      row,
+      column,
+      facing,
+      anchors,
+    }),
+  ) ?? [];
   if (JSON.stringify(sourceStates) !== JSON.stringify(spec.states)) throw new Error('state sheet spec 必须覆盖 source asset 的完整有序姿态族，不能只处理或替换单格');
+  if (
+    sourceBinding.identityReferenceAssetId !== spec.identityReference.assetId ||
+    JSON.stringify(sourceBinding.anchorPolicy) !== JSON.stringify(spec.anchorPolicy)
+  ) {
+    throw new Error('state sheet spec 的 identityReference/anchorPolicy 必须与 source stateSheetBinding 完全一致');
+  }
+  const identityReference = manifest.assets.find(
+    ({assetId, lifecycle}) =>
+      assetId === spec.identityReference.assetId &&
+      lifecycle?.status === 'active',
+  );
+  if (!identityReference?.sha256) {
+    throw new Error('identityReference.assetId 必须指向 manifest 中含 SHA-256 的 active 参考资产');
+  }
   const recoveryPolicy = sourceBinding.recoveryPolicy;
   if (recoveryPolicy?.strategy !== 'preserve-sheet-context' || recoveryPolicy.localDeterministicFixFirst !== true || recoveryPolicy.isolatedCellGeneration !== 'forbidden' || recoveryPolicy.fallback !== 'full-sheet-regeneration') throw new Error('source state sheet 缺少 preserve-sheet-context 恢复策略');
   const sourceRecovery = source.stateSheetRecoveryBinding ?? source.request?.stateSheetRecoveryBinding ?? null;
@@ -158,6 +203,32 @@ try {
   }
   const dimensions = new Set(members.map(({metadata}) => `${metadata.width}x${metadata.height}`));
   if (dimensions.size !== 1) throw new Error(`注册状态格尺寸不一致：${[...dimensions].join(', ')}`);
+  const anchorRegistrationProof = inspectStateAnchorRegistration({
+    states: spec.states,
+    anchorPolicy: spec.anchorPolicy,
+  });
+  if (!anchorRegistrationProof.passed) {
+    throw new Error('逐状态 anchor registration proof 未通过');
+  }
+  const anchorEvidence = new Map();
+  for (const member of members) {
+    const state = spec.states.find(({id}) => id === member.stateId);
+    const evidenceFile = path.join(
+      outputDirectory,
+      `${spec.poseFamilyId}-${member.stateId}-anchors.png`,
+    );
+    await writeAnchorOverlay({
+      input: path.resolve(ROOT, member.file),
+      output: evidenceFile,
+      anchors: state.anchors,
+      width: member.metadata.width,
+      height: member.metadata.height,
+    });
+    anchorEvidence.set(member.stateId, {
+      file: path.relative(ROOT, evidenceFile),
+      sha256: await sha256(evidenceFile),
+    });
+  }
   const familyFingerprint = createStateFamilyFingerprint({sourceSha256, spec, members});
   const recordedAt = new Date().toISOString();
   const derived = members.map(({stateId, sha256: memberSha256, file, stat, metadata}) => {
@@ -202,7 +273,17 @@ try {
           registrationCanvas: spec.extraction?.canvas ?? null,
         },
       },
-      stateBinding: {poseFamilyId: spec.poseFamilyId, stateId, registrationId: spec.registration.id, sourceMasterAssetId: spec.registration.sourceMasterAssetId},
+      stateBinding: {
+        poseFamilyId: spec.poseFamilyId,
+        stateId,
+        registrationId: spec.registration.id,
+        sourceMasterAssetId: spec.registration.sourceMasterAssetId,
+        facing: state.facing,
+        anchors: state.anchors,
+        identityReferenceAssetId: identityReference.assetId,
+        identityReferenceSha256: identityReference.sha256,
+        anchorEvidence: anchorEvidence.get(stateId),
+      },
       stateSheetBinding: null,
       stateSheetRecoveryBinding: sourceRecovery,
       sourceSheetAssetId: spec.sourceAssetId,
@@ -227,12 +308,19 @@ try {
   const providerImageCalls = ['host', 'command'].includes(source.adapter) ? 1 : 0;
   const recoveryTargetCount = sourceRecovery?.targetStateIds?.length ?? derived.length;
   await writeJson(path.join(outputDirectory, `${spec.poseFamilyId}-state-sheet-report.json`), {
-    schemaVersion: 3,
+    schemaVersion: 4,
     projectSlug: spec.projectSlug,
     poseFamilyId: spec.poseFamilyId,
     sourceAssetId: spec.sourceAssetId,
     sourceSha256,
     familyFingerprint,
+    identityReference: {
+      assetId: identityReference.assetId,
+      sha256: identityReference.sha256,
+      file: identityReference.file,
+    },
+    anchorPolicy: spec.anchorPolicy,
+    anchorRegistrationProof,
     providerImageCalls,
     generationMode: sourceRecovery?.mode ?? 'initial-family-sheet',
     recoverySourceSheetAssetId: sourceRecovery?.sourceSheetAssetId ?? null,
@@ -247,7 +335,13 @@ try {
     },
     derivedStateCount: derived.length,
     avoidedIndividualCalls: Math.max(0, (sourceRecovery ? recoveryTargetCount : derived.length) - providerImageCalls),
-    members: derived.map(({assetId, file, sha256: hash, stateBinding}) => ({assetId, file, sha256: hash, stateBinding})),
+    members: derived.map(({assetId, file, sha256: hash, stateBinding}) => ({
+      assetId,
+      file,
+      sha256: hash,
+      stateBinding,
+      anchorEvidence: stateBinding.anchorEvidence,
+    })),
     createdAt: recordedAt,
   });
   console.log(`✓ 完整 sheet 上下文派生 ${derived.length} 个注册状态；独立单格生成：0 次。`);

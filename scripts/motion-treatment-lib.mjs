@@ -511,7 +511,6 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
       (world?.frozen !== undefined && typeof world.frozen !== 'boolean') ||
       (world?.frozen === true && (world?.activeFrom !== undefined || world?.activeUntil !== undefined)) ||
       !nonEmpty(world?.groundStripId) ||
-      !nonEmpty(world?.trackedSubjectId) ||
       !['before', 'seam', 'after'].every((key) => nonEmpty(world?.seamProofTimeIds?.[key]))
     ) {
       addIssue(issues, 'treatment-looping-world', 'looping-environment 必须声明 horizontal direction、travel、单调 speedRange、groundStripId 与 loop phase。', `${location}.composition.world`);
@@ -521,6 +520,12 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     } else {
       const ids = new Set();
       const roles = new Set();
+      const surfaceRoleByRole = {
+        far: 'backdrop',
+        mid: 'scenery',
+        ground: 'walkable-ground',
+        near: 'foreground-occluder',
+      };
       let previousDepth = -Infinity;
       for (const [index, strip] of world.strips.entries()) {
         const stripLocation = `${location}.composition.world.strips[${index}]`;
@@ -528,6 +533,14 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         ids.add(strip?.id);
         if (!['far', 'mid', 'ground', 'near'].includes(strip?.role) || roles.has(strip.role)) addIssue(issues, 'treatment-looping-strip-role', 'world strip role 必须有效且唯一。', `${stripLocation}.role`);
         roles.add(strip?.role);
+        if (strip?.surfaceRole !== surfaceRoleByRole[strip?.role]) {
+          addIssue(
+            issues,
+            'treatment-looping-strip-surface',
+            `world strip role=${strip?.role ?? 'missing'} 必须声明 surfaceRole=${surfaceRoleByRole[strip?.role] ?? 'valid-role'}。`,
+            `${stripLocation}.surfaceRole`,
+          );
+        }
         if (!(Number.isFinite(strip?.depth) && strip.depth >= -1 && strip.depth <= 1 && strip.depth > previousDepth)) {
           addIssue(issues, 'treatment-looping-strip-depth', 'world strips 必须按严格递增 depth 编排。', `${stripLocation}.depth`);
         }
@@ -535,6 +548,54 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
       }
       const ground = world.strips.find(({id}) => id === world.groundStripId);
       if (ground?.role !== 'ground') addIssue(issues, 'treatment-looping-ground', 'groundStripId 必须指向 role=ground 的 strip。', `${location}.composition.world.groundStripId`);
+    }
+    if (!Array.isArray(world?.subjectBindings) || world.subjectBindings.length < 1) {
+      addIssue(
+        issues,
+        'treatment-looping-subjects',
+        'looping-environment 必须声明至少一个 subjectBinding。',
+        `${location}.composition.world.subjectBindings`,
+      );
+    } else {
+      const ids = new Set();
+      let trackedCount = 0;
+      for (const [index, subject] of world.subjectBindings.entries()) {
+        if (!nonEmpty(subject?.nodeId) || ids.has(subject.nodeId)) {
+          addIssue(
+            issues,
+            'treatment-looping-subject-id',
+            'world subjectBinding.nodeId 必须非空且唯一。',
+            `${location}.composition.world.subjectBindings[${index}].nodeId`,
+          );
+        }
+        ids.add(subject?.nodeId);
+        if (subject?.role === 'tracked') trackedCount += 1;
+        if (!['tracked', 'participant'].includes(subject?.role)) {
+          addIssue(issues, 'treatment-looping-subject-role', 'world subject role 无效。', `${location}.composition.world.subjectBindings[${index}].role`);
+        }
+        if (!['screen', 'world'].includes(subject?.anchorMode)) {
+          addIssue(issues, 'treatment-looping-subject-anchor', 'world subject anchorMode 必须为 screen 或 world。', `${location}.composition.world.subjectBindings[${index}].anchorMode`);
+        }
+        if (!['behind-near', 'above-near'].includes(subject?.nearOcclusion)) {
+          addIssue(issues, 'treatment-looping-subject-occlusion', 'world subject nearOcclusion 无效。', `${location}.composition.world.subjectBindings[${index}].nearOcclusion`);
+        }
+        if (
+          !Array.isArray(subject?.proofTimeIds) ||
+          subject.proofTimeIds.length < 2 ||
+          new Set(subject.proofTimeIds).size !== subject.proofTimeIds.length ||
+          subject.proofTimeIds.some((id) => !nonEmpty(id))
+        ) {
+          addIssue(issues, 'treatment-looping-subject-proofs', 'world subject 必须绑定至少两个唯一 proofTimeIds。', `${location}.composition.world.subjectBindings[${index}].proofTimeIds`);
+        }
+      }
+      if (trackedCount !== 1) {
+        addIssue(
+          issues,
+          'treatment-looping-tracked-subject',
+          'world subjectBindings 必须且只能包含一个 role=tracked 的可读性主体。',
+          `${location}.composition.world.subjectBindings`,
+        );
+      }
     }
     if (motion?.preset !== 'scroll-world-x') {
       addIssue(issues, 'treatment-looping-preset', 'looping-environment 必须使用 scroll-world-x preset。', `${location}.motion.preset`);
@@ -690,7 +751,7 @@ const compileScene = (scene) => {
           distanceViewports: world.distanceViewports,
           speedRange: world.speedRange,
           groundStripId: world.groundStripId,
-          trackedSubjectId: world.trackedSubjectId,
+          subjectBindings: world.subjectBindings,
           seamProofTimeIds: world.seamProofTimeIds,
           closedLoop: world.closedLoop,
           startPhase: world.startPhase,
@@ -772,7 +833,16 @@ const compileScene = (scene) => {
     riskScore: highestRisk ? treatmentRiskScore(highestRisk) : 0,
     highestRiskTreatmentId: highestRisk?.id ?? null,
   };
-  return {...scene, compositionPlan, directing};
+  return {
+    ...scene,
+    motionPolicy: scene.motionPolicy ?? 'standard',
+    staticRationale:
+      scene.motionPolicy === 'locked-static'
+        ? scene.staticRationale
+        : null,
+    compositionPlan,
+    directing,
+  };
 };
 
 export const summarizeDirectingDemand = (scenes, motionBudget) => {
@@ -915,6 +985,47 @@ export const summarizeProfileFulfillment = (scenes, demand, promise = null) => {
   };
 };
 
+export const recalculateProfilePromiseForLockedStaticScenes = ({
+  promise,
+  scenes,
+}) => {
+  if (!promise) return null;
+  const sceneCount = scenes.length;
+  const lockedSceneIds = scenes
+    .filter(({motionPolicy}) => motionPolicy === 'locked-static')
+    .map(({id}) => id)
+    .sort();
+  if (lockedSceneIds.length === 0 || sceneCount === 0) {
+    return {
+      original: promise,
+      recalculated: promise,
+      lockedSceneIds,
+      changed: false,
+    };
+  }
+  const eligibleSceneCount = sceneCount - lockedSceneIds.length;
+  const recalculated = {
+    ...promise,
+    minLocalMotionTargets: Math.ceil(
+      promise.minLocalMotionTargets * eligibleSceneCount / sceneCount,
+    ),
+    minParallaxScenes: Math.min(
+      promise.minParallaxScenes,
+      eligibleSceneCount,
+    ),
+    minAmbientScenes: Math.min(
+      promise.minAmbientScenes,
+      eligibleSceneCount,
+    ),
+  };
+  return {
+    original: promise,
+    recalculated,
+    lockedSceneIds,
+    changed: JSON.stringify(recalculated) !== JSON.stringify(promise),
+  };
+};
+
 export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
   const issues = [];
   if (storyboard.directingSummary !== undefined) {
@@ -926,6 +1037,34 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
       addIssue(issues, 'storyboard-derived-fields', '输入不得手写 compositionPlan 或 directing；它们由编译器生成。', `scenes[${sceneIndex}]`);
     }
     const motifTargets = new Map();
+    const motionPolicy = scene.motionPolicy ?? 'standard';
+    if (!['standard', 'locked-static'].includes(motionPolicy)) {
+      addIssue(
+        issues,
+        'storyboard-motion-policy',
+        'scene.motionPolicy 必须为 standard 或 locked-static。',
+        `scenes[${sceneIndex}].motionPolicy`,
+      );
+    }
+    if (
+      motionPolicy === 'locked-static' &&
+      (!nonEmpty(scene.staticRationale) ||
+        (scene.beats ?? []).some((beat) =>
+          (beat.treatments ?? []).some(
+            (treatment) =>
+              treatment.motion?.kind !== 'static' ||
+              treatment.changeClass !== 'static-hold' ||
+              treatment.graphic !== null,
+          ),
+        ))
+    ) {
+      addIssue(
+        issues,
+        'storyboard-locked-static-drift',
+        'locked-static 镜头必须说明 staticRationale，且全部 treatment 都是无 graphic 的 static-hold。',
+        `scenes[${sceneIndex}]`,
+      );
+    }
     for (const [beatIndex, beat] of (scene.beats ?? []).entries()) {
       const beatLocation = `scenes[${sceneIndex}].beats[${beatIndex}]`;
       if (!Array.isArray(beat.treatments) || beat.treatments.length === 0) {
@@ -1213,7 +1352,7 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         distanceViewports: environment.travel.distanceViewports,
         speedRange: environment.speedRange,
         groundStripId: environment.groundStripId,
-        trackedSubjectId: environment.trackedSubjectId,
+        subjectBindings: environment.subjectBindings,
         seamProofTimeIds: environment.seamProofTimeIds,
         closedLoop: environment.travel.closedLoop,
         startPhase: environment.travel.startPhase,
@@ -1223,7 +1362,7 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         frozen: environment.travel.frozen === true,
         strips: (node.children ?? [])
           .filter(({kind}) => kind === 'world-strip')
-          .map(({id, role, depth}) => ({id, role, depth})),
+          .map(({id, role, surfaceRole, depth}) => ({id, role, surfaceRole, depth})),
       };
       const plannedShape = worldPlan && {
         axis: worldPlan.axis,
@@ -1231,7 +1370,7 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         distanceViewports: worldPlan.distanceViewports,
         speedRange: worldPlan.speedRange,
         groundStripId: worldPlan.groundStripId,
-        trackedSubjectId: worldPlan.trackedSubjectId,
+        subjectBindings: worldPlan.subjectBindings,
         seamProofTimeIds: worldPlan.seamProofTimeIds,
         closedLoop: worldPlan.closedLoop,
         startPhase: worldPlan.startPhase,

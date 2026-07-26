@@ -25,9 +25,17 @@ This finite-canvas decision is separate from a persistent travelling world.
 When a car, train, or boat stays near the focal corridor while mountains,
 trees, road, or shoreline keep moving beyond the viewport, use
 `looping-environment`. Each semantic `world-strip` owns one proved horizontal
-canonical tile and an infinite logical world; the group also owns exactly one
-tracked subject that does not inherit strip phase. Do not enlarge a
+canonical tile and an infinite logical world; the group owns one tracked
+subject and may own additional declared participants. Each subject explicitly
+chooses screen or ground/world anchoring and its foreground-occlusion
+relationship. Do not enlarge a
 `registered-depth-stack` envelope or duplicate image nodes to simulate this.
+
+Every strip must also declare what visible surface it provides. A ground
+derivative is not accepted merely because its rectangular transform reaches the
+bottom: its source alpha must prove full horizontal span and real visible
+support at both repeat edges. Near strips must prove a visible foreground band
+that can actually overlap the declared subjects.
 
 ## Compile the Source Package Before Provider Approval
 

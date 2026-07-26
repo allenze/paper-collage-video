@@ -71,6 +71,7 @@
         "review": {"type": "string", "minLength": 1},
         "styleProof": {"$ref": "#/$defs/nullablePath"},
         "directingRevision": {"$ref": "#/$defs/nullablePath"},
+        "semanticRevision": {"$ref": "#/$defs/nullablePath"},
         "validationReport": {"$ref": "#/$defs/nullablePath"},
         "assetsReadySeal": {"$ref": "#/$defs/nullablePath"},
         "preview": {"$ref": "#/$defs/nullablePath"},

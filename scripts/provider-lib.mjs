@@ -29,6 +29,9 @@ import {
   observedKeyPlanePolicyFingerprint,
   validateObservedKeyPlaneDeclaration,
 } from './observed-key-plane-lib.mjs';
+import {
+  inspectStateAnchorRegistration,
+} from './state-sheet-lib.mjs';
 
 export const PROVIDER_CAPABILITIES = ['text', 'image', 'voice'];
 export const PROVIDER_ADAPTERS = ['host', 'command', 'manual'];
@@ -75,6 +78,22 @@ const PROVIDER_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const validStateAnchors = (anchors) =>
+  Array.isArray(anchors) &&
+  anchors.length > 0 &&
+  new Set(anchors.map(({id}) => id)).size === anchors.length &&
+  anchors.every(
+    ({id, x, y}) =>
+      typeof id === 'string' &&
+      id.trim().length > 0 &&
+      Number.isFinite(x) &&
+      x >= 0 &&
+      x <= 1 &&
+      Number.isFinite(y) &&
+      y >= 0 &&
+      y <= 1,
+  );
 
 const stableValue = (value) => {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -788,7 +807,19 @@ export const validateAssetRequest = (request) => {
       const sheet = request.stateSheetBinding;
       const recovery = request.stateSheetRecoveryBinding;
       if (Boolean(state) === Boolean(sheet)) errors.push('state-sequence 图像必须且只能声明 stateBinding 或 stateSheetBinding 之一');
-      if (state && (!isPlainObject(state) || !state.poseFamilyId || !state.stateId || !state.registrationId || !state.sourceMasterAssetId)) errors.push('stateBinding 不完整');
+      if (
+        state &&
+        (
+          !isPlainObject(state) ||
+          !state.poseFamilyId ||
+          !state.stateId ||
+          !state.registrationId ||
+          !state.sourceMasterAssetId ||
+          !['left', 'right', 'front', 'back', 'neutral'].includes(state.facing) ||
+          !validStateAnchors(state.anchors) ||
+          !state.identityReferenceAssetId
+        )
+      ) errors.push('stateBinding 不完整');
       const generationFamily = request.semanticBinding?.generationFamily;
       if (!isPlainObject(generationFamily)) errors.push('state-sequence 图像必须声明 semanticBinding.generationFamily');
       if (state && generationFamily && (
@@ -800,15 +831,52 @@ export const validateAssetRequest = (request) => {
       }
       if (state && recovery) errors.push('独立 stateBinding 不得声明 stateSheetRecoveryBinding');
       if (sheet) {
-        if (!isPlainObject(sheet) || !sheet.poseFamilyId || !sheet.registrationId || !sheet.sourceMasterAssetId || !Number.isInteger(sheet.layout?.columns) || !Number.isInteger(sheet.layout?.rows) || !Array.isArray(sheet.states) || sheet.states.length < 2 || !validRecoveryPolicy(sheet.recoveryPolicy)) errors.push('stateSheetBinding 必须声明完整的 preserve-sheet-context 恢复策略');
+        if (
+          !isPlainObject(sheet) ||
+          !sheet.poseFamilyId ||
+          !sheet.registrationId ||
+          !sheet.sourceMasterAssetId ||
+          !sheet.identityReferenceAssetId ||
+          !Array.isArray(sheet.anchorPolicy?.requiredAnchorIds) ||
+          sheet.anchorPolicy.requiredAnchorIds.length < 1 ||
+          !Number.isFinite(sheet.anchorPolicy?.maximumDrift) ||
+          sheet.anchorPolicy.maximumDrift < 0 ||
+          sheet.anchorPolicy.maximumDrift > 0.1 ||
+          !Number.isInteger(sheet.layout?.columns) ||
+          !Number.isInteger(sheet.layout?.rows) ||
+          !Array.isArray(sheet.states) ||
+          sheet.states.length < 2 ||
+          !validRecoveryPolicy(sheet.recoveryPolicy)
+        ) errors.push('stateSheetBinding 必须声明完整的身份参考、逐状态锚点与 preserve-sheet-context 恢复策略');
         if (sheet.registrationId !== binding.registrationId || sheet.sourceMasterAssetId !== binding.sourceMasterAssetId) errors.push('stateSheetBinding 必须与 compositionBinding 使用同一注册族');
         const cells = new Set();
         const stateIds = new Set();
         for (const member of sheet.states ?? []) {
           const cell = `${member.row}:${member.column}`;
           if (!member.stateId || stateIds.has(member.stateId) || cells.has(cell) || member.row < 0 || member.row >= sheet.layout.rows || member.column < 0 || member.column >= sheet.layout.columns) errors.push('stateSheetBinding 状态 id/格位重复或越界');
+          if (
+            !['left', 'right', 'front', 'back', 'neutral'].includes(member.facing) ||
+            !validStateAnchors(member.anchors)
+          ) {
+            errors.push('stateSheetBinding 每个状态必须声明有效 facing 与归一化 anchors');
+          }
           stateIds.add(member.stateId);
           cells.add(cell);
+        }
+        const anchorProof = inspectStateAnchorRegistration({
+          states: sheet.states ?? [],
+          anchorPolicy: sheet.anchorPolicy,
+        });
+        if (!anchorProof.passed) {
+          errors.push('stateSheetBinding 逐状态 anchor 漂移超过 anchorPolicy.maximumDrift');
+        }
+        if (
+          generationFamily &&
+          !generationFamily.referenceAssetIds?.includes(
+            sheet.identityReferenceAssetId,
+          )
+        ) {
+          errors.push('stateSheetBinding.identityReferenceAssetId 必须属于 generationFamily.referenceAssetIds');
         }
         if (generationFamily && (
           generationFamily.familyId !== sheet.poseFamilyId ||

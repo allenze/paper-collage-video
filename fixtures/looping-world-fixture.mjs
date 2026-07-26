@@ -48,6 +48,7 @@ export const LOOPING_WORLD_STRIPS = Object.freeze([
     sourceAssetId: 'mountain-source',
     assetId: 'mountain-loop',
     role: 'far',
+    surfaceRole: 'backdrop',
     depth: -0.9,
     z: 0,
     sourceWidth: 1920,
@@ -61,6 +62,7 @@ export const LOOPING_WORLD_STRIPS = Object.freeze([
     sourceAssetId: 'tree-source',
     assetId: 'tree-loop',
     role: 'mid',
+    surfaceRole: 'scenery',
     depth: -0.25,
     z: 2,
     sourceWidth: 2560,
@@ -74,6 +76,7 @@ export const LOOPING_WORLD_STRIPS = Object.freeze([
     sourceAssetId: 'road-source',
     assetId: 'road-loop',
     role: 'ground',
+    surfaceRole: 'walkable-ground',
     depth: 0.38,
     z: 3,
     sourceWidth: 3840,
@@ -87,6 +90,7 @@ export const LOOPING_WORLD_STRIPS = Object.freeze([
     sourceAssetId: 'grass-source',
     assetId: 'grass-loop',
     role: 'near',
+    surfaceRole: 'foreground-occluder',
     depth: 0.9,
     z: 8,
     sourceWidth: 3840,
@@ -178,7 +182,19 @@ const worldTravelTreatment = () => ({
       distanceViewports: 34,
       speedRange: {far: 0.4, near: 1},
       groundStripId: 'road-strip',
-      trackedSubjectId: 'paper-car',
+      subjectBindings: [{
+        nodeId: 'paper-car',
+        role: 'tracked',
+        anchorMode: 'screen',
+        nearOcclusion: 'behind-near',
+        proofTimeIds: ['world-before', 'world-seam', 'world-after'],
+      }, {
+        nodeId: 'finish-marker',
+        role: 'participant',
+        anchorMode: 'world',
+        nearOcclusion: 'behind-near',
+        proofTimeIds: ['world-before', 'world-marker-move'],
+      }],
       seamProofTimeIds: {
         before: 'world-before',
         seam: 'world-seam',
@@ -186,7 +202,8 @@ const worldTravelTreatment = () => ({
       },
       closedLoop: false,
       startPhase: 0.13,
-      strips: LOOPING_WORLD_STRIPS.map(({id, role, depth}) => ({id, role, depth})),
+      activeFrom: 0.12,
+      strips: LOOPING_WORLD_STRIPS.map(({id, role, surfaceRole, depth}) => ({id, role, surfaceRole, depth})),
     },
   },
   graphic: null,
@@ -296,6 +313,14 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
         stateAssertions: [],
       },
       {
+        id: 'world-marker-move',
+        at: 0.13,
+        label: 'World-anchored marker begins to leave',
+        kind: 'action',
+        assertions: ['The finish marker moves with the ground while the tracked car remains screen anchored.'],
+        stateAssertions: [],
+      },
+      {
         id: 'world-seam',
         at: 0.5,
         label: 'Seam crossing and camera push',
@@ -323,7 +348,7 @@ export const compileLoopingWorldStoryboard = ({media}) =>
     {plan: createLoopingWorldPlan()},
   );
 
-const createWorldGroup = ({profile, stripAssets, carSrc}) => ({
+const createWorldGroup = ({profile, stripAssets, carSrc, finishMarkerSrc}) => ({
   id: LOOPING_WORLD_GROUP_ID,
   kind: 'group',
   pattern: 'looping-environment',
@@ -334,7 +359,19 @@ const createWorldGroup = ({profile, stripAssets, carSrc}) => ({
   loopingEnvironment: {
     axis: 'x',
     groundStripId: 'road-strip',
-    trackedSubjectId: 'paper-car',
+    subjectBindings: [{
+      nodeId: 'paper-car',
+      role: 'tracked',
+      anchorMode: 'screen',
+      nearOcclusion: 'behind-near',
+      proofTimeIds: ['world-before', 'world-seam', 'world-after'],
+    }, {
+      nodeId: 'finish-marker',
+      role: 'participant',
+      anchorMode: 'world',
+      nearOcclusion: 'behind-near',
+      proofTimeIds: ['world-before', 'world-marker-move'],
+    }],
     seamProofTimeIds: {
       before: 'world-before',
       seam: 'world-seam',
@@ -346,6 +383,7 @@ const createWorldGroup = ({profile, stripAssets, carSrc}) => ({
       easing: 'linear',
       closedLoop: false,
       startPhase: 0.13,
+      activeFrom: 0.12,
     },
     speedRange: {far: 0.4, near: 1},
     overscanPx: 2,
@@ -355,6 +393,7 @@ const createWorldGroup = ({profile, stripAssets, carSrc}) => ({
       id: strip.id,
       kind: 'world-strip',
       role: strip.role,
+      surfaceRole: strip.surfaceRole,
       src: stripAssets[strip.id].src,
       loopingStripBinding: stripAssets[strip.id].binding,
       z: strip.z,
@@ -382,6 +421,16 @@ const createWorldGroup = ({profile, stripAssets, carSrc}) => ({
         pivot: {x: 0.5, y: 0.82},
       },
     },
+    {
+      id: 'finish-marker',
+      kind: 'asset',
+      assetRole: 'prop',
+      src: finishMarkerSrc,
+      z: 5,
+      depth: 0.14,
+      transform: transform(0.65, 0.77, 0.11, 0.26, 0.5, 1),
+      motion: motion(),
+    },
   ],
 });
 
@@ -390,6 +439,7 @@ export const createLoopingWorldProject = ({
   profileId,
   stripAssets,
   carSrc,
+  finishMarkerSrc,
 }) => {
   const profile = LOOPING_WORLD_PROFILES.find(({id}) => id === profileId);
   if (!profile) throw new Error(`未知 looping world profile：${profileId}`);
@@ -447,7 +497,7 @@ export const createLoopingWorldProject = ({
       composition: {
         coordinateSpace: {width: profile.width, height: profile.height},
         nodes: [
-          createWorldGroup({profile, stripAssets, carSrc}),
+          createWorldGroup({profile, stripAssets, carSrc, finishMarkerSrc}),
           {
             id: 'proof-badge',
             kind: 'group',

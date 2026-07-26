@@ -48,7 +48,7 @@
         {"type": "null"},
         {
           "type": "object",
-          "required": ["logline", "audience", "theme", "ending", "beats"],
+          "required": ["logline", "audience", "theme", "ending", "beats", "semanticActions"],
           "properties": {
             "logline": {"type": "string", "minLength": 1},
             "audience": {"type": "string", "minLength": 1},
@@ -58,6 +58,11 @@
               "type": "array",
               "minItems": 3,
               "items": {"type": "string", "minLength": 1}
+            },
+            "semanticActions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"$ref": "#/$defs/semanticAction"}
             }
           },
           "additionalProperties": false
@@ -78,6 +83,63 @@
     "updatedAt": {"type": "string", "format": "date-time"}
   },
   "$defs": {
+    "semanticAction": {
+      "type": "object",
+      "required": ["id", "summary", "requiredExecution"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "summary": {"type": "string", "minLength": 1},
+        "requiredExecution": {
+          "enum": ["registered-state", "local-motion", "layer-package"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "semanticActionCoverage": {
+      "type": "object",
+      "required": [
+        "actionId",
+        "sceneId",
+        "targetId",
+        "execution",
+        "visibleResult"
+      ],
+      "properties": {
+        "actionId": {"type": "string", "minLength": 1},
+        "sceneId": {"type": "string", "minLength": 1},
+        "targetId": {"type": "string", "minLength": 1},
+        "execution": {
+          "enum": ["registered-state", "local-motion", "layer-package"]
+        },
+        "stateRef": {
+          "type": "object",
+          "required": ["poseFamilyId", "stateId"],
+          "properties": {
+            "poseFamilyId": {"type": "string", "minLength": 1},
+            "stateId": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        "localMotionTargetId": {"type": "string", "minLength": 1},
+        "sourcePackageId": {"type": "string", "minLength": 1},
+        "visibleResult": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"execution": {"const": "registered-state"}}},
+          "then": {"required": ["stateRef"]}
+        },
+        {
+          "if": {"properties": {"execution": {"const": "local-motion"}}},
+          "then": {"required": ["localMotionTargetId"]}
+        },
+        {
+          "if": {"properties": {"execution": {"const": "layer-package"}}},
+          "then": {"required": ["sourcePackageId"]}
+        }
+      ],
+      "additionalProperties": false
+    },
     "profilePromise": {
       "type": "object",
       "required": [
@@ -292,6 +354,7 @@
         "estimatedNarrationSeconds",
         "rationale",
         "scenes",
+        "semanticActionCoverage",
         "profilePromise",
         "plannedFulfillment",
         "providerEstimate",
@@ -311,6 +374,11 @@
           "type": "array",
           "minItems": 1,
           "items": {"$ref": "#/$defs/scene"}
+        },
+        "semanticActionCoverage": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/semanticActionCoverage"}
         },
         "profilePromise": {"$ref": "#/$defs/profilePromise"},
         "plannedFulfillment": {"$ref": "#/$defs/fulfillment"},

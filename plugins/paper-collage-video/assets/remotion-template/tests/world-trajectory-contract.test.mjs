@@ -8,7 +8,13 @@ import {
 
 const still = () => ({keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]});
 const transform = ({x, y, width, height = width}) => ({x, y, width, height, anchorX: 0, anchorY: 0});
-const strip = (role) => ({id: `${role}-strip`, kind: 'world-strip', role, src: `${role}.png`, z: 0, depth: 0, transform: transform({x: 0, y: 0, width: 1, height: 1}), motion: still(), loopingStripBinding: {sourceAssetId: `forest-${role}-source`}});
+const surfaceRole = {
+  far: 'backdrop',
+  mid: 'scenery',
+  ground: 'walkable-ground',
+  near: 'foreground-occluder',
+};
+const strip = (role) => ({id: `${role}-strip`, kind: 'world-strip', role, surfaceRole: surfaceRole[role], src: `${role}.png`, z: 0, depth: 0, transform: transform({x: 0, y: 0, width: 1, height: 1}), motion: still(), loopingStripBinding: {sourceAssetId: `forest-${role}-source`}});
 const stateNode = (id, x) => ({
   id,
   kind: 'state-sequence',

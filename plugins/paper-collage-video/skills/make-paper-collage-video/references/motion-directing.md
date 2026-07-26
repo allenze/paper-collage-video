@@ -60,10 +60,22 @@ a real held tableau before travel, not a substitute for hiding a moving
 background. Also author
 ordered semantic strip roles, and before/seam/after proof ids. Every
 `world-strip` resolves to at least one viewport width at its authored height.
-The looping group contains those strips plus exactly one asset/state-sequence
-tracked subject; this lets near strips genuinely occlude it without inheriting
-world phase. The renderer expands internal copies. Authors never place repeated
+Each strip declares its visible surface role: backdrop, scenery,
+walkable-ground, or foreground-occluder. The looping group also owns
+`subjectBindings`: exactly one tracked subject plus any declared participants.
+A subject chooses `anchorMode=screen|world`, its near-layer occlusion relation,
+and the proof moments that must show it. Screen-anchored subjects remain in the
+focal corridor; world-anchored markers and actors inherit the ground
+displacement. This allows a starter, finish marker, or second racer to belong
+to the same world and lets near strips genuinely occlude selected actors.
+The renderer expands strip copies internally. Authors never place repeated
 asset nodes.
+
+A deliberately motionless scene uses `motionPolicy=locked-static` plus a human
+rationale and static-only treatments. This may recalculate only the
+local-motion, parallax-scene, and ambient-scene floors for the remaining
+eligible scenes. It never discounts required state families, layered scenes,
+provider calls, or semantic actions.
 
 At execution, one root world maps every strip role to a stable source asset
 across its scenes. A route traveler also declares the inclusive proof window in
@@ -187,9 +199,10 @@ composition coupling, importance, and necessity, then compiles a
 classes, each concrete coupled relationship, state-sequence behavior, and
 motif-field behavior, and greedily reuses one source family where it can prove
 multiple facets. Looping worlds additionally require source/render-scale RGB
-and alpha seam proof, three-ratio worst-phase coverage, depth-speed ordering,
-camera-compensated world displacement, tracked-subject readability, and a real
-near-layer occlusion band. If a film has no such high-risk facet, the highest-ranked
+and alpha seam proof, visible full-span semantic surfaces, real ground support
+at both repeat edges, three-ratio worst-phase coverage, signed
+camera-compensated world displacement, every declared subject's anchor
+behavior, and its requested near-layer occlusion relation. If a film has no such high-risk facet, the highest-ranked
 treatment becomes one `baseline:representative` target so the style gate never
 becomes empty. `style:proof` renders every selected target and binds the report
 to the plan fingerprint. A depth stack is proven as one family through neutral

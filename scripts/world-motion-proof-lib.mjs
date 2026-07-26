@@ -133,6 +133,7 @@ export const resolveTargetViewportSnapshot = async ({
   nodeId,
   progress,
   video,
+  worldAnchorOffsetX = 0,
 }) => {
   const entry = nodeEntry(scene, nodeId, video);
   if (!entry) throw new Error(`worldMotionProof target 不存在：${nodeId}`);
@@ -155,7 +156,7 @@ export const resolveTargetViewportSnapshot = async ({
   });
   const scale = Number(entry.node.transform?.scale ?? 1) * authored.scale * parallax.scale;
   const nodeRect = {
-    left: entry.rect.left + authored.x * entry.parentRect.width + parallax.x,
+    left: entry.rect.left + authored.x * entry.parentRect.width + parallax.x + worldAnchorOffsetX,
     top: entry.rect.top + authored.y * entry.parentRect.height + parallax.y,
     width: entry.rect.width * scale,
     height: entry.rect.height * scale,
@@ -210,6 +211,7 @@ export const buildTargetWorldMotionProof = async ({
   maximumScreenOccupancy = 0.85,
   minimumDisplacementRatio = 0.1,
   requireMotion = true,
+  worldAnchorOffsetAt = () => 0,
 }) => {
   const snapshots = [];
   for (const proof of proofTimes) {
@@ -220,6 +222,7 @@ export const buildTargetWorldMotionProof = async ({
         nodeId,
         progress: proof.at,
         video,
+        worldAnchorOffsetX: worldAnchorOffsetAt(proof.at),
       }),
     });
   }
@@ -261,6 +264,82 @@ export const buildTargetWorldMotionProof = async ({
     readabilityPassed,
     motionResolvable,
     passed: readabilityPassed && (!requireMotion || motionResolvable),
+  };
+};
+
+const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPixels = 4}) => {
+  const file = resolvePublicFile(source);
+  if (!(await fileExists(file))) {
+    return {
+      source,
+      role,
+      surfaceRole,
+      passed: false,
+      reason: 'source-missing',
+    };
+  }
+  const {data, info} = await sharp(file)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({resolveWithObject: true});
+  const alphaChannel = info.channels - 1;
+  const edge = Math.max(1, Math.min(edgeBandPixels, Math.floor(info.width / 4)));
+  let visiblePixels = 0;
+  let leftVisible = 0;
+  let rightVisible = 0;
+  let top = info.height;
+  let bottom = -1;
+  let left = info.width;
+  let right = -1;
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      if (data[(y * info.width + x) * info.channels + alphaChannel] <= 8) continue;
+      visiblePixels += 1;
+      if (x < edge) leftVisible += 1;
+      if (x >= info.width - edge) rightVisible += 1;
+      left = Math.min(left, x);
+      right = Math.max(right, x);
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  const visiblePixelRatio = visiblePixels / (info.width * info.height);
+  const leftEdgeSupportRatio = leftVisible / (edge * info.height);
+  const rightEdgeSupportRatio = rightVisible / (edge * info.height);
+  const horizontalVisibleSpanRatio = right < left
+    ? 0
+    : (right - left + 1) / info.width;
+  const verticalVisibleBand = bottom < top
+    ? {top: 0, bottom: 0, height: 0}
+    : {
+        top: cleanNumber(top / info.height),
+        bottom: cleanNumber((bottom + 1) / info.height),
+        height: cleanNumber((bottom - top + 1) / info.height),
+      };
+  const edgeSupportRequired = surfaceRole === 'walkable-ground';
+  const passed =
+    visiblePixelRatio >= 0.002 &&
+    horizontalVisibleSpanRatio >= 0.85 &&
+    (
+      !edgeSupportRequired ||
+      (leftEdgeSupportRatio >= 0.02 && rightEdgeSupportRatio >= 0.02)
+    );
+  return {
+    source,
+    role,
+    surfaceRole,
+    dimensions: {width: info.width, height: info.height},
+    thresholds: {
+      minimumVisiblePixelRatio: 0.002,
+      minimumHorizontalVisibleSpanRatio: 0.85,
+      minimumGroundEdgeSupportRatio: edgeSupportRequired ? 0.02 : null,
+    },
+    visiblePixelRatio: cleanNumber(visiblePixelRatio),
+    horizontalVisibleSpanRatio: cleanNumber(horizontalVisibleSpanRatio),
+    leftEdgeSupportRatio: cleanNumber(leftEdgeSupportRatio),
+    rightEdgeSupportRatio: cleanNumber(rightEdgeSupportRatio),
+    verticalVisibleBand,
+    passed,
   };
 };
 
@@ -373,9 +452,16 @@ export const buildLoopingWorldProof = async ({
     const seamPassed =
       derivationReport?.passed === true &&
       derivationReport.derivationFingerprint === strip.loopingStripBinding.derivationFingerprint;
+    const visibleSurfaceProof = await inspectStripVisibleSurface({
+      source: strip.src,
+      role: strip.role,
+      surfaceRole: strip.surfaceRole,
+      edgeBandPixels: strip.loopingStripBinding.edgeBandPixels,
+    });
     strips.push({
       nodeId: strip.id,
       role: strip.role,
+      surfaceRole: strip.surfaceRole,
       depth: strip.depth,
       speedFactor: cleanNumber(speedFactor),
       tileWidth: cleanNumber(activeGeometry.tileWidth),
@@ -388,6 +474,7 @@ export const buildLoopingWorldProof = async ({
         activeGeometry.tileWidth,
       ),
       seamPassed,
+      visibleSurfaceProof,
       derivationReport: derivationReport ? path.relative(root, derivationReportFile) : null,
       snapshots,
       lockedSnapshots,
@@ -439,67 +526,126 @@ export const buildLoopingWorldProof = async ({
       travelProgress === expectedProgress && cameraCompensatedDisplacement === expectedDisplacement,
     );
   });
-  const trackedSubjectProof = await buildTargetWorldMotionProof({
-    scene,
-    nodeId: environment.trackedSubjectId,
-    proofTimes: seamProofs,
-    video,
-    minimumVisibleAreaRatio: 0.55,
-    minimumScreenOccupancy: 0.008,
-    maximumScreenOccupancy: 0.45,
-    requireMotion: false,
-  });
-  const trackedSubject = group.children.find(
-    ({id}) => id === environment.trackedSubjectId,
-  );
   const nearStrip = group.children.find(
     ({kind, role}) => kind === 'world-strip' && role === 'near',
   );
-  const trackedAlpha = trackedSubject
-    ? await alphaBoundsForSource(sourceForNode(trackedSubject, seamProofs[1].at))
-    : null;
   const nearAlpha = nearStrip
     ? await alphaBoundsForSource(nearStrip.src)
     : null;
-  const trackedTop =
-    (trackedSubject?.transform?.y ?? 0) -
-    (trackedSubject?.transform?.anchorY ?? 0) *
-      (trackedSubject?.transform?.height ?? 1) +
-    (trackedAlpha?.y ?? 0) * (trackedSubject?.transform?.height ?? 1);
-  const trackedBottom =
-    trackedTop +
-    (trackedAlpha?.height ?? 0) *
-      (trackedSubject?.transform?.height ?? 1);
   const nearTop =
     (nearStrip?.transform?.y ?? 0) +
     (nearAlpha?.y ?? 0) * (nearStrip?.transform?.height ?? 1);
   const nearBottom =
     nearTop +
     (nearAlpha?.height ?? 0) * (nearStrip?.transform?.height ?? 1);
-  const verticalOverlap = Math.max(
-    0,
-    Math.min(trackedBottom, nearBottom) - Math.max(trackedTop, nearTop),
+  const groundStrip = group.children.find(
+    ({kind, id}) => kind === 'world-strip' && id === environment.groundStripId,
   );
-  const foregroundOcclusion = {
-    trackedSubjectZ: trackedSubject?.z ?? null,
-    nearStripZ: nearStrip?.z ?? null,
-    trackedSubjectVerticalBand: {
-      top: cleanNumber(trackedTop),
-      bottom: cleanNumber(trackedBottom),
-    },
-    nearStripVerticalBand: {
-      top: cleanNumber(nearTop),
-      bottom: cleanNumber(nearBottom),
-    },
-    verticalOverlap: cleanNumber(verticalOverlap),
-    passed:
-      Boolean(trackedAlpha && nearAlpha) &&
-      nearStrip.z > trackedSubject.z &&
-      verticalOverlap >= 0.02,
-  };
+  const groundSpeedFactor = groundStrip
+    ? resolveWorldStripSpeedFactor({
+        depth: groundStrip.depth,
+        far: environment.speedRange.far,
+        near: environment.speedRange.near,
+      })
+    : 0;
+  const worldAnchorOffsetAt = (progress) => resolveWorldStripFrame({
+    progress: frozen ? 0 : progress,
+    viewportWidth: group.coordinateSpace.width,
+    tileWidth: group.coordinateSpace.width,
+    direction: environment.travel.direction,
+    distanceViewports: environment.travel.distanceViewports,
+    speedFactor: groundSpeedFactor,
+    startPhase: environment.travel.startPhase,
+    activeFrom: environment.travel.activeFrom ?? 0,
+    activeUntil: environment.travel.activeUntil ?? 1,
+    easing: environment.travel.easing,
+    overscanPx: environment.overscanPx,
+  }).cameraCompensatedDisplacement;
+  const subjectProofs = [];
+  const subjectOcclusions = [];
+  for (const binding of environment.subjectBindings ?? []) {
+    const subject = group.children.find(({id}) => id === binding.nodeId);
+    const bindingProofs = binding.proofTimeIds
+      .map((id) => proofById.get(id))
+      .filter(Boolean)
+      .sort((left, right) => left.at - right.at);
+    const subjectProof = await buildTargetWorldMotionProof({
+      scene,
+      nodeId: binding.nodeId,
+      proofTimes: bindingProofs,
+      video,
+      minimumVisibleAreaRatio: binding.anchorMode === 'world' ? 0.1 : 0.55,
+      minimumScreenOccupancy: 0.002,
+      maximumScreenOccupancy: 0.45,
+      minimumDisplacementRatio: 0.1,
+      requireMotion: binding.anchorMode === 'world',
+      worldAnchorOffsetAt:
+        binding.anchorMode === 'world' ? worldAnchorOffsetAt : () => 0,
+    });
+    subjectProofs.push({...binding, proof: subjectProof});
+    const subjectAlpha = subject
+      ? await alphaBoundsForSource(sourceForNode(subject, bindingProofs[0].at))
+      : null;
+    const subjectTop =
+      (subject?.transform?.y ?? 0) -
+      (subject?.transform?.anchorY ?? 0) *
+        (subject?.transform?.height ?? 1) +
+      (subjectAlpha?.y ?? 0) * (subject?.transform?.height ?? 1);
+    const subjectBottom =
+      subjectTop +
+      (subjectAlpha?.height ?? 0) *
+        (subject?.transform?.height ?? 1);
+    const verticalOverlap = Math.max(
+      0,
+      Math.min(subjectBottom, nearBottom) - Math.max(subjectTop, nearTop),
+    );
+    const zPassed = binding.nearOcclusion === 'behind-near'
+      ? nearStrip?.z > subject?.z
+      : subject?.z > nearStrip?.z;
+    subjectOcclusions.push({
+      nodeId: binding.nodeId,
+      requiredRelation: binding.nearOcclusion,
+      subjectZ: subject?.z ?? null,
+      nearStripZ: nearStrip?.z ?? null,
+      subjectVerticalBand: {
+        top: cleanNumber(subjectTop),
+        bottom: cleanNumber(subjectBottom),
+      },
+      nearStripVerticalBand: {
+        top: cleanNumber(nearTop),
+        bottom: cleanNumber(nearBottom),
+      },
+      verticalOverlap: cleanNumber(verticalOverlap),
+      passed:
+        Boolean(subjectAlpha && nearAlpha && nearStrip) &&
+        zPassed &&
+        (
+          binding.nearOcclusion === 'above-near' ||
+          verticalOverlap >= 0.02
+        ),
+    });
+  }
+  const trackedSubjectProof = subjectProofs.find(({role}) => role === 'tracked')?.proof ?? null;
+  const foregroundOcclusion = subjectOcclusions.find(
+    ({nodeId}) =>
+      nodeId === environment.subjectBindings?.find(({role}) => role === 'tracked')?.nodeId,
+  ) ?? null;
   const groundWorldDisplacement = ground
     ? Math.abs(ground.snapshots.at(-1).cameraCompensatedDisplacement - ground.snapshots[0].cameraCompensatedDisplacement)
     : 0;
+  const groundSignedWorldDisplacement = ground
+    ? ground.snapshots.at(-1).cameraCompensatedDisplacement -
+      ground.snapshots[0].cameraCompensatedDisplacement
+    : 0;
+  const expectedDirectionSign = environment.travel.direction === 'left' ? -1 : 1;
+  const signedDirectionProof = {
+    direction: environment.travel.direction,
+    expectedSign: expectedDirectionSign,
+    actualSignedDisplacement: cleanNumber(groundSignedWorldDisplacement),
+    passed:
+      frozen ||
+      Math.sign(groundSignedWorldDisplacement) === expectedDirectionSign,
+  };
   const groundTotalWorldDisplacement = ground
     ? Math.abs(
         (frozen ? 0 : environment.travel.distanceViewports) *
@@ -510,7 +656,7 @@ export const buildLoopingWorldProof = async ({
   const proof = {
     schemaVersion: 1,
     groupId: group.id,
-    trackedSubjectId: environment.trackedSubjectId,
+    subjectBindings: environment.subjectBindings,
     activeFrom: environment.travel.activeFrom ?? 0,
     activeUntil,
     easing: environment.travel.easing,
@@ -523,9 +669,12 @@ export const buildLoopingWorldProof = async ({
     groundCrossedSeam,
     worldLockClean,
     groundWorldDisplacement: cleanNumber(groundWorldDisplacement),
+    signedDirectionProof,
     groundTotalWorldDisplacement: cleanNumber(groundTotalWorldDisplacement),
     trackedSubjectProof,
     foregroundOcclusion,
+    subjectProofs,
+    subjectOcclusions,
   };
   proof.fingerprint = hashCompositionValue({
     runtimeBuildFingerprint,
@@ -536,15 +685,18 @@ export const buildLoopingWorldProof = async ({
   });
   proof.passed =
     strips.length >= 2 &&
-    strips.every(({seamPassed}) => seamPassed) &&
+    strips.every(({seamPassed, visibleSurfaceProof}) =>
+      seamPassed && visibleSurfaceProof.passed) &&
     speedOrdered &&
+    signedDirectionProof.passed &&
     (frozen || (groundCrossedSeam && groundTotalWorldDisplacement >= video.width)) &&
     (!requiresWorldLock || worldLockClean) &&
     coverage.every(({uncoveredPixels, viewportSpan}) =>
       uncoveredPixels === 0 && viewportSpan >= 1,
     ) &&
-    trackedSubjectProof.passed &&
-    foregroundOcclusion.passed;
+    subjectProofs.length === environment.subjectBindings.length &&
+    subjectProofs.every(({proof: subjectProof}) => subjectProof.passed) &&
+    subjectOcclusions.every(({passed}) => passed);
   return proof;
 };
 

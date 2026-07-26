@@ -15,6 +15,15 @@ The first intake never authorizes provider spend. The combined second decision m
 
 Do not create a fourth default gate after final render. Local final delivery completes the creation task.
 
+If preview feedback intentionally changes narration meaning, scene semantics, or
+which scenes must be still, do not disguise it as a directing-only revision.
+Record a schema-v1 semantic revision authorization containing the source
+feedback, exact allowed scene ids, human note, and equivalent-quality evidence,
+then run `project:revise-preview-semantic`. The command rejects top-level
+story/style drift, records old/new concept fingerprints, recomputes only legal
+locked-static motion floors, preserves the approved provider cap, and
+invalidates all dependent style/proof/render evidence.
+
 ## Cost Boundary
 
 - Before combined scenario/concept approval, use only the current host model for the common story and three scenarios; do not invoke an unconfirmed external/paid provider. Built-in style cards are versioned local text-to-image PNG assets and consume no provider calls when shown during intake.

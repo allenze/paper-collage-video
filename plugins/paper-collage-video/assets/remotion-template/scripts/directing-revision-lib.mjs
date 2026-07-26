@@ -4,6 +4,12 @@ import {
   compileStoryboardDirecting,
   validateStoryboard,
 } from './storyboard-lib.mjs';
+import {
+  recalculateProfilePromiseForLockedStaticScenes,
+} from './motion-treatment-lib.mjs';
+import {
+  assertStoryboardMatchesScenario,
+} from './planning-scenario-lib.mjs';
 import {materializeSceneTransitionRecipes} from '../src/sceneTimeline.mjs';
 
 const sceneConcept = (scene) => ({
@@ -12,6 +18,8 @@ const sceneConcept = (scene) => ({
   narrativeRole: scene.narrativeRole,
   message: scene.message,
   blueprint: scene.blueprint,
+  motionPolicy: scene.motionPolicy ?? 'standard',
+  staticRationale: scene.staticRationale ?? null,
   beats: (scene.beats ?? []).map((beat) => ({
     id: beat.id,
     purpose: beat.purpose,
@@ -73,6 +81,55 @@ const changedCategories = (before, after) => {
 const styleProofTarget = (storyboard) => {
   const plan = storyboard.directingSummary?.styleProofPlan ?? null;
   return plan ? {fingerprint: plan.fingerprint, targets: plan.targets} : null;
+};
+
+const authorizationFingerprint = (authorization) =>
+  hashCompositionValue({
+    schemaVersion: authorization.schemaVersion,
+    id: authorization.id,
+    slug: authorization.slug,
+    source: authorization.source,
+    allowedSceneIds: [...authorization.allowedSceneIds].sort(),
+    humanNote: authorization.humanNote.trim(),
+    equivalentQualityEvidence: authorization.equivalentQualityEvidence.map(
+      (entry) => entry.trim(),
+    ),
+    decidedAt: authorization.decidedAt,
+  });
+
+const assertSemanticRevisionAuthorization = ({
+  authorization,
+  slug,
+  sceneIds,
+}) => {
+  if (
+    authorization?.schemaVersion !== 1 ||
+    authorization.slug !== slug ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(authorization.id ?? '') ||
+    ![
+      'preview-changes-requested',
+      'style-review-feedback',
+      'asset-production-feedback',
+    ].includes(authorization.source) ||
+    !Array.isArray(authorization.allowedSceneIds) ||
+    authorization.allowedSceneIds.length < 1 ||
+    new Set(authorization.allowedSceneIds).size !==
+      authorization.allowedSceneIds.length ||
+    authorization.allowedSceneIds.some((id) => !sceneIds.has(id)) ||
+    typeof authorization.humanNote !== 'string' ||
+    !authorization.humanNote.trim() ||
+    !Array.isArray(authorization.equivalentQualityEvidence) ||
+    authorization.equivalentQualityEvidence.length < 1 ||
+    authorization.equivalentQualityEvidence.some(
+      (entry) => typeof entry !== 'string' || !entry.trim(),
+    ) ||
+    !Number.isFinite(Date.parse(authorization.decidedAt))
+  ) {
+    throw new Error(
+      'semantic revision authorization 必须绑定当前项目、合法来源、允许改变的镜头、人类原话、等价质量说明和决定时间。',
+    );
+  }
+  return authorization;
 };
 
 export const prepareDirectingRevision = ({
@@ -182,4 +239,177 @@ export const prepareDirectingRevision = ({
     at,
   });
   return {storyboard: candidate, production: nextProduction, report: {...report, source}};
+};
+
+export const prepareSemanticRevision = ({
+  currentStoryboard,
+  suppliedStoryboard,
+  plan,
+  production,
+  authorization,
+  reportPath,
+  scenarioOption = null,
+  at = new Date().toISOString(),
+}) => {
+  const currentSceneIds = new Set(
+    currentStoryboard.scenes.map(({id}) => id),
+  );
+  assertSemanticRevisionAuthorization({
+    authorization,
+    slug: currentStoryboard.slug,
+    sceneIds: currentSceneIds,
+  });
+  const sourceByAuthorization = {
+    'preview-changes-requested': 'preview',
+    'style-review-feedback': 'style-review',
+    'asset-production-feedback': 'asset-production',
+  };
+  const source = sourceByAuthorization[authorization.source];
+  const authored = storyboardAuthoringFromCompiled(suppliedStoryboard);
+  if (
+    hashCompositionValue(currentStoryboard.arc) !==
+      hashCompositionValue(authored.arc) ||
+    hashCompositionValue(currentStoryboard.style) !==
+      hashCompositionValue(authored.style)
+  ) {
+    throw new Error(
+      '语义重编授权按镜头生效；全片 arc 或 style 变化必须返回其所属概念/风格决策。',
+    );
+  }
+  const profileRecalculation =
+    recalculateProfilePromiseForLockedStaticScenes({
+      promise: plan.profilePromise ?? null,
+      scenes: authored.scenes ?? [],
+    });
+  const nextPlan = profileRecalculation?.changed
+    ? {
+        ...plan,
+        profilePromise: profileRecalculation.recalculated,
+        profilePromiseRevision: {
+          authorizationId: authorization.id,
+          authorizationFingerprint: authorizationFingerprint(authorization),
+          lockedSceneIds: profileRecalculation.lockedSceneIds,
+          original: profileRecalculation.original,
+          recalculated: profileRecalculation.recalculated,
+          equivalentQualityEvidence:
+            authorization.equivalentQualityEvidence.map((entry) =>
+              entry.trim(),
+            ),
+          decidedAt: authorization.decidedAt,
+        },
+        updatedAt: at,
+      }
+    : plan;
+  const candidate = compileStoryboardDirecting({
+    ...authored,
+    $schema: '../../schemas/storyboard.schema.json',
+    schemaVersion: 10,
+    slug: currentStoryboard.slug,
+    status: 'ready',
+    sceneTransitions: materializeSceneTransitionRecipes(
+      authored.sceneTransitions,
+    ),
+    updatedAt: at,
+  }, {plan: nextPlan});
+  const issues = validateStoryboard(candidate, {
+    slug: currentStoryboard.slug,
+    plan: nextPlan,
+  });
+  if (issues.length > 0) {
+    throw new Error(
+      issues
+        .map(({location, message}) => `${location}: ${message}`)
+        .join('\n'),
+    );
+  }
+  if (scenarioOption) {
+    // The owning scenario remains the budget and critical-action boundary.
+    assertStoryboardMatchesScenario(
+      scenarioOption,
+      candidate.directingSummary,
+    );
+  }
+  const beforeScenes = new Map(
+    currentStoryboard.scenes.map((scene) => [scene.id, scene]),
+  );
+  const semanticChangedSceneIds = candidate.scenes
+    .filter(
+      (scene) =>
+        hashCompositionValue(sceneConcept(beforeScenes.get(scene.id))) !==
+        hashCompositionValue(sceneConcept(scene)),
+    )
+    .map(({id}) => id)
+    .sort();
+  if (semanticChangedSceneIds.length === 0) {
+    throw new Error(
+      'human-authorized semantic revision 必须产生至少一个真实镜头语义变化；纯导演变化请使用 project:revise-preview-directing。',
+    );
+  }
+  const allowed = new Set(authorization.allowedSceneIds);
+  const unauthorized = semanticChangedSceneIds.filter(
+    (sceneId) => !allowed.has(sceneId),
+  );
+  if (unauthorized.length > 0) {
+    throw new Error(
+      `语义重编越过人类授权镜头：${unauthorized.join(', ')}。`,
+    );
+  }
+  const directingChangedScenes = candidate.scenes
+    .map((scene) => ({
+      sceneId: scene.id,
+      categories: changedCategories(beforeScenes.get(scene.id), scene),
+    }))
+    .filter(({categories}) => categories.length > 0);
+  const changedSceneIds = [
+    ...new Set([
+      ...semanticChangedSceneIds,
+      ...directingChangedScenes.map(({sceneId}) => sceneId),
+    ]),
+  ].sort();
+  const nextProduction = transitionDirectingRevision(production, {
+    changedSceneIds,
+    invalidateStyleProof: true,
+    source,
+    reportPath,
+    at,
+  });
+  nextProduction.artifacts.semanticRevision = reportPath;
+  nextProduction.artifacts.directingRevision = null;
+  const historyEntry = nextProduction.history.at(-1);
+  historyEntry.action = 'revise-preview-semantic';
+  historyEntry.note =
+    `${authorization.id} · ${source} · ${changedSceneIds.join(', ')} · ${reportPath}`;
+  const report = {
+    schemaVersion: 1,
+    slug: currentStoryboard.slug,
+    createdAt: at,
+    source,
+    authorization: {
+      ...authorization,
+      fingerprint: authorizationFingerprint(authorization),
+    },
+    oldConceptFingerprint:
+      storyboardConceptFingerprint(currentStoryboard),
+    newConceptFingerprint: storyboardConceptFingerprint(candidate),
+    semanticChangedSceneIds,
+    changedSceneIds,
+    changedScenes: directingChangedScenes,
+    profilePromiseRecalculation: profileRecalculation,
+    executionSyncRequired: true,
+    providerApprovalRequired: false,
+    invalidatedArtifacts: [
+      'styleProof',
+      'validationReport',
+      'preview',
+      'final',
+      'report',
+      'contactSheet',
+    ],
+  };
+  return {
+    storyboard: candidate,
+    plan: nextPlan,
+    production: nextProduction,
+    report,
+  };
 };

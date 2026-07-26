@@ -16,6 +16,17 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const still = () => ({keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]});
 const fullTransform = () => ({x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0});
+const withStateContract = (node) => node.kind !== 'state-sequence' ? node : ({
+  ...node,
+  anchorPolicy: {requiredAnchorIds: ['ground-contact'], maximumDrift: 0.02},
+  states: node.states.map((state) => ({
+    ...state,
+    facing: 'right',
+    anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+    identityReferenceAssetId: `${node.poseFamilyId}-identity`,
+    identityReferenceSha256: 'd'.repeat(64),
+  })),
+});
 const asset = ({id, slot, role = 'prop', clip, semanticCoverage}) => ({
   id,
   kind: 'asset',
@@ -100,7 +111,7 @@ const depthStackGroup = () => ({
 });
 
 const validate = (node, proofTimes = [{id: 'establish', at: 0.08}, {id: 'action', at: 0.5}, {id: 'final', at: 0.9}]) => validateCompositionStructure({
-  composition: {coordinateSpace: {width: 100, height: 100}, nodes: [node]},
+  composition: {coordinateSpace: {width: 100, height: 100}, nodes: [withStateContract(node)]},
   video: {width: 100, height: 100},
   proofTimes,
 });

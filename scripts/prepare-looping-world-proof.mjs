@@ -184,6 +184,17 @@ const carSvg = () => svgDocument({
   `,
 });
 
+const finishMarkerSvg = () => svgDocument({
+  width: 240,
+  height: 420,
+  body: `
+    <path d="M116 398 V38" stroke="#24343c" stroke-width="22" stroke-linecap="round"/>
+    <path d="M126 52 H218 L188 112 L218 172 H126Z" fill="#fff0c7" stroke="#24343c" stroke-width="14" stroke-linejoin="round"/>
+    <path d="M142 68 h32 v32 h-32z M174 100 h28 v32 h-28z M142 132 h32 v24 h-32z" fill="#d86a45"/>
+    <ellipse cx="116" cy="370" rx="76" ry="10" fill="#24343c"/>
+  `,
+});
+
 const wavBuffer = ({durationSeconds, sampleRate = 48000}) => {
   const sampleCount = Math.round(durationSeconds * sampleRate);
   const dataSize = sampleCount * 2;
@@ -291,6 +302,18 @@ const carRecord = await createSourceRecord({
     outputRole: 'tracked-subject',
   },
 });
+const finishMarkerFile = path.join(PUBLIC_DIRECTORY, 'finish-marker.png');
+await sharp(finishMarkerSvg()).png().toFile(finishMarkerFile);
+const finishMarkerRecord = await createSourceRecord({
+  assetId: 'finish-marker',
+  file: finishMarkerFile,
+  compositionBinding: {
+    sceneId: LOOPING_WORLD_SCENE_ID,
+    nodeId: 'finish-marker',
+    pattern: 'looping-environment',
+    outputRole: 'world-anchored-participant',
+  },
+});
 
 const audioFile = path.join(PUBLIC_DIRECTORY, 'engineering-tone.wav');
 await fs.writeFile(audioFile, wavBuffer({durationSeconds: LOOPING_WORLD_DURATION_SECONDS}));
@@ -323,7 +346,7 @@ let manifest = {
   $schema: '../../schemas/assets-manifest.schema.json',
   schemaVersion: 4,
   projectSlug: LOOPING_WORLD_SLUG,
-  assets: [...sourceRecords, carRecord],
+  assets: [...sourceRecords, carRecord, finishMarkerRecord],
 };
 const stripAssets = {};
 const derivationReports = [];
@@ -407,6 +430,7 @@ for (const profile of LOOPING_WORLD_PROFILES) {
     profileId: profile.id,
     stripAssets,
     carSrc: publicSrc(carFile),
+    finishMarkerSrc: publicSrc(finishMarkerFile),
   });
   const result = await validateProject(project, {storyboard, manifest});
   const errors = result.issues.filter(({level}) => level === 'error');
@@ -478,6 +502,18 @@ const acceptance = {
   speedStrictlyDepthOrdered: worldProofs.every(({speedOrdered}) => speedOrdered),
   trackedSubjectReadable: worldProofs.every(
     ({trackedSubjectProof}) => trackedSubjectProof.readabilityPassed,
+  ),
+  visibleWorldSurfaces: worldProofs.every(({strips}) =>
+    strips.every(({visibleSurfaceProof}) => visibleSurfaceProof.passed)
+  ),
+  allSubjectAnchorsPassed: worldProofs.every(({subjectProofs}) =>
+    subjectProofs.every(({proof}) => proof.passed)
+  ),
+  allSubjectOcclusionsPassed: worldProofs.every(({subjectOcclusions}) =>
+    subjectOcclusions.every(({passed}) => passed)
+  ),
+  signedWorldDirectionPassed: worldProofs.every(
+    ({signedDirectionProof}) => signedDirectionProof.passed,
   ),
   foregroundOcclusion: worldProofs.map(
     ({profileId, foregroundOcclusion}) => ({

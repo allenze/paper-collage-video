@@ -206,6 +206,10 @@ export type SequenceState = {
   id: string;
   src: string;
   at: number;
+  facing: 'left' | 'right' | 'front' | 'back' | 'neutral';
+  anchors: Array<{id: string; x: number; y: number}>;
+  identityReferenceAssetId: string;
+  identityReferenceSha256: string;
 };
 
 export type CompositionStateSequenceNode = {
@@ -214,6 +218,10 @@ export type CompositionStateSequenceNode = {
   assetRole: 'character' | 'prop' | 'decorative';
   poseFamilyId: string;
   registration: CompositionRegistration;
+  anchorPolicy: {
+    requiredAnchorIds: string[];
+    maximumDrift: number;
+  };
   states: SequenceState[];
   playback: {
     mode: 'once' | 'loop' | 'ping-pong';
@@ -624,6 +632,11 @@ export type CompositionWorldStripNode = {
   id: string;
   kind: 'world-strip';
   role: 'far' | 'mid' | 'ground' | 'near';
+  surfaceRole:
+    | 'backdrop'
+    | 'scenery'
+    | 'walkable-ground'
+    | 'foreground-occluder';
   src: string;
   loopingStripBinding: LoopingStripBinding;
   z: number;
@@ -676,7 +689,13 @@ export type CompositionGroupNode = {
   loopingEnvironment?: {
     axis: 'x';
     groundStripId: string;
-    trackedSubjectId: string;
+    subjectBindings: Array<{
+      nodeId: string;
+      role: 'tracked' | 'participant';
+      anchorMode: 'screen' | 'world';
+      nearOcclusion: 'behind-near' | 'above-near';
+      proofTimeIds: string[];
+    }>;
     seamProofTimeIds: {
       before: string;
       seam: string;

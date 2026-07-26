@@ -88,6 +88,7 @@ const composeNodeTransform = ({
   cameraY,
   cameraZoom,
   parallax,
+  worldAnchorOffsetX = 0,
 }: {
   node: CompositionNode;
   parent: CoordinateSpace;
@@ -101,6 +102,7 @@ const composeNodeTransform = ({
   cameraY: number;
   cameraZoom: number;
   parallax: NormalizedProjectScene['camera']['parallax'];
+  worldAnchorOffsetX?: number;
 }) => {
   const authored = resolveMotionState(node.motion.keyframes, progress);
   const idle = resolveIdleState({
@@ -133,7 +135,7 @@ const composeNodeTransform = ({
     width,
     height,
     opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * emphasis.opacity * visibility.opacity,
-    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x}px, ${(authored.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
+    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x + worldAnchorOffsetX}px, ${(authored.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
   };
 };
 
@@ -201,6 +203,7 @@ const AssetView = ({
   cameraY,
   cameraZoom,
   parallax,
+  worldAnchorOffsetX,
 }: {
   node: CompositionAssetNode;
   parent: CoordinateSpace;
@@ -217,8 +220,9 @@ const AssetView = ({
   cameraY: number;
   cameraZoom: number;
   parallax: NormalizedProjectScene['camera']['parallax'];
+  worldAnchorOffsetX?: number;
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX});
   const cutout = ['character', 'prop'].includes(node.assetRole);
   return (
     <div
@@ -257,6 +261,7 @@ const StateSequenceView = ({
   cameraY,
   cameraZoom,
   parallax,
+  worldAnchorOffsetX,
 }: {
   node: CompositionStateSequenceNode;
   parent: CoordinateSpace;
@@ -273,8 +278,9 @@ const StateSequenceView = ({
   cameraY: number;
   cameraZoom: number;
   parallax: NormalizedProjectScene['camera']['parallax'];
+  worldAnchorOffsetX?: number;
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX});
   const layers = resolveSequenceLayers({node, progress, durationSeconds});
   const registeredHeight = resolved.height ?? resolved.width * node.registration.canvas.height / node.registration.canvas.width;
   return (
@@ -624,6 +630,46 @@ const GroupView = ({
   });
   const ratio = node.coordinateSpace.height / node.coordinateSpace.width;
   const height = resolved.height ?? resolved.width * ratio;
+  const groundStrip = loopingWorld
+    ? node.children.find(
+        (child): child is CompositionWorldStripNode =>
+          child.kind === 'world-strip' &&
+          child.id === node.loopingEnvironment?.groundStripId,
+      )
+    : null;
+  const groundSpeed = groundStrip && node.loopingEnvironment
+    ? resolveWorldStripSpeedFactor({
+        depth: groundStrip.depth,
+        far: node.loopingEnvironment.speedRange.far,
+        near: node.loopingEnvironment.speedRange.near,
+      })
+    : 0;
+  const worldSubjectOffsetX = (childId: string) => {
+    const binding = node.loopingEnvironment?.subjectBindings.find(
+      ({nodeId}) => nodeId === childId,
+    );
+    if (
+      !binding ||
+      binding.anchorMode !== 'world' ||
+      !node.loopingEnvironment ||
+      !groundStrip
+    ) {
+      return 0;
+    }
+    return resolveWorldStripFrame({
+      progress: node.loopingEnvironment.travel.frozen === true ? 0 : progress,
+      viewportWidth: resolved.width,
+      tileWidth: resolved.width,
+      direction: node.loopingEnvironment.travel.direction,
+      distanceViewports: node.loopingEnvironment.travel.distanceViewports,
+      speedFactor: groundSpeed,
+      startPhase: node.loopingEnvironment.travel.startPhase,
+      activeFrom: node.loopingEnvironment.travel.activeFrom ?? 0,
+      activeUntil: node.loopingEnvironment.travel.activeUntil ?? 1,
+      easing: node.loopingEnvironment.travel.easing,
+      overscanPx: node.loopingEnvironment.overscanPx,
+    }).cameraCompensatedDisplacement;
+  };
   return (
     <div
       data-composition-node={node.id}
@@ -665,6 +711,7 @@ const GroupView = ({
             rootNodes={rootNodes}
             zones={zones}
             loopingEnvironment={node.loopingEnvironment}
+            worldAnchorOffsetX={worldSubjectOffsetX(child.id)}
           />
         ))}
     </div>
@@ -692,6 +739,7 @@ const CompositionNodeView = ({
   rootNodes,
   zones,
   loopingEnvironment,
+  worldAnchorOffsetX,
 }: {
   node: CompositionNode;
   parent: CoordinateSpace;
@@ -713,13 +761,14 @@ const CompositionNodeView = ({
   rootNodes: CompositionNode[];
   zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
   loopingEnvironment?: CompositionGroupNode['loopingEnvironment'];
+  worldAnchorOffsetX?: number;
 }) => {
   if (node.kind === 'group' && node.renderParticipation === 'derivation-only') {
     return null;
   }
   if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
-  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax}} />;
-  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax}} />;
+  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
+  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
   if (node.kind === 'typography') {
     const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
     return <TypographyView node={node as CompositionTypographyNode} sceneId={sceneId} frame={frame} editorial={editorial} container={containerStyle({node, resolved, renderZ})} width={resolved.width} height={resolved.height ?? parent.height} />;

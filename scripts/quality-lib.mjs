@@ -49,6 +49,7 @@ import {
   inspectAlphaBands,
 } from './alpha-band-lib.mjs';
 import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
+import {inspectStateAnchorRegistration} from './state-sheet-lib.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -96,7 +97,10 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'final-state-preserved',
   'state-order-correct',
   'pose-registration-stable',
+  'state-anchor-stable',
+  'state-facing-correct',
   'state-identity-consistent',
+  'identity-reference-current',
   'transition-clean',
   'depth-order-readable',
   'camera-coupling-clean',
@@ -125,6 +129,10 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'world-lock-clean',
   'repetition-cadence-clean',
   'tracked-subject-readable',
+  'world-surfaces-readable',
+  'world-anchors-correct',
+  'multi-subject-occlusion-correct',
+  'signed-world-direction-correct',
 ];
 
 export const QUALITY_CHECKS = [
@@ -150,10 +158,19 @@ const COMPOSITE_PROFILES = {
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
   'registered-depth-stack': ['registration-aligned', 'layer-completeness-proven', 'depth-order-readable', 'neutral-reconstruction-readable', 'exploded-view-readable', 'responsive-motion-stress-clean', 'final-composition-readable'],
   event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
-  'state-sequence': ['state-order-correct', 'pose-registration-stable', 'state-identity-consistent', 'transition-clean', 'proof-time-bound'],
+  'state-sequence': [
+    'state-order-correct',
+    'pose-registration-stable',
+    'state-anchor-stable',
+    'state-facing-correct',
+    'state-identity-consistent',
+    'identity-reference-current',
+    'transition-clean',
+    'proof-time-bound',
+  ],
   'parallax-rig': ['depth-order-readable', 'camera-coupling-clean', 'registered-groups-stable', 'final-composition-readable'],
   'motif-field': ['field-density-readable', 'field-bounds-clean', 'field-exclusions-clean', 'field-motion-clean', 'field-loop-clean', 'final-composition-readable'],
-  'looping-environment': ['strip-seams-clean', 'coverage-gap-free', 'depth-speed-readable', 'world-motion-resolvable', 'repetition-cadence-clean', 'tracked-subject-readable', 'final-composition-readable'],
+  'looping-environment': ['strip-seams-clean', 'coverage-gap-free', 'depth-speed-readable', 'world-motion-resolvable', 'repetition-cadence-clean', 'tracked-subject-readable', 'world-surfaces-readable', 'world-anchors-correct', 'multi-subject-occlusion-correct', 'signed-world-direction-correct', 'final-composition-readable'],
   typography: ['typography-fit-clean', 'typography-timing-bound', 'final-composition-readable'],
   annotation: ['annotation-routing-clean', 'annotation-exclusions-clean', 'proof-time-bound'],
   'data-graphic': ['data-mapping-valid', 'data-reveal-bound', 'proof-time-bound'],
@@ -169,6 +186,10 @@ const requiredChecksForGroup = (group) => {
       'depth-speed-readable',
       'world-lock-clean',
       'tracked-subject-readable',
+      'world-surfaces-readable',
+      'world-anchors-correct',
+      'multi-subject-occlusion-correct',
+      'signed-world-direction-correct',
       'final-composition-readable',
     ];
   }
@@ -628,6 +649,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
     await createRuntimeSurfaceFingerprint('composition-proof');
   const assetManifest = manifest ?? await readManifest(project);
   const recordsByFile = new Map((assetManifest.assets ?? []).map((record) => [path.normalize(record.file), record]));
+  const recordsByAssetId = new Map((assetManifest.assets ?? []).map((record) => [record.assetId, record]));
   const targets = [];
   for (const scene of project.scenes ?? []) {
     const sceneTransitions = (project.sceneTransitions ?? []).filter(
@@ -771,6 +793,10 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         reviewScope: 'runtime-visible',
         sequence: node,
         stateRecords,
+        identityReferenceRecords: node.states.map(
+          ({identityReferenceAssetId}) =>
+            recordsByAssetId.get(identityReferenceAssetId) ?? null,
+        ),
       });
     }
     for (const {node: group, renderParticipation} of collectCompositionGroups(scene.composition)) {
@@ -1426,6 +1452,38 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
         expected: 'current seam, coverage, depth-speed, wrap, and camera-compensated world-motion proof',
         actual: worldProof ?? null,
       },
+      {
+        id: 'looping-world-visible-surfaces',
+        passed:
+          worldProof?.strips?.every(
+            ({visibleSurfaceProof}) => visibleSurfaceProof?.passed === true,
+          ) === true,
+        expected:
+          'every semantic strip has visible full-span source support and walkable ground has real support at both repeat edges',
+        actual:
+          worldProof?.strips?.map(
+            ({nodeId, role, surfaceRole, visibleSurfaceProof}) => ({
+              nodeId,
+              role,
+              surfaceRole,
+              visibleSurfaceProof,
+            }),
+          ) ?? null,
+      },
+      {
+        id: 'looping-world-subject-topology',
+        passed:
+          worldProof?.subjectProofs?.length ===
+            target.group.loopingEnvironment.subjectBindings.length &&
+          worldProof.subjectProofs.every(({proof}) => proof?.passed === true) &&
+          worldProof.subjectOcclusions?.every(({passed}) => passed) === true,
+        expected:
+          'all screen/world anchored subjects follow their declared motion and near-layer occlusion relation',
+        actual: {
+          subjectProofs: worldProof?.subjectProofs ?? null,
+          subjectOcclusions: worldProof?.subjectOcclusions ?? null,
+        },
+      },
     );
   }
   if (target.pattern === 'event') {
@@ -1439,19 +1497,96 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       const proof = proofFrames.find((frame) => frame.proofTimeId === proofTimeId);
       return proof ? [proofTimeId] : [];
     }));
-    const registrationsBound = target.stateRecords.every((record) => {
+    const registrationsBound = target.stateRecords.every((record, index) => {
       if (!record) return false;
       const binding = record.stateBinding ?? record.request?.stateBinding;
-      return binding?.poseFamilyId === target.sequence.poseFamilyId && binding?.registrationId === target.sequence.registration.id;
+      const state = target.sequence.states[index];
+      return (
+        binding?.poseFamilyId === target.sequence.poseFamilyId &&
+        binding?.registrationId === target.sequence.registration.id &&
+        binding?.stateId === state.id &&
+        binding?.facing === state.facing &&
+        JSON.stringify(binding?.anchors) === JSON.stringify(state.anchors) &&
+        binding?.identityReferenceAssetId === state.identityReferenceAssetId &&
+        binding?.identityReferenceSha256 === state.identityReferenceSha256
+      );
     });
     const registeredDimensions = new Set(target.stateRecords.map((record) =>
       record?.media ? `${record.media.width}x${record.media.height}` : 'missing',
     ));
     const expectedDimensions = `${target.sequence.registration.canvas.width}x${target.sequence.registration.canvas.height}`;
+    const anchorRegistrationProof = inspectStateAnchorRegistration({
+      states: target.sequence.states,
+      anchorPolicy: target.sequence.anchorPolicy,
+    });
+    const anchorEvidence = await Promise.all(target.stateRecords.map(async (record) => {
+      const evidence = (record?.stateBinding ?? record?.request?.stateBinding)?.anchorEvidence;
+      if (!evidence?.file || !evidence?.sha256) {
+        return {
+          file: evidence?.file ?? null,
+          expectedSha256: evidence?.sha256 ?? null,
+          actualSha256: null,
+          passed: false,
+        };
+      }
+      try {
+        const file = assertWorkspaceFile(evidence.file);
+        const actualSha256 = (await fileExists(file)) ? await hashFile(file) : null;
+        return {
+          file: evidence.file,
+          expectedSha256: evidence.sha256,
+          actualSha256,
+          passed: actualSha256 === evidence.sha256,
+        };
+      } catch {
+        return {
+          file: evidence.file,
+          expectedSha256: evidence.sha256,
+          actualSha256: null,
+          passed: false,
+        };
+      }
+    }));
+    const identityReferencesCurrent = target.sequence.states.every((state, index) => {
+      const record = target.identityReferenceRecords[index];
+      return (
+        record?.lifecycle?.status === 'active' &&
+        record.sha256 === state.identityReferenceSha256
+      );
+    });
+    const facingsDeclared = target.sequence.states.every(
+      ({facing}) => ['left', 'right', 'front', 'back', 'neutral'].includes(facing),
+    );
     checks.push(
       {id: 'state-proofs-complete', passed: proofStateIds.size === target.proofTimeIds.length, expected: target.proofTimeIds.length, actual: proofStateIds.size},
       {id: 'registered-state-family', passed: registrationsBound, actual: registrationsBound},
       {id: 'registered-state-dimensions', passed: registeredDimensions.size === 1 && registeredDimensions.has(expectedDimensions), expected: expectedDimensions, actual: [...registeredDimensions].join(', ')},
+      {
+        id: 'state-anchor-registration',
+        passed:
+          anchorRegistrationProof.passed &&
+          anchorEvidence.every(({passed}) => passed),
+        expected: 'declared anchor drift within policy and current per-state anchor overlays',
+        actual: {anchorRegistrationProof, anchorEvidence},
+      },
+      {
+        id: 'state-facing-metadata',
+        passed: facingsDeclared,
+        expected: 'every state declares a valid facing for visual review',
+        actual: target.sequence.states.map(({id, facing}) => ({stateId: id, facing})),
+      },
+      {
+        id: 'state-identity-reference',
+        passed: identityReferencesCurrent,
+        expected: 'every state binds the current active identity-reference SHA-256',
+        actual: target.sequence.states.map((state, index) => ({
+          stateId: state.id,
+          assetId: state.identityReferenceAssetId,
+          expectedSha256: state.identityReferenceSha256,
+          actualSha256: target.identityReferenceRecords[index]?.sha256 ?? null,
+          lifecycleStatus: target.identityReferenceRecords[index]?.lifecycle?.status ?? null,
+        })),
+      },
     );
   }
   if (target.pattern === 'parallax-rig') {

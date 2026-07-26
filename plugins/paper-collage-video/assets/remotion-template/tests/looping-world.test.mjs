@@ -175,9 +175,9 @@ test('world-strip eases to and permanently holds its completed phase after activ
 
 test('looping-environment validates semantic strips, tracked subject, seam proofs, and monotonic depth speed', () => {
   const strips = [
-    {id: 'mountains', role: 'far', depth: -0.8, z: 0},
-    {id: 'trees', role: 'mid', depth: -0.1, z: 1},
-    {id: 'road', role: 'ground', depth: 0.55, z: 2},
+    {id: 'mountains', role: 'far', surfaceRole: 'backdrop', depth: -0.8, z: 0},
+    {id: 'trees', role: 'mid', surfaceRole: 'scenery', depth: -0.1, z: 1},
+    {id: 'road', role: 'ground', surfaceRole: 'walkable-ground', depth: 0.55, z: 2},
   ].map((strip) => ({
     ...strip,
     kind: 'world-strip',
@@ -200,7 +200,19 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
         loopingEnvironment: {
           axis: 'x',
           groundStripId: 'road',
-          trackedSubjectId: 'car',
+          subjectBindings: [{
+            nodeId: 'car',
+            role: 'tracked',
+            anchorMode: 'screen',
+            nearOcclusion: 'above-near',
+            proofTimeIds: ['before', 'seam', 'after'],
+          }, {
+            nodeId: 'finish-marker',
+            role: 'participant',
+            anchorMode: 'world',
+            nearOcclusion: 'above-near',
+            proofTimeIds: ['before', 'seam'],
+          }],
           seamProofTimeIds: {before: 'before', seam: 'seam', after: 'after'},
           travel: {
             direction: 'left',
@@ -226,6 +238,16 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
             transform: {x: 0.5, y: 0.72, width: 0.3, height: 0.2, anchorX: 0.5, anchorY: 1},
             motion: still,
           },
+          {
+            id: 'finish-marker',
+            kind: 'asset',
+            assetRole: 'prop',
+            src: 'finish-marker.png',
+            z: 5,
+            depth: 0.25,
+            transform: {x: 0.8, y: 0.72, width: 0.08, height: 0.2, anchorX: 0.5, anchorY: 1},
+            motion: still,
+          },
         ],
       },
     ],
@@ -240,6 +262,21 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
     ],
   });
   assert.deepEqual(result.issues.filter(({level}) => level === 'error'), []);
+  const missingParticipant = structuredClone(composition);
+  missingParticipant.nodes[0].children = missingParticipant.nodes[0].children.filter(
+    ({id}) => id !== 'finish-marker',
+  );
+  assert.ok(
+    validateCompositionStructure({
+      composition: missingParticipant,
+      video: {width: 200, height: 100},
+      proofTimes: [
+        {id: 'before', at: 0.2, stateAssertions: []},
+        {id: 'seam', at: 0.5, stateAssertions: []},
+        {id: 'after', at: 0.8, stateAssertions: []},
+      ],
+    }).issues.some(({code}) => code === 'composition-looping-members'),
+  );
   const invalidCue = structuredClone(composition);
   invalidCue.nodes[0].loopingEnvironment.travel.activeFrom = 1;
   const invalidCueResult = validateCompositionStructure({
@@ -327,7 +364,13 @@ test('world-travel authoring compiles only through looping-environment and scrol
         distanceViewports: 8,
         speedRange: {far: 0.2, near: 1.2},
         groundStripId: 'road',
-        trackedSubjectId: 'car',
+        subjectBindings: [{
+          nodeId: 'car',
+          role: 'tracked',
+          anchorMode: 'screen',
+          nearOcclusion: 'above-near',
+          proofTimeIds: ['proof-before', 'proof-seam', 'proof-after'],
+        }],
         seamProofTimeIds: {before: 'proof-before', seam: 'proof-seam', after: 'proof-after'},
         closedLoop: false,
         startPhase: 0.1,
@@ -335,9 +378,9 @@ test('world-travel authoring compiles only through looping-environment and scrol
         activeUntil: 0.8,
         easing: 'ease-out',
         strips: [
-          {id: 'mountains', role: 'far', depth: -0.8},
-          {id: 'trees', role: 'mid', depth: -0.1},
-          {id: 'road', role: 'ground', depth: 0.55},
+          {id: 'mountains', role: 'far', surfaceRole: 'backdrop', depth: -0.8},
+          {id: 'trees', role: 'mid', surfaceRole: 'scenery', depth: -0.1},
+          {id: 'road', role: 'ground', surfaceRole: 'walkable-ground', depth: 0.55},
         ],
       },
     },

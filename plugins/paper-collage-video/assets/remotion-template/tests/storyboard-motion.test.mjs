@@ -222,7 +222,13 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
         distanceViewports: 8,
         speedRange: {far: 0.18, near: 1.2},
         groundStripId: 'road-strip',
-        trackedSubjectId: 'paper-car',
+        subjectBindings: [{
+          nodeId: 'paper-car',
+          role: 'tracked',
+          anchorMode: 'screen',
+          nearOcclusion: 'behind-near',
+          proofTimeIds: ['proof-establish', 'proof-action', 'proof-final'],
+        }],
         seamProofTimeIds: {
           before: 'proof-establish',
           seam: 'proof-action',
@@ -232,10 +238,10 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
         startPhase: 0.12,
         activeFrom: 0.2,
         strips: [
-          {id: 'mountain-strip', role: 'far', depth: -0.85},
-          {id: 'tree-strip', role: 'mid', depth: -0.2},
-          {id: 'road-strip', role: 'ground', depth: 0.4},
-          {id: 'grass-strip', role: 'near', depth: 0.9},
+          {id: 'mountain-strip', role: 'far', surfaceRole: 'backdrop', depth: -0.85},
+          {id: 'tree-strip', role: 'mid', surfaceRole: 'scenery', depth: -0.2},
+          {id: 'road-strip', role: 'ground', surfaceRole: 'walkable-ground', depth: 0.4},
+          {id: 'grass-strip', role: 'near', surfaceRole: 'foreground-occluder', depth: 0.9},
         ],
       },
     },
@@ -245,7 +251,13 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
   const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
   const [world] = storyboard.scenes[0].compositionPlan.loopingEnvironments;
   assert.equal(world.targetId, 'road-world');
-  assert.equal(world.trackedSubjectId, 'paper-car');
+  assert.deepEqual(world.subjectBindings, [{
+    nodeId: 'paper-car',
+    role: 'tracked',
+    anchorMode: 'screen',
+    nearOcclusion: 'behind-near',
+    proofTimeIds: ['proof-establish', 'proof-action', 'proof-final'],
+  }]);
   assert.equal(world.activeFrom, 0.2);
   assert.deepEqual(world.seamProofTimeIds, {
     before: 'proof-establish',
@@ -284,7 +296,7 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
         loopingEnvironment: {
           axis: frozenPlan.axis,
           groundStripId: frozenPlan.groundStripId,
-          trackedSubjectId: frozenPlan.trackedSubjectId,
+          subjectBindings: frozenPlan.subjectBindings,
           seamProofTimeIds: frozenPlan.seamProofTimeIds,
           travel: {
             direction: frozenPlan.direction,
@@ -297,7 +309,10 @@ test('v10 compiles one horizontal looping world with compiler-owned strip roles 
           speedRange: frozenPlan.speedRange,
           overscanPx: 2,
         },
-        children: frozenPlan.strips.map(({id, role, depth}) => ({id, kind: 'world-strip', role, depth})),
+        children: [
+          ...frozenPlan.strips.map(({id, role, surfaceRole, depth}) => ({id, kind: 'world-strip', role, surfaceRole, depth})),
+          {id: 'paper-car', kind: 'asset'},
+        ],
       }],
     },
   };
