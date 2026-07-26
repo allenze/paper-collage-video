@@ -13,11 +13,10 @@ below or carries its own notice.
 The following material is excluded from the MIT License and is provided under
 the limited permission in this section:
 
-- `public/fixtures/transition-gallery/style-proof-tone.wav`
+- image, audio, and SVG media under `public/fixtures/**`
 - `public/style-catalog/*.png`
 - the `tie-chu-mo-zhen-final.mp4` attachment published with the v0.5.0 release
 - `fixtures/starter-demo/*.png`
-- `public/fixtures/vox-phase2-proof/**`
 - `public/textures/**`
 - copies of those fixture and texture assets generated inside
   `plugins/paper-collage-video/assets/remotion-template/**`

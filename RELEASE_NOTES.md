@@ -1,218 +1,139 @@
-# Paper Collage Video 0.16.0-dev.6
+# Paper Collage Video 0.16.0
 
-This development release makes provider-native mixed-surface registered layer
-sheets a first-class production source. A 2×2 request now declares
-`outputSurface.mode=layer-sheet`: reference and rear cells are opaque, while
-subject and front cells use real alpha or an explicit flat chroma key. Host
-models that do not reliably emit native alpha can therefore return one RGB
-provider root without fake checkerboard transparency.
+Paper Collage Video 0.16.0 turns the repository into a stricter, evidence-bound
+production system for editable Remotion paper-collage films. It closes the
+highest-priority failures found during real story production without weakening
+human approval, provider budget, rights, preview, or publication gates.
 
-The provider root remains byte-for-byte unchanged in provenance. The formal
-registered-family derivation accepts fingerprinted source-cell rectangles for
-provider-native dimensions and separators, applies the repository chroma-key
-processor, scales each result onto the shared registration canvas, writes
-current `.key.json` metadata, and records all of that in each member binding and
-family fingerprint. Provider validation rejects missing per-cell key planes;
-quality rejects stale key metadata and key-colored edge residue.
+## Production planning and budget control
 
-The no-provider F035 fixture now exercises a gapped provider-native RGB sheet
-with opaque top cells and magenta-keyed subject/front cells. This closes the
-generic gap exposed by the first VOX Phase 2.4 pilot attempt, where a
-project-local brightness/chroma threshold preserved blue ocean inside submarine
-negative spaces and incorrectly attributed a locally normalized file to the
-provider.
+- New projects first choose aspect ratio, one of three bundled visual directions,
+  and a parallax preference, then compare complete draft, balanced, and
+  full-depth production scenarios.
+- Each scenario states story scope, motion language, depth plan, state families,
+  provider recommendation, expected image calls, proposed approved cap, local
+  derivatives, avoided calls, and final-film tradeoffs.
+- A production profile is only a planning ceiling. Provider attempts are
+  enforced against the smaller exact cap approved by the human.
+- Story-critical semantic actions must resolve to actual registered states,
+  local-motion targets, or layer source packages before they count as covered.
 
-No image, voice, or video provider call is required by this engineering
-release. The pilot's remaining approved image attempt stays unused until the
-source, packaged plugin, installed cache, and fresh-workspace runtime identities
-match.
+## Layer-complete assets and registered animation
 
-## Inherited 0.16.0-dev.5 approved attempt budget
+- Project and Storyboard schema v10 plan complete rear, subject, and front source
+  packages before any layer-aware provider request.
+- Registered depth stacks preserve one coordinate system, stable depth order,
+  complete hidden content, and explicit reveal envelopes for 16:9, 9:16, and
+  1:1.
+- Identity-bound state sheets carry one active identity reference plus per-state
+  facing and anchor declarations. Deterministic processing retains a shared
+  canvas and produces fingerprinted anchor overlays for quality review.
+- Provider-native mixed-surface sheets support opaque reference/rear cells and
+  alpha or observed chroma-key subject/front cells without rewriting the
+  provider root.
+- Quota-consuming calls remain distinct from deterministic crops, keying,
+  registration, masks, looping derivatives, and other local work.
 
-This development release separates a production profile's planning ceiling from
-the exact image-attempt cap a human approved for one project. Creative Plan v4
-adds `approvedImageBudget`; combined concept confirmation requires an explicit
-`budgetDecision.imageAttemptLimit`, records the expected calls and profile
-ceiling at approval time, and refuses a cap below the compiled storyboard need
-or above the selected profile.
+## Persistent worlds and causal motion
 
-The append-only attempt ledger now reserves against the human-approved cap,
-not the larger profile ceiling. Read-only attempt summaries and project
-validation expose the profile ceiling, approved cap, expected calls, usage,
-reservations, and remaining capacity. Storyboard drift invalidates the approval.
-This fixes the generic budget-control gap found while preparing the VOX Phase
-2.4 single-scene registered-depth-stack pilot. The engineering change itself
-uses no image, voice, or video provider.
+- `looping-environment` provides far, mid, walkable-ground, and near strips with
+  seamless source/render proof and real visible-surface validation.
+- Scenes can bind one tracked subject and multiple participants using explicit
+  screen- or world-space anchoring and near-layer occlusion relationships.
+- Ground displacement is shared by world-anchored subjects, so markers and
+  participants stay attached to the travelling world.
+- Signed trajectory contracts prove forward travel, relative order, overtaking,
+  state changes, offscreen exits, finish order, and final stops instead of
+  relying on prose or unsigned distance.
 
-## Inherited 0.16.0-dev.4 layer-complete assets
+## Editorial, timing, and revision contracts
 
-This development release moves rear/subject/front completeness planning before
-provider approval and generation. It fixes the production-design error exposed
-by the stopped 《纸舟穿浪》 pilot: a flattened image contains only visible
-pixels and therefore cannot be masked into independently moving layers with
-complete hidden content.
+- Editorial v9 binds narration words, phrases, sentences, emphasis, SFX phases,
+  music beats, and manual cues to actual local media timing.
+- Editable typography, annotations, counters, charts, tables, maps, diagrams,
+  responsive directing, and semantic paper transitions remain React/SVG
+  primitives rather than baked raster UI.
+- `motionPolicy=locked-static` protects deliberate still scenes from profile
+  motion floors.
+- A human-authorized semantic revision can change listed scenes while preserving
+  the approved provider cap and invalidating all dependent style, proof, preview,
+  and final evidence.
 
-## Layer-complete production contract
+## Evidence-bound quality and delivery
 
-- Project and Storyboard schema v10 compile a stable source package before any
-  layer-aware provider request can be reserved.
-- `registered-depth-stack` requires exactly one clean rear plate, one complete
-  subject silhouette, and one complete front overlay on a shared registration
-  canvas with strict depth order.
-- Every stack declares 16:9, 9:16, and 1:1 reveal envelopes; runtime validation
-  rejects local transforms outside those envelopes.
-- Asset-request schema v7 accepts either one registered 2x2
-  reference/rear/subject/front sheet or one complete reference plus three
-  context-preserving layer edits. Isolated member generation and flat-master
-  extraction are invalid.
+- Composition, asset, subtitle, transition, relationship, and semantic-contract
+  review surfaces have independent fingerprints and lifecycle rules.
+- Quality contact sheets bind the exact scaffold, targets, evidence files, and
+  report hash; stale or cross-surface approvals are rejected.
+- State identity, anchor drift, facing, alpha bands, chroma-key residue, depth
+  reconstruction, visible world surfaces, actor grounding, occlusion, and signed
+  world direction are deterministic quality checks.
+- `project:assets-ready` creates one seal over current assets, audio, subtitles,
+  timeline, quality, and proof state. Preview and final rendering reject a stale
+  seal.
+- Subtitle delivery is verified from encoded frames independently of the
+  subtitle-free composition review surface.
 
-## Budget, provenance, and proof
+## Dependency maintenance
 
-- Creative Plan v3 separates base attempts from a layer-package recovery
-  reserve. One-scene hard ceilings are draft 6, balanced 8, and full-depth 11.
-- Concept approval binds the exact compiler-owned `sourcePackageDecision`;
-  provider calls, local derivatives, and avoided calls remain auditable.
-- Registered-family schema v2 carries source-package strategy, completeness,
-  shared canvas, lifecycle, and responsive reveal provenance.
-- Family-aware proof adds neutral reconstruction, reference comparison,
-  checkerboard exploded members, and both extremes of all three responsive
-  reveal envelopes, alongside source/render-scale alpha-band diagnostics.
-
-No image, voice, or video provider call is required by this engineering
-release. The stopped pilot remains negative evidence and is not resumed or
-published.
-
-## Inherited 0.16.0-dev.3 hardening
-
-This development release completes VOX Phase 2.2 asset-family and transparent
-edge production hardening. It does not include a final reference film and its
-acceptance fixtures make no image, voice, or video provider calls.
-
-## Registered supported-subject families
-
-- Adds strict registered-family authoring and manifest-binding schemas plus
-  `assets:derive-registered-family`.
-- Deterministically derives `support-rear`, `subject`, and `support-front` from
-  a registered complete master, registered sheet cell, or formally processed
-  sheet member while retaining one canvas, origin, registration, source master,
-  family fingerprint, and context-preserving recovery policy.
-- Automatically records manifest provenance and active/superseded lifecycle,
-  optionally patches matching supported-subject nodes, rejects unplaced tight
-  images, and reports provider image calls, local derivatives, and calls
-  avoided.
-
-## Rectangular alpha residue
-
-- Adds deterministic low-alpha horizontal/vertical band detection at source
-  resolution and actual proof/render scale.
-- Correlates diagnostics with canvas, crop, placement, and rectangular clip
-  boundaries; separates thin rectangular residue from broad paper shadows and
-  normal curved silhouettes.
-- Integrates independent failures into project validation, quality reports,
-  composition/style proof JSON and overlays. Checkerboard, tight-crop, and
-  motion-stress evidence remain required for human semantic review;
-  `key-edge-clean` is not a substitute.
-
-## Proof and packaging
-
-- The no-provider Phase 2 fixture now includes a locally derived registered
-  supported-subject family in all three Chromium renders.
-- Adds positive, negative, and extreme alpha fixtures and formal F035/F037
-  proof commands.
-- Bumps executable identity and packages all schemas, CLIs, proof helpers,
-  tests, Skill guidance, and fixture assets together.
-
-## Previous Phase 2.1 audit fix
-
-This development release completes the VOX Phase 2.1 production-readiness
-audit. It keeps the v9 contracts and renderer behavior from dev.1, while
-making the packaged `schema:v9` check self-contained in a newly bootstrapped
-workspace.
-
-## Audit fix
-
-- `npm run schema:v9` now deterministically prepares its local v9 proof inputs
-  before validating the Storyboard Authoring, Compiled Storyboard, and three
-  Project contracts. A fresh installed-cache workspace no longer depends on a
-  pre-existing `dist/vox-phase2-proof/inputs` directory.
-- The new wrapper is included in the packaged runtime and runtime-build
-  fingerprint. It uses only local fixtures and never invokes an image, voice,
-  or video provider.
-
-## Inherited Phase 2 system
-
-The complete Phase 2 feature set and compatibility policy below are unchanged
-from `0.16.0-dev.1`.
-
-This development release establishes the reusable VOX Phase 2 editorial
-system without requiring any image, voice, or video provider. It upgrades the
-Project, Storyboard Authoring, and Compiled Storyboard contracts to v9 and
-binds authoring, compilation, runtime, validation, proof, packaging, and
-documentation to the same behavior.
-
-## Highlights
-
-- Actual-file edit-point compilation for narration words/phrases/sentences,
-  emphasis, SFX onset/peak/tail, music beat/bar/accent, and manual cues, with
-  authored/detected provenance, priorities, tolerance windows, conflict
-  resolution, and deterministic media/scene/render frame mappings.
-- Reusable typography, annotation, counter, chart, table, timeline, registered
-  map, flow-diagram, and editorial-switch primitives with responsive layout,
-  lifecycle and edit-point bindings.
-- Explicit 16:9, 9:16, and 1:1 directing plans covering composition,
-  typography, framing, parallax, exclusion zones, placement, crop/focus,
-  routing, safe areas, and density budgets.
-- Eight semantic advanced transitions with source/destination anchors,
-  treatments, continuity validation, fallback policy, compiled plans, and
-  before/at/after proof frames.
-- A six-second, no-provider Phase 2 proof gallery that renders all three
-  aspect ratios from synthetic WAV and deterministic SVG fixtures and emits
-  fingerprinted reports plus contact sheets.
-- Source, packaged plugin, and fresh installed-cache validation share the same
-  runtime-build identity.
+- `remotion` and `@remotion/cli` are pinned together at 4.0.499.
+- PostCSS is updated to the compatible 8.5.23 patch.
+- `fast-uri` remains on the patched 3.1.4 line used by the current dependency
+  graph.
+- These unified updates supersede the older automated dependency PRs that
+  proposed partial or stale versions.
 
 ## Compatibility
 
-- New projects use Project, Storyboard Authoring, and Compiled Storyboard
-  schema v9. Older projects are intentionally not migrated or silently
-  downgraded.
-- There is no v8 loader, dual schema, deprecated field, compatibility adapter,
-  or version-conditioned renderer branch.
-- Useful v8 output capabilities remain expressible under the v9 contract.
-- Start a new Codex task after upgrading so the new Skill snapshot is loaded.
+- 0.16.0 supports only the latest project, storyboard, asset, evidence, and
+  production contracts.
+- Old projects are intentionally not migrated or loaded through compatibility
+  adapters. Rebuild an older production as a fresh latest-contract project when
+  it needs revision.
+- The output capability remains: editable layered collage stories, recurring
+  identities, registered limited animation, persistent travelling worlds,
+  functional diagrams, actual-audio editing, responsive typography, subtitles,
+  preview review, and locally accepted final delivery.
 
-This release contains reusable source, the packaged Plugin, and technical test
-fixtures only. The generated VOX Phase 2 MP4s and proof artifacts remain local
-build outputs and are not bundled as production media or a final reference
-film.
+## Release validation
+
+- Source workspace: 204/204 tests passed.
+- Fresh packaged workspace: 189/189 tests passed.
+- TypeScript, doctor, Remotion bundle, schema-v10, and npm moderate-level audit
+  passed; the audit reported zero vulnerabilities.
+- Registered-family and alpha-band proofs passed with zero provider calls.
+- The looping-world proof rendered and verified 16:9, 9:16, and 1:1 previews
+  plus a 16:9 final artifact under Remotion 4.0.499.
+- A separately installed packaged workspace reached doctor READY and rendered
+  the sealed starter preview with current validation, quality, audio, subtitle,
+  contact-sheet, and encoded-frame evidence.
+
+## Provider and publication boundary
+
+No image, voice, or video provider call is required to build or validate this
+release. The release contains reusable source, deterministic fixtures, and the
+packaged Codex Plugin. It does not publish user projects, credentials, private
+prompts, or generated production media, and this release intentionally carries
+no media attachment.
 
 ## Install
-
-Give Codex the repository URL, or run:
 
 ```bash
 codex plugin marketplace add cyberlesterr/paper-collage-video
 codex plugin add paper-collage-video@paper-collage-video
 ```
 
-Start a new Codex task and invoke `$make-paper-collage-video`. The Plugin will
-create a writable workspace outside its installation cache and run environment
-diagnostics before production begins.
+Start a new Codex task after installation so the versioned Skill snapshot and
+packaged runtime come from the same release.
 
-## Requirements and Support
+## Requirements and licensing
 
 - Node.js 20 or newer
 - FFmpeg and ffprobe
-- Python 3.11 or newer for image processing and proof generation
-- macOS and Ubuntu are validated; Windows support is currently best effort
+- Python 3.11 or newer
+- macOS and Ubuntu are validated; Windows support remains best effort
 
-Image and voice generation require capabilities or provider accounts selected
-by the user. The project does not publish generated media automatically.
-
-## Licensing
-
-The software is MIT-licensed. Bundled showcase and fixture media is excluded
-from MIT and is limited to repository demonstration, testing, and evaluation;
-see `ASSET_LICENSES.md`. Remotion and other dependencies retain their own
-licenses, including Remotion's Company License requirements in some commercial
-use cases; see `THIRD_PARTY_NOTICES.md`.
+The software is MIT-licensed. Bundled fixture and style-catalog media use the
+repository-demo-only terms in `ASSET_LICENSES.md`. Remotion and other
+dependencies retain their own licenses as described in
+`THIRD_PARTY_NOTICES.md`.

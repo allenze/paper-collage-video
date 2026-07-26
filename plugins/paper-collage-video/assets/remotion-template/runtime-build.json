@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "packageVersion": "0.16.0-dev.22",
-  "fingerprint": "055b6de386f8894e3a01ac7e53b4c87b8fc6c3008f48582f24eaa661386aad35",
+  "packageVersion": "0.16.0",
+  "fingerprint": "b857bfbe29cf3c565868305ec4f1bb13fdf46d45b981f36df145098681bb56fe",
   "surfaces": {
-    "composition-proof": "7a55b1171ece7c1402667ccf671fa3964eb6b7d6939f58f1e5edaa8e1000509f"
+    "composition-proof": "39b6193090a6779bdb160734a4a90e1461fee517afaf526ffa1fb570824b478b"
   },
   "files": {
-    "package.json": "aac8f54be1f951a3b66b9b6c74396f164a19bf5873cecd70bfa63854314a19cf",
+    "package.json": "2727a58d49e5e227681580710dfc728e2a111debf31536c20af5c59f72a653ae",
     "requirements.txt": "4d94df48a8bb5659d79504208ee8c26ccfff7e28aa0040dc99c7776b10c735c9",
     "remotion.config.ts": "6b513b6e87a709cd00cd60c87329584379057f6927230af1f96559a3409ed728",
     "schemas/composition.schema.json": "fd479e1ea02913a34e754837eb03ccd7f449b38ba7c252f74825d04f5b6c9448",

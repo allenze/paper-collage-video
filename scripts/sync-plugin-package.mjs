@@ -547,7 +547,7 @@ const project = {
         durationSeconds: 1,
         text: '纸片分层视频',
       },
-      subtitles: [{fromSeconds: 0, toSeconds: 1.15, text: '纸片分层视频'}],
+      subtitles: [{fromSeconds: 0, toSeconds: 1, text: '纸片分层视频'}],
       events: [
         {id: 'establish', beatId: 'establish', proofTimeId: 'proof-establish', at: 0, targetId: 'background', visual: {kind: 'emphasis', action: 'pulse', durationSeconds: 0.35, intensity: 0.35}},
         {id: 'subject-arrives', beatId: 'subject-arrives', proofTimeId: 'proof-action', at: 0.5, targetId: 'traveler', visual: {kind: 'visibility', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}},
@@ -889,6 +889,46 @@ runtimeQualityLib.refreshQualityReviewSurfaceFingerprint(
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   starterPreparedQuality.report,
+);
+
+const starterValidation = await runtimeProjectLib.validateProject(
+  starterRuntimeProject,
+);
+if (!starterValidation.passed) {
+  throw new Error('packaged starter validation must pass before sealing');
+}
+starterValidation.generatedAt = at;
+await writeJson(
+  path.join(RUNTIME_ROOT, 'dist', 'starter-demo', 'validation-report.json'),
+  starterValidation,
+);
+const starterQualityReady = await runtimeQualityLib.assertQualityReady(
+  'starter-demo',
+);
+const runtimeAssetsReadySealLib = await import(
+  `${pathToFileURL(path.join(RUNTIME_ROOT, 'scripts', 'assets-ready-seal-lib.mjs')).href}?sync=${Date.now()}`,
+);
+const starterSeal = await runtimeAssetsReadySealLib.createAssetsReadySeal(
+  'starter-demo',
+  {
+    project: starterRuntimeProject,
+    validation: starterValidation,
+    quality: starterQualityReady,
+  },
+);
+starterSeal.seal.generatedAt = at;
+await writeJson(starterSeal.file, starterSeal.seal);
+production.artifacts.validationReport = path.relative(
+  RUNTIME_ROOT,
+  path.join(RUNTIME_ROOT, 'dist', 'starter-demo', 'validation-report.json'),
+);
+production.artifacts.assetsReadySeal = path.relative(
+  RUNTIME_ROOT,
+  starterSeal.file,
+);
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production.json'),
+  production,
 );
 
 await writeJson(path.join(RUNTIME_ROOT, '.paper-collage-template.json'), {

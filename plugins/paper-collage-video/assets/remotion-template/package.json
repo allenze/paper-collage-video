@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video-workspace",
-  "version": "0.16.0-dev.22",
+  "version": "0.16.0",
   "description": "Configuration-driven paper-collage video pipeline and Codex plugin built with Remotion.",
   "private": true,
   "type": "module",
@@ -94,10 +94,10 @@
     "render:preview": "npm run project:preview -- starter-demo"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.490",
+    "@remotion/cli": "4.0.499",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "remotion": "4.0.490"
+    "remotion": "4.0.499"
   },
   "devDependencies": {
     "@types/react": "19.2.17",

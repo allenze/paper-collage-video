@@ -183,6 +183,12 @@ test('packaged runtime is lightweight and independent from production projects',
   const starterMetrics = readJson(
     path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
   );
+  const starterProduction = readJson(
+    path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production.json'),
+  );
+  const starterSeal = readJson(
+    path.join(RUNTIME_ROOT, 'dist', 'starter-demo', 'assets-ready-seal.json'),
+  );
   assert.equal(starterProject.schemaVersion, 10);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
@@ -203,6 +209,17 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(starterQuality.assets.length, 2);
   assert.ok(starterQuality.assets.every(({status}) => status === 'passed'));
   assert.equal(starterMetrics.summary.coverage.status, 'full');
+  assert.equal(
+    starterProduction.artifacts.assetsReadySeal,
+    'dist/starter-demo/assets-ready-seal.json',
+  );
+  assert.equal(
+    starterProduction.artifacts.validationReport,
+    'dist/starter-demo/validation-report.json',
+  );
+  assert.equal(starterSeal.schemaVersion, 1);
+  assert.equal(starterSeal.projectSlug, 'starter-demo');
+  assert.match(starterSeal.fingerprint, /^[a-f0-9]{64}$/);
   assert.equal(starterMetrics.summary.aiReview.durationMs, 0);
 
   for (const relative of [
@@ -386,6 +403,10 @@ test('packaged starter proof keeps the complete quality gate ready', async () =>
     {cwd: RUNTIME_ROOT, encoding: 'utf8'},
   );
   assert.equal(validation.status, 0, validation.stderr || validation.stdout);
+  const runtimeAssetsReadySeal = await import(
+    `${pathToFileURL(path.join(RUNTIME_ROOT, 'scripts', 'assets-ready-seal-lib.mjs')).href}?test=${Date.now()}`,
+  );
+  await runtimeAssetsReadySeal.assertAssetsReadySealCurrent('starter-demo');
 });
 
 test('bootstrap creates an isolated resumable workspace and is idempotent', async () => {
