@@ -178,7 +178,18 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 composition/v9 editorial validation, current-proof enforcement, and both
 quality gates. Provider or forced-alignment timing wins; actual final-audio
 edit-point evidence is authoritative for editorial bindings. Review
-reading-speed warnings.
+reading-speed warnings. Every narration source must have non-empty transcript
+text. Narrated scenes must keep subtitles visible, reconstruct that text after
+whitespace normalization, use ordered cue ranges inside
+the narration window, and cover at least 80% of that window. The renderer uses
+duration-aware fades, so a short cue never receives overlapping interpolation
+stops, and places the subtitle inside the active responsive safe area.
+
+The final report repeats those machine checks and extracts one frame from the
+encoded video for every narrated scene into `subtitle-contact-sheet.jpg`. Treat
+that sheet as the human visual proof for legibility, occlusion, clipping, and
+font appearance; its existence is not OCR proof that the pixels spell the
+expected text.
 
 After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds an audio-only timeline mix, and measures LUFS/true peak. A passing mix needs no decision. A failing mix writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns preflight. Changed source audio or timing invalidates the decision. The final artifact report remains authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
 

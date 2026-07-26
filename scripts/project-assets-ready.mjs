@@ -9,8 +9,10 @@ import {
   writeValidationReport,
 } from './project-lib.mjs';
 import {assertQualityReady, formatQualityStatus} from './quality-lib.mjs';
+import {createAssetsReadySeal} from './assets-ready-seal-lib.mjs';
 import {
   loadProduction,
+  recordAssetsReadySeal,
   resolveAssetsReadyMode,
 } from './production-state.mjs';
 
@@ -39,18 +41,28 @@ try {
   await run('project-sync.mjs', [slug]);
   await run('project-subtitles.mjs', [slug]);
   await run('project-audio-calibration.mjs', [slug, 'propose']);
+  const {project} = await loadProject(slug);
+  const validation = await validateProject(project);
+  const reportFile = await writeValidationReport(slug, validation);
+  console.log(formatValidation(validation));
+  if (!validation.passed) {
+    throw new Error('素材与项目校验未通过。');
+  }
+  const quality = await assertQualityReady(slug);
+  console.log(formatQualityStatus(quality));
+  const seal = await createAssetsReadySeal(slug, {
+    project,
+    validation,
+    quality,
+  });
+  console.log(`✓ assets-ready seal：${path.relative(ROOT, seal.file)}`);
   if (mode === 'advance') {
     await run('project-advance.mjs', [slug, 'assets-ready', ...args]);
   } else {
-    const {project} = await loadProject(slug);
-    const validation = await validateProject(project);
-    await writeValidationReport(slug, validation);
-    console.log(formatValidation(validation));
-    if (!validation.passed) {
-      throw new Error('preview 修订后的素材与项目校验未通过。');
-    }
-    const quality = await assertQualityReady(slug);
-    console.log(formatQualityStatus(quality));
+    await recordAssetsReadySeal(slug, {
+      assetsReadySeal: path.relative(ROOT, seal.file),
+      validationReport: path.relative(ROOT, reportFile),
+    });
     console.log(`✓ assets-ready 幂等复核完成；生产阶段保持 ${state.stage}，下一步重新运行 project:preview。`);
   }
 } catch (error) {

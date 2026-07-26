@@ -99,6 +99,7 @@ export const projectPaths = (slug) => ({
   publicDirectory: path.join(ROOT, 'public', 'projects', slug),
   distDirectory: path.join(ROOT, 'dist', slug),
   validationReport: path.join(ROOT, 'dist', slug, 'validation-report.json'),
+  assetsReadySeal: path.join(ROOT, 'dist', slug, 'assets-ready-seal.json'),
 });
 
 export const assertSlug = (slug) => {

@@ -72,6 +72,7 @@
         "styleProof": {"$ref": "#/$defs/nullablePath"},
         "directingRevision": {"$ref": "#/$defs/nullablePath"},
         "validationReport": {"$ref": "#/$defs/nullablePath"},
+        "assetsReadySeal": {"$ref": "#/$defs/nullablePath"},
         "preview": {"$ref": "#/$defs/nullablePath"},
         "final": {"$ref": "#/$defs/nullablePath"},
         "report": {"$ref": "#/$defs/nullablePath"},

@@ -17,6 +17,11 @@ import {
 import {deriveTimeline, validateProject} from '../scripts/project-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {deriveSubtitleCues, segmentSubtitleText} from '../scripts/subtitle-lib.mjs';
+import {createSubtitleContract} from '../scripts/subtitle-contract-lib.mjs';
+import {
+  resolveSubtitleFadeFrames,
+  resolveSubtitleLayout,
+} from '../src/subtitleSurface.mjs';
 import {
   compileEditorialFixture,
   withCompiledEditorialFixture,
@@ -298,6 +303,102 @@ test('subtitle fallback splits long narration and fills the measured narration w
   assert.deepEqual(
     compressed.map(({fromSeconds, toSeconds}) => [fromSeconds, toSeconds]),
     [[0, 1 / 30], [1 / 30, 2 / 30]],
+  );
+});
+
+test('subtitle segmentation keeps Chinese closing punctuation with its sentence', () => {
+  const text = '兔子说：“继续吧。”乌龟点头。';
+  const segments = segmentSubtitleText(text, 20);
+  assert.deepEqual(segments, ['兔子说：“继续吧。”', '乌龟点头。']);
+  assert.equal(segments.join(''), text);
+  assert.ok(segments.every((segment) => !/^[”’」』）》】〕〉》]/u.test(segment)));
+});
+
+test('subtitle fades stay monotonic for short cues and layout honors portrait safe area', () => {
+  const fades = Array.from({length: 12}, (_, index) =>
+    resolveSubtitleFadeFrames({from: 0, to: index + 1}),
+  );
+  assert.deepEqual(fades, [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+  for (let duration = 1; duration <= 12; duration += 1) {
+    const fade = resolveSubtitleFadeFrames({from: 0, to: duration});
+    assert.ok(fade * 2 < duration);
+  }
+  const layout = resolveSubtitleLayout({
+    safeArea: {x: 0.08, y: 0.05, width: 0.84, height: 0.9},
+    width: 1080,
+    height: 1920,
+  });
+  assert.equal(layout.contract, 'responsive-safe-area-v1');
+  assert.ok(layout.bottomPixels > 96);
+  assert.ok(layout.leftPercent >= 8);
+  assert.ok(layout.rightPercent >= 8);
+});
+
+test('subtitle delivery contract checks transcript, timing, safe area, and font source', async () => {
+  const project = {
+    video: {width: 1080, height: 1920, fps: 30},
+    theme: {fontFamily: 'STKaiti'},
+    editorial: {
+      activeProfile: '9:16',
+      responsiveProfiles: [
+        {
+          id: '9:16',
+          safeArea: {x: 0.08, y: 0.05, width: 0.84, height: 0.9},
+        },
+      ],
+    },
+    scenes: [
+      {
+        id: 'race',
+        narration: {
+          src: 'projects/test/audio/race.wav',
+          startSeconds: 0.2,
+          durationSeconds: 2,
+          text: '乌龟继续向前。',
+        },
+        subtitles: [
+          {fromSeconds: 0.2, toSeconds: 2.2, text: '乌龟继续向前。'},
+        ],
+      },
+    ],
+  };
+  const contract = await createSubtitleContract(project);
+  assert.equal(contract.passed, true);
+  assert.equal(contract.summary.requiredScenes, 1);
+  assert.ok(contract.checks.every(({passed}) => passed));
+
+  const broken = await createSubtitleContract({
+    ...project,
+    scenes: [
+      {
+        ...project.scenes[0],
+        subtitles: [{fromSeconds: 0.2, toSeconds: 0.4, text: '兔子停下。'}],
+      },
+    ],
+  });
+  assert.equal(broken.passed, false);
+  assert.equal(
+    broken.checks.find(({id}) => id === 'subtitle-transcript-match').passed,
+    false,
+  );
+  assert.equal(
+    broken.checks.find(({id}) => id === 'subtitle-narration-coverage').passed,
+    false,
+  );
+
+  const missingTranscript = await createSubtitleContract({
+    ...project,
+    scenes: [
+      {
+        ...project.scenes[0],
+        narration: {...project.scenes[0].narration, text: ''},
+      },
+    ],
+  });
+  assert.equal(missingTranscript.passed, false);
+  assert.equal(
+    missingTranscript.checks.find(({id}) => id === 'subtitle-narration-text').passed,
+    false,
   );
 });
 

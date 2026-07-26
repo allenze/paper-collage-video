@@ -82,7 +82,6 @@ try {
     startedAt: renderStartedAt,
     detail: '正在同步旁白、验证组合与质量门。',
   });
-  await assertRenderAllowed(slug, mode);
   await runInherited(process.execPath, ['scripts/project-sync.mjs', slug]);
   await runInherited(process.execPath, [
     'scripts/project-audio-preflight.mjs',
@@ -98,6 +97,7 @@ try {
   if (!report.passed) {
     throw new Error('项目校验未通过，已停止渲染。');
   }
+  await assertRenderAllowed(slug, mode);
 
   const paths = projectPaths(slug);
   await fs.mkdir(paths.distDirectory, {recursive: true});

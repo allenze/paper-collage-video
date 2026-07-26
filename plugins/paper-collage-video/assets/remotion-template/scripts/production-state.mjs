@@ -7,6 +7,7 @@ import {
   readJson,
   writeJson,
 } from './project-lib.mjs';
+import {assertAssetsReadySealCurrent} from './assets-ready-seal-lib.mjs';
 
 export const PRODUCTION_STAGES = [
   'capability-review',
@@ -53,6 +54,7 @@ const ARTIFACT_KEYS = [
   'prompts',
   'review',
   'validationReport',
+  'assetsReadySeal',
   'preview',
   'final',
   'report',
@@ -394,7 +396,11 @@ export const validateProductionState = (state, expectedSlug) => {
       const value = state.artifacts[key];
       if (REQUIRED_ARTIFACT_KEYS.has(key) && !value) {
         issues.push(`artifacts.${key} 必须为非空字符串`);
-      } else if (value !== null && typeof value !== 'string') {
+      } else if (
+        value !== undefined &&
+        value !== null &&
+        typeof value !== 'string'
+      ) {
         issues.push(`artifacts.${key} 必须为字符串或 null`);
       }
     }
@@ -552,7 +558,7 @@ export const transitionDirectingRevision = (current, options = {}) => {
   assertApproved(state, 'concept', action);
   if (source !== 'style-review') assertApproved(state, 'styleAndVoice', action);
 
-  for (const key of ['validationReport', 'preview', 'final', 'report', 'contactSheet']) {
+  for (const key of ['validationReport', 'assetsReadySeal', 'preview', 'final', 'report', 'contactSheet']) {
     state.artifacts[key] = null;
   }
   if (options.invalidateStyleProof) state.artifacts.styleProof = null;
@@ -724,6 +730,9 @@ export const transitionProduction = (current, action, options = {}) => {
       );
       setApproval(state, 'preview', 'changes-requested', at, note);
       resetApproval(state, 'publish');
+      for (const key of ['validationReport', 'assetsReadySeal', 'preview', 'final', 'report', 'contactSheet']) {
+        state.artifacts[key] = null;
+      }
       state.stage = 'asset-production';
       break;
     case 'approve-publish':
@@ -749,7 +758,19 @@ export const transitionProduction = (current, action, options = {}) => {
 
 export const advanceProduction = async (slug, action, options = {}) => {
   const {paths, state: current} = await loadProduction(slug);
-  const state = transitionProduction(current, action, options);
+  let resolvedOptions = options;
+  if (action === 'assets-ready') {
+    const {file} = await assertAssetsReadySealCurrent(slug);
+    resolvedOptions = {
+      ...options,
+      artifacts: {
+        ...(options.artifacts ?? {}),
+        validationReport: path.relative(ROOT, paths.validationReport),
+        assetsReadySeal: path.relative(ROOT, file),
+      },
+    };
+  }
+  const state = transitionProduction(current, action, resolvedOptions);
   await writeJson(paths.productionFile, state);
   await syncReviewBestEffort(slug, state);
   return state;
@@ -758,6 +779,24 @@ export const advanceProduction = async (slug, action, options = {}) => {
 export const advanceWorkItem = async (slug, id, options = {}) => {
   const {paths, state: current} = await loadProduction(slug);
   const state = transitionWorkItem(current, id, options);
+  await writeJson(paths.productionFile, state);
+  await syncReviewBestEffort(slug, state);
+  return state;
+};
+
+export const recordAssetsReadySeal = async (slug, artifacts) => {
+  const {paths, state: current} = await loadProduction(slug);
+  resolveAssetsReadyMode(current.stage);
+  const state = clone(current);
+  Object.assign(state.artifacts, artifacts);
+  const at = new Date().toISOString();
+  state.updatedAt = at;
+  state.history.push({
+    at,
+    action: 'assets-ready-rechecked',
+    stage: state.stage,
+    note: artifacts.assetsReadySeal ?? '',
+  });
   await writeJson(paths.productionFile, state);
   await syncReviewBestEffort(slug, state);
   return state;
@@ -780,6 +819,7 @@ export const assertRenderAllowed = async (slug, mode) => {
       throw new Error('正式渲染前必须获得预览人工批准。');
     }
   }
+  await assertAssetsReadySealCurrent(slug);
   return state;
 };
 

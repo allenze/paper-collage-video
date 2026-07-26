@@ -16,6 +16,7 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
 | `assets-manifest.json` | Provider provenance, source families, fingerprints, hashes, and active/superseded/rejected/recovery-source lifecycle |
 | `quality-report.json` | Hash-bound current asset/composite quality plus non-current asset history |
+| `dist/<slug>/assets-ready-seal.json` | Current project, runtime, storyboard, validation, quality, audio, and subtitle delivery fingerprints required by preview/final rendering |
 | `review.md` | Generated approval summary plus natural-language revision history |
 
 Never ask the human to edit machine JSON. Paths in `project.json` are relative to `public/`; production artifacts are relative to the workspace root.
@@ -244,7 +245,10 @@ asset-evidence reuse and records that decision in the report.
 `project:assets-ready` rejects missing/stale proof fingerprints, open generation
 reservations, missing or exceeded human-approved attempt caps, pending/failed asset or composite quality,
 and audio without either a passing preflight or a fingerprinted, explicitly
-accepted calibration decision.
+accepted calibration decision. It then writes `assets-ready-seal.json`. Low-level
+`project:advance ... assets-ready` and both render modes only accept a current
+seal; any project, source media, storyboard, quality, subtitle, or runtime change
+invalidates it and routes back through the canonical command.
 
 Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `style:proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
 

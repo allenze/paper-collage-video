@@ -16,6 +16,7 @@ import {
   transitionRender,
   transitionWorkItem,
 } from '../scripts/production-state.mjs';
+import {assertAssetsReadySealCurrent} from '../scripts/assets-ready-seal-lib.mjs';
 
 const approval = (status = 'pending', note = '') => ({
   status,
@@ -44,6 +45,7 @@ const makeState = (stage) => ({
     prompts: 'projects/test-film/prompts.json',
     review: 'projects/test-film/review.md',
     validationReport: null,
+    assetsReadySeal: null,
     preview: null,
     final: null,
     report: null,
@@ -168,6 +170,36 @@ test('assets-ready advances once and becomes an idempotent preview recheck', () 
   assert.equal(resolveAssetsReadyMode('preview'), 'recheck');
   assert.equal(resolveAssetsReadyMode('human-review'), 'recheck');
   assert.throws(() => resolveAssetsReadyMode('style-review'), /只能在/);
+});
+
+test('assets-ready seal is recorded and invalidated with preview revisions', () => {
+  const ready = transitionProduction(makeState('asset-production'), 'assets-ready', {
+    artifacts: {
+      validationReport: 'dist/test-film/validation-report.json',
+      assetsReadySeal: 'dist/test-film/assets-ready-seal.json',
+    },
+  });
+  assert.equal(ready.stage, 'preview');
+  assert.equal(
+    ready.artifacts.assetsReadySeal,
+    'dist/test-film/assets-ready-seal.json',
+  );
+  ready.stage = 'human-review';
+  ready.artifacts.preview = 'dist/test-film/preview.mp4';
+  const revised = transitionProduction(ready, 'request-preview-revision', {
+    note: '字幕位置需要调整',
+  });
+  assert.equal(revised.stage, 'asset-production');
+  assert.equal(revised.artifacts.assetsReadySeal, null);
+  assert.equal(revised.artifacts.preview, null);
+  assert.equal(revised.artifacts.report, null);
+});
+
+test('assets-ready cannot be asserted without the canonical seal', async () => {
+  await assert.rejects(
+    () => assertAssetsReadySealCurrent(`missing-seal-${process.pid}`),
+    /必须运行 project:assets-ready/,
+  );
 });
 
 test('directing revision is a gated preview-return transition', () => {

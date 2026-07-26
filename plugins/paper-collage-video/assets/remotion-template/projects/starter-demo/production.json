@@ -35,6 +35,7 @@
     "prompts": "projects/starter-demo/prompts.json",
     "review": "projects/starter-demo/review.md",
     "validationReport": null,
+    "assetsReadySeal": null,
     "preview": null,
     "final": null,
     "report": null,

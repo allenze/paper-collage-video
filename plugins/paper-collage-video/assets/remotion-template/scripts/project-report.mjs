@@ -21,6 +21,11 @@ import {
 import {analyzeRenderedContinuityArtifact} from './timeline-continuity-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {summarizeActualPoseSheets} from './state-sheet-lib.mjs';
+import {
+  createSubtitleContract,
+  deriveSubtitleProofSamples,
+} from './subtitle-contract-lib.mjs';
+import {hashFileStream} from './render-cache-lib.mjs';
 import {deriveTransitionProofSamples, summarizeSceneTransitions} from '../src/sceneTimeline.mjs';
 
 const args = process.argv.slice(2);
@@ -69,6 +74,11 @@ const parseFrameRate = (value) => {
   return denominator ? numerator / denominator : 0;
 };
 
+const formatCheckActual = (value) =>
+  value !== null && typeof value === 'object'
+    ? JSON.stringify(value)
+    : String(value);
+
 const mapWithConcurrency = async (items, limit, mapper) => {
   const results = new Array(items.length);
   const concurrency = Math.max(1, Math.min(limit, items.length));
@@ -106,7 +116,7 @@ const createContactSheet = async ({video, output, samples, framesDirectory}) => 
         .resize(480, 270, {fit: 'cover'})
         .png()
         .toBuffer();
-      return {...sample, image};
+      return {...sample, frameFile, image};
     },
   );
 
@@ -142,6 +152,7 @@ const createContactSheet = async ({video, output, samples, framesDirectory}) => 
     .composite(composite)
     .jpeg({quality: 90})
     .toFile(output);
+  return panels.map(({image: _image, ...panel}) => panel);
 };
 
 try {
@@ -238,6 +249,7 @@ try {
   const tailBudgetIssues = (validation.issues ?? []).filter(
     ({code}) => code === 'scene-tail-budget',
   );
+  const subtitleContract = await createSubtitleContract(project);
   const technicalChecks = [
     {
       id: 'video-stream',
@@ -301,6 +313,7 @@ try {
         ? `${continuityAnalysis.totalDeadAirSeconds.toFixed(3)}s (${(continuityAnalysis.deadAirRatio * 100).toFixed(1)}%)`
         : `${continuityAnalysis.failingRanges.length} failing range(s), ${continuityAnalysis.totalDeadAirSeconds.toFixed(3)}s total (${(continuityAnalysis.deadAirRatio * 100).toFixed(1)}%)`,
     },
+    ...subtitleContract.checks,
   ];
   const mastering = project.audio?.mastering;
   if (mastering) {
@@ -352,12 +365,43 @@ try {
       framesDirectory: path.join(paths.distDirectory, 'transition-frames'),
     });
   }
+  const subtitleSamples = deriveSubtitleProofSamples({
+    project,
+    timeline: validation.timeline,
+    contract: subtitleContract,
+  });
+  const subtitleContactSheet = subtitleSamples.length > 0
+    ? path.join(paths.distDirectory, 'subtitle-contact-sheet.jpg')
+    : null;
+  const subtitlePanels = subtitleContactSheet
+    ? await createContactSheet({
+        video: artifact,
+        output: subtitleContactSheet,
+        samples: subtitleSamples,
+        framesDirectory: path.join(paths.distDirectory, 'subtitle-frames'),
+      })
+    : [];
+  const subtitleEvidence = await Promise.all(
+    subtitlePanels.map(async ({frameFile, ...panel}) => ({
+      ...panel,
+      file: path.relative(ROOT, frameFile),
+      sha256: await hashFileStream(frameFile),
+    })),
+  );
+  technicalChecks.push({
+    id: 'subtitle-encoded-frame-evidence',
+    passed:
+      subtitleContract.summary.requiredScenes === 0 ||
+      subtitleEvidence.length === subtitleContract.summary.requiredScenes,
+    expected: 'one encoded-frame sample for every narrated scene',
+    actual: `${subtitleEvidence.length}/${subtitleContract.summary.requiredScenes} narrated scenes`,
+  });
 
   const quality = qualityArgument
     ? await readQualityReportStatus(slug)
     : await prepareQualityReport(slug);
   const report = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     generatedAt: new Date().toISOString(),
     project: {slug: project.slug, title: project.title},
     artifact: {
@@ -423,6 +467,13 @@ try {
       providerCallsAvoidedByBatching: poseSheetActuals.providerCallsAvoidedByBatching,
     },
     continuityAnalysis,
+    subtitleProof: {
+      ...subtitleContract,
+      contactSheet: subtitleContactSheet
+        ? path.relative(ROOT, subtitleContactSheet)
+        : null,
+      samples: subtitleEvidence,
+    },
     technicalChecks,
     passed:
       validation.passed &&
@@ -444,9 +495,10 @@ try {
   console.log(`✓ 验收报告：${path.relative(ROOT, reportFile)}`);
   console.log(`✓ 关键帧联系表：${path.relative(ROOT, contactSheet)}`);
   if (transitionContactSheet) console.log(`✓ 转场联系表：${path.relative(ROOT, transitionContactSheet)}`);
+  if (subtitleContactSheet) console.log(`✓ 字幕联系表：${path.relative(ROOT, subtitleContactSheet)}`);
   for (const check of technicalChecks) {
     console.log(
-      `${check.passed ? '✓' : '✗'} ${check.id}: ${check.actual} (expected ${check.expected})`,
+      `${check.passed ? '✓' : '✗'} ${check.id}: ${formatCheckActual(check.actual)} (expected ${check.expected})`,
     );
   }
   for (const range of continuityAnalysis.perScene.filter(

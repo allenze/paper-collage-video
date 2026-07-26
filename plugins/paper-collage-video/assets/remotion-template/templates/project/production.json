@@ -19,6 +19,7 @@
     "prompts": "projects/{{slug}}/prompts.json",
     "review": "projects/{{slug}}/review.md",
     "validationReport": null,
+    "assetsReadySeal": null,
     "preview": null,
     "final": null,
     "report": null,

@@ -11,6 +11,12 @@ Read this after real narration exists, when authoring tails or an intentional qu
 
 `project:sync` measures every narration file. For an inferred duration, it also caps unexplained `tailSeconds` before subtitles and validation. The initial plan remains provenance, while `validation.timeline` is the real execution length.
 
+Subtitle cue ranges use the measured narration window. Sentence segmentation
+keeps Chinese closing quotes/brackets with the preceding punctuation. Default
+cue gaps may leave brief reading separation, but ordered cues must cover at
+least 80% of narrated frames. Cues shorter than three frames render fully
+opaque; longer cues use a fade no greater than half their usable duration.
+
 `project:plan --json` exposes this choice as `decision.durationAuthority`: `human-target` for an explicit duration and `content-derived` otherwise. Copy it into concept `planDecision`; do not describe an inferred estimate as a locked delivery target.
 
 ## Keep Tails Technical
