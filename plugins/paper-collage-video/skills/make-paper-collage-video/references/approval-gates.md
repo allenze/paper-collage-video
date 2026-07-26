@@ -6,21 +6,45 @@ Read this before presenting or recording a human gate, making a material paid ca
 
 Require explicit decisions for:
 
-1. Combined concept, duration/scenes, production profile/budget, facts, and provider plan.
-2. Representative visual style, fictional voice, and optional motion proof.
-3. Rendered preview and requested creative changes.
+1. Initial intake: `16:9|9:16`, one of three built-in visual styles, and text-only parallax preference.
+2. Combined scenario, story scope, duration/scenes, production profile, exact budget cap, facts, and provider plan.
+3. Story-specific visual sample, fictional voice, and 3–5 second motion/topology proof.
+4. Rendered preview and requested creative changes.
 
-The combined first decision may authorize both providers and concept when the request clearly names both. Preserve the human's wording. If approval is ambiguous, ask one concise question.
+The first intake never authorizes provider spend. The combined second decision may authorize both providers and concept when the request clearly names both. Preserve the human's wording. If approval is ambiguous, ask one concise question.
 
 Do not create a fourth default gate after final render. Local final delivery completes the creation task.
 
+If preview feedback intentionally changes narration meaning, scene semantics, or
+which scenes must be still, do not disguise it as a directing-only revision.
+Record a schema-v1 semantic revision authorization containing the source
+feedback, exact allowed scene ids, human note, and equivalent-quality evidence,
+then run `project:revise-preview-semantic`. The command rejects top-level
+story/style drift, records old/new concept fingerprints, recomputes only legal
+locked-static motion floors, preserves the approved provider cap, and
+invalidates all dependent style/proof/render evidence.
+
 ## Cost Boundary
 
-- Before combined concept approval, use only the current host model for a provisional draft; do not invoke an unconfirmed external/paid provider.
-- Before style approval, classify and contract any identity-, topology-, mechanism-, or diagram-critical sample, then create at most one representative image, a short fictional-voice audition, and one 3–5 second proof when motion is new or coupled topology is present. A topology proof uses the actual v4 group, master-derived members, and renderer. It also produces full-resolution frame/crop evidence plus alpha, checkerboard, tight-crop, and motion-stress evidence for every registered member. Coupled approval cannot advance while that evidence is missing, stale, or semantically pending.
+- Before combined scenario/concept approval, use only the current host model for the common story and three scenarios; do not invoke an unconfirmed external/paid provider. Built-in style cards are versioned local text-to-image PNG assets and consume no provider calls when shown during intake.
+- Before style approval, classify and contract any identity-, topology-,
+  mechanism-, or diagram-critical sample, then create at most one representative
+  source package, a short fictional-voice audition, and one 3–5 second proof
+  when motion is new or coupled topology is present. A topology or
+  limited-animation proof uses the actual v10 group/state sequence and renderer.
+  A `registered-depth-stack` uses its compiled layer-complete source package and
+  family-aware proof: neutral reconstruction, reference comparison,
+  checkerboard exploded members, and both extremes of the 16:9, 9:16, and 1:1
+  reveal envelopes. Standard alpha/tight/motion evidence remains required where
+  applicable. Coupled approval cannot advance while that evidence is missing,
+  stale, or semantically pending.
 - After style approval, produce autonomously within the approved asset budget.
 - Reuse exact-match assets and deterministic local processing before regeneration.
-- Disclose known material costs or quota effects at the decision that authorizes them.
+- Disclose the compiled source-package strategy, base/reserve/hard ceiling,
+  one story-specific style-sample call, proposed exact image-attempt cap,
+  provider calls, local derivatives, and avoided calls at the decision that authorizes them. Record the cap as
+  `budgetDecision.imageAttemptLimit`; the profile ceiling alone is not provider
+  authorization.
 
 ## Voice, Rights, and Accuracy
 

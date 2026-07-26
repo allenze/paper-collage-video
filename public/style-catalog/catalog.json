@@ -1,0 +1,26 @@
+{
+  "$schema": "../../schemas/style-catalog.schema.json",
+  "schemaVersion": 1,
+  "version": "2026-07-25.2",
+  "canonicalSubject": "同一森林跑道中的乌龟与兔子，用于只比较视觉语言，不代表项目最终构图。",
+  "styles": [
+    {
+      "id": "childrens-picture-book-paper",
+      "label": "儿童绘本纸片",
+      "summary": "圆润、温暖、层次清楚，适合儿童故事和轻松寓言。",
+      "image": "style-catalog/childrens-picture-book-paper.png"
+    },
+    {
+      "id": "hand-drawn-cutout-explainer",
+      "label": "手绘剪纸 / 手绘解释",
+      "summary": "手绘线条、剪纸边缘和解释性图形，适合知识讲解与活泼叙事。",
+      "image": "style-catalog/hand-drawn-cutout-explainer.png"
+    },
+    {
+      "id": "archival-collage",
+      "label": "复古档案拼贴",
+      "summary": "旧纸、印刷网点和档案照片感，适合历史、纪实与怀旧叙事。",
+      "image": "style-catalog/archival-collage.png"
+    }
+  ]
+}

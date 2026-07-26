@@ -1,6 +1,6 @@
 import path from 'node:path';
 import {
-  collectCompositeQualityTargets,
+  collectStyleProofTargets,
   prepareQualityReport,
 } from './quality-lib.mjs';
 import {
@@ -10,9 +10,17 @@ import {
   readJson,
 } from './project-lib.mjs';
 import {loadStoryboard} from './storyboard-lib.mjs';
+import {selectStyleProofTargets} from './motion-treatment-lib.mjs';
+import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 
-const COUPLED_PATTERNS = new Set(['supported-subject', 'registered-environment']);
-const REQUIRED_ASSET_EVIDENCE = ['alphaMask', 'checkerboard', 'tightCrop', 'motionStress'];
+const REQUIRED_ASSET_EVIDENCE = [
+  'alphaMask',
+  'checkerboard',
+  'tightCrop',
+  'motionStress',
+  'alphaBandReport',
+  'alphaBandOverlay',
+];
 const REQUIRED_FRAME_EVIDENCE = ['fullFrame', 'crop', 'debugFrame'];
 
 export const styleProofReportPath = (slug) => path.join(ROOT, 'dist', slug, 'style-motion-proof.json');
@@ -36,29 +44,58 @@ const assertReviewedEvidence = (entry, files, label) => {
   }
 };
 
+export const selectTargetAssetEvidence = ({report, target}) =>
+  (report.assetEvidence ?? []).filter(
+    ({sceneId, nodeId}) =>
+      sceneId === target.sceneId &&
+      target.memberNodeIds.includes(nodeId),
+  );
+
+export const selectTargetQualityAssetGroups = ({qualityReport, target}) =>
+  target.memberNodeIds
+    .map((nodeId) => ({
+      nodeId,
+      assets: qualityReport.assets.filter(({sources}) =>
+        sources.includes(`scene:${target.sceneId}:node:${nodeId}`)),
+    }))
+    .filter(({assets}) => assets.length > 0);
+
 export const assertStyleProofReady = async (slug) => {
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
-  const required = (storyboard.scenes ?? []).some((scene) =>
-    (scene.compositionPlan?.patterns ?? []).some((pattern) => COUPLED_PATTERNS.has(pattern)),
-  );
-  if (!required) return {required: false, ready: true, report: null, composites: []};
+  const directingTargets = selectStyleProofTargets(storyboard);
+  if (directingTargets.length === 0) return {required: false, ready: true, report: null, composites: []};
 
-  const targets = (await collectCompositeQualityTargets(project)).filter(({pattern}) => COUPLED_PATTERNS.has(pattern));
-  if (targets.length === 0) throw new Error('故事板需要耦合拓扑，但项目尚未实现 supported-subject 或 registered-environment 组合。');
+  const targetGroups = await Promise.all(directingTargets.map((target) => collectStyleProofTargets(project, target)));
+  const targets = [...new Map(targetGroups.flat().map((target) => [target.compositeId, target])).values()];
 
   const reportFile = styleProofReportPath(slug);
   if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
   const report = await readJson(reportFile);
-  if (report.schemaVersion !== 3 || !Array.isArray(report.composites) || report.composites.length === 0) {
+  if (report.schemaVersion !== 6 || report.scope !== 'style' || !Array.isArray(report.composites)) {
     throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run style:proof。');
   }
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
+  if (
+    report.planFingerprint !== storyboard.directingSummary.styleProofPlan.fingerprint ||
+    JSON.stringify(report.directingTargets) !== JSON.stringify(directingTargets) ||
+    report.runtimeBuildFingerprint !== runtimeBuildFingerprint
+  ) {
+    throw new Error('风格拓扑证明没有绑定当前多维风险覆盖计划；请重新运行 npm run style:proof。');
+  }
+  if (!Array.isArray(report.outputs) || report.outputs.length === 0) {
+    throw new Error('风格拓扑证明缺少 outputs。');
+  }
+  for (const [index, output] of report.outputs.entries()) {
+    await assertEvidenceFile(output.file, `outputs[${index}].file`);
+  }
+  await assertEvidenceFile(report.contactSheet, 'contactSheet');
 
   const targetById = new Map(targets.map((target) => [target.compositeId, target]));
   const provenTargets = [];
   for (const proof of report.composites) {
     const target = targetById.get(proof.compositeId);
     if (!target) continue;
-    if (proof.styleFingerprint !== styleFingerprintForTarget(target)) {
+    if (proof.fingerprint !== styleFingerprintForTarget(target)) {
       throw new Error(`${proof.compositeId} 的风格拓扑证明已过期；请重新生成。`);
     }
     const frames = proof.proofFrames ?? [];
@@ -67,36 +104,139 @@ export const assertStyleProofReady = async (slug) => {
       if (!frame) throw new Error(`${proof.compositeId} 缺少证明时刻 ${proofTimeId}。`);
       for (const field of REQUIRED_FRAME_EVIDENCE) await assertEvidenceFile(frame[field], `${proof.compositeId}.${proofTimeId}.${field}`);
     }
-    const assetEvidence = report.assetEvidence ?? [];
-    for (const nodeId of target.memberNodeIds) {
-      const evidence = assetEvidence.find((candidate) => candidate.nodeId === nodeId);
-      if (!evidence) throw new Error(`${proof.compositeId} 缺少成员 ${nodeId} 的 alpha 证据。`);
-      for (const field of REQUIRED_ASSET_EVIDENCE) await assertEvidenceFile(evidence[field], `${nodeId}.${field}`);
+    if (target.pattern === 'registered-depth-stack') {
+      const layerProof = proof.layerStackProof;
+      const envelopeExtremes =
+        layerProof?.artifacts?.envelopeExtremes ?? [];
+      const subjectTravelExtremes =
+        layerProof?.artifacts?.subjectTravelExtremes ?? [];
+      const subjectTravelRequired = Boolean(
+        target.group?.layerStack?.subjectTravelEnvelope,
+      );
+      if (
+        layerProof?.passed !== true ||
+        envelopeExtremes.length !== 3 ||
+        envelopeExtremes.some(
+          ({passed, transparentPixels}) =>
+            passed !== true || transparentPixels !== 0,
+        ) ||
+        (
+          subjectTravelRequired &&
+          (
+            subjectTravelExtremes.length !== 3 ||
+            subjectTravelExtremes.some(
+              ({passed, transparentPixels}) =>
+                passed !== true || transparentPixels !== 0,
+            )
+          )
+        )
+      ) {
+        throw new Error(
+          `${proof.compositeId} 缺少通过的三画幅 layer-family 极值证明。`,
+        );
+      }
+      await assertEvidenceFile(
+        layerProof.artifacts.neutralReconstruction,
+        `${proof.compositeId}.neutralReconstruction`,
+      );
+      await assertEvidenceFile(
+        layerProof.artifacts.referenceComparison,
+        `${proof.compositeId}.referenceComparison`,
+      );
+      await assertEvidenceFile(
+        layerProof.artifacts.explodedView,
+        `${proof.compositeId}.explodedView`,
+      );
+      for (const envelope of envelopeExtremes) {
+        await assertEvidenceFile(
+          envelope.file,
+          `${proof.compositeId}.envelope.${envelope.profile}`,
+        );
+      }
+      for (const envelope of subjectTravelExtremes) {
+        await assertEvidenceFile(
+          envelope.file,
+          `${proof.compositeId}.subjectTravel.${envelope.profile}`,
+        );
+      }
+    }
+    if (target.pattern === 'looping-environment') {
+      if (
+        proof.loopingWorldProof?.passed !== true ||
+        proof.loopingWorldProof.coverage?.some(
+          ({uncoveredPixels}) => uncoveredPixels !== 0,
+        ) ||
+        proof.loopingWorldProof.strips?.some(
+          ({seamPassed}) => seamPassed !== true,
+        )
+      ) {
+        throw new Error(
+          `${proof.compositeId} 缺少通过的三画幅 seam/coverage/world-motion 证明。`,
+        );
+      }
+      for (const strip of proof.loopingWorldProof.strips) {
+        await assertEvidenceFile(
+          strip.derivationReport,
+          `${proof.compositeId}.${strip.nodeId}.derivationReport`,
+        );
+      }
+    }
+    for (const evidence of selectTargetAssetEvidence({report, target})) {
+      for (const field of REQUIRED_ASSET_EVIDENCE) await assertEvidenceFile(evidence[field], `${evidence.nodeId}.${field}`);
     }
     provenTargets.push(target);
   }
-  if (provenTargets.length === 0) throw new Error('风格拓扑证明没有覆盖当前项目中的耦合组合。');
+  if (provenTargets.length !== targets.length || provenTargets.length === 0) {
+    throw new Error('风格证明没有完整覆盖最高风险导演目标；自由目标也必须提供结构化 composite 证据。');
+  }
 
   const quality = await prepareQualityReport(slug, {write: false});
   for (const target of provenTargets) {
     const composite = quality.report.composites.find(({compositeId}) => compositeId === target.compositeId);
-    if (!composite || !allPassed(composite.semanticChecks)) {
+    if (!target.styleOnly && (!composite || !allPassed(composite.semanticChecks))) {
       throw new Error(`${target.compositeId} 的拓扑语义检查尚未全部通过；请检查证明图并用 project:quality record-batch 记录。`);
     }
     const proof = report.composites.find(({compositeId}) => compositeId === target.compositeId);
     const compositeEvidence = (proof?.proofFrames ?? []).flatMap((frame) => REQUIRED_FRAME_EVIDENCE.map((field) => frame[field]));
-    const targetAssetEvidence = (report.assetEvidence ?? []).filter(({nodeId}) => target.memberNodeIds.includes(nodeId));
+    if (target.pattern === 'registered-depth-stack') {
+      compositeEvidence.push(
+        proof.layerStackProof.artifacts.neutralReconstruction,
+        proof.layerStackProof.artifacts.referenceComparison,
+        proof.layerStackProof.artifacts.explodedView,
+        ...proof.layerStackProof.artifacts.envelopeExtremes.map(
+          ({file}) => file,
+        ),
+        ...(proof.layerStackProof.artifacts.subjectTravelExtremes ?? []).map(
+          ({file}) => file,
+        ),
+      );
+    }
+    if (target.pattern === 'looping-environment') {
+      compositeEvidence.push(
+        ...proof.loopingWorldProof.strips.map(
+          ({derivationReport}) => derivationReport,
+        ),
+      );
+    }
+    const targetAssetEvidence = selectTargetAssetEvidence({report, target});
     compositeEvidence.push(...targetAssetEvidence.map(({motionStress}) => motionStress));
-    assertReviewedEvidence(composite, compositeEvidence, target.compositeId);
-    for (const nodeId of target.memberNodeIds) {
-      const asset = quality.report.assets.find(({sources}) => sources.includes(`scene:${target.sceneId}:node:${nodeId}`));
-      if (!asset || !asset.technical.passed || !allPassed(asset.semanticChecks)) {
+    if (composite) assertReviewedEvidence(composite, compositeEvidence, target.compositeId);
+    for (const {nodeId, assets} of selectTargetQualityAssetGroups({
+      qualityReport: quality.report,
+      target,
+    })) {
+      if (assets.some((asset) => !asset.technical.passed || !allPassed(asset.semanticChecks))) {
         throw new Error(`${target.compositeId} 的成员 ${nodeId} 尚未通过完整素材质量检查。`);
       }
-      const evidence = targetAssetEvidence.find((candidate) => candidate.nodeId === nodeId);
-      assertReviewedEvidence(asset, REQUIRED_ASSET_EVIDENCE.map((field) => evidence[field]), `${target.compositeId} 的成员 ${nodeId}`);
+      for (const asset of assets) {
+        const evidence = targetAssetEvidence.find((candidate) =>
+          candidate.nodeId === nodeId && candidate.source && path.normalize(path.relative(ROOT, path.resolve(ROOT, 'public', candidate.source))) === path.normalize(asset.file),
+        ) ?? targetAssetEvidence.find((candidate) => candidate.nodeId === nodeId && !candidate.source);
+        if (!evidence) throw new Error(`${target.compositeId} 的成员 ${nodeId} 缺少 ${asset.file} 的当前素材证据。`);
+        assertReviewedEvidence(asset, REQUIRED_ASSET_EVIDENCE.map((field) => evidence[field]), `${target.compositeId} 的成员 ${nodeId}`);
+      }
     }
-    const masterAssetId = target.group.registration?.sourceMasterAssetId;
+    const masterAssetId = target.group?.registration?.sourceMasterAssetId ?? target.sequence?.registration?.sourceMasterAssetId;
     if (masterAssetId) {
       const master = quality.report.assets.find(({assetId}) => assetId === masterAssetId);
       if (master && (!master.technical.passed || !allPassed(master.semanticChecks))) {
@@ -104,5 +244,12 @@ export const assertStyleProofReady = async (slug) => {
       }
     }
   }
-  return {required: true, ready: true, report: reportFile, composites: provenTargets.map(({compositeId}) => compositeId)};
+  return {
+    required: true,
+    ready: true,
+    report: reportFile,
+    planFingerprint: storyboard.directingSummary.styleProofPlan.fingerprint,
+    targets: directingTargets,
+    composites: provenTargets.map(({compositeId}) => compositeId),
+  };
 };

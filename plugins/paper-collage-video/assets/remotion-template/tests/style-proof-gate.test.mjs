@@ -6,18 +6,44 @@ import test from 'node:test';
 import sharp from 'sharp';
 import {
   assertStyleProofReady,
+  selectTargetAssetEvidence,
+  selectTargetQualityAssetGroups,
   styleFingerprintForTarget,
   styleProofReportPath,
 } from '../scripts/style-proof-lib.mjs';
 import {
   collectCompositeQualityTargets,
+  collectStyleProofTargets,
   prepareQualityReport,
   recordQualityReviews,
 } from '../scripts/quality-lib.mjs';
+import {padEvidenceBounds} from '../scripts/asset-evidence-lib.mjs';
 import {ROOT} from '../scripts/project-lib.mjs';
+import {createRuntimeBuildFingerprint} from '../scripts/runtime-build-lib.mjs';
+import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const relativePublicSource = (file) => path.relative(path.join(ROOT, 'public'), file);
 const relativeWorkspaceFile = (file) => path.relative(ROOT, file);
+
+test('evidence padding converts fractional layout bounds into an enclosing integer crop', () => {
+  assert.deepEqual(
+    padEvidenceBounds(
+      {left: 338.4, top: 306.4, width: 576, height: 576},
+      {width: 1920, height: 1080},
+      32,
+    ),
+    {left: 306, top: 274, width: 641, height: 641},
+  );
+});
+const manifestFixture = (projectSlug, assets) => ({
+  schemaVersion: 4,
+  projectSlug,
+  assets: assets.map((record, index) => ({
+    recordId: String(index + 1).padStart(64, '0'),
+    lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+    ...record,
+  })),
+});
 
 const writeFixture = async (slug) => {
   const projectDirectory = path.join(ROOT, 'projects', slug);
@@ -67,6 +93,44 @@ const writeFixture = async (slug) => {
     canvas: {width: 100, height: 100},
     derivation: {method: 'alpha-extraction', parentAssetId: 'master'},
   });
+  const registeredFamilyBinding = (nodeId, role) => ({
+    schemaVersion: 1,
+    familyId: 'style-proof-family',
+    pattern: 'supported-subject',
+    registrationId: 'family',
+    sourceMasterAssetId: 'master',
+    canvas: {width: 100, height: 100},
+    origin: 'top-left',
+    role,
+    slot: role,
+    nodeId,
+    source: {
+      kind: 'source-master',
+      assetId: 'master',
+      stateId: null,
+      sourceSheetAssetId: null,
+      sourceFamilyFingerprint: null,
+      sha256: 'a'.repeat(64),
+    },
+    derivation: {
+      placement: {left: 0, top: 0, width: 100, height: 100},
+      maskAssetId: null,
+      maskSha256: null,
+      maskChannel: null,
+      invertMask: false,
+      clip: null,
+      trimmed: false,
+      outputCanvasPreserved: true,
+    },
+    recoveryPolicy: {
+      strategy: 'preserve-family-context',
+      localDeterministicFixFirst: true,
+      isolatedMemberGeneration: 'forbidden',
+      providerRepair: 'masked-complete-source-edit',
+      fallback: 'full-source-regeneration',
+    },
+    familyFingerprint: 'f'.repeat(64),
+  });
   const node = (id, slot, assetRole = 'prop') => ({
     id,
     kind: 'asset',
@@ -78,15 +142,13 @@ const writeFixture = async (slug) => {
     transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
     motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
   });
-  const project = {
-    schemaVersion: 4,
+  const project = withCompiledEditorialFixture({
     slug,
     quality: {minimumAssetScale: 1},
     video: {width: 100, height: 100, fps: 30},
     scenes: [{
       id: 'scene',
       tailSeconds: 1,
-      transition: {type: 'none', durationSeconds: 0},
       narration: {src: 'projects/fixture/audio.mp3', startSeconds: 0, durationSeconds: 3, text: ''},
       camera: {preset: 'static', intensity: 0},
       motion: {
@@ -120,25 +182,44 @@ const writeFixture = async (slug) => {
           ],
         }],
       },
-      cues: [],
+      events: [],
     }],
-  };
+    sceneTransitions: [],
+  });
   const storyboard = {
-    schemaVersion: 1,
+    schemaVersion: 10,
     slug,
     status: 'ready',
-    scenes: [{id: 'scene', compositionPlan: {patterns: ['supported-subject']}}],
+    directingSummary: {
+      styleProofPlan: {
+        requiredCoverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
+        targets: [{
+          sceneId: 'scene',
+          treatmentId: 'subject-on-support',
+          targetId: 'subject',
+          proofTimeId: null,
+          riskScore: 46,
+          directingFingerprint: 'a'.repeat(64),
+          sourceFamilyKey: 'target:subject',
+          coverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
+        }],
+        sourceFamilyKeys: ['target:subject'],
+        fingerprint: 'c'.repeat(64),
+      },
+    },
+    scenes: [{
+      id: 'scene',
+      directing: {fingerprint: 'a'.repeat(64), riskScore: 46, highestRiskTreatmentId: 'subject-on-support', treatmentCount: 1},
+      beats: [{id: 'action', treatments: [{id: 'subject-on-support', targetId: 'subject'}]}],
+      compositionPlan: {patterns: ['supported-subject'], relationships: [], stateSequences: [], continuousMotions: [], visibilityEvents: [], graphics: []},
+    }],
   };
-  const manifest = {
-    schemaVersion: 3,
-    projectSlug: slug,
-    assets: [
+  const manifest = manifestFixture(slug, [
       {assetId: 'master', capability: 'image', file: relativeWorkspaceFile(files.master), request: {quality: {kind: 'style-sample'}}},
-      {assetId: 'rear', capability: 'image', file: relativeWorkspaceFile(files.rear), compositionBinding: binding('rear', 'support-rear')},
-      {assetId: 'subject', capability: 'image', file: relativeWorkspaceFile(files.subject), compositionBinding: binding('subject', 'subject')},
-      {assetId: 'front', capability: 'image', file: relativeWorkspaceFile(files.front), compositionBinding: binding('front', 'support-front')},
-    ],
-  };
+      {assetId: 'rear', capability: 'image', adapter: 'registered-family-member', file: relativeWorkspaceFile(files.rear), media: {width: 100, height: 100, format: 'png', hasAlpha: true}, compositionBinding: binding('rear', 'support-rear'), registeredFamilyBinding: registeredFamilyBinding('rear', 'support-rear'), familyFingerprint: 'f'.repeat(64)},
+      {assetId: 'subject', capability: 'image', adapter: 'registered-family-member', file: relativeWorkspaceFile(files.subject), media: {width: 100, height: 100, format: 'png', hasAlpha: true}, compositionBinding: binding('subject', 'subject'), registeredFamilyBinding: registeredFamilyBinding('subject', 'subject'), familyFingerprint: 'f'.repeat(64)},
+      {assetId: 'front', capability: 'image', adapter: 'registered-family-member', file: relativeWorkspaceFile(files.front), media: {width: 100, height: 100, format: 'png', hasAlpha: true}, compositionBinding: binding('front', 'support-front'), registeredFamilyBinding: registeredFamilyBinding('front', 'support-front'), familyFingerprint: 'f'.repeat(64)},
+    ]);
   const production = {
     $schema: '../../schemas/production.schema.json',
     schemaVersion: 1,
@@ -182,17 +263,32 @@ const writeProofEvidence = async ({slug, project, files}) => {
   const unrelatedFile = path.join(evidenceDirectory, 'unrelated.png');
   await sharp({create: {width: 20, height: 20, channels: 4, background: '#ffffffff'}}).png().toFile(unrelatedFile);
   const [target] = await collectCompositeQualityTargets(project);
+  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   const evidencePath = relativeWorkspaceFile(evidenceFile);
   await fs.writeFile(
     styleProofReportPath(slug),
     `${JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: 6,
+      scope: 'style',
       slug,
-      sceneId: 'scene',
+      planFingerprint: 'c'.repeat(64),
+      directingTargets: [{
+        sceneId: 'scene',
+        treatmentId: 'subject-on-support',
+        targetId: 'subject',
+        proofTimeId: null,
+        riskScore: 46,
+        directingFingerprint: 'a'.repeat(64),
+        sourceFamilyKey: 'target:subject',
+        coverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
+      }],
+      runtimeBuildFingerprint,
       generatedAt: new Date().toISOString(),
+      outputs: [{sceneId: 'scene', file: evidencePath, durationSeconds: 4}],
+      contactSheet: evidencePath,
       composites: [{
         compositeId: target.compositeId,
-        styleFingerprint: styleFingerprintForTarget(target),
+        fingerprint: styleFingerprintForTarget(target),
         proofFrames: [
           {proofTimeId: 'establish', fullFrame: evidencePath, crop: evidencePath, debugFrame: evidencePath},
           {proofTimeId: 'action', fullFrame: evidencePath, crop: evidencePath, debugFrame: evidencePath},
@@ -200,16 +296,80 @@ const writeProofEvidence = async ({slug, project, files}) => {
         ],
       }],
       assetEvidence: target.memberNodeIds.map((nodeId) => ({
+        sceneId: target.sceneId,
         nodeId,
         alphaMask: evidencePath,
         checkerboard: evidencePath,
         tightCrop: evidencePath,
         motionStress: evidencePath,
+        alphaBandReport: evidencePath,
+        alphaBandOverlay: evidencePath,
+        renderSize: {width: 1, height: 1},
+        alphaBandInspection: {
+          passed: true,
+          sourceSize: {width: 100, height: 100},
+          scales: [{label: 'original'}, {label: 'render-scale'}],
+        },
       })),
     }, null, 2)}\n`,
   );
   return {target, evidencePath, unrelatedPath: relativeWorkspaceFile(unrelatedFile)};
 };
+
+test('free directing targets still produce a structured style composite', async () => {
+  const slug = `style-proof-free-${process.pid}`;
+  const fixture = await writeFixture(slug);
+  try {
+    const project = structuredClone(fixture.project);
+    const subject = project.scenes[0].composition.nodes[0].children.find(({id}) => id === 'subject');
+    delete subject.slot;
+    delete subject.registrationId;
+    project.scenes[0].composition.nodes = [subject];
+    const targets = await collectStyleProofTargets(project, {
+      sceneId: 'scene',
+      treatmentId: 'free-subject',
+      targetId: 'subject',
+      directingFingerprint: 'b'.repeat(64),
+    });
+    assert.equal(targets.length, 1);
+    assert.equal(targets[0].compositeId, 'style-target:scene:subject');
+    assert.equal(targets[0].styleOnly, true);
+    assert.deepEqual(targets[0].memberNodeIds, ['subject']);
+    assert.equal(targets[0].proofTimeIds.length, 3);
+  } finally {
+    await fs.rm(fixture.projectDirectory, {recursive: true, force: true});
+    await fs.rm(fixture.publicDirectory, {recursive: true, force: true});
+    await fs.rm(fixture.distDirectory, {recursive: true, force: true});
+  }
+});
+
+test('style proof asset requirements ignore non-file composite members', () => {
+  const target = {
+    sceneId: 'scene',
+    memberNodeIds: ['rig', 'subject', 'fish-field'],
+  };
+  const report = {
+    assetEvidence: [
+      {sceneId: 'scene', nodeId: 'subject'},
+      {sceneId: 'other-scene', nodeId: 'subject'},
+    ],
+  };
+  const qualityReport = {
+    assets: [{
+      assetId: 'subject',
+      sources: ['scene:scene:node:subject'],
+    }],
+  };
+
+  assert.deepEqual(
+    selectTargetAssetEvidence({report, target}).map(({nodeId}) => nodeId),
+    ['subject'],
+  );
+  assert.deepEqual(
+    selectTargetQualityAssetGroups({qualityReport, target}).map(({nodeId}) => nodeId),
+    ['subject'],
+  );
+});
 
 test('style topology gate rejects hard-alpha false confidence, unrelated evidence, and stale evidence', async () => {
   const slug = `style-proof-gate-${process.pid}`;

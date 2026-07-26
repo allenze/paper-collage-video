@@ -4,17 +4,13 @@ import {
   ROOT,
   assertSlug,
   fileExists,
-  formatValidation,
   loadProject,
   projectPaths,
   readJson,
-  validateProject,
-  writeValidationReport,
 } from './project-lib.mjs';
 import {advanceProduction, formatProduction} from './production-state.mjs';
 import {assertSelectedProvidersReady} from './provider-lib.mjs';
 import {assertCreativePlanReady} from './creative-plan-lib.mjs';
-import {assertQualityReady, formatQualityStatus} from './quality-lib.mjs';
 import {assertStoryboardReady} from './storyboard-lib.mjs';
 import {assertStyleProofReady} from './style-proof-lib.mjs';
 
@@ -51,18 +47,6 @@ try {
     const {project} = await loadProject(slug);
     assertCreativePlanReady(project.plan, {slug});
     await assertStoryboardReady(slug, project.plan);
-  }
-  if (action === 'assets-ready') {
-    const {project} = await loadProject(slug);
-    const validation = await validateProject(project);
-    const reportFile = await writeValidationReport(slug, validation);
-    console.log(formatValidation(validation));
-    if (!validation.passed) {
-      throw new Error('素材与项目校验未通过，不能进入 preview。');
-    }
-    const quality = await assertQualityReady(slug);
-    console.log(formatQualityStatus(quality));
-    artifacts.validationReport = path.relative(ROOT, reportFile);
   }
   if (action === 'approve-style-voice') {
     const styleProof = await assertStyleProofReady(slug);

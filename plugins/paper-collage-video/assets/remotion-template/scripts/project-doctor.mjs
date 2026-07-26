@@ -60,14 +60,21 @@ commandCheck('ffmpeg', 'ffmpeg', ['-version']);
 commandCheck('ffprobe', 'ffprobe', ['-version']);
 
 const packageFile = path.join(ROOT, 'package.json');
+const workspaceMarkerFile = path.join(ROOT, '.paper-collage-video-workspace.json');
 const requiredWorkspaceScripts = [
   'project:new',
   'project:resume',
   'project:semantic-contracts',
   'project:composition-proof',
+  'project:budget',
   'project:quality',
+  'project:audio-preflight',
+  'project:audio-calibration',
+  'project:stitch-narration',
   'project:preview',
+  'project:scene-preview',
   'project:render',
+  'project:render-status',
   'provider:attempt',
   'style:proof',
 ];
@@ -94,6 +101,26 @@ record(
   fs.existsSync(packageFile) ? workspaceDetails : '缺少 package.json',
 );
 
+if (fs.existsSync(workspaceMarkerFile) && fs.existsSync(packageFile)) {
+  try {
+    const marker = JSON.parse(fs.readFileSync(workspaceMarkerFile, 'utf8'));
+    const packageJson = JSON.parse(fs.readFileSync(packageFile, 'utf8'));
+    const matches = marker.pluginVersion === packageJson.version;
+    record(
+      'workspace-version',
+      matches ? 'ok' : 'error',
+      matches
+        ? `工作区版本一致：${packageJson.version}`
+        : `工作区版本漂移：marker ${marker.pluginVersion ?? '(missing)'} / package ${packageJson.version ?? '(missing)'}`,
+      matches
+        ? null
+        : '不要混用版本；用当前已安装插件重新 bootstrap 到新工作区，或显式迁移现有工作区。',
+    );
+  } catch (error) {
+    record('workspace-version', 'error', '工作区版本标记无效', error.message);
+  }
+}
+
 const remotionBinary = path.join(
   ROOT,
   'node_modules',
@@ -115,11 +142,13 @@ const pythonAvailable = commandCheck(
   ready,
 );
 if (pythonAvailable) {
-  const modules = run(pythonCommand, ['-c', 'import numpy; import PIL']);
+  const modules = run(pythonCommand, ['-c', 'import numpy; import PIL; import yaml']);
   record(
     'python-dependencies',
     modules.status === 0 ? 'ok' : ready ? 'error' : 'warning',
-    modules.status === 0 ? 'Python 图像依赖已安装' : '缺少 numpy 或 Pillow',
+    modules.status === 0
+      ? 'Python 图像与 Skill 验证依赖已安装'
+      : '缺少 numpy、Pillow 或 PyYAML',
     modules.status === 0
       ? pythonCommand
       : '运行 python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt',

@@ -6,17 +6,39 @@ import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {createRequestFingerprint} from '../scripts/provider-lib.mjs';
 import {
+  assertQualityReviewScaffoldCurrent,
   assertQualityReady,
+  buildQualityReviewScaffold,
   collectCompositeQualityTargets,
   compositionProofReportPath,
+  createQualityReviewContactSheets,
+  createQualityReviewScaffold,
   prepareQualityReport,
   recordQualityReviews,
 } from '../scripts/quality-lib.mjs';
 import {deriveTimeline, validateProject} from '../scripts/project-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {deriveSubtitleCues, segmentSubtitleText} from '../scripts/subtitle-lib.mjs';
+import {createSubtitleContract} from '../scripts/subtitle-contract-lib.mjs';
+import {
+  resolveSubtitleFadeFrames,
+  resolveSubtitleLayout,
+} from '../src/subtitleSurface.mjs';
+import {
+  compileEditorialFixture,
+  withCompiledEditorialFixture,
+} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const manifestFixture = (projectSlug, assets) => ({
+  schemaVersion: 4,
+  projectSlug,
+  assets: assets.map((record, index) => ({
+    recordId: String(index + 1).padStart(64, '0'),
+    lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+    ...record,
+  })),
+});
 
 test('python resolution prefers an explicit override, then the workspace venv', () => {
   assert.equal(
@@ -99,37 +121,96 @@ test('request fingerprints ignore project-specific destinations but preserve gen
   assert.notEqual(registered, otherFamily);
 });
 
-test('v4 scene transitions use one seconds-based timing protocol', () => {
+test('quality scaffold exposes pending checks and current proof evidence without pre-approving them', () => {
+  const status = {
+    report: {
+      assets: [{
+        assetId: 'subject',
+        file: 'public/projects/scaffold/subject.png',
+        sources: ['scene:scene-01:node:subject-node'],
+        requiredChecks: ['subject-complete', 'silhouette-fidelity'],
+        semanticChecks: {'subject-complete': 'passed', 'silhouette-fidelity': 'pending'},
+        status: 'pending',
+      }],
+      composites: [{
+        compositeId: 'group:scene-01:rig',
+        memberNodeIds: ['subject-node'],
+        requiredChecks: ['support-contact'],
+        semanticChecks: {'support-contact': 'pending'},
+        status: 'pending',
+      }],
+    },
+  };
+  const compositionProof = {
+    assetEvidence: [{
+      nodeId: 'subject-node',
+      source: 'projects/scaffold/subject.png',
+      alphaMask: 'dist/scaffold/evidence/alpha.png',
+      checkerboard: 'dist/scaffold/evidence/checker.png',
+      tightCrop: 'dist/scaffold/evidence/tight.png',
+      motionStress: 'dist/scaffold/evidence/stress.jpg',
+    }],
+    composites: [{
+      compositeId: 'group:scene-01:rig',
+      proofFrames: [{
+        fullFrame: 'dist/scaffold/frame.png',
+        crop: 'dist/scaffold/crop.png',
+        debugFrame: 'dist/scaffold/debug.png',
+      }],
+    }],
+  };
+  const scaffold = createQualityReviewScaffold({
+    status,
+    projectSlug: 'scaffold',
+    reviewer: 'host-vision',
+    compositionProof,
+  });
+  assert.equal(scaffold.reviews.length, 2);
+  assert.equal(scaffold.schemaVersion, 2);
+  assert.match(scaffold.sourceReport.fingerprint, /^[a-f0-9]{64}$/);
+  assert.ok(
+    scaffold.reviews.every(({targetFingerprint}) =>
+      /^[a-f0-9]{64}$/.test(targetFingerprint),
+    ),
+  );
+  assert.deepEqual(scaffold.reviews[0].pendingChecks, ['silhouette-fidelity']);
+  assert.deepEqual(scaffold.reviews[0].passedChecks, []);
+  assert.ok(scaffold.reviews[0].evidenceFiles.includes('dist/scaffold/evidence/alpha.png'));
+  assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
+});
+
+test('v9 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {
   const timeline = deriveTimeline({
     video: {fps: 30},
     scenes: [
       {
         id: 'one',
-        narration: {durationSeconds: 2, startSeconds: 0},
-        tailSeconds: 0,
-        transition: {type: 'fade', durationSeconds: 0.4},
+        narration: {durationSeconds: 2, startSeconds: 0.4},
+        tailSeconds: 0.4,
       },
       {
         id: 'two',
-        narration: {durationSeconds: 2, startSeconds: 0},
-        tailSeconds: 0,
-        transition: {type: 'none', durationSeconds: 1},
+        narration: {durationSeconds: 2, startSeconds: 0.4},
+        tailSeconds: 0.4,
       },
       {
         id: 'three',
-        narration: {durationSeconds: 2, startSeconds: 0},
+        narration: {durationSeconds: 2, startSeconds: 0.4},
         tailSeconds: 0,
-        transition: {type: 'fade', durationSeconds: 2 / 3},
       },
+    ],
+    sceneTransitions: [
+      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', treatment: {type: 'paper-wipe', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.4}},
+      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', treatment: {type: 'dip-to-paper', motivation: 'authored', durationSeconds: 0.4}},
     ],
   });
   assert.equal(timeline.scenes[0].from, 0);
-  assert.equal(timeline.scenes[1].from, 60);
-  assert.equal(timeline.scenes[2].from, 100);
-  assert.equal(timeline.durationInFrames, 160);
+  assert.equal(timeline.scenes[1].from, 72);
+  assert.equal(timeline.scenes[2].from, 144);
+  assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v4 projects are rejected instead of migrated', async () => {
+test('pre-v10 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -143,14 +224,14 @@ test('pre-v4 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-        code === 'schema-version' && message.includes('必须为 4'),
+          code === 'schema-version' && message.includes('必须为 10'),
     ),
   );
 });
 
-test('v4 projects require an explicit bounded narration gain', async () => {
+test('v10 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 4,
+    schemaVersion: 10,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -162,6 +243,8 @@ test('v4 projects require an explicit bounded narration gain', async () => {
       mastering: {targetLufs: -16, toleranceLufs: 3, truePeakDbtp: -1},
     },
     scenes: [],
+    sceneTransitions: [],
+    editorial: compileEditorialFixture(),
   };
   const missing = await validateProject(base);
   assert.ok(
@@ -188,6 +271,14 @@ test('v4 projects require an explicit bounded narration gain', async () => {
   });
   assert.ok(
     legacyRoleSounds.issues.some(({code}) => code === 'unsupported-audio-sfx'),
+  );
+  const transparentCanvas = await validateProject({
+    ...base,
+    theme: {canvas: 'rgba(110, 30, 25, 0.5)'},
+    audio: {...base.audio, narration: {volume: 1}},
+  });
+  assert.ok(
+    transparentCanvas.issues.some(({code}) => code === 'theme-opaque-canvas'),
   );
 });
 
@@ -221,6 +312,102 @@ test('subtitle fallback splits long narration and fills the measured narration w
   assert.deepEqual(
     compressed.map(({fromSeconds, toSeconds}) => [fromSeconds, toSeconds]),
     [[0, 1 / 30], [1 / 30, 2 / 30]],
+  );
+});
+
+test('subtitle segmentation keeps Chinese closing punctuation with its sentence', () => {
+  const text = '兔子说：“继续吧。”乌龟点头。';
+  const segments = segmentSubtitleText(text, 20);
+  assert.deepEqual(segments, ['兔子说：“继续吧。”', '乌龟点头。']);
+  assert.equal(segments.join(''), text);
+  assert.ok(segments.every((segment) => !/^[”’」』）》】〕〉》]/u.test(segment)));
+});
+
+test('subtitle fades stay monotonic for short cues and layout honors portrait safe area', () => {
+  const fades = Array.from({length: 12}, (_, index) =>
+    resolveSubtitleFadeFrames({from: 0, to: index + 1}),
+  );
+  assert.deepEqual(fades, [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+  for (let duration = 1; duration <= 12; duration += 1) {
+    const fade = resolveSubtitleFadeFrames({from: 0, to: duration});
+    assert.ok(fade * 2 < duration);
+  }
+  const layout = resolveSubtitleLayout({
+    safeArea: {x: 0.08, y: 0.05, width: 0.84, height: 0.9},
+    width: 1080,
+    height: 1920,
+  });
+  assert.equal(layout.contract, 'responsive-safe-area-v1');
+  assert.ok(layout.bottomPixels > 96);
+  assert.ok(layout.leftPercent >= 8);
+  assert.ok(layout.rightPercent >= 8);
+});
+
+test('subtitle delivery contract checks transcript, timing, safe area, and font source', async () => {
+  const project = {
+    video: {width: 1080, height: 1920, fps: 30},
+    theme: {fontFamily: 'STKaiti'},
+    editorial: {
+      activeProfile: '9:16',
+      responsiveProfiles: [
+        {
+          id: '9:16',
+          safeArea: {x: 0.08, y: 0.05, width: 0.84, height: 0.9},
+        },
+      ],
+    },
+    scenes: [
+      {
+        id: 'race',
+        narration: {
+          src: 'projects/test/audio/race.wav',
+          startSeconds: 0.2,
+          durationSeconds: 2,
+          text: '乌龟继续向前。',
+        },
+        subtitles: [
+          {fromSeconds: 0.2, toSeconds: 2.2, text: '乌龟继续向前。'},
+        ],
+      },
+    ],
+  };
+  const contract = await createSubtitleContract(project);
+  assert.equal(contract.passed, true);
+  assert.equal(contract.summary.requiredScenes, 1);
+  assert.ok(contract.checks.every(({passed}) => passed));
+
+  const broken = await createSubtitleContract({
+    ...project,
+    scenes: [
+      {
+        ...project.scenes[0],
+        subtitles: [{fromSeconds: 0.2, toSeconds: 0.4, text: '兔子停下。'}],
+      },
+    ],
+  });
+  assert.equal(broken.passed, false);
+  assert.equal(
+    broken.checks.find(({id}) => id === 'subtitle-transcript-match').passed,
+    false,
+  );
+  assert.equal(
+    broken.checks.find(({id}) => id === 'subtitle-narration-coverage').passed,
+    false,
+  );
+
+  const missingTranscript = await createSubtitleContract({
+    ...project,
+    scenes: [
+      {
+        ...project.scenes[0],
+        narration: {...project.scenes[0].narration, text: ''},
+      },
+    ],
+  });
+  assert.equal(missingTranscript.passed, false);
+  assert.equal(
+    missingTranscript.checks.find(({id}) => id === 'subtitle-narration-text').passed,
+    false,
   );
 });
 
@@ -264,8 +451,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
     await fs.writeFile(
       path.join(projectDirectory, 'project.json'),
       `${JSON.stringify(
-        {
-          schemaVersion: 4,
+        withCompiledEditorialFixture({
           slug,
           title: 'Quality Gate',
           quality: {minimumAssetScale: 1},
@@ -300,7 +486,8 @@ test('required asset quality resets on hashes and batch reviews write atomically
               },
             },
           ],
-        },
+          sceneTransitions: [],
+        }),
         null,
         2,
       )}\n`,
@@ -308,10 +495,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
     );
     await fs.writeFile(
       path.join(projectDirectory, 'assets-manifest.json'),
-      `${JSON.stringify({
-        schemaVersion: 3,
-        projectSlug: slug,
-        assets: [
+      `${JSON.stringify(manifestFixture(slug, [
           {
             assetId: 'hero-alpha',
             capability: 'image',
@@ -320,14 +504,21 @@ test('required asset quality resets on hashes and batch reviews write atomically
               quality: {requiredChecks: ['edge-clean']},
             },
           },
-        ],
-      })}\n`,
+          {
+            assetId: 'rejected-style',
+            capability: 'image',
+            file: path.relative(ROOT, characterFile),
+            lifecycle: {status: 'rejected', changedAt: '2026-01-02T00:00:00.000Z', reason: 'human-rejected', supersededBy: null},
+          },
+        ]))}\n`,
       'utf8',
     );
 
     let status = await prepareQualityReport(slug);
     assert.equal(status.ready, false);
     assert.equal(status.pending, 2);
+    assert.equal(status.report.assetHistory.length, 1);
+    assert.equal(status.report.assetHistory[0].lifecycle.status, 'rejected');
     assert.deepEqual(
       status.report.assets.find(({kind}) => kind === 'character').requiredChecks,
       ['edge-clean'],
@@ -357,12 +548,37 @@ test('required asset quality resets on hashes and batch reviews write atomically
     );
     assert.equal(await fs.readFile(reportFile, 'utf8'), beforeInvalidBatch);
 
+    const built = await buildQualityReviewScaffold({slug, reviewer: 'test-vision'});
+    assert.ok(built.scaffold.reviews.every(({evidenceFiles}) => evidenceFiles.length > 0));
+    assert.equal(built.scaffold.schemaVersion, 2);
+    assert.equal(
+      built.scaffold.sourceReport.fingerprint,
+      built.status.report.reviewSurfaceFingerprint,
+    );
+    await assert.doesNotReject(() =>
+      assertQualityReviewScaffoldCurrent({slug, scaffold: built.scaffold}),
+    );
+    const contactSheets = await createQualityReviewContactSheets({
+      slug,
+      scaffold: built.scaffold,
+    });
+    assert.equal(
+      contactSheets.index.sourceReport.fingerprint,
+      built.scaffold.sourceReport.fingerprint,
+    );
+    assert.ok(contactSheets.index.pages.length > 0);
+    assert.ok(
+      contactSheets.index.pages.every(({sha256}) =>
+        /^[a-f0-9]{64}$/.test(sha256),
+      ),
+    );
     status = await recordQualityReviews({
       slug,
-      reviews: status.report.assets.map((asset) => ({
-        assetId: asset.assetId,
-        reviewer: 'test-vision',
-        passedChecks: asset.requiredChecks,
+      sourceReportFingerprint: built.scaffold.sourceReport.fingerprint,
+      reviews: built.scaffold.reviews.map(({evidenceFiles, pendingChecks, ...review}) => ({
+        ...review,
+        passedChecks: pendingChecks,
+        failedChecks: [],
         note: 'Fixture reviewed',
       })),
     });
@@ -378,6 +594,23 @@ test('required asset quality resets on hashes and batch reviews write atomically
     await fs.writeFile(backgroundFile, changedBackground);
     status = await prepareQualityReport(slug);
     assert.equal(status.ready, false);
+    await assert.rejects(
+      () =>
+        recordQualityReviews({
+          slug,
+          sourceReportFingerprint: built.scaffold.sourceReport.fingerprint,
+          reviews: built.scaffold.reviews,
+        }),
+      /scaffold 已过期/,
+    );
+    await assert.rejects(
+      () =>
+        createQualityReviewContactSheets({
+          slug,
+          scaffold: built.scaffold,
+        }),
+      /scaffold 已过期/,
+    );
     assert.equal(
       status.report.assets.find(({kind}) => kind === 'background').status,
       'pending',
@@ -385,6 +618,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(publicDirectory, {recursive: true, force: true});
+    await fs.rm(path.join(ROOT, 'dist', slug), {recursive: true, force: true});
   }
 });
 
@@ -404,6 +638,61 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     outputRole,
     canvas: {width: 100, height: 100},
     derivation: {method: 'alpha-extraction', parentAssetId: 'boat-master'},
+  });
+  const registeredFamilyBinding = (nodeId, role) => ({
+    schemaVersion: 2,
+    familyId: 'boat-family-members',
+    pattern: 'supported-subject',
+    motionCapability: 'bounded-relative',
+    sourcePackageId: 'boat-layer-package',
+    sourceStrategy: 'registered-layer-sheet',
+    revealEnvelope: {
+      '16:9': {x: 0.02, y: 0.02, scale: 0.04, rotationDegrees: 1},
+      '9:16': {x: 0.015, y: 0.02, scale: 0.04, rotationDegrees: 1},
+      '1:1': {x: 0.018, y: 0.018, scale: 0.04, rotationDegrees: 1},
+    },
+    registrationId: 'boat-family',
+    sourceMasterAssetId: 'boat-master',
+    canvas: {width: 100, height: 100},
+    origin: 'top-left',
+    role,
+    slot: role,
+    completeness: {
+      'support-rear': 'clean-plate',
+      subject: 'full-silhouette',
+      'support-front': 'full-overlay',
+    }[role],
+    nodeId,
+    source: {
+      kind: 'registered-layer-sheet',
+      assetId: 'boat-layer-sheet',
+      stateId: null,
+      sourceSheetAssetId: null,
+      sourceFamilyFingerprint: null,
+      sha256: 'a'.repeat(64),
+    },
+    derivation: {
+      placement: {left: 0, top: 0, width: 100, height: 100},
+      sourceRect: null,
+      sourceSurface: null,
+      keying: null,
+      keyingMetadataSha256: null,
+      maskAssetId: null,
+      maskSha256: null,
+      maskChannel: null,
+      invertMask: false,
+      clip: null,
+      trimmed: false,
+      outputCanvasPreserved: true,
+    },
+    recoveryPolicy: {
+      strategy: 'preserve-family-context',
+      localDeterministicFixFirst: true,
+      isolatedMemberGeneration: 'forbidden',
+      providerRepair: 'masked-complete-source-edit',
+      fallback: 'full-source-regeneration',
+    },
+    familyFingerprint: 'f'.repeat(64),
   });
   const node = (id, slot, role = 'prop') => ({
     id,
@@ -426,8 +715,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
         .png()
         .toFile(file);
     }
-    const project = {
-      schemaVersion: 4,
+    const project = withCompiledEditorialFixture({
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},
@@ -450,19 +738,25 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
             children: [node('boat-rear', 'support-rear'), node('traveler', 'subject', 'character'), node('boat-front', 'support-front')],
           }],
         },
-        cues: [],
+        events: [],
       }],
-    };
+      sceneTransitions: [],
+    });
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`, 'utf8');
-    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
-      schemaVersion: 3,
-      projectSlug: slug,
-      assets: [
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [
         ['boat-rear', 'support-rear'],
         ['traveler', 'subject'],
-        ['boat-front', 'support-front'],
-      ].map(([assetId, outputRole]) => ({assetId, capability: 'image', file: relativeSource(assetId), compositionBinding: binding(assetId, outputRole)})),
-    }, null, 2)}\n`, 'utf8');
+      ['boat-front', 'support-front'],
+      ].map(([assetId, outputRole]) => ({
+        assetId,
+        capability: 'image',
+        adapter: 'registered-family-member',
+        file: relativeSource(assetId),
+        media: {width: 100, height: 100, format: 'png', hasAlpha: true},
+        compositionBinding: binding(assetId, outputRole),
+        registeredFamilyBinding: registeredFamilyBinding(assetId, outputRole),
+        familyFingerprint: 'f'.repeat(64),
+      }))), null, 2)}\n`, 'utf8');
 
     const [target] = await collectCompositeQualityTargets(project);
     const proofFile = compositionProofReportPath(slug);
@@ -471,7 +765,25 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     await fs.mkdir(path.dirname(proofFile), {recursive: true});
     await fs.copyFile(sources['boat-front'], frame);
     await fs.copyFile(sources['boat-front'], crop);
-    await fs.writeFile(proofFile, `${JSON.stringify({schemaVersion: 1, projectSlug: slug, composites: [{compositeId: target.compositeId, fingerprint: target.fingerprint, proofFrames: [{proofTimeId: 'final', fullFrame: path.relative(ROOT, frame), crop: path.relative(ROOT, crop)}]}]}, null, 2)}\n`, 'utf8');
+    await fs.writeFile(proofFile, `${JSON.stringify({
+      schemaVersion: 1,
+      projectSlug: slug,
+      composites: [{
+        compositeId: target.compositeId,
+        fingerprint: target.fingerprint,
+        proofFrames: [{proofTimeId: 'final', fullFrame: path.relative(ROOT, frame), crop: path.relative(ROOT, crop)}],
+      }],
+      assetEvidence: ['boat-rear', 'traveler', 'boat-front'].map((nodeId) => ({
+        sceneId: 'scene',
+        nodeId,
+        renderSize: {width: 1, height: 1},
+        alphaBandInspection: {
+          passed: true,
+          sourceSize: {width: 100, height: 100},
+          scales: [{label: 'original'}, {label: 'render-scale'}],
+        },
+      })),
+    }, null, 2)}\n`, 'utf8');
 
     let status = await prepareQualityReport(slug);
     assert.equal(status.scopes.composites.pending, 1);

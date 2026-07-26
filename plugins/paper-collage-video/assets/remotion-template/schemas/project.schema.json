@@ -1,14 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v4",
+  "title": "Paper Collage Project v10",
   "type": "object",
-  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "scenes"],
+  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 4},
+    "schemaVersion": {"const": 10},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
+    "intake": {"$ref": "#/$defs/intake"},
     "plan": {"$ref": "#/$defs/plan"},
     "quality": {
       "type": "object",
@@ -29,30 +30,295 @@
     "theme": {"$ref": "#/$defs/theme"},
     "voice": {"$ref": "#/$defs/voice"},
     "audio": {"$ref": "#/$defs/audio"},
-    "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}}
+    "editorial": {"$ref": "editorial.schema.json#/$defs/editorialProject"},
+    "worlds": {"type": "array", "items": {"$ref": "#/$defs/worldContract"}},
+    "trajectoryContracts": {"type": "array", "items": {"$ref": "#/$defs/trajectoryContract"}},
+    "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}},
+    "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}}
   },
   "$defs": {
-    "plan": {
+    "intake": {
       "type": "object",
-      "required": ["schemaVersion", "slug", "status", "inputMode", "requested", "resolved", "updatedAt"],
+      "required": [
+        "schemaVersion",
+        "status",
+        "aspectRatio",
+        "visualStylePreset",
+        "parallaxPreference",
+        "styleCatalogVersion",
+        "styleCatalogFingerprint",
+        "confirmedAt",
+        "note",
+        "updatedAt"
+      ],
       "properties": {
         "schemaVersion": {"const": 1},
+        "status": {"enum": ["pending", "confirmed"]},
+        "aspectRatio": {
+          "oneOf": [
+            {"type": "null"},
+            {"enum": ["16:9", "9:16"]}
+          ]
+        },
+        "visualStylePreset": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "enum": [
+                "childrens-picture-book-paper",
+                "hand-drawn-cutout-explainer",
+                "archival-collage"
+              ]
+            }
+          ]
+        },
+        "parallaxPreference": {
+          "oneOf": [
+            {"type": "null"},
+            {"enum": ["auto", "prefer", "minimal"]}
+          ]
+        },
+        "styleCatalogVersion": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "minLength": 1}
+          ]
+        },
+        "styleCatalogFingerprint": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          ]
+        },
+        "confirmedAt": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "format": "date-time"}
+          ]
+        },
+        "note": {"type": "string"},
+        "updatedAt": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "profilePromise": {
+      "type": "object",
+      "required": [
+        "minRequiredStateFamilies",
+        "minEnhancementStateFamilies",
+        "minTotalStates",
+        "minLocalMotionTargets",
+        "minLayeredScenes",
+        "minParallaxScenes",
+        "minAmbientScenes"
+      ],
+      "properties": {
+        "minRequiredStateFamilies": {"type": "integer", "minimum": 0},
+        "minEnhancementStateFamilies": {"type": "integer", "minimum": 0},
+        "minTotalStates": {"type": "integer", "minimum": 0},
+        "minLocalMotionTargets": {"type": "integer", "minimum": 0},
+        "minLayeredScenes": {"type": "integer", "minimum": 0},
+        "minParallaxScenes": {"type": "integer", "minimum": 0},
+        "minAmbientScenes": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "profilePromiseRevision": {
+      "type": "object",
+      "required": [
+        "authorizationId",
+        "authorizationFingerprint",
+        "lockedSceneIds",
+        "original",
+        "recalculated",
+        "equivalentQualityEvidence",
+        "decidedAt"
+      ],
+      "properties": {
+        "authorizationId": {"type": "string", "minLength": 1},
+        "authorizationFingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "lockedSceneIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "original": {"$ref": "#/$defs/profilePromise"},
+        "recalculated": {"$ref": "#/$defs/profilePromise"},
+        "equivalentQualityEvidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "decidedAt": {"type": "string", "format": "date-time"}
+      },
+      "additionalProperties": false
+    },
+    "worldContract": {
+      "type": "object",
+      "required": ["id", "sceneIds", "requiredStripRoles", "stripSources"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "sceneIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "requiredStripRoles": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {"enum": ["far", "mid", "ground", "near"]}
+        },
+        "stripSources": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": ["role", "sourceAssetId"],
+            "properties": {
+              "role": {"enum": ["far", "mid", "ground", "near"]},
+              "sourceAssetId": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "trajectoryAssertion": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "stateId"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "state-at"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "stateId": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "leadingNodeId", "trailingNodeId", "leadingSide", "minimumGap"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "relative-order"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "leadingNodeId": {"type": "string", "minLength": 1}, "trailingNodeId": {"type": "string", "minLength": 1}, "leadingSide": {"enum": ["left", "right"]}, "minimumGap": {"type": "number", "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "fromProofTimeId", "toProofTimeId", "direction", "minimumDelta"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "travel"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "fromProofTimeId": {"type": "string", "minLength": 1}, "toProofTimeId": {"type": "string", "minLength": 1}, "direction": {"enum": ["left", "right"]}, "minimumDelta": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "fromProofTimeId", "direction", "minimumDelta"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "monotonic-travel"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "fromProofTimeId": {"type": "string", "minLength": 1}, "direction": {"enum": ["left", "right"]}, "minimumDelta": {"type": "number", "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "kind", "sceneId", "proofTimeId", "nodeId", "side"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1}, "kind": {"const": "offscreen-at"}, "sceneId": {"type": "string", "minLength": 1}, "proofTimeId": {"type": "string", "minLength": 1}, "nodeId": {"type": "string", "minLength": 1}, "side": {"enum": ["left", "right"]}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "trajectoryContract": {
+      "type": "object",
+      "required": ["id", "assertions", "sequence"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "assertions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/trajectoryAssertion"}},
+        "sequence": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "plan": {
+      "type": "object",
+      "required": ["schemaVersion", "slug", "status", "inputMode", "productionProfile", "assetBudget", "motionBudget", "approvedImageBudget", "requested", "resolved", "updatedAt"],
+      "properties": {
+        "schemaVersion": {"const": 4},
         "slug": {"type": "string"},
         "status": {"enum": ["pending", "resolved"]},
         "inputMode": {"enum": ["none", "duration-only", "scenes-only", "both"]},
         "productionProfile": {"enum": ["draft", "balanced", "full-depth"]},
+        "storyScope": {
+          "enum": ["concise", "standard", "expanded"]
+        },
+        "scenarioBinding": {
+          "type": "object",
+          "required": [
+            "scenarioSetFingerprint",
+            "optionId",
+            "optionFingerprint",
+            "expectedProviderImageCalls",
+            "proposedImageAttemptLimit",
+            "selectedAt"
+          ],
+          "properties": {
+            "scenarioSetFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "optionId": {"enum": ["draft", "balanced", "full-depth"]},
+            "optionFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "expectedProviderImageCalls": {"type": "integer", "minimum": 1},
+            "proposedImageAttemptLimit": {"type": "integer", "minimum": 1},
+            "selectedAt": {"type": "string", "format": "date-time"}
+          },
+          "additionalProperties": false
+        },
+        "profilePromise": {"$ref": "#/$defs/profilePromise"},
+        "profilePromiseRevision": {"$ref": "#/$defs/profilePromiseRevision"},
         "assetBudget": {
           "oneOf": [
             {"type": "null"},
             {
               "type": "object",
-              "required": ["backgrounds", "environmentLayers", "characterSheets", "styleSamples", "maxGeneratedImages"],
+              "required": ["backgrounds", "environmentLayers", "characterSheets", "styleSamples", "baseImageAttempts", "layerPackageAttemptReserve", "maxGeneratedImages"],
               "properties": {
                 "backgrounds": {"type": "integer", "minimum": 0},
                 "environmentLayers": {"type": "integer", "minimum": 0},
                 "characterSheets": {"type": "integer", "minimum": 0},
                 "styleSamples": {"type": "integer", "minimum": 0},
+                "baseImageAttempts": {"type": "integer", "minimum": 0},
+                "layerPackageAttemptReserve": {"type": "integer", "minimum": 0},
                 "maxGeneratedImages": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "motionBudget": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["maxPoseSheetCalls", "maxStatesPerSheet", "maxContinuousTargets"],
+              "properties": {
+                "maxPoseSheetCalls": {"type": "integer", "minimum": 1},
+                "maxStatesPerSheet": {"type": "integer", "minimum": 2},
+                "maxContinuousTargets": {"type": "integer", "minimum": 1}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "approvedImageBudget": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["imageAttemptLimit", "expectedProviderImageCalls", "profileHardCeiling", "approvedAt"],
+              "properties": {
+                "imageAttemptLimit": {"type": "integer", "minimum": 0},
+                "expectedProviderImageCalls": {"type": "integer", "minimum": 0},
+                "profileHardCeiling": {"type": "integer", "minimum": 0},
+                "approvedAt": {"type": "string", "format": "date-time"}
               },
               "additionalProperties": false
             }
@@ -92,7 +358,7 @@
       "type": "object",
       "required": ["canvas", "sceneBackground", "accent", "ink", "subtitle", "subtitleBackground", "paperEdge", "foreground", "texture"],
       "properties": {
-        "canvas": {"type": "string"},
+        "canvas": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
         "sceneBackground": {"type": "string"},
         "accent": {"type": "string"},
         "ink": {"type": "string"},
@@ -160,34 +426,155 @@
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "label": {"type": "string", "minLength": 1},
         "kind": {"enum": ["establish", "action", "peak", "final"]},
-        "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        "assertions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "stateAssertions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": ["nodeId", "stateId"],
+            "properties": {
+              "nodeId": {"type": "string", "minLength": 1},
+              "stateId": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        }
       },
       "additionalProperties": false
     },
-    "cue": {
+    "visibilityVisual": {
       "type": "object",
-      "required": ["id", "beatId", "at", "durationSeconds", "targetId", "action", "intensity"],
+      "required": ["kind", "action", "transition", "durationSeconds"],
+      "properties": {
+        "kind": {"const": "visibility"},
+        "action": {"enum": ["show", "hide"]},
+        "transition": {"enum": ["cut", "fade-rise", "fade-scale"]},
+        "durationSeconds": {"type": "number", "minimum": 0, "maximum": 2}
+      },
+      "allOf": [
+        {"if": {"properties": {"transition": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}}}},
+        {"if": {"properties": {"transition": {"enum": ["fade-rise", "fade-scale"]}}}, "then": {"properties": {"durationSeconds": {"exclusiveMinimum": 0}}}}
+      ],
+      "additionalProperties": false
+    },
+    "emphasisVisual": {
+      "type": "object",
+      "required": ["kind", "action", "durationSeconds", "intensity"],
+      "properties": {
+        "kind": {"const": "emphasis"},
+        "action": {"$ref": "composition.schema.json#/$defs/emphasisAction"},
+        "durationSeconds": {"type": "number", "exclusiveMinimum": 0},
+        "intensity": {"type": "number", "minimum": 0, "maximum": 3}
+      },
+      "additionalProperties": false
+    },
+    "holdVisual": {
+      "type": "object",
+      "required": ["kind", "durationSeconds"],
+      "properties": {
+        "kind": {"const": "hold"},
+        "durationSeconds": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "beatId", "at", "targetId", "visual"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "beatId": {"type": "string", "minLength": 1},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
-        "durationSeconds": {"type": "number", "exclusiveMinimum": 0},
         "targetId": {"type": "string", "minLength": 1},
-        "action": {"$ref": "composition.schema.json#/$defs/cueAction"},
-        "intensity": {"type": "number", "minimum": 0, "maximum": 3},
+        "visual": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/visibilityVisual"}, {"$ref": "#/$defs/emphasisVisual"}, {"$ref": "#/$defs/holdVisual"}]},
         "proofTimeId": {"type": "string", "minLength": 1},
         "sound": {"$ref": "#/$defs/sound"}
       },
       "additionalProperties": false
     },
+    "sceneBoundaryTransition": {
+      "type": "object",
+      "required": ["id", "fromSceneId", "toSceneId", "intent", "rationale", "treatment"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "fromSceneId": {"type": "string", "minLength": 1},
+        "toSceneId": {"type": "string", "minLength": 1},
+        "intent": {"enum": ["continuity", "location-change", "time-passage", "focus-reveal", "chapter-reset", "impact"]},
+        "rationale": {"type": "string", "minLength": 1},
+        "treatment": {"$ref": "#/$defs/sceneBoundaryTreatment"}
+      },
+      "additionalProperties": false
+    },
+    "sceneBoundaryTreatment": {
+      "type": "object",
+      "required": ["type", "motivation", "durationSeconds"],
+      "properties": {
+        "type": {"enum": ["cut", "paper-wipe", "dip-to-paper", "paper-slide", "torn-wipe", "paper-iris", "page-turn", "paper-shutters"]},
+        "motivation": {"enum": ["semantic-default", "authored", "rhythmic", "impact"]},
+        "durationSeconds": {"type": "number", "minimum": 0, "maximum": 1.5},
+        "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]},
+        "beatId": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}, "motivation": {"enum": ["rhythmic", "impact"]}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"motivation": {"const": "rhythmic"}}}, "then": {"required": ["beatId"], "properties": {"type": {"const": "cut"}}}},
+        {"if": {"properties": {"motivation": {"const": "impact"}}}, "then": {"properties": {"type": {"const": "cut"}}}},
+        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.2}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "paper-slide"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.25}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "torn-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "paper-iris"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "page-turn"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.4}, "direction": {"enum": ["left-to-right", "right-to-left"]}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "paper-shutters"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.4}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}}
+      ],
+      "additionalProperties": false
+    },
+    "sceneAppearance": {
+      "type": "object",
+      "properties": {
+        "background": {"type": "string", "minLength": 1},
+        "paperTexture": {
+          "type": "object",
+          "required": ["visible", "opacity", "blendMode"],
+          "properties": {
+            "visible": {"type": "boolean"},
+            "opacity": {"type": "number", "minimum": 0, "maximum": 1},
+            "blendMode": {"enum": ["normal", "multiply", "screen", "overlay"]}
+          },
+          "additionalProperties": false
+        },
+        "chapter": {
+          "type": "object",
+          "required": ["visible"],
+          "properties": {
+            "visible": {"type": "boolean"},
+            "variant": {"enum": ["plain", "paper-tab"]}
+          },
+          "additionalProperties": false
+        },
+        "subtitles": {
+          "type": "object",
+          "required": ["variant"],
+          "properties": {
+            "variant": {"enum": ["boxed", "plain", "hidden"]},
+            "color": {"type": "string"},
+            "background": {"type": "string"},
+            "maxWidth": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "scene": {
       "type": "object",
-      "required": ["id", "label", "eyebrow", "tailSeconds", "motion", "composition", "camera", "transition", "narration", "subtitles", "cues"],
+      "required": ["id", "label", "eyebrow", "tailSeconds", "motion", "composition", "camera", "narration", "subtitles", "events"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "label": {"type": "string"},
         "eyebrow": {"type": "string"},
         "tailSeconds": {"type": "number", "minimum": 0},
+        "appearance": {"$ref": "#/$defs/sceneAppearance"},
         "motion": {
           "type": "object",
           "required": ["blueprint", "intensity", "seed", "proofTimes"],
@@ -206,16 +593,17 @@
           "properties": {
             "preset": {"enum": ["push", "pull", "pan-left", "pan-right", "static"]},
             "intensity": {"type": "number", "minimum": 0, "maximum": 3},
-            "keyframes": {"type": "array", "minItems": 2, "items": {"type": "object"}}
-          },
-          "additionalProperties": false
-        },
-        "transition": {
-          "type": "object",
-          "required": ["type", "durationSeconds"],
-          "properties": {
-            "type": {"enum": ["fade", "none"]},
-            "durationSeconds": {"type": "number", "minimum": 0}
+            "keyframes": {"type": "array", "minItems": 2, "items": {"type": "object"}},
+            "parallax": {
+              "type": "object",
+              "required": ["enabled", "strength", "focalDepth"],
+              "properties": {
+                "enabled": {"const": true},
+                "strength": {"type": "number", "exclusiveMinimum": 0, "maximum": 2},
+                "focalDepth": {"type": "number", "minimum": -1, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
           },
           "additionalProperties": false
         },
@@ -244,7 +632,7 @@
             "additionalProperties": false
           }
         },
-        "cues": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/cue"}}
+        "events": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/event"}}
       },
       "additionalProperties": false
     }

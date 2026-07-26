@@ -1,6 +1,7 @@
 import {useMemo} from 'react';
 import {AbsoluteFill, Audio, Sequence, staticFile} from 'remotion';
 import {ReplicaChapterScene} from './ReplicaChapterScene';
+import {SceneTransitionOverlay} from './SceneTransitionOverlay';
 import {
   normalizeProject,
   type PaperCollageProject,
@@ -46,7 +47,17 @@ export const MainVideo = (project: PaperCollageProject) => {
             scene={scene}
             narrationVolume={normalized.audio.narration.volume}
             theme={normalized.theme}
+            editorial={normalized.editorial}
           />
+        </Sequence>
+      ))}
+      {normalized.transitions.map((transition) => (
+        <Sequence
+          key={transition.id}
+          from={transition.from}
+          durationInFrames={Math.max(1, transition.durationInFrames)}
+        >
+          <SceneTransitionOverlay transition={transition} theme={normalized.theme} />
         </Sequence>
       ))}
     </AbsoluteFill>

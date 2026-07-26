@@ -1,0 +1,606 @@
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import test from 'node:test';
+import {fileURLToPath} from 'node:url';
+import sharp from 'sharp';
+import {createRequestFingerprint, inspectStateSheetRecoveryMask, validateAssetRequest} from '../scripts/provider-lib.mjs';
+import {
+  inspectCompositeTechnical,
+  inspectUntargetedSheetCells,
+} from '../scripts/quality-lib.mjs';
+import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
+import {
+  createStateFamilyFingerprint,
+  stateOutputName,
+  summarizeActualPoseSheets,
+  validateStateSheetSpec,
+} from '../scripts/state-sheet-lib.mjs';
+import {resolveTargetViewportSnapshot} from '../scripts/world-motion-proof-lib.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const anchorPolicy = {requiredAnchorIds: ['ground-contact'], maximumDrift: 0.02};
+const stateContract = (state) => ({
+  ...state,
+  facing: 'right',
+  anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+});
+
+const sheetRequest = () => ({
+  schemaVersion: 7,
+  projectSlug: 'fixture-project',
+  assetId: 'reader-state-sheet',
+  capability: 'image',
+  outputSurface: {mode: 'opaque'},
+  output: 'public/projects/fixture-project/assets/reader-state-sheet.png',
+  prompt: 'A registered 2x2 pose sheet on a uniform chroma background.',
+  compositionBinding: {
+    sceneId: 'scene-1',
+    nodeId: 'reader',
+    pattern: 'state-sequence',
+    registrationId: 'reader-registration',
+    sourceMasterAssetId: 'reader-master',
+    outputRole: 'registered-state-sheet',
+    canvas: {width: 2048, height: 2048},
+    derivation: {method: 'provider-generation'},
+  },
+  stateSheetBinding: {
+    poseFamilyId: 'reader-poses',
+    registrationId: 'reader-registration',
+    sourceMasterAssetId: 'reader-master',
+    identityReferenceAssetId: 'reader-master',
+    anchorPolicy,
+    layout: {columns: 2, rows: 2},
+    states: [
+      {stateId: 'reading', row: 0, column: 0},
+      {stateId: 'turning', row: 0, column: 1},
+      {stateId: 'pointing', row: 1, column: 0},
+      {stateId: 'book-down', row: 1, column: 1},
+    ].map(stateContract),
+    recoveryPolicy: {
+      strategy: 'preserve-sheet-context',
+      localDeterministicFixFirst: true,
+      isolatedCellGeneration: 'forbidden',
+      fallback: 'full-sheet-regeneration',
+    },
+  },
+  semanticBinding: {
+    riskClass: 'identity-critical',
+    contractIds: ['reader-identity'],
+    generationFamily: {
+      familyId: 'reader-poses',
+      identityMemberIds: ['reader'],
+      stateMemberIds: ['reading', 'turning', 'pointing', 'book-down'],
+      referenceAssetIds: ['reader-master'],
+    },
+  },
+});
+
+test('a single provider request can contractually cover a registered pose sheet', () => {
+  const request = sheetRequest();
+  assert.equal(validateAssetRequest(request), request);
+  const changed = structuredClone(request);
+  changed.stateSheetBinding.states[3].column = 0;
+  assert.throws(() => validateAssetRequest(changed), /重复或越界/);
+  const familyDrift = structuredClone(request);
+  familyDrift.semanticBinding.generationFamily.stateMemberIds.pop();
+  assert.throws(() => validateAssetRequest(familyDrift), /同一 family 和成员集合/);
+  const fingerprint = createRequestFingerprint({request, providerId: 'host-image', model: 'fixture'});
+  const changedFingerprint = createRequestFingerprint({request: changed, providerId: 'host-image', model: 'fixture'});
+  assert.notEqual(fingerprint, changedFingerprint);
+});
+
+test('multi-state provider requests reject isolated cells and require context-preserving recovery', () => {
+  const isolated = sheetRequest();
+  isolated.assetId = 'reader-pointing-repair';
+  delete isolated.stateSheetBinding;
+  isolated.stateBinding = {
+    poseFamilyId: 'reader-poses',
+    stateId: 'pointing',
+    registrationId: 'reader-registration',
+    sourceMasterAssetId: 'reader-master',
+    facing: 'right',
+    anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+    identityReferenceAssetId: 'reader-master',
+  };
+  assert.throws(
+    () => validateAssetRequest(isolated),
+    /禁止独立单格 provider 生成/,
+  );
+
+  const masked = sheetRequest();
+  masked.assetId = 'reader-state-sheet-repair';
+  masked.compositionBinding.derivation = {
+    method: 'provider-edit',
+    parentAssetId: 'reader-state-sheet',
+  };
+  masked.semanticBinding.generationFamily.referenceAssetIds.push('reader-state-sheet');
+  masked.stateSheetRecoveryBinding = {
+    mode: 'masked-sheet-edit',
+    sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: ['pointing'],
+    maskAssetId: 'reader-pointing-mask',
+    maskPolarity: 'white-is-editable',
+  };
+  masked.quality = {
+    kind: 'character-sheet',
+    requiredChecks: [
+      'identity-family-consistent',
+      'cell-separation',
+      'reference-conformant',
+      'untargeted-cells-unchanged',
+    ],
+  };
+  assert.equal(validateAssetRequest(masked), masked);
+
+  const detached = structuredClone(masked);
+  detached.semanticBinding.generationFamily.referenceAssetIds = ['reader-master'];
+  assert.throws(
+    () => validateAssetRequest(detached),
+    /完整原状态表加入 generationFamily.referenceAssetIds/,
+  );
+
+  const allCellsMasked = structuredClone(masked);
+  allCellsMasked.stateSheetRecoveryBinding.targetStateIds = masked.stateSheetBinding.states.map(({stateId}) => stateId);
+  assert.throws(
+    () => validateAssetRequest(allCellsMasked),
+    /必须使用 full-sheet-regeneration/,
+  );
+
+  const fullSheet = structuredClone(masked);
+  fullSheet.compositionBinding.derivation.method = 'provider-generation';
+  fullSheet.stateSheetRecoveryBinding = {
+    mode: 'full-sheet-regeneration',
+    sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: fullSheet.stateSheetBinding.states.map(({stateId}) => stateId),
+  };
+  fullSheet.quality.requiredChecks = fullSheet.quality.requiredChecks.filter((check) => check !== 'untargeted-cells-unchanged');
+  assert.equal(validateAssetRequest(fullSheet), fullSheet);
+});
+
+test('masked sheet edits preserve every untargeted cell at pixel level', async () => {
+  const directory = path.join(ROOT, 'projects', `sheet-context-${process.pid}`);
+  const sourceFile = path.join(directory, 'source.png');
+  const repairedFile = path.join(directory, 'repaired.png');
+  const driftedFile = path.join(directory, 'drifted.png');
+  const sheetBinding = sheetRequest().stateSheetBinding;
+  sheetBinding.layout = {columns: 2, rows: 1};
+  sheetBinding.states = [
+    {stateId: 'reading', row: 0, column: 0},
+    {stateId: 'pointing', row: 0, column: 1},
+  ];
+  const recoveryBinding = {
+    mode: 'masked-sheet-edit',
+    sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: ['pointing'],
+    maskAssetId: 'reader-pointing-mask',
+    maskPolarity: 'white-is-editable',
+  };
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await sharp({create: {width: 200, height: 100, channels: 4, background: '#224466ff'}}).png().toFile(sourceFile);
+    await sharp(sourceFile).composite([
+      {input: Buffer.from('<svg width="100" height="100"><rect width="100" height="100" fill="#dd8844"/></svg>'), left: 100, top: 0},
+    ]).png().toFile(repairedFile);
+    const preserved = await inspectUntargetedSheetCells({currentFile: repairedFile, sourceFile, stateSheetBinding: sheetBinding, recoveryBinding});
+    assert.equal(preserved.passed, true);
+
+    await sharp(repairedFile).composite([
+      {input: Buffer.from('<svg width="100" height="100"><rect width="100" height="100" fill="#335577"/></svg>'), left: 0, top: 0},
+    ]).png().toFile(driftedFile);
+    const drifted = await inspectUntargetedSheetCells({currentFile: driftedFile, sourceFile, stateSheetBinding: sheetBinding, recoveryBinding});
+    assert.equal(drifted.passed, false);
+    assert.ok(drifted.changedPixelRatio > 0.9);
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('masked sheet recovery rejects masks that touch accepted cells', async () => {
+  const directory = path.join(ROOT, 'projects', `sheet-mask-${process.pid}`);
+  const validMask = path.join(directory, 'valid.png');
+  const broadMask = path.join(directory, 'broad.png');
+  const stateSheetBinding = sheetRequest().stateSheetBinding;
+  stateSheetBinding.layout = {columns: 2, rows: 1};
+  stateSheetBinding.states = [
+    {stateId: 'reading', row: 0, column: 0},
+    {stateId: 'pointing', row: 0, column: 1},
+  ];
+  const recoveryBinding = {
+    mode: 'masked-sheet-edit', sourceSheetAssetId: 'reader-state-sheet',
+    targetStateIds: ['pointing'], maskAssetId: 'reader-pointing-mask', maskPolarity: 'white-is-editable',
+  };
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await sharp({create: {width: 200, height: 100, channels: 4, background: '#000000ff'}})
+      .composite([{input: Buffer.from('<svg width="100" height="100"><rect width="100" height="100" fill="#ffffff"/></svg>'), left: 100, top: 0}])
+      .png().toFile(validMask);
+    await sharp({create: {width: 200, height: 100, channels: 4, background: '#ffffffff'}}).png().toFile(broadMask);
+    assert.equal((await inspectStateSheetRecoveryMask({maskFile: validMask, stateSheetBinding, recoveryBinding})).passed, true);
+    const broad = await inspectStateSheetRecoveryMask({maskFile: broadMask, stateSheetBinding, recoveryBinding});
+    assert.equal(broad.passed, false);
+    assert.ok(broad.activeOutsideTarget > 0);
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('registered sheet processing preserves row-major cells and produces stable family fingerprints', () => {
+  const spec = {
+    schemaVersion: 1,
+    projectSlug: 'fixture-project',
+    sceneId: 'scene-1',
+    nodeId: 'reader',
+    poseFamilyId: 'reader-poses',
+    sourceAssetId: 'reader-state-sheet',
+    input: 'public/projects/fixture-project/assets/reader-state-sheet.png',
+    outputDirectory: 'public/projects/fixture-project/assets/reader-poses',
+    registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-master'},
+    identityReference: {assetId: 'reader-master'},
+    anchorPolicy,
+    layout: {columns: 2, rows: 2},
+    states: [
+      {id: 'reading', row: 0, column: 0},
+      {id: 'turning', row: 0, column: 1},
+      {id: 'pointing', row: 1, column: 0},
+      {id: 'book-down', row: 1, column: 1},
+    ].map(stateContract),
+    keying: {keyColor: 'auto', matteErode: 1},
+  };
+  assert.deepEqual(validateStateSheetSpec(spec), []);
+  assert.equal(stateOutputName({poseFamilyId: spec.poseFamilyId, stateId: 'book-down'}), 'reader-poses-book-down.png');
+  const members = spec.states.map(({id}) => ({stateId: id, sha256: id}));
+  const first = createStateFamilyFingerprint({sourceSha256: 'source', spec, members});
+  const second = createStateFamilyFingerprint({sourceSha256: 'source', spec, members: [...members].reverse()});
+  assert.equal(first, second);
+  assert.equal(first, createStateFamilyFingerprint({sourceSha256: 'source', spec, members: members.map((member) => ({...member, stat: {mtimeMs: Date.now()}}))}));
+  const invalid = structuredClone(spec);
+  invalid.states[2].column = 1;
+  assert.ok(validateStateSheetSpec(invalid).length > 0);
+  const drifted = structuredClone(spec);
+  drifted.states[2].anchors[0].x = 0.7;
+  assert.ok(validateStateSheetSpec(drifted).some((error) => error.includes('anchor 漂移')));
+
+  const explicit = structuredClone(spec);
+  explicit.extraction = {
+    mode: 'explicit-source-rects',
+    canvas: {width: 140, height: 100},
+    cells: explicit.states.map(({id}, index) => ({
+      stateId: id,
+      sourceRect: {left: index * 100, top: 0, width: 100, height: 100},
+      placement: {left: 0, top: 0},
+    })),
+  };
+  assert.deepEqual(validateStateSheetSpec(explicit), []);
+  const overlap = structuredClone(explicit);
+  overlap.extraction.cells[1].sourceRect.left = 80;
+  assert.ok(validateStateSheetSpec(overlap).some((error) => error.includes('不得重叠')));
+  assert.notEqual(
+    createStateFamilyFingerprint({sourceSha256: 'source', spec, members}),
+    createStateFamilyFingerprint({sourceSha256: 'source', spec: explicit, members}),
+  );
+});
+
+test('state sheet processor turns one recorded provider image into registered local states', async (context) => {
+  const python = resolvePythonCommand({root: ROOT});
+  const dependencies = spawnSync(python, ['-c', 'import numpy; from PIL import Image'], {cwd: ROOT});
+  if (dependencies.status !== 0) return context.skip('numpy and Pillow are not installed');
+  const slug = `state-sheet-e2e-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const input = path.join(publicDirectory, 'reader-sheet.png');
+  const outputDirectory = path.join(publicDirectory, 'states');
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(publicDirectory, {recursive: true});
+    const left = await sharp({create: {width: 100, height: 100, channels: 3, background: '#ff00ff'}})
+      .composite([{input: Buffer.from('<svg width="100" height="100"><circle cx="50" cy="54" r="28" fill="#3b7d42"/></svg>')}])
+      .png().toBuffer();
+    const right = await sharp({create: {width: 100, height: 100, channels: 3, background: '#ff00ff'}})
+      .composite([{input: Buffer.from('<svg width="100" height="100"><rect x="24" y="24" width="52" height="60" rx="12" fill="#d48a32"/></svg>')}])
+      .png().toBuffer();
+    await sharp({create: {width: 200, height: 100, channels: 3, background: '#ff00ff'}})
+      .composite([{input: left, left: 0, top: 0}, {input: right, left: 100, top: 0}])
+      .png().toFile(input);
+    const sourceSha256 = createHash('sha256').update(await fs.readFile(input)).digest('hex');
+    const binding = {
+      poseFamilyId: 'reader-poses', registrationId: 'reader-registration', sourceMasterAssetId: 'reader-master',
+      identityReferenceAssetId: 'reader-master', anchorPolicy,
+      layout: {columns: 2, rows: 1},
+      states: [
+        {stateId: 'reading', row: 0, column: 0},
+        {stateId: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
+      recoveryPolicy: {
+        strategy: 'preserve-sheet-context', localDeterministicFixFirst: true,
+        isolatedCellGeneration: 'forbidden', fallback: 'full-sheet-regeneration',
+      },
+    };
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
+      schemaVersion: 4,
+      projectSlug: slug,
+      assets: [
+        {
+          recordId: '1'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+          assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
+          requestFingerprint: 'a'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
+          stateSheetBinding: binding, familyFingerprint: null,
+        },
+        {
+          recordId: '9'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'identity-reference', supersededBy: null},
+          assetId: 'reader-master', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'manual',
+          requestFingerprint: '9'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: null, compositionBinding: null,
+        },
+      ],
+    }, null, 2)}\n`);
+    const specFile = path.join(projectDirectory, 'reader-state-sheet.json');
+    await fs.writeFile(specFile, `${JSON.stringify({
+      schemaVersion: 1, projectSlug: slug, sceneId: 'scene-1', nodeId: 'reader', poseFamilyId: 'reader-poses',
+      sourceAssetId: 'reader-sheet', input: path.relative(ROOT, input), outputDirectory: path.relative(ROOT, outputDirectory),
+      registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-master'},
+      identityReference: {assetId: 'reader-master'}, anchorPolicy,
+      layout: {columns: 2, rows: 1}, states: [
+        {id: 'reading', row: 0, column: 0},
+        {id: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
+      keying: {keyColor: '#ff00ff', matteErode: 1},
+    }, null, 2)}\n`);
+    const processed = spawnSync(process.execPath, ['scripts/process-state-sheet.mjs', path.relative(ROOT, specFile)], {cwd: ROOT, encoding: 'utf8'});
+    assert.equal(processed.status, 0, processed.stderr);
+    const report = JSON.parse(await fs.readFile(path.join(outputDirectory, 'reader-poses-state-sheet-report.json'), 'utf8'));
+    assert.equal(report.providerImageCalls, 1);
+    assert.equal(report.schemaVersion, 4);
+    assert.equal(report.anchorRegistrationProof.passed, true);
+    assert.equal(report.identityReference.assetId, 'reader-master');
+    assert.equal(report.generationMode, 'initial-family-sheet');
+    assert.equal(report.isolatedCellGenerationUsed, false);
+    assert.equal(report.derivedStateCount, 2);
+    assert.equal(report.avoidedIndividualCalls, 1);
+    const dimensions = await Promise.all(['reading', 'pointing'].map(async (stateId) => {
+      const metadata = await sharp(path.join(outputDirectory, `reader-poses-${stateId}.png`)).metadata();
+      return `${metadata.width}x${metadata.height}:${metadata.hasAlpha}`;
+    }));
+    assert.deepEqual(dimensions, ['100x100:true', '100x100:true']);
+    const manifest = JSON.parse(await fs.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'));
+    assert.equal(manifest.assets.filter(({adapter}) => adapter === 'registered-sheet-cell').length, 2);
+    assert.equal(new Set(manifest.assets.filter(({stateBinding}) => stateBinding).map(({familyFingerprint}) => familyFingerprint)).size, 1);
+    assert.deepEqual(summarizeActualPoseSheets(manifest), {
+      families: [{
+        poseFamilyId: 'reader-poses',
+        stateIds: ['pointing', 'reading'],
+        sourceAssetIds: ['reader-sheet'],
+        providerCalls: 1,
+        deterministicDerivatives: 2,
+        providerCallsAvoidedByBatching: 1,
+      }],
+      providerCalls: 1,
+      deterministicDerivatives: 2,
+      providerCallsAvoidedByBatching: 1,
+    });
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
+test('explicit registered source rects preserve a full silhouette that crosses a nominal grid boundary', async (context) => {
+  const python = resolvePythonCommand({root: ROOT});
+  const dependencies = spawnSync(python, ['-c', 'import numpy; from PIL import Image'], {cwd: ROOT});
+  if (dependencies.status !== 0) return context.skip('numpy and Pillow are not installed');
+  const slug = `state-sheet-explicit-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const input = path.join(publicDirectory, 'reader-sheet.png');
+  const outputDirectory = path.join(publicDirectory, 'states');
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(publicDirectory, {recursive: true});
+    await sharp({create: {width: 220, height: 100, channels: 3, background: '#ff00ff'}})
+      .composite([
+        {input: Buffer.from('<svg width="120" height="100"><rect x="12" y="28" width="102" height="50" rx="18" fill="#3b7d42"/></svg>'), left: 0, top: 0},
+        {input: Buffer.from('<svg width="100" height="100"><rect x="12" y="20" width="76" height="60" rx="14" fill="#d48a32"/></svg>'), left: 120, top: 0},
+      ])
+      .png().toFile(input);
+    const sourceSha256 = createHash('sha256').update(await fs.readFile(input)).digest('hex');
+    const binding = {
+      poseFamilyId: 'reader-poses', registrationId: 'reader-registration', sourceMasterAssetId: 'reader-master',
+      identityReferenceAssetId: 'reader-master', anchorPolicy,
+      layout: {columns: 2, rows: 1},
+      states: [
+        {stateId: 'reading', row: 0, column: 0},
+        {stateId: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
+      recoveryPolicy: {
+        strategy: 'preserve-sheet-context', localDeterministicFixFirst: true,
+        isolatedCellGeneration: 'forbidden', fallback: 'full-sheet-regeneration',
+      },
+    };
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
+      schemaVersion: 4,
+      projectSlug: slug,
+      assets: [
+        {
+          recordId: '2'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+          assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
+          requestFingerprint: 'b'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
+          stateSheetBinding: binding, familyFingerprint: null,
+        },
+        {
+          recordId: '8'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'identity-reference', supersededBy: null},
+          assetId: 'reader-master', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'manual',
+          requestFingerprint: '8'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
+          recordedAt: '2026-01-01T00:00:00.000Z', request: null, compositionBinding: null,
+        },
+      ],
+    }, null, 2)}\n`);
+    const specFile = path.join(projectDirectory, 'reader-state-sheet.json');
+    await fs.writeFile(specFile, `${JSON.stringify({
+      schemaVersion: 1, projectSlug: slug, sceneId: 'scene-1', nodeId: 'reader', poseFamilyId: 'reader-poses',
+      sourceAssetId: 'reader-sheet', input: path.relative(ROOT, input), outputDirectory: path.relative(ROOT, outputDirectory),
+      registration: {id: 'reader-registration', sourceMasterAssetId: 'reader-master'},
+      identityReference: {assetId: 'reader-master'}, anchorPolicy,
+      layout: {columns: 2, rows: 1}, states: [
+        {id: 'reading', row: 0, column: 0},
+        {id: 'pointing', row: 0, column: 1},
+      ].map(stateContract),
+      keying: {keyColor: '#ff00ff', matteErode: 1},
+      extraction: {
+        mode: 'explicit-source-rects', canvas: {width: 120, height: 100},
+        cells: [
+          {stateId: 'reading', sourceRect: {left: 0, top: 0, width: 120, height: 100}, placement: {left: 0, top: 0}},
+          {stateId: 'pointing', sourceRect: {left: 120, top: 0, width: 100, height: 100}, placement: {left: 0, top: 0}},
+        ],
+      },
+    }, null, 2)}\n`);
+    const processed = spawnSync(process.execPath, ['scripts/process-state-sheet.mjs', path.relative(ROOT, specFile)], {cwd: ROOT, encoding: 'utf8'});
+    assert.equal(processed.status, 0, processed.stderr);
+    const reading = path.join(outputDirectory, 'reader-poses-reading.png');
+    const pointing = path.join(outputDirectory, 'reader-poses-pointing.png');
+    const [readingPixels, pointingPixels] = await Promise.all([
+      sharp(reading).ensureAlpha().raw().toBuffer({resolveWithObject: true}),
+      sharp(pointing).ensureAlpha().raw().toBuffer({resolveWithObject: true}),
+    ]);
+    assert.equal(readingPixels.info.width, 120);
+    assert.equal(pointingPixels.info.width, 120);
+    const alphaAt = ({data, info}, x, y) => data[(y * info.width + x) * 4 + 3];
+    assert.ok(alphaAt(readingPixels, 110, 52) > 200, 'wide first pose remains intact past nominal 110px grid edge');
+    assert.ok(alphaAt(pointingPixels, 86, 52) > 200, 'second pose remains registered on the shared 120px canvas');
+    assert.equal(alphaAt(pointingPixels, 119, 52), 0, 'source-rect padding stays keyed transparent rather than becoming an opaque band');
+    const manifest = JSON.parse(await fs.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'));
+    const derived = manifest.assets.filter(({adapter}) => adapter === 'registered-sheet-cell');
+    assert.deepEqual(derived.map(({compositionBinding}) => compositionBinding.derivation.method), ['explicit-source-rects', 'explicit-source-rects']);
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
+test('state-sequence quality requires current anchors, facing, and identity references', async () => {
+  const slug = `state-quality-${process.pid}`;
+  const directory = path.join(ROOT, 'public', 'projects', slug);
+  const evidenceFile = path.join(directory, 'anchors.png');
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await sharp({
+      create: {width: 24, height: 24, channels: 4, background: '#3b7d42ff'},
+    }).png().toFile(evidenceFile);
+    const evidenceSha256 = createHash('sha256')
+      .update(await fs.readFile(evidenceFile))
+      .digest('hex');
+    const relativeEvidence = path.relative(ROOT, evidenceFile);
+    const identitySha256 = 'd'.repeat(64);
+    const states = ['reading', 'pointing'].map((id, index) => ({
+      id,
+      src: `projects/${slug}/${id}.png`,
+      at: index * 0.5,
+      facing: 'right',
+      anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+      identityReferenceAssetId: 'reader-master',
+      identityReferenceSha256: identitySha256,
+    }));
+    const stateRecords = states.map((state) => ({
+      lifecycle: {status: 'active'},
+      media: {width: 24, height: 24},
+      stateBinding: {
+        poseFamilyId: 'reader-poses',
+        stateId: state.id,
+        registrationId: 'reader-registration',
+        facing: state.facing,
+        anchors: state.anchors,
+        identityReferenceAssetId: state.identityReferenceAssetId,
+        identityReferenceSha256: state.identityReferenceSha256,
+        anchorEvidence: {file: relativeEvidence, sha256: evidenceSha256},
+      },
+    }));
+    const target = {
+      compositeId: 'state-sequence:scene:reader',
+      fingerprint: 'f'.repeat(64),
+      pattern: 'state-sequence',
+      proofTimeIds: ['proof-reading', 'proof-pointing'],
+      sequence: {
+        poseFamilyId: 'reader-poses',
+        registration: {
+          id: 'reader-registration',
+          canvas: {width: 24, height: 24},
+        },
+        anchorPolicy,
+        states,
+      },
+      stateRecords,
+      identityReferenceRecords: states.map(() => ({
+        lifecycle: {status: 'active'},
+        sha256: identitySha256,
+      })),
+    };
+    const proofReport = {
+      composites: [{
+        compositeId: target.compositeId,
+        fingerprint: target.fingerprint,
+        proofFrames: target.proofTimeIds.map((proofTimeId) => ({
+          proofTimeId,
+          fullFrame: relativeEvidence,
+          crop: relativeEvidence,
+        })),
+      }],
+    };
+    const current = await inspectCompositeTechnical({target, proofReport});
+    assert.equal(current.passed, true);
+    assert.ok(current.checks.some(
+      ({id, passed}) => id === 'state-anchor-registration' && passed,
+    ));
+
+    const staleIdentity = structuredClone(target);
+    staleIdentity.identityReferenceRecords[1].sha256 = 'e'.repeat(64);
+    const rejected = await inspectCompositeTechnical({
+      target: staleIdentity,
+      proofReport,
+    });
+    assert.equal(rejected.passed, false);
+    assert.ok(rejected.checks.some(
+      ({id, passed}) => id === 'state-identity-reference' && !passed,
+    ));
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('world-motion proof resolves a looping state sequence through its hold state', async () => {
+  const slug = `state-proof-${process.pid}`;
+  const directory = path.join(ROOT, 'public', 'projects', slug);
+  const run = path.join(directory, 'run.png');
+  const sleep = path.join(directory, 'sleep.png');
+  try {
+    await fs.mkdir(directory, {recursive: true});
+    await Promise.all([
+      sharp({create: {width: 24, height: 24, channels: 4, background: '#3b7d42ff'}}).png().toFile(run),
+      sharp({create: {width: 24, height: 24, channels: 4, background: '#d48a32ff'}}).png().toFile(sleep),
+    ]);
+    const node = {
+      id: 'runner', kind: 'state-sequence', poseFamilyId: 'runner-poses',
+      registration: {id: 'runner-registration', sourceMasterAssetId: 'runner-sheet', canvas: {width: 24, height: 24}, origin: 'top-left'},
+      states: [
+        {id: 'sleep', src: `projects/${slug}/sleep.png`, at: 0},
+        {id: 'run-a', src: `projects/${slug}/run.png`, at: 0.01},
+      ],
+      playback: {mode: 'loop', cycles: 2, activeFrom: 0.01, activeUntil: 0.3, holdStateId: 'sleep', activeStateIds: ['run-a']},
+      transition: {type: 'cut', durationSeconds: 0}, z: 2, depth: 0,
+      transform: {x: 0.2, y: 0.5, width: 0.2, height: 0.2, anchorX: 0, anchorY: 0},
+      motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    };
+    const scene = {
+      camera: {preset: 'static'},
+      composition: {nodes: [node]},
+    };
+    const snapshot = await resolveTargetViewportSnapshot({
+      scene, nodeId: 'runner', progress: 0.38, video: {width: 100, height: 100},
+    });
+    assert.equal(snapshot.source, `projects/${slug}/sleep.png`);
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});

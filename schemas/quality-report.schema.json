@@ -3,26 +3,56 @@
   "$id": "https://local.paper-collage.dev/quality-report.schema.json",
   "title": "Paper Collage Asset and Composite Quality Report",
   "type": "object",
-  "required": ["schemaVersion", "projectSlug", "updatedAt", "cueEvents", "assets", "composites"],
+  "required": ["schemaVersion", "projectSlug", "updatedAt", "reviewSurfaceFingerprint", "eventTimeline", "assetHistory", "assets", "composites"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 2},
+    "schemaVersion": {"const": 6},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "updatedAt": {"type": "string", "format": "date-time"},
-    "cueEvents": {"type": "array", "items": {"type": "object"}},
+    "reviewSurfaceFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "eventTimeline": {"type": "array", "items": {"type": "object"}},
+    "assetHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["recordId", "assetId", "file", "sha256", "lifecycle"],
+        "properties": {
+          "recordId": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "assetId": {"type": "string"},
+          "file": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "lifecycle": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
     "assets": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["assetId", "file", "kind", "sources", "sha256", "requiredChecks", "technical", "semanticChecks", "status", "reviewer", "reviewedAt", "note"],
+        "required": ["assetId", "file", "kind", "sources", "reviewScope", "sha256", "requiredChecks", "technical", "semanticChecks", "status", "reviewer", "reviewedAt", "note"],
         "properties": {
           "assetId": {"type": "string", "minLength": 1},
           "file": {"type": "string", "minLength": 1},
           "kind": {"enum": ["background", "environment", "character", "prop", "decorative", "character-sheet", "style-sample", "mechanism", "diagram", "image"]},
           "sources": {"type": "array", "items": {"type": "string"}},
+          "reviewScope": {"enum": ["runtime-visible", "derivation-only", "source-asset"]},
           "sha256": {"type": ["string", "null"]},
           "fingerprint": {"type": ["string", "null"]},
           "semanticBinding": {"type": ["object", "null"]},
+          "stateSheetBinding": {"type": ["object", "null"]},
+          "stateSheetRecoveryBinding": {"type": ["object", "null"]},
+          "registeredFamilyBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/registered-family-binding.schema.json"}
+            ]
+          },
+          "recoverySourceFile": {"type": ["string", "null"]},
+          "recoverySourceSha256": {"type": ["string", "null"]},
+          "recoveryEvidenceFiles": {"type": "array", "items": {"type": "string"}},
+          "manifestRecordId": {"type": ["string", "null"]},
+          "manifestSha256": {"type": ["string", "null"]},
           "semanticContractFingerprints": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},
           "requiredChecks": {"type": "array", "items": {"type": "string"}},
           "technical": {"type": "object"},
@@ -40,11 +70,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["compositeId", "sceneId", "pattern", "nodeId", "memberNodeIds", "memberHashes", "compositionHash", "fingerprint", "proofTimeIds", "proofFrames", "requiredChecks", "technical", "semanticChecks", "status", "reviewer", "reviewedAt", "note"],
+        "required": ["compositeId", "sceneId", "pattern", "nodeId", "memberNodeIds", "memberHashes", "compositionHash", "fingerprint", "proofTimeIds", "proofFrames", "reviewScope", "requiredChecks", "technical", "semanticChecks", "status", "reviewer", "reviewedAt", "note"],
         "properties": {
           "compositeId": {"type": "string", "minLength": 1},
           "sceneId": {"type": "string", "minLength": 1},
-          "pattern": {"enum": ["supported-subject", "registered-environment", "cue", "semantic-contract"]},
+          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "state-sequence", "event", "semantic-contract", "parallax-rig", "motif-field", "typography", "annotation", "data-graphic", "editorial-transition", "responsive-directing", "style-target"]},
           "nodeId": {"type": "string", "minLength": 1},
           "memberNodeIds": {"type": "array", "items": {"type": "string"}},
           "memberHashes": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},
@@ -55,6 +85,7 @@
           "contractId": {"type": "string"},
           "contractKind": {"enum": ["identity", "topology", "mechanism", "diagram"]},
           "proofFrames": {"type": "array", "items": {"type": "object"}},
+          "reviewScope": {"enum": ["runtime-visible", "derivation-only"]},
           "requiredChecks": {"type": "array", "items": {"type": "string"}},
           "technical": {"type": "object"},
           "semanticChecks": {"type": "object"},

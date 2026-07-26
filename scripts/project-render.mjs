@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   ROOT,
+  fileExists,
   formatValidation,
   loadProject,
   projectPaths,
@@ -13,8 +14,17 @@ import {
 } from './project-lib.mjs';
 import {assertRenderAllowed, recordRender} from './production-state.mjs';
 import {assertQualityReady, formatQualityStatus} from './quality-lib.mjs';
+import {
+  classifyRenderCache,
+  createRenderFingerprints,
+  readRenderCache,
+  updateRenderCache,
+} from './render-cache-lib.mjs';
+import {writeRenderStatus} from './render-status-lib.mjs';
 
 const [mode, slug] = process.argv.slice(2);
+let renderStartedAt = null;
+let renderOutput = null;
 
 const runInherited = (command, args, {captureOutput = false} = {}) =>
   new Promise((resolve, reject) => {
@@ -64,8 +74,20 @@ try {
   if (!['preview', 'render'].includes(mode)) {
     throw new Error('用法：project-render.mjs <preview|render> <slug>');
   }
-  await assertRenderAllowed(slug, mode);
+  renderStartedAt = new Date().toISOString();
+  await writeRenderStatus({
+    slug,
+    mode,
+    phase: 'preflight',
+    startedAt: renderStartedAt,
+    detail: '正在同步旁白、验证组合与质量门。',
+  });
   await runInherited(process.execPath, ['scripts/project-sync.mjs', slug]);
+  await runInherited(process.execPath, [
+    'scripts/project-audio-preflight.mjs',
+    slug,
+    '--strict',
+  ]);
   const quality = await assertQualityReady(slug);
   console.log(formatQualityStatus(quality));
   const {project} = await loadProject(slug);
@@ -75,6 +97,7 @@ try {
   if (!report.passed) {
     throw new Error('项目校验未通过，已停止渲染。');
   }
+  await assertRenderAllowed(slug, mode);
 
   const paths = projectPaths(slug);
   await fs.mkdir(paths.distDirectory, {recursive: true});
@@ -82,6 +105,7 @@ try {
     paths.distDirectory,
     mode === 'preview' ? 'preview.mp4' : 'final.mp4',
   );
+  renderOutput = output;
   const args = [
     'render',
     'src/index.ts',
@@ -89,6 +113,9 @@ try {
     output,
     `--props=${path.relative(ROOT, paths.projectFile)}`,
     `--concurrency=${resolveRenderConcurrency()}`,
+    // Render progress emits one update per frame. Keep automated preview/render
+    // runs observable through their final reports without flooding their caller.
+    '--log=error',
   ];
   if (mode === 'preview') {
     args.push(
@@ -98,13 +125,64 @@ try {
     );
   }
   const remotion = path.join(ROOT, 'node_modules', '.bin', 'remotion');
-  await runInherited(remotion, ['browser', 'ensure'], {captureOutput: true}).catch(
-    (error) => {
+  const fingerprints = await createRenderFingerprints(project, mode);
+  let cache = await readRenderCache(slug);
+  const cacheState = await classifyRenderCache({
+    cache,
+    mode,
+    artifact: output,
+    fingerprints,
+  });
+  if (cacheState === 'exact') {
+    await writeRenderStatus({slug, mode, phase: 'reused', artifact: output, startedAt: renderStartedAt, detail: '视觉与音频指纹未变化，复用已验证成片。'});
+    console.log(`✓ render cache: ${mode} 视觉与音频均未变化，复用 ${path.relative(ROOT, output)}`);
+  } else if (cacheState === 'visual-only') {
+    await writeRenderStatus({slug, mode, phase: 'audio-refresh', artifact: output, startedAt: renderStartedAt, detail: '视觉指纹未变化，正在重新混音和封装。'});
+    const audioMix = path.join(paths.distDirectory, 'audio-preflight.wav');
+    if (!(await fileExists(audioMix))) throw new Error('缺少 audio-preflight.wav，不能执行音频-only 修订。');
+    const temporary = path.join(paths.distDirectory, `.${mode}-audio-refresh.mp4`);
+    await runInherited('ffmpeg', [
+      '-v',
+      'error',
+      '-i',
+      output,
+      '-i',
+      audioMix,
+      '-map',
+      '0:v:0',
+      '-map',
+      '1:a:0',
+      '-c:v',
+      'copy',
+      '-c:a',
+      'aac',
+      '-b:a',
+      mode === 'preview' ? '96k' : '192k',
+      '-shortest',
+      '-movflags',
+      '+faststart',
+      '-y',
+      temporary,
+    ]);
+    await fs.rename(temporary, output);
+    console.log(`✓ render cache: 视觉未变化，仅重新混音/封装 ${path.relative(ROOT, output)}`);
+  } else {
+    await writeRenderStatus({slug, mode, phase: 'rendering', artifact: output, startedAt: renderStartedAt, detail: 'Remotion 正在渲染；为避免逐帧噪声不报告推测百分比。'});
+    await runInherited(remotion, ['browser', 'ensure'], {captureOutput: true}).catch(
+      (error) => {
+        throw friendlyRenderError(error);
+      },
+    );
+    await runInherited(remotion, args, {captureOutput: true}).catch((error) => {
       throw friendlyRenderError(error);
-    },
-  );
-  await runInherited(remotion, args, {captureOutput: true}).catch((error) => {
-    throw friendlyRenderError(error);
+    });
+  }
+  cache = await updateRenderCache({
+    slug,
+    cache,
+    mode,
+    artifact: output,
+    fingerprints,
   });
   await runInherited(process.execPath, [
     'scripts/project-report.mjs',
@@ -114,8 +192,12 @@ try {
     `--quality-report=${path.join(ROOT, 'projects', slug, 'quality-report.json')}`,
   ]);
   const production = await recordRender(slug, mode);
+  await writeRenderStatus({slug, mode, phase: 'completed', artifact: output, startedAt: renderStartedAt, detail: `渲染、报告与生产状态已完成：${production.stage}。`});
   console.log(`✓ 生产状态：${production.stage}`);
 } catch (error) {
+  if (slug && ['preview', 'render'].includes(mode) && renderStartedAt) {
+    await writeRenderStatus({slug, mode, phase: 'failed', artifact: renderOutput, startedAt: renderStartedAt, error: error.message}).catch(() => {});
+  }
   console.error(`project:${mode ?? 'render'} failed: ${error.message}`);
   process.exitCode = 1;
 }

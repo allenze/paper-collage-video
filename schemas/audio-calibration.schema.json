@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.paper-collage.dev/audio-calibration.schema.json",
+  "title": "Paper Collage Audio Calibration Decision",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "projectSlug",
+    "status",
+    "sourceFingerprint",
+    "currentNarrationVolume",
+    "recommendedNarrationVolume",
+    "generatedAt",
+    "acceptedAt",
+    "acceptanceNote",
+    "preflight"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "status": {"enum": ["proposed", "accepted", "not-required"]},
+    "sourceFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "currentNarrationVolume": {"type": "number", "exclusiveMinimum": 0},
+    "recommendedNarrationVolume": {"type": "number", "exclusiveMinimum": 0},
+    "acceptedNarrationVolume": {"type": "number", "exclusiveMinimum": 0},
+    "generatedAt": {"type": "string", "format": "date-time"},
+    "acceptedAt": {
+      "oneOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]
+    },
+    "acceptanceNote": {"type": "string"},
+    "verifiedAt": {"type": "string", "format": "date-time"},
+    "previousAcceptance": {"type": ["object", "null"]},
+    "preflight": {"type": "object"}
+  },
+  "additionalProperties": false
+}

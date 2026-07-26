@@ -7,6 +7,7 @@ import {
   readJson,
   writeJson,
 } from './project-lib.mjs';
+import {assertAssetsReadySealCurrent} from './assets-ready-seal-lib.mjs';
 
 export const PRODUCTION_STAGES = [
   'capability-review',
@@ -53,6 +54,7 @@ const ARTIFACT_KEYS = [
   'prompts',
   'review',
   'validationReport',
+  'assetsReadySeal',
   'preview',
   'final',
   'report',
@@ -74,7 +76,7 @@ const HUMAN_DECISION_ACTIONS = new Set([
 
 const nextActionByStage = {
   'capability-review':
-    '准备概念、故事板、制作档位与 provider 方案；请人一次确认后直接进入风格样张',
+    '先完成画幅/视觉风格/视差 intake；再比较三档故事与制作方案，并一次确认档位、预算上限和 provider',
   brief: '完善 brief.md，运行 project:plan 并锁定 storyboard，再记录 brief-ready',
   'concept-review': '向人展示文案、分镜和素材清单；确认后记录 approve-concept',
   'style-review': '展示风格样张、虚构音色及所需拓扑证据；确认且证明通过后记录 approve-style-voice',
@@ -89,10 +91,10 @@ const nextActionByStage = {
 const stageControlByStage = {
   'capability-review': {
     mode: 'wait-human',
-    gate: 'providers',
+    gate: 'intake-or-scenario',
     requiredDecision:
-      '请一次确认概念、故事板、制作档位与 text/image/voice provider 方案，或给出修改意见。',
-    expectedArtifacts: ['brief', 'plan', 'storyboard', 'providers'],
+      '若 intake 未确认，请选择画幅、视觉风格和视差偏好；否则请一次确认 scenario、制作档位、精确图片上限与 text/image/voice provider。',
+    expectedArtifacts: ['intake', 'planningScenarios', 'brief', 'plan', 'storyboard', 'providers'],
   },
   brief: {
     mode: 'auto-continue',
@@ -108,8 +110,8 @@ const stageControlByStage = {
   'style-review': {
     mode: 'wait-human',
     gate: 'styleAndVoice',
-    requiredDecision: '请明确批准风格样张、虚构音色和所需运动拓扑，或给出修改意见。',
-    expectedArtifacts: ['styleSample', 'voiceAudition', 'topologyProofWhenRequired'],
+    requiredDecision: '请明确批准故事专属风格样张、虚构音色和 3–5 秒运动/拓扑证明，或给出修改意见。',
+    expectedArtifacts: ['storySpecificStyleSample', 'voiceAudition', 'motionProof3To5Seconds', 'topologyProofWhenRequired'],
   },
   'asset-production': {
     mode: 'auto-continue',
@@ -216,8 +218,43 @@ export const assessHandoff = (state, options = {}) => {
   };
 };
 
-export const summarizeResumeState = (state, plan = null, storyboard = null) => {
+export const summarizeResumeState = (
+  state,
+  plan = null,
+  storyboard = null,
+  context = {},
+) => {
   const control = getStageControl(state);
+  let capabilityAutoContinue = false;
+  if (state.stage === 'capability-review') {
+    if (context.intake?.status !== 'confirmed') {
+      control.gate = 'intake';
+      control.requiredDecision =
+        '请选择 16:9 / 9:16、三种内置视觉风格之一，以及分层视差偏好。';
+      control.expectedArtifacts = ['styleCatalog', 'intake'];
+    } else if (context.planningScenarios?.status !== 'ready') {
+      capabilityAutoContinue = true;
+      control.mode = 'auto-continue';
+      control.mayEndTurn = false;
+      control.requiresHumanDecision = false;
+      control.gate = 'scenario-planning';
+      control.requiredDecision = null;
+      control.nextCommand =
+        `npm run project:scenarios -- ${state.slug} --input=<scenarios.json> --json`;
+      control.expectedArtifacts = ['intake', 'commonStory', 'planningScenarios'];
+    } else {
+      control.gate = 'scenario-profile-budget-providers';
+      control.requiredDecision =
+        '请在三档方案中选择一个，并一次确认对应的故事范围、制作档位、精确图片上限和 text/image/voice provider。';
+      control.expectedArtifacts = [
+        'planningScenarios',
+        'brief',
+        'plan',
+        'storyboard',
+        'providers',
+      ];
+    }
+  }
   const remaining = (state.workItems ?? [])
     .filter(({status}) => status !== 'completed')
     .map(({id, label, status, artifact, note}) => ({
@@ -227,7 +264,9 @@ export const summarizeResumeState = (state, plan = null, storyboard = null) => {
       artifact,
       note,
     }));
-  const handoff = assessHandoff(state);
+  const handoff = capabilityAutoContinue
+    ? {allowed: false, reason: 'auto-continue'}
+    : assessHandoff(state);
   const nextCommand =
     state.stage === 'asset-production'
       ? remaining.length === 0
@@ -237,7 +276,8 @@ export const summarizeResumeState = (state, plan = null, storyboard = null) => {
   return {
     slug: state.slug,
     stage: state.stage,
-    productionProfile: plan?.productionProfile ?? null,
+    productionProfile:
+      plan?.status === 'pending' ? null : plan?.productionProfile ?? null,
     storyboard,
     control: {
       mode: control.mode,
@@ -255,6 +295,14 @@ export const summarizeResumeState = (state, plan = null, storyboard = null) => {
       reason: handoff.reason,
     },
   };
+};
+
+export const resolveAssetsReadyMode = (stage) => {
+  if (stage === 'asset-production') return 'advance';
+  if (['preview', 'human-review'].includes(stage)) return 'recheck';
+  throw new Error(
+    `project:assets-ready 只能在 asset-production、preview 或 human-review 阶段执行；当前为 ${stage}。`,
+  );
 };
 
 const assertStage = (state, allowed, action) => {
@@ -348,7 +396,11 @@ export const validateProductionState = (state, expectedSlug) => {
       const value = state.artifacts[key];
       if (REQUIRED_ARTIFACT_KEYS.has(key) && !value) {
         issues.push(`artifacts.${key} 必须为非空字符串`);
-      } else if (value !== null && typeof value !== 'string') {
+      } else if (
+        value !== undefined &&
+        value !== null &&
+        typeof value !== 'string'
+      ) {
         issues.push(`artifacts.${key} 必须为字符串或 null`);
       }
     }
@@ -473,6 +525,65 @@ export const transitionWorkItem = (current, id, options = {}) => {
     action: `work-item-${status}`,
     stage: state.stage,
     note: `${id}${note ? ` · ${note}` : ''}`,
+  });
+  return state;
+};
+
+export const transitionDirectingRevision = (current, options = {}) => {
+  const action = 'revise-preview-directing';
+  const source = options.source ?? 'preview';
+  if (!['style-review', 'preview', 'asset-production'].includes(source)) {
+    throw new Error(`${action} 的来源必须是 style-review、preview 或 asset-production。`);
+  }
+  if (source === 'style-review') {
+    assertStage(current, ['style-review'], action);
+  } else {
+    assertStage(current, ['asset-production'], action);
+  }
+  if (source === 'preview' && current.approvals?.preview?.status !== 'changes-requested') {
+    throw new Error(`${action} 只能响应已记录的 request-preview-revision。`);
+  }
+  if (source === 'preview' && !(current.history ?? []).some((entry) => entry.action === 'request-preview-revision')) {
+    throw new Error(`${action} 缺少 request-preview-revision 历史证据。`);
+  }
+  const changedSceneIds = [...new Set(options.changedSceneIds ?? [])];
+  if (changedSceneIds.length === 0) {
+    throw new Error(`${action} 必须至少包含一个实际改变的镜头。`);
+  }
+
+  const state = clone(current);
+  const at = options.at ?? new Date().toISOString();
+  const reportPath = (options.reportPath ?? '').trim();
+  if (!reportPath) throw new Error(`${action} 必须记录 directing-revision 报告路径。`);
+  assertApproved(state, 'concept', action);
+  if (source !== 'style-review') assertApproved(state, 'styleAndVoice', action);
+
+  for (const key of ['validationReport', 'assetsReadySeal', 'preview', 'final', 'report', 'contactSheet']) {
+    state.artifacts[key] = null;
+  }
+  if (options.invalidateStyleProof) state.artifacts.styleProof = null;
+  state.artifacts.directingRevision = reportPath;
+  const workItems = normalizeWorkItems(state);
+  for (const sceneId of changedSceneIds) {
+    const id = `directing-revision-${sceneId}`;
+    const next = {
+      id,
+      label: `同步导演重编镜头 ${sceneId}`,
+      status: 'pending',
+      updatedAt: at,
+      artifact: reportPath,
+      note: '按新 storyboard 同步 project.json 执行树并重新验证。',
+    };
+    const index = workItems.findIndex((item) => item.id === id);
+    if (index >= 0) workItems[index] = next;
+    else workItems.push(next);
+  }
+  state.updatedAt = at;
+  state.history.push({
+    at,
+    action,
+    stage: state.stage,
+    note: `${source} · ${changedSceneIds.join(', ')} · ${reportPath}`,
   });
   return state;
 };
@@ -619,6 +730,9 @@ export const transitionProduction = (current, action, options = {}) => {
       );
       setApproval(state, 'preview', 'changes-requested', at, note);
       resetApproval(state, 'publish');
+      for (const key of ['validationReport', 'assetsReadySeal', 'preview', 'final', 'report', 'contactSheet']) {
+        state.artifacts[key] = null;
+      }
       state.stage = 'asset-production';
       break;
     case 'approve-publish':
@@ -644,7 +758,19 @@ export const transitionProduction = (current, action, options = {}) => {
 
 export const advanceProduction = async (slug, action, options = {}) => {
   const {paths, state: current} = await loadProduction(slug);
-  const state = transitionProduction(current, action, options);
+  let resolvedOptions = options;
+  if (action === 'assets-ready') {
+    const {file} = await assertAssetsReadySealCurrent(slug);
+    resolvedOptions = {
+      ...options,
+      artifacts: {
+        ...(options.artifacts ?? {}),
+        validationReport: path.relative(ROOT, paths.validationReport),
+        assetsReadySeal: path.relative(ROOT, file),
+      },
+    };
+  }
+  const state = transitionProduction(current, action, resolvedOptions);
   await writeJson(paths.productionFile, state);
   await syncReviewBestEffort(slug, state);
   return state;
@@ -653,6 +779,24 @@ export const advanceProduction = async (slug, action, options = {}) => {
 export const advanceWorkItem = async (slug, id, options = {}) => {
   const {paths, state: current} = await loadProduction(slug);
   const state = transitionWorkItem(current, id, options);
+  await writeJson(paths.productionFile, state);
+  await syncReviewBestEffort(slug, state);
+  return state;
+};
+
+export const recordAssetsReadySeal = async (slug, artifacts) => {
+  const {paths, state: current} = await loadProduction(slug);
+  resolveAssetsReadyMode(current.stage);
+  const state = clone(current);
+  Object.assign(state.artifacts, artifacts);
+  const at = new Date().toISOString();
+  state.updatedAt = at;
+  state.history.push({
+    at,
+    action: 'assets-ready-rechecked',
+    stage: state.stage,
+    note: artifacts.assetsReadySeal ?? '',
+  });
   await writeJson(paths.productionFile, state);
   await syncReviewBestEffort(slug, state);
   return state;
@@ -675,6 +819,7 @@ export const assertRenderAllowed = async (slug, mode) => {
       throw new Error('正式渲染前必须获得预览人工批准。');
     }
   }
+  await assertAssetsReadySealCurrent(slug);
   return state;
 };
 

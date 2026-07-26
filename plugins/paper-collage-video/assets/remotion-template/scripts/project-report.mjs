@@ -18,6 +18,15 @@ import {
   prepareQualityReport,
   readQualityReportStatus,
 } from './quality-lib.mjs';
+import {analyzeRenderedContinuityArtifact} from './timeline-continuity-lib.mjs';
+import {loadStoryboard} from './storyboard-lib.mjs';
+import {summarizeActualPoseSheets} from './state-sheet-lib.mjs';
+import {
+  createSubtitleContract,
+  deriveSubtitleProofSamples,
+} from './subtitle-contract-lib.mjs';
+import {hashFileStream} from './render-cache-lib.mjs';
+import {deriveTransitionProofSamples, summarizeSceneTransitions} from '../src/sceneTimeline.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -65,6 +74,11 @@ const parseFrameRate = (value) => {
   return denominator ? numerator / denominator : 0;
 };
 
+const formatCheckActual = (value) =>
+  value !== null && typeof value === 'object'
+    ? JSON.stringify(value)
+    : String(value);
+
 const mapWithConcurrency = async (items, limit, mapper) => {
   const results = new Array(items.length);
   const concurrency = Math.max(1, Math.min(limit, items.length));
@@ -102,7 +116,7 @@ const createContactSheet = async ({video, output, samples, framesDirectory}) => 
         .resize(480, 270, {fit: 'cover'})
         .png()
         .toBuffer();
-      return {...sample, image};
+      return {...sample, frameFile, image};
     },
   );
 
@@ -138,11 +152,16 @@ const createContactSheet = async ({video, output, samples, framesDirectory}) => 
     .composite(composite)
     .jpeg({quality: 90})
     .toFile(output);
+  return panels.map(({image: _image, ...panel}) => panel);
 };
 
 try {
-  const {project} = await loadProject(slug);
+  const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
   const paths = projectPaths(slug);
+  const manifestFile = path.join(paths.projectDirectory, 'assets-manifest.json');
+  const poseSheetActuals = summarizeActualPoseSheets(
+    (await fileExists(manifestFile)) ? await readJson(manifestFile) : null,
+  );
   const requestedArtifact = artifactArgument?.slice('--artifact='.length);
   const finalArtifact = path.join(paths.distDirectory, 'final.mp4');
   const previewArtifact = path.join(paths.distDirectory, 'preview.mp4');
@@ -200,11 +219,37 @@ try {
         ).stderr,
       )
     : {integratedLufs: null, truePeakDbtp: null, loudnessRangeLu: null};
+  const continuityAnalysis = videoStream
+    ? await analyzeRenderedContinuityArtifact({
+        artifact,
+        durationSeconds,
+        hasAudio: Boolean(audioStream),
+        timeline: validation.timeline,
+        fps: project.video.fps,
+      })
+    : {
+        silentRanges: [],
+        lowMotionRanges: [],
+        approvedHoldRanges: [],
+        deadAirRanges: [],
+        warningRanges: [],
+        failingRanges: [],
+        perScene: [],
+        totalDeadAirSeconds: durationSeconds,
+        deadAirRatio: 1,
+        passed: false,
+        sampling: null,
+        thresholds: null,
+      };
   const isPreview = path.basename(artifact) === 'preview.mp4';
   const expectedScale = isPreview ? 0.5 : 1;
   const expectedWidth = Math.round(project.video.width * expectedScale);
   const expectedHeight = Math.round(project.video.height * expectedScale);
   const frameRate = parseFrameRate(videoStream?.r_frame_rate);
+  const tailBudgetIssues = (validation.issues ?? []).filter(
+    ({code}) => code === 'scene-tail-budget',
+  );
+  const subtitleContract = await createSubtitleContract(project);
   const technicalChecks = [
     {
       id: 'video-stream',
@@ -245,6 +290,30 @@ try {
       expected: '<= -0.1 dB',
       actual: volume.maxDb,
     },
+    {
+      id: 'tail-budget',
+      passed: tailBudgetIssues.length === 0,
+      expected: 'all scene tails within technical or proof-backed hold budget',
+      actual:
+        tailBudgetIssues.length === 0
+          ? 'within budget'
+          : tailBudgetIssues.map(({location}) => location).join(', '),
+    },
+    {
+      id: 'scene-transition-contract',
+      passed: !(validation.issues ?? []).some(({code}) => String(code).startsWith('scene-transition')),
+      expected: 'intent-routed adjacent boundaries with no alpha-blended semantic scenes',
+      actual: (project.sceneTransitions ?? []).map(({intent, treatment}) => `${intent}:${treatment?.type}:${treatment?.motivation}`).join(', ') || 'single scene',
+    },
+    {
+      id: 'audiovisual-coverage',
+      passed: continuityAnalysis.passed,
+      expected: 'no unapproved silent + low-motion interval >= 1.2s; total <= 8%',
+      actual: continuityAnalysis.passed
+        ? `${continuityAnalysis.totalDeadAirSeconds.toFixed(3)}s (${(continuityAnalysis.deadAirRatio * 100).toFixed(1)}%)`
+        : `${continuityAnalysis.failingRanges.length} failing range(s), ${continuityAnalysis.totalDeadAirSeconds.toFixed(3)}s total (${(continuityAnalysis.deadAirRatio * 100).toFixed(1)}%)`,
+    },
+    ...subtitleContract.checks,
   ];
   const mastering = project.audio?.mastering;
   if (mastering) {
@@ -280,12 +349,59 @@ try {
     samples: contactSheetSamples,
     framesDirectory: path.join(paths.distDirectory, 'frames'),
   });
+  const transitionSamples = deriveTransitionProofSamples({
+    timeline: validation.timeline,
+    fps: project.video.fps,
+    durationSeconds,
+  });
+  const transitionContactSheet = transitionSamples.length > 0
+    ? path.join(paths.distDirectory, 'transition-contact-sheet.jpg')
+    : null;
+  if (transitionContactSheet) {
+    await createContactSheet({
+      video: artifact,
+      output: transitionContactSheet,
+      samples: transitionSamples,
+      framesDirectory: path.join(paths.distDirectory, 'transition-frames'),
+    });
+  }
+  const subtitleSamples = deriveSubtitleProofSamples({
+    project,
+    timeline: validation.timeline,
+    contract: subtitleContract,
+  });
+  const subtitleContactSheet = subtitleSamples.length > 0
+    ? path.join(paths.distDirectory, 'subtitle-contact-sheet.jpg')
+    : null;
+  const subtitlePanels = subtitleContactSheet
+    ? await createContactSheet({
+        video: artifact,
+        output: subtitleContactSheet,
+        samples: subtitleSamples,
+        framesDirectory: path.join(paths.distDirectory, 'subtitle-frames'),
+      })
+    : [];
+  const subtitleEvidence = await Promise.all(
+    subtitlePanels.map(async ({frameFile, ...panel}) => ({
+      ...panel,
+      file: path.relative(ROOT, frameFile),
+      sha256: await hashFileStream(frameFile),
+    })),
+  );
+  technicalChecks.push({
+    id: 'subtitle-encoded-frame-evidence',
+    passed:
+      subtitleContract.summary.requiredScenes === 0 ||
+      subtitleEvidence.length === subtitleContract.summary.requiredScenes,
+    expected: 'one encoded-frame sample for every narrated scene',
+    actual: `${subtitleEvidence.length}/${subtitleContract.summary.requiredScenes} narrated scenes`,
+  });
 
   const quality = qualityArgument
     ? await readQualityReportStatus(slug)
     : await prepareQualityReport(slug);
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 5,
     generatedAt: new Date().toISOString(),
     project: {slug: project.slug, title: project.title},
     artifact: {
@@ -326,7 +442,7 @@ try {
       scopes: quality.scopes,
       file: path.relative(ROOT, quality.file),
     },
-    cueEvents: quality.report.cueEvents ?? [],
+    eventTimeline: quality.report.eventTimeline ?? [],
     compositeProof: {
       total: quality.report.composites?.length ?? 0,
       entries: (quality.report.composites ?? []).map(({compositeId, sceneId, pattern, fingerprint, proofFrames, status}) => ({
@@ -338,6 +454,26 @@ try {
         status,
       })),
     },
+    directing: {
+      fingerprint: storyboard.directingSummary.fingerprint,
+      productionProfile: storyboard.directingSummary.profile,
+      styleProofPlan: storyboard.directingSummary.styleProofPlan,
+      poseSheetPlans: storyboard.directingSummary.poseSheetPlans,
+      plannedPoseSheetCalls: storyboard.directingSummary.estimatedPoseSheetCalls,
+      plannedAvoidedIsolatedStateCalls: storyboard.directingSummary.avoidedIsolatedStateCalls,
+      actualPoseSheets: poseSheetActuals.families,
+      actualPoseSheetProviderCalls: poseSheetActuals.providerCalls,
+      deterministicStateDerivatives: poseSheetActuals.deterministicDerivatives,
+      providerCallsAvoidedByBatching: poseSheetActuals.providerCallsAvoidedByBatching,
+    },
+    continuityAnalysis,
+    subtitleProof: {
+      ...subtitleContract,
+      contactSheet: subtitleContactSheet
+        ? path.relative(ROOT, subtitleContactSheet)
+        : null,
+      samples: subtitleEvidence,
+    },
     technicalChecks,
     passed:
       validation.passed &&
@@ -345,14 +481,32 @@ try {
       technicalChecks.every((check) => check.passed),
     contactSheet: path.relative(ROOT, contactSheet),
     contactSheetSamples,
+    transitionProof: {
+      contract: 'intent-routed-opaque-boundary-v2',
+      routingPolicy: 'editorial-intent-v1',
+      semanticAlphaBlendAllowed: false,
+      summary: summarizeSceneTransitions(project.sceneTransitions),
+      contactSheet: transitionContactSheet ? path.relative(ROOT, transitionContactSheet) : null,
+      samples: transitionSamples,
+    },
   };
   const reportFile = path.join(paths.distDirectory, 'report.json');
   await writeJson(reportFile, report);
   console.log(`✓ 验收报告：${path.relative(ROOT, reportFile)}`);
   console.log(`✓ 关键帧联系表：${path.relative(ROOT, contactSheet)}`);
+  if (transitionContactSheet) console.log(`✓ 转场联系表：${path.relative(ROOT, transitionContactSheet)}`);
+  if (subtitleContactSheet) console.log(`✓ 字幕联系表：${path.relative(ROOT, subtitleContactSheet)}`);
   for (const check of technicalChecks) {
     console.log(
-      `${check.passed ? '✓' : '✗'} ${check.id}: ${check.actual} (expected ${check.expected})`,
+      `${check.passed ? '✓' : '✗'} ${check.id}: ${formatCheckActual(check.actual)} (expected ${check.expected})`,
+    );
+  }
+  for (const range of continuityAnalysis.perScene.filter(
+    ({durationSeconds: rangeDuration}) =>
+      rangeDuration >= continuityAnalysis.thresholds?.deadAirWarningSeconds,
+  )) {
+    console.log(
+      `  DEAD AIR ${range.sceneId}: ${range.startSeconds.toFixed(3)}s–${range.endSeconds.toFixed(3)}s (${range.durationSeconds.toFixed(3)}s)`,
     );
   }
   if (!report.passed) process.exitCode = 1;

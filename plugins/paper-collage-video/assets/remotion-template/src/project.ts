@@ -1,3 +1,6 @@
+import {deriveSceneTimeline} from './sceneTimeline.mjs';
+import {applyResponsiveDirectingPlan} from './editorialPrimitives.mjs';
+
 export type SceneBlueprint =
   | 'layered-reveal'
   | 'map-journey'
@@ -21,7 +24,7 @@ export type MotionKeyframe = {
 };
 
 export type IdleMotion = {
-  preset: 'float' | 'breathe' | 'grind' | 'drift' | 'still';
+  preset: 'float' | 'breathe' | 'grind' | 'drift' | 'sway' | 'still';
   intensity: number;
   cycleSeconds: number;
   phase?: number;
@@ -30,6 +33,11 @@ export type IdleMotion = {
 export type NodeMotion = {
   keyframes: MotionKeyframe[];
   idle?: IdleMotion;
+  pivot?: {x: number; y: number};
+};
+
+export type NodeVisibility = {
+  initial: 'visible' | 'hidden';
 };
 
 export type NodeTransform = {
@@ -53,6 +61,131 @@ export type CompositionRegistration = {
   origin: 'top-left';
 };
 
+export type RegisteredFamilyRole =
+  | 'support-rear'
+  | 'subject'
+  | 'support-front';
+
+export type RegisteredFamilySource =
+  | {
+      kind: 'registered-layer-sheet';
+      assetId: string;
+      packageRole: RegisteredFamilyRole;
+    }
+  | {kind: 'layer-package-member'; assetId: string};
+
+export type RegisteredFamilyRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+export type RegisteredFamilyDerivation = {
+  placement?: RegisteredFamilyRect;
+  sourceRect?: RegisteredFamilyRect;
+  keying?: {
+    keyColor: string;
+    transparentThreshold: number;
+    opaqueThreshold: number;
+    edgeFeather: number;
+    matteErode: number;
+    edgePadding: number;
+  };
+  maskAssetId?: string;
+  maskChannel?: 'alpha' | 'luminance';
+  invertMask?: boolean;
+  clip?:
+    | {kind: 'rectangle'; rect: RegisteredFamilyRect}
+    | {kind: 'polygon'; points: Array<[number, number]>};
+};
+
+export type RegisteredFamilySpec = {
+  schemaVersion: 2;
+  projectSlug: string;
+  sceneId: string;
+  groupId: string;
+  familyId: string;
+  pattern: 'supported-subject' | 'registered-depth-stack';
+  motionCapability: 'rigid-locked' | 'bounded-relative';
+  sourcePackageId: string;
+  sourceStrategy:
+    | 'rigid-master'
+    | 'registered-layer-sheet'
+    | 'context-preserving-layer-edits';
+  revealEnvelope: LayerRevealEnvelope | null;
+  registration: CompositionRegistration;
+  members: Array<{
+    assetId: string;
+    nodeId: string;
+    role: RegisteredFamilyRole;
+    slot: RegisteredFamilyRole;
+    completeness: 'clean-plate' | 'full-silhouette' | 'full-overlay';
+    output: string;
+    source: RegisteredFamilySource;
+    derivation: RegisteredFamilyDerivation;
+  }>;
+  recoveryPolicy: {
+    strategy: 'preserve-family-context';
+    localDeterministicFixFirst: true;
+    isolatedMemberGeneration: 'forbidden';
+    providerRepair: 'masked-complete-source-edit';
+    fallback: 'full-source-regeneration';
+  };
+  applyToProject: boolean;
+};
+
+export type RegisteredFamilyBinding = {
+  schemaVersion: 2;
+  familyId: string;
+  pattern: 'supported-subject' | 'registered-depth-stack';
+  motionCapability: 'rigid-locked' | 'bounded-relative';
+  sourcePackageId: string;
+  sourceStrategy: RegisteredFamilySpec['sourceStrategy'];
+  revealEnvelope: LayerRevealEnvelope | null;
+  registrationId: string;
+  sourceMasterAssetId: string;
+  canvas: CoordinateSpace;
+  origin: 'top-left';
+  role: RegisteredFamilyRole;
+  slot: RegisteredFamilyRole;
+  completeness: 'clean-plate' | 'full-silhouette' | 'full-overlay';
+  nodeId: string;
+  source: {
+    kind: RegisteredFamilySource['kind'];
+    assetId: string;
+    stateId: string | null;
+    sourceSheetAssetId: string | null;
+    sourceFamilyFingerprint: string | null;
+    sha256: string;
+  };
+  derivation: {
+    placement: RegisteredFamilyRect;
+    sourceRect: RegisteredFamilyRect | null;
+    sourceSurface: {
+      mode: 'alpha' | 'chroma-key' | 'opaque';
+      keyColor: string | null;
+      tolerance: number | null;
+      requestedKeyColor: string | null;
+      observedKeyColor: string | null;
+      observationPolicyId: 'flat-v1' | null;
+      observationPolicyFingerprint: string | null;
+      observationFingerprint: string | null;
+    } | null;
+    keying: RegisteredFamilyDerivation['keying'] | null;
+    keyingMetadataSha256: string | null;
+    maskAssetId: string | null;
+    maskSha256: string | null;
+    maskChannel: 'alpha' | 'luminance' | null;
+    invertMask: boolean;
+    clip: RegisteredFamilyDerivation['clip'] | null;
+    trimmed: false;
+    outputCanvasPreserved: true;
+  };
+  recoveryPolicy: RegisteredFamilySpec['recoveryPolicy'];
+  familyFingerprint: string;
+};
+
 export type CompositionAssetNode = {
   id: string;
   kind: 'asset';
@@ -65,7 +198,381 @@ export type CompositionAssetNode = {
   depth?: number;
   transform: NodeTransform;
   motion: NodeMotion;
+  visibility?: NodeVisibility;
   clip?: {boundaryId: string; side: 'upper' | 'lower'};
+};
+
+export type SequenceState = {
+  id: string;
+  src: string;
+  at: number;
+  facing: 'left' | 'right' | 'front' | 'back' | 'neutral';
+  anchors: Array<{id: string; x: number; y: number}>;
+  identityReferenceAssetId: string;
+  identityReferenceSha256: string;
+};
+
+export type CompositionStateSequenceNode = {
+  id: string;
+  kind: 'state-sequence';
+  assetRole: 'character' | 'prop' | 'decorative';
+  poseFamilyId: string;
+  registration: CompositionRegistration;
+  anchorPolicy: {
+    requiredAnchorIds: string[];
+    maximumDrift: number;
+  };
+  states: SequenceState[];
+  playback: {
+    mode: 'once' | 'loop' | 'ping-pong';
+    cycles: number;
+    activeFrom?: number;
+    activeUntil?: number;
+    holdStateId?: string;
+    activeStateIds?: string[];
+  };
+  transition: {type: 'cut' | 'crossfade'; durationSeconds: number};
+  z: number;
+  slot?: string;
+  semanticCoverage?: string[];
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+  clip?: {boundaryId: string; side: 'upper' | 'lower'};
+};
+
+export type EditorialProfileId = '16:9' | '9:16' | '1:1';
+
+export type EditorialAnchorReference = {
+  targetId: string;
+  anchor:
+    | 'top'
+    | 'top-right'
+    | 'right'
+    | 'bottom-right'
+    | 'bottom'
+    | 'bottom-left'
+    | 'left'
+    | 'top-left'
+    | 'center';
+  point?: {x: number; y: number};
+};
+
+export type EditorialMatchDescriptor = {
+  shape?: string;
+  color?: string;
+  value?: string;
+  width?: number;
+  height?: number;
+};
+
+export type EditorialAdvancedTransition = {
+  id: string;
+  scope: 'scene-boundary' | 'within-shot';
+  type:
+    | 'match-cut'
+    | 'graphic-match'
+    | 'shape-match'
+    | 'position-scale-match'
+    | 'color-value-match'
+    | 'within-shot-card-switch'
+    | 'panel-replace'
+    | 'data-state-transition';
+  sceneId: string;
+  destinationSceneId?: string;
+  editPointId: string;
+  semanticIntent: string;
+  sourceAnchor: EditorialAnchorReference;
+  destinationAnchor: EditorialAnchorReference;
+  sourceDescriptor: EditorialMatchDescriptor;
+  destinationDescriptor: EditorialMatchDescriptor;
+  matchDimensions: Array<'shape' | 'position' | 'scale' | 'color' | 'value'>;
+  continuityTolerance: number;
+  invalidPolicy: 'reject' | 'fallback';
+  fallback?: 'cut' | 'paper-wipe' | 'panel-replace';
+  treatment:
+    | 'hard-cut'
+    | 'card-switch'
+    | 'panel-replace'
+    | 'data-state'
+    | 'slide'
+    | 'wipe'
+    | 'scale-swap'
+    | 'value-tween';
+};
+
+export type EditorialTransitionPlan = EditorialAdvancedTransition & {
+  editPointFrame: number;
+  continuity: Array<{
+    profileId: EditorialProfileId;
+    source: {x: number; y: number} | null;
+    destination: {x: number; y: number} | null;
+    distance: number | null;
+    dimensionChecks: Partial<Record<
+      'shape' | 'position' | 'scale' | 'color' | 'value',
+      {
+        source: unknown;
+        destination: unknown;
+        delta?: number | null;
+        valid: boolean;
+      }
+    >>;
+    valid: boolean;
+    runtimeTreatment: string;
+  }>;
+  invalidProfiles: EditorialProfileId[];
+  runtimeTreatment: string;
+  proofFrameIds: string[];
+};
+
+export type EditorialSystem = {
+  timebase: {fps: number; rounding: 'nearest' | 'floor' | 'ceil'};
+  wordTimingPolicy: 'require' | 'phrase-fallback' | 'block';
+  media: Array<{
+    id: string;
+    kind: 'narration' | 'sfx' | 'music';
+    src: string;
+    sha256: string;
+    durationSeconds: number;
+    timingDataSrc?: string;
+    timelineMode: 'scene-local' | 'global';
+    sceneOffsetSeconds?: number;
+  }>;
+  cues: Array<{
+    id: string;
+    kind: string;
+    source: 'authored' | 'detected';
+    timingBasis: 'actual-audio' | 'manual';
+    mediaId: string;
+    sceneId: string;
+    atSeconds: number;
+    endSeconds?: number;
+    text?: string;
+    priority: number;
+    toleranceSeconds: number;
+  }>;
+  editPoints: Array<{
+    id: string;
+    cueIds: string[];
+    conflictPolicy: 'merge' | 'highest-priority' | 'offset-within-window' | 'reject';
+    priority?: number;
+    toleranceSeconds?: number;
+  }>;
+  bindings: Array<{
+    id: string;
+    sceneId: string;
+    targetType: string;
+    targetId: string;
+    editPointId: string;
+    mode?: string;
+    offsetSeconds?: number;
+  }>;
+  responsiveProfiles: Array<{
+    id: EditorialProfileId;
+    width: number;
+    height: number;
+    safeArea: {x: number; y: number; width: number; height: number};
+    densityBudget: number;
+    typographyScale: number;
+    parallaxScale: number;
+    exclusionZones: Array<{
+      id: string;
+      role: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      padding?: number;
+    }>;
+  }>;
+  sceneDirecting: Array<Record<string, unknown>>;
+  transitions: EditorialAdvancedTransition[];
+  activeProfile?: EditorialProfileId;
+  resolvedEditPoints: Array<{
+    id: string;
+    sceneId: string;
+    cueIds: string[];
+    resolvedSeconds: number;
+    mediaFrame: number;
+    sceneFrame: number;
+    renderFrame: number;
+    priority: number;
+    toleranceSeconds: number;
+    conflictPolicy: string;
+    sources: string[];
+    timingBasis: string[];
+  }>;
+  conflicts: Array<Record<string, unknown>>;
+  responsivePlans: Array<{
+    profileId: EditorialProfileId;
+    width: number;
+    height: number;
+    safeArea: {x: number; y: number; width: number; height: number};
+    exclusionZones: Array<{
+      id: string;
+      role: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      padding?: number;
+    }>;
+    densityBudget: number;
+    scenes: Array<{
+      sceneId: string;
+      compositionProfile: string;
+      typographyProfile: string;
+      subjectFraming: Record<string, unknown>;
+      parallaxScale: number;
+      cropFocus: {x: number; y: number};
+      densityUsed: number;
+      placements: Array<{
+        targetId: string;
+        role: string;
+        transform: NodeTransform;
+      }>;
+    }>;
+  }>;
+  transitionPlans: EditorialTransitionPlan[];
+  fingerprint: string;
+};
+
+export type CompositionTypographyNode = {
+  id: string;
+  kind: 'typography';
+  text: string;
+  treatment: {
+    fit: {
+      minFontSize: number;
+      maxFontSize: number;
+      maxLines: number;
+      overflow: 'error' | 'clip';
+    };
+    style: {
+      color: string;
+      fontWeight: number;
+      lineHeight: number;
+      align: 'left' | 'center' | 'right';
+      letterSpacing?: number;
+      fontFamily?: string;
+    };
+    effects: {
+      stroke?: {color: string; width: number};
+      shadow?: {color: string; x: number; y: number; blur: number};
+      pad?: {color: string; padding: number; radius: number};
+    };
+    highlights: Array<{text: string; color: string}>;
+    reveal: {
+      mode: 'none' | 'word' | 'line' | 'edit-point';
+      editPointIds: string[];
+      units?: Array<{id: string; text: string}>;
+    };
+    emphasis: Array<{
+      text: string;
+      editPointId: string;
+      durationFrames: number;
+      scale: number;
+      offsetX: number;
+      offsetY: number;
+      color: string;
+    }>;
+    safeAreaMode: 'inside' | 'allow-bleed';
+    avoidZoneIds: string[];
+  };
+  z: number;
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
+export type CompositionAnnotationNode = {
+  id: string;
+  kind: 'annotation';
+  annotationKind:
+    | 'arrow'
+    | 'leader-line'
+    | 'label'
+    | 'badge'
+    | 'explainer-card'
+    | 'callout'
+    | 'bracket'
+    | 'numeric-counter'
+    | 'percentage-counter';
+  anchor: EditorialAnchorReference;
+  target: EditorialAnchorReference;
+  routing: 'straight' | 'orthogonal';
+  avoidZoneIds: string[];
+  label: string;
+  value: number;
+  style: {color: string; background: string; strokeWidth: number; fontSize: number};
+  lifecycle: {
+    enterEditPointId?: string;
+    exitEditPointId?: string;
+    enterFrames?: number;
+    exitFrames?: number;
+  };
+  z: number;
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
+export type CompositionDataGraphicNode = {
+  id: string;
+  kind: 'data-graphic';
+  graphicKind:
+    | 'bar-chart'
+    | 'column-chart'
+    | 'line-chart'
+    | 'comparison-table'
+    | 'timeline'
+    | 'map'
+    | 'flow';
+  data: Record<string, unknown>;
+  geometry?: Array<{regionId: string; path: string}>;
+  scale: {domain: [number, number]};
+  format: {prefix?: string; suffix?: string; unit?: string; decimals?: number; multiplier?: number};
+  states: Array<{id: string; editPointId: string; reveal: number; focusIds: string[]}>;
+  style: {ink: string; paper: string; accent: string; muted: string; fontSize: number};
+  z: number;
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
+export type CompositionEditorialSwitchNode = {
+  id: string;
+  kind: 'editorial-switch';
+  panels: Array<{id: string; node: CompositionNode}>;
+  changes: Array<{
+    id: string;
+    editPointId: string;
+    fromPanelId: string;
+    toPanelId: string;
+    treatment: 'card-switch' | 'panel-replace' | 'data-state';
+    durationFrames: number;
+  }>;
+  z: number;
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
+export type CompositionShapeNode = {
+  id: string;
+  kind: 'shape';
+  shape: 'rectangle' | 'ellipse' | 'line';
+  style: {fill: string; stroke: string; strokeWidth: number; radius: number};
+  z: number;
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
 };
 
 export type CompositionBoundary = {
@@ -77,17 +584,133 @@ export type CompositionBoundary = {
   lowerSemantic: string;
 };
 
+export type LayerRevealLimit = {
+  x: number;
+  y: number;
+  scale: number;
+  rotationDegrees: number;
+};
+
+export type LayerRevealEnvelope = {
+  '16:9': LayerRevealLimit;
+  '9:16': LayerRevealLimit;
+  '1:1': LayerRevealLimit;
+};
+
+export type LoopingStripBinding = {
+  schemaVersion: 1;
+  stripId: string;
+  role: 'far' | 'mid' | 'ground' | 'near';
+  sourceAssetId: string;
+  axis: 'x';
+  seamStrategy: 'exact' | 'overlap-crop' | 'mirror-crop';
+  source: {
+    sha256: string;
+    width: number;
+    height: number;
+    provider: string;
+    adapter: string;
+    recordId: string;
+  };
+  canonicalTile: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  output: {
+    width: number;
+    height: number;
+    hasAlpha: boolean;
+  };
+  minimumViewportSpan: number;
+  edgeBandPixels: number;
+  derivationFingerprint: string;
+};
+
+export type CompositionWorldStripNode = {
+  id: string;
+  kind: 'world-strip';
+  role: 'far' | 'mid' | 'ground' | 'near';
+  surfaceRole:
+    | 'backdrop'
+    | 'scenery'
+    | 'walkable-ground'
+    | 'foreground-occluder';
+  src: string;
+  loopingStripBinding: LoopingStripBinding;
+  z: number;
+  depth: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
+export type LoopingEnvironmentTravel = {
+  direction: 'left' | 'right';
+  distanceViewports: number;
+  easing: 'linear' | 'ease-out';
+  closedLoop: boolean;
+  startPhase: number;
+  /** Normalized scene cue; phase is held before this point. */
+  activeFrom?: number;
+  /** Normalized scene lock; phase remains at the completed travel after this point. */
+  activeUntil?: number;
+  /** Reuse registered strips as one locked tableau; never advance the world phase. */
+  frozen?: boolean;
+};
+
 export type CompositionGroupNode = {
   id: string;
   kind: 'group';
-  pattern: 'free' | 'supported-subject' | 'registered-environment';
+  pattern:
+    | 'free'
+    | 'supported-subject'
+    | 'registered-environment'
+    | 'registered-depth-stack'
+    | 'looping-environment';
+  renderParticipation?: 'visible' | 'derivation-only';
   z: number;
+  depth?: number;
   coordinateSpace: CoordinateSpace;
   transform: NodeTransform;
   motion: NodeMotion;
+  visibility?: NodeVisibility;
   registration?: CompositionRegistration;
+  layerStack?: {
+    sourcePackageId: string;
+    sourceStrategy:
+      | 'registered-layer-sheet'
+      | 'context-preserving-layer-edits';
+    motionCapability: 'bounded-relative';
+    revealEnvelope: LayerRevealEnvelope;
+    subjectTravelEnvelope?: LayerRevealEnvelope;
+  };
+  loopingEnvironment?: {
+    axis: 'x';
+    groundStripId: string;
+    subjectBindings: Array<{
+      nodeId: string;
+      role: 'tracked' | 'participant';
+      anchorMode: 'screen' | 'world';
+      nearOcclusion: 'behind-near' | 'above-near';
+      proofTimeIds: string[];
+    }>;
+    seamProofTimeIds: {
+      before: string;
+      seam: string;
+      after: string;
+    };
+    travel: LoopingEnvironmentTravel;
+    speedRange: {
+      far: number;
+      near: number;
+    };
+    overscanPx: number;
+  };
   support?: {
     subjectId: string;
+    layering?: 'between-supports' | 'subject-front';
     contactAnchor: {x: number; y: number};
     contactZone: Array<[number, number]>;
     occlusionZone: Array<[number, number]>;
@@ -97,10 +720,63 @@ export type CompositionGroupNode = {
   children: CompositionNode[];
 };
 
-export type CompositionNode = CompositionAssetNode | CompositionGroupNode;
+export type CompositionMotifFieldNode = {
+  id: string;
+  kind: 'motif-field';
+  motifs: Array<{id: string; src: string}>;
+  count: number;
+  seed: number;
+  distribution: 'scattered' | 'grid' | 'edge';
+  fieldMotion: {
+    preset: 'drift' | 'fall-drift' | 'rise-drift' | 'burst' | 'orbit';
+    cycles: number;
+  };
+  baseSize: number;
+  variation: {
+    scale: [number, number];
+    rotation: [number, number];
+    opacity: [number, number];
+  };
+  bounds: {x: number; y: number; width: number; height: number};
+  exclusionZones: Array<{
+    id: string;
+    shape: 'rectangle' | 'ellipse';
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    padding?: number;
+  }>;
+  z: number;
+  depth?: number;
+  transform: NodeTransform;
+  motion: NodeMotion;
+  visibility?: NodeVisibility;
+};
+
+export type CompositionNode =
+  | CompositionAssetNode
+  | CompositionStateSequenceNode
+  | CompositionTypographyNode
+  | CompositionShapeNode
+  | CompositionAnnotationNode
+  | CompositionDataGraphicNode
+  | CompositionEditorialSwitchNode
+  | CompositionMotifFieldNode
+  | CompositionWorldStripNode
+  | CompositionGroupNode;
 
 export type SceneComposition = {
   coordinateSpace: CoordinateSpace;
+  world?: {
+    id: string;
+    groupId: string;
+    route: {
+      subjectIds: string[];
+      subjectSafeBand: {x: number; y: number; width: number; height: number};
+      markerNodeIds: string[];
+    };
+  };
   nodes: CompositionNode[];
 };
 
@@ -112,11 +788,14 @@ export type SceneCamera = {
   preset: 'push' | 'pull' | 'pan-left' | 'pan-right' | 'static';
   intensity: number;
   keyframes?: CameraKeyframe[];
+  parallax?: {
+    enabled: boolean;
+    strength: number;
+    focalDepth: number;
+  };
 };
 
-export type SceneTransition = {type: 'fade' | 'none'; durationSeconds: number};
-export type CueAction =
-  | 'reveal'
+export type EmphasisAction =
   | 'pulse'
   | 'stamp'
   | 'shake'
@@ -125,16 +804,67 @@ export type CueAction =
   | 'drop-impact'
   | 'carve';
 
-export type ProjectCue = {
+export type VisibilityTransition = 'cut' | 'fade-rise' | 'fade-scale';
+
+export type EventVisual =
+  | {
+      kind: 'visibility';
+      action: 'show' | 'hide';
+      transition: VisibilityTransition;
+      durationSeconds: number;
+    }
+  | {
+      kind: 'emphasis';
+      action: EmphasisAction;
+      durationSeconds: number;
+      intensity: number;
+    }
+  | {
+      kind: 'hold';
+      durationSeconds: number;
+    };
+
+export type ProjectEvent = {
   id: string;
   beatId: string;
   at: number;
-  durationSeconds: number;
   targetId: string;
-  action: CueAction;
-  intensity: number;
+  visual: EventVisual | null;
   proofTimeId?: string;
   sound?: ProjectSound;
+};
+
+export type SceneBoundaryTransition = {
+  id: string;
+  fromSceneId: string;
+  toSceneId: string;
+  intent:
+    | 'continuity'
+    | 'location-change'
+    | 'time-passage'
+    | 'focus-reveal'
+    | 'chapter-reset'
+    | 'impact';
+  rationale: string;
+  treatment: {
+    type:
+      | 'cut'
+      | 'paper-wipe'
+      | 'dip-to-paper'
+      | 'paper-slide'
+      | 'torn-wipe'
+      | 'paper-iris'
+      | 'page-turn'
+      | 'paper-shutters';
+    motivation: 'semantic-default' | 'authored' | 'rhythmic' | 'impact';
+    durationSeconds: number;
+    direction?:
+      | 'left-to-right'
+      | 'right-to-left'
+      | 'top-to-bottom'
+      | 'bottom-to-top';
+    beatId?: string;
+  };
 };
 
 export type ProofTime = {
@@ -143,6 +873,7 @@ export type ProofTime = {
   label: string;
   kind: 'establish' | 'action' | 'peak' | 'final';
   assertions: string[];
+  stateAssertions?: Array<{nodeId: string; stateId: string}>;
 };
 
 export type SceneMotion = {
@@ -173,15 +904,34 @@ export type ProjectAudioMastering = {
   truePeakDbtp: number;
 };
 
+export type SceneAppearance = {
+  background?: string;
+  paperTexture?: {
+    visible: boolean;
+    opacity: number;
+    blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+  };
+  chapter?: {
+    visible: boolean;
+    variant?: 'plain' | 'paper-tab';
+  };
+  subtitles?: {
+    variant: 'boxed' | 'plain' | 'hidden';
+    color?: string;
+    background?: string;
+    maxWidth?: number;
+  };
+};
+
 export type ProjectScene = {
   id: string;
   label: string;
   eyebrow: string;
   tailSeconds: number;
+  appearance?: SceneAppearance;
   motion: SceneMotion;
   composition: SceneComposition;
   camera: SceneCamera;
-  transition: SceneTransition;
   narration: {
     src: string;
     timingSrc?: string;
@@ -190,26 +940,39 @@ export type ProjectScene = {
     text: string;
   };
   subtitles: SubtitleCue[];
-  cues: ProjectCue[];
+  events: ProjectEvent[];
 };
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 4;
+  schemaVersion: 10;
   slug: string;
   title: string;
   plan: {
-    schemaVersion: 1;
+    schemaVersion: 4;
     slug: string;
     status: 'pending' | 'resolved';
     inputMode: 'none' | 'duration-only' | 'scenes-only' | 'both';
-    productionProfile?: 'draft' | 'balanced' | 'full-depth';
-    assetBudget?: {
+    productionProfile: 'draft' | 'balanced' | 'full-depth';
+    assetBudget: {
       backgrounds: number;
       environmentLayers: number;
       characterSheets: number;
       styleSamples: number;
+      baseImageAttempts: number;
+      layerPackageAttemptReserve: number;
       maxGeneratedImages: number;
+    } | null;
+    motionBudget: {
+      maxPoseSheetCalls: number;
+      maxStatesPerSheet: number;
+      maxContinuousTargets: number;
+    } | null;
+    approvedImageBudget: {
+      imageAttemptLimit: number;
+      expectedProviderImageCalls: number;
+      profileHardCeiling: number;
+      approvedAt: string;
     } | null;
     requested: {durationSeconds: number | null; sceneCount: number | null};
     resolved: null | {
@@ -237,53 +1000,80 @@ export type PaperCollageProject = {
     music: ProjectSound | null;
     mastering: ProjectAudioMastering;
   };
+  editorial: EditorialSystem;
+  worlds?: Array<{
+    id: string;
+    sceneIds: string[];
+    requiredStripRoles: Array<'far' | 'mid' | 'ground' | 'near'>;
+  }>;
+  trajectoryContracts?: Array<{
+    id: string;
+    sequence: string[];
+    assertions: Array<
+      | {id: string; kind: 'state-at'; sceneId: string; proofTimeId: string; nodeId: string; stateId: string}
+      | {id: string; kind: 'relative-order'; sceneId: string; proofTimeId: string; leadingNodeId: string; trailingNodeId: string; leadingSide: 'left' | 'right'; minimumGap: number}
+      | {id: string; kind: 'travel'; sceneId: string; proofTimeId: string; nodeId: string; fromProofTimeId: string; toProofTimeId: string; direction: 'left' | 'right'; minimumDelta: number}
+      | {id: string; kind: 'offscreen-at'; sceneId: string; proofTimeId: string; nodeId: string; side: 'left' | 'right'}
+    >;
+  }>;
   scenes: ProjectScene[];
+  sceneTransitions: SceneBoundaryTransition[];
+};
+
+export type NormalizedSceneBoundaryTransition = SceneBoundaryTransition & {
+  from: number;
+  durationInFrames: number;
 };
 
 export type NormalizedProjectScene = Omit<ProjectScene, 'subtitles'> & {
   from: number;
   durationInFrames: number;
+  narrationFrames: number;
   narrationStartFrame: number;
-  transitionFrames: number;
+  enterTransitionFrames: number;
+  exitTransitionFrames: number;
+  enterTransition: NormalizedSceneBoundaryTransition | null;
   subtitles: NormalizedSubtitleCue[];
+};
+
+export type DerivedSceneTimeline = {
+  durationInFrames: number;
+  durationSeconds: number;
+  scenes: Array<
+    ProjectScene & {
+      from: number;
+      durationInFrames: number;
+      narrationFrames: number;
+      narrationStartFrame: number;
+      enterTransitionFrames: number;
+      exitTransitionFrames: number;
+      enterTransition: NormalizedSceneBoundaryTransition | null;
+    }
+  >;
+  transitions: NormalizedSceneBoundaryTransition[];
 };
 
 export type NormalizedProject = Omit<PaperCollageProject, 'scenes'> & {
   durationInFrames: number;
+  durationSeconds: number;
   scenes: NormalizedProjectScene[];
+  transitions: NormalizedSceneBoundaryTransition[];
 };
 
 export const normalizeProject = (project: PaperCollageProject): NormalizedProject => {
-  let cursor = 0;
-  const {fps} = project.video;
-  const scenes = project.scenes.map((scene, index) => {
-    const narrationFrames = Math.ceil(scene.narration.durationSeconds * fps);
-    const narrationStartFrame = Math.round(scene.narration.startSeconds * fps);
-    const tailFrames = Math.ceil(scene.tailSeconds * fps);
-    const durationInFrames = narrationStartFrame + narrationFrames + tailFrames;
-    const sceneTransitionFrames =
-      scene.transition.type === 'none'
-        ? 0
-        : Math.round(scene.transition.durationSeconds * fps);
-    const from = index === 0 ? 0 : Math.max(0, cursor - sceneTransitionFrames);
-    cursor = from + durationInFrames;
-    return {
+  const directed = applyResponsiveDirectingPlan(project);
+  const {fps} = directed.video;
+  const timeline = deriveSceneTimeline(directed);
+  return {
+    ...directed,
+    ...timeline,
+    scenes: timeline.scenes.map((scene) => ({
       ...scene,
-      from,
-      durationInFrames,
-      narrationStartFrame,
-      transitionFrames: sceneTransitionFrames,
       subtitles: scene.subtitles.map((cue) => ({
         from: Math.round(cue.fromSeconds * fps),
         to: Math.round(cue.toSeconds * fps),
         text: cue.text,
       })),
-    };
-  });
-
-  return {
-    ...project,
-    durationInFrames: scenes.length === 0 ? fps : cursor,
-    scenes,
+    })),
   };
 };

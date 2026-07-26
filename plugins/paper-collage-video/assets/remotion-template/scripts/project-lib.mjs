@@ -1,4 +1,5 @@
 import {execFile} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {availableParallelism} from 'node:os';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
@@ -9,19 +10,43 @@ import {
   assessCreativePlanTimeline,
   validateCreativePlan,
 } from './creative-plan-lib.mjs';
+import {validateIntake} from './intake-lib.mjs';
 import {
   loadStoryboard,
   STORY_BLUEPRINTS,
   validateStoryboard,
 } from './storyboard-lib.mjs';
+import {validateDirectingExecution} from './motion-treatment-lib.mjs';
 import {
-  CUE_ACTIONS,
+  EMPHASIS_ACTIONS,
+  flattenCompositionNodes,
   validateCompositionStructure,
 } from './composition-lib.mjs';
+import {
+  deriveSceneTimeline,
+  validateSceneTransitionSequence,
+} from '../src/sceneTimeline.mjs';
+import {validateParallaxRig} from '../src/parallax.mjs';
+import {validateVisibilityLifecycle} from '../src/visibilityLifecycle.mjs';
+import {assessTimelineContinuity} from './timeline-continuity-lib.mjs';
 import {
   readGenerationAttemptEvents,
   summarizeGenerationAttempts,
 } from './generation-attempt-lib.mjs';
+import {
+  validateCompiledEditorial,
+  validateEditorialTransitionExecution,
+} from './editorial-system-lib.mjs';
+import {
+  activeManifestAssets,
+  assertAssetManifest,
+} from './asset-manifest-lib.mjs';
+import {
+  derivationRegionsFromBinding,
+  inspectAlphaBands,
+} from './alpha-band-lib.mjs';
+import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
+import {validateProductionContracts} from './world-trajectory-lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -32,10 +57,21 @@ export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const resolveRenderConcurrency = (
   parallelism = availableParallelism(),
   maximum = 8,
-) => Math.max(1, Math.min(maximum, Math.floor(parallelism)));
+  requested = process.env.PAPER_COLLAGE_RENDER_CONCURRENCY,
+) => {
+  if (requested !== undefined && requested !== '') {
+    const parsed = Number(requested);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('PAPER_COLLAGE_RENDER_CONCURRENCY must be a positive integer.');
+    }
+    return Math.min(maximum, parsed);
+  }
+  return Math.max(1, Math.min(maximum, Math.floor(parallelism)));
+};
 
 export const countProviderGeneratedImages = (assets = []) =>
   assets.filter((asset) => {
+    if (asset.lifecycle && asset.lifecycle.status !== 'active') return false;
     if (asset.capability !== 'image') return false;
     const derivationMethod =
       asset.request?.compositionBinding?.derivation?.method ??
@@ -48,7 +84,14 @@ export const projectPaths = (slug) => ({
   slug,
   projectDirectory: path.join(ROOT, 'projects', slug),
   projectFile: path.join(ROOT, 'projects', slug, 'project.json'),
+  planningScenariosFile: path.join(
+    ROOT,
+    'projects',
+    slug,
+    'planning-scenarios.json',
+  ),
   productionFile: path.join(ROOT, 'projects', slug, 'production.json'),
+  productionMetricsFile: path.join(ROOT, 'projects', slug, 'production-metrics.json'),
   storyboardFile: path.join(ROOT, 'projects', slug, 'storyboard.json'),
   reviewFile: path.join(ROOT, 'projects', slug, 'review.md'),
   semanticContractsFile: path.join(ROOT, 'projects', slug, 'semantic-contracts.json'),
@@ -56,6 +99,7 @@ export const projectPaths = (slug) => ({
   publicDirectory: path.join(ROOT, 'public', 'projects', slug),
   distDirectory: path.join(ROOT, 'dist', slug),
   validationReport: path.join(ROOT, 'dist', slug, 'validation-report.json'),
+  assetsReadySeal: path.join(ROOT, 'dist', slug, 'assets-ready-seal.json'),
 });
 
 export const assertSlug = (slug) => {
@@ -78,49 +122,57 @@ export const loadProject = async (slug) => {
   assertSlug(slug);
   const paths = projectPaths(slug);
   const project = await readJson(paths.projectFile);
-  if (project.schemaVersion !== 4) {
-    throw new Error('project.json 必须使用 schemaVersion 4；旧项目不会自动迁移。');
+  if (project.schemaVersion !== 10) {
+    throw new Error('project.json 必须使用 schemaVersion 10；旧项目不会自动迁移。');
   }
   return {paths, project};
 };
 
-export const deriveTimeline = (project) => {
-  let cursor = 0;
-  const fps = Number(project.video?.fps ?? 30);
-  const scenes = (project.scenes ?? []).map((scene, index) => {
-    const narrationFrames = Math.ceil(
-      Number(scene.narration?.durationSeconds ?? 0) * fps,
-    );
-    const narrationStartFrame = Math.round(
-      Number(scene.narration?.startSeconds ?? 0) * fps,
-    );
-    const tailFrames = Math.ceil(Number(scene.tailSeconds ?? 0) * fps);
-    const durationInFrames = narrationStartFrame + narrationFrames + tailFrames;
-    const sceneTransitionFrames =
-      scene.transition?.type === 'none'
-        ? 0
-        : Math.round(Number(scene.transition?.durationSeconds ?? 0) * fps);
-    const from = index === 0 ? 0 : Math.max(0, cursor - sceneTransitionFrames);
-    cursor = from + durationInFrames;
-    return {
-      ...scene,
-      from,
-      durationInFrames,
-      narrationFrames,
-      narrationStartFrame,
-      transitionFrames: sceneTransitionFrames,
-    };
-  });
-  return {durationInFrames: cursor, durationSeconds: cursor / fps, scenes};
-};
+export const deriveTimeline = (project) => deriveSceneTimeline(project);
+
+export const stateSequenceMatchesStoryboardPlan = (actual, planned) =>
+  actual?.poseFamilyId === planned?.poseFamilyId &&
+  JSON.stringify(actual?.playback ?? null) === JSON.stringify(planned?.playback ?? null) &&
+  actual?.transition?.type === planned?.transition &&
+  JSON.stringify((actual?.states ?? []).map(({id, at}) => ({id, at}))) ===
+    JSON.stringify((planned?.states ?? []).map(({id, at}) => ({id, at})));
 
 export const proofOverlapsTransition = ({
   at,
-  transitionFrames,
+  enterTransitionFrames = 0,
+  exitTransitionFrames = 0,
   durationInFrames,
 }) => {
-  const transitionRatio = transitionFrames / Math.max(1, durationInFrames);
-  return at < transitionRatio || at > 1 - transitionRatio;
+  const duration = Math.max(1, durationInFrames);
+  return at < enterTransitionFrames / duration || at > 1 - exitTransitionFrames / duration;
+};
+
+export const resolveEventProofWindow = ({
+  event,
+  eventIndex,
+  events,
+  sceneDurationSeconds,
+}) => {
+  const start = event.at;
+  if (event.visual?.kind === 'visibility') {
+    const nextVisibility = (events ?? [])
+      .slice(eventIndex + 1)
+      .find((candidate) =>
+        candidate.targetId === event.targetId &&
+        candidate.visual?.kind === 'visibility',
+      );
+    return {
+      start,
+      end: nextVisibility?.at ?? 1,
+      mode: 'persistent-visibility',
+    };
+  }
+  const duration = event.visual?.durationSeconds ?? 0.1;
+  return {
+    start,
+    end: start + duration / Math.max(0.001, sceneDurationSeconds),
+    mode: 'action-window',
+  };
 };
 
 export const deriveContactSheetSamples = ({
@@ -196,6 +248,9 @@ const fileExists = async (file) => {
   }
 };
 
+const sha256File = async (file) =>
+  createHash('sha256').update(await fs.readFile(file)).digest('hex');
+
 export const inspectCharacterPng = async (file) => {
   const metadata = await sharp(file).metadata();
   const {data, info} = await sharp(file)
@@ -239,13 +294,26 @@ export const inspectCharacterPng = async (file) => {
   }
 
   const keySampleCount = transparentPixels || lowAlphaPixels;
-  const keyColor = keySampleCount
+  const inferredKeyColor = keySampleCount
     ? [
         (transparentPixels ? transparentRed : lowAlphaRed) / keySampleCount,
         (transparentPixels ? transparentGreen : lowAlphaGreen) / keySampleCount,
         (transparentPixels ? transparentBlue : lowAlphaBlue) / keySampleCount,
       ]
     : null;
+  let keyMetadata = null;
+  try {
+    keyMetadata = JSON.parse(await fs.readFile(`${file}.key.json`, 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  const declaredKeyColor = /^#[0-9a-f]{6}$/i.test(keyMetadata?.keyColor ?? '')
+    ? [1, 3, 5].map((index) => Number.parseInt(keyMetadata.keyColor.slice(index, index + 2), 16))
+    : null;
+  const inferredSaturation = inferredKeyColor
+    ? Math.max(...inferredKeyColor) - Math.min(...inferredKeyColor)
+    : 0;
+  const keyColor = declaredKeyColor ?? (inferredSaturation >= 80 ? inferredKeyColor : null);
   const keyMean = keyColor
     ? (keyColor[0] + keyColor[1] + keyColor[2]) / 3
     : 0;
@@ -293,6 +361,7 @@ export const inspectCharacterPng = async (file) => {
     partialPixels,
     visiblePixels,
     keyColor: keyChromaMagnitude >= 18 ? keyColorHex : null,
+    keyColorSource: declaredKeyColor ? 'metadata' : keyColor ? 'transparent-rgb-fallback' : null,
     keyEdgePixels,
     keyEdgeRatio:
       partialAlphaWeight === 0 ? 0 : keyEdgeAlphaWeight / partialAlphaWeight,
@@ -331,15 +400,99 @@ export const validateProject = async (project, options = {}) => {
   };
   const add = (level, code, message, location) =>
     issues.push(makeIssue(level, code, message, location));
+  let manifest = options.manifest ?? null;
+  const manifestFile = path.join(
+    ROOT,
+    'projects',
+    project.slug ?? '',
+    'assets-manifest.json',
+  );
+  if (
+    !manifest &&
+    SLUG_PATTERN.test(project.slug ?? '') &&
+    await fileExists(manifestFile)
+  ) {
+    try {
+      manifest = assertAssetManifest(await readJson(manifestFile), project.slug);
+    } catch (error) {
+      add('error', 'asset-manifest-invalid', error.message, 'assets-manifest.json');
+    }
+  }
+  const manifestByFile = new Map(
+    activeManifestAssets(manifest ?? {assets: []}).map((record) => [
+      path.normalize(record.file),
+      record,
+    ]),
+  );
+  const manifestRecordForSource = (source) =>
+    manifestByFile.get(path.normalize(path.join('public', source))) ?? null;
+  const inspectRectangularAlphaBands = async ({
+    file,
+    source,
+    location,
+    renderSize = null,
+  }) => {
+    const record = manifestRecordForSource(source);
+    const inspection = await inspectAlphaBands({
+      file,
+      renderSize,
+      derivationRegions: derivationRegionsFromBinding(
+        record?.registeredFamilyBinding,
+      ),
+    });
+    if (!inspection.passed) {
+      add(
+        'error',
+        'composition-rectangular-alpha-band',
+        `透明前景存在确定性低 alpha 矩形裁切带：${inspection.failureMessage}`,
+        location,
+      );
+    } else if (inspection.severity === 'warning') {
+      const warnings = inspection.scales.flatMap(({label, diagnostics}) =>
+        diagnostics
+          .filter(({severity}) => severity === 'warning')
+          .map((diagnostic) =>
+            `${label} ${diagnostic.orientation} ${diagnostic.coordinateStart}-${diagnostic.coordinateEnd}px spans ${diagnostic.spanStart}-${diagnostic.spanEnd}px`),
+      );
+      add(
+        'warning',
+        'composition-alpha-band-warning',
+        `透明前景存在未确认的长直低 alpha 带：${warnings.join('；')}`,
+        location,
+      );
+    }
+    return inspection;
+  };
 
-  if (project.schemaVersion !== 4) {
-    add('error', 'schema-version', 'schemaVersion 必须为 4。', 'schemaVersion');
+  if (project.schemaVersion !== 10) {
+    add('error', 'schema-version', 'schemaVersion 必须为 10。', 'schemaVersion');
   }
   if (!SLUG_PATTERN.test(project.slug ?? '')) {
     add('error', 'slug', 'slug 格式无效。', 'slug');
   }
   if (!project.title || typeof project.title !== 'string') {
     add('error', 'title', '项目必须有标题。', 'title');
+  }
+  if (project.intake !== undefined) {
+    for (const issue of validateIntake(project.intake)) {
+      add('error', 'intake-invalid', issue.message, issue.location);
+    }
+    if (
+      project.intake.status === 'confirmed' &&
+      (
+        (project.intake.aspectRatio === '16:9' &&
+          (project.video?.width !== 1920 || project.video?.height !== 1080)) ||
+        (project.intake.aspectRatio === '9:16' &&
+          (project.video?.width !== 1080 || project.video?.height !== 1920))
+      )
+    ) {
+      add(
+        'error',
+        'intake-video-drift',
+        'video 尺寸必须与已确认 intake.aspectRatio 一致。',
+        'video',
+      );
+    }
   }
   if (!isPositiveNumber(project.video?.width)) {
     add('error', 'video-width', '视频宽度必须为正数。', 'video.width');
@@ -350,14 +503,22 @@ export const validateProject = async (project, options = {}) => {
   if (!isPositiveNumber(project.video?.fps)) {
     add('error', 'video-fps', 'fps 必须为正数。', 'video.fps');
   }
+  if (!/^#[0-9a-f]{6}$/i.test(project.theme?.canvas ?? '')) {
+    add(
+      'error',
+      'theme-opaque-canvas',
+      'theme.canvas 必须是六位不透明十六进制颜色，作为每幕和转场的隔离底纸。',
+      'theme.canvas',
+    );
+  }
   if (project.plan === undefined) {
-    add('error', 'plan-required', 'v4 项目必须包含 plan。', 'plan');
+    add('error', 'plan-required', 'v9 项目必须包含 plan。', 'plan');
   }
   if (!project.voice || typeof project.voice !== 'object') {
-    add('error', 'voice-required', 'v4 项目必须包含 voice。', 'voice');
+    add('error', 'voice-required', 'v9 项目必须包含 voice。', 'voice');
   }
   if (project.audio?.sfx !== undefined) {
-    add('error', 'unsupported-audio-sfx', 'v4 不支持 audio.sfx；请用逐节拍 cue.sound。', 'audio.sfx');
+    add('error', 'unsupported-audio-sfx', 'v9 不支持 audio.sfx；请用统一 editorial cue 与 event.sound。', 'audio.sfx');
   }
   if (!isPositiveNumber(project.quality?.minimumAssetScale)) {
     add(
@@ -393,7 +554,7 @@ export const validateProject = async (project, options = {}) => {
     add(
       'error',
       'audio-mastering-required',
-      'audio.mastering 是 v4 项目的必填交付规格。',
+      'audio.mastering 是 v9 项目的必填交付规格。',
       'audio.mastering',
     );
   }
@@ -424,6 +585,128 @@ export const validateProject = async (project, options = {}) => {
     if (storyboard.status !== 'ready') {
       add('error', 'storyboard-pending', 'storyboard.json 必须为 ready。', 'storyboard.status');
     }
+    if (JSON.stringify(project.sceneTransitions ?? []) !== JSON.stringify(storyboard.sceneTransitions ?? [])) {
+      add('error', 'scene-transitions-drift', 'project.sceneTransitions 必须与已批准故事板完全一致。', 'sceneTransitions');
+    }
+    const projectEditorial = project.editorial
+      ? {...project.editorial, activeProfile: undefined}
+      : null;
+    const storyboardEditorial = storyboard.editorial
+      ? {...storyboard.editorial, activeProfile: undefined}
+      : null;
+    if (JSON.stringify(projectEditorial) !== JSON.stringify(storyboardEditorial)) {
+      add('error', 'editorial-drift', 'project.editorial 必须与已批准故事板的 v9 编译结果完全一致。', 'editorial');
+    }
+    const approvedImageBudget = project.plan?.approvedImageBudget;
+    const currentExpectedProviderImageCalls =
+      storyboard.directingSummary?.generationBudget
+        ?.expectedProviderImageCalls ?? 0;
+    if (
+      approvedImageBudget &&
+      (
+        project.plan?.scenarioBinding
+          ? currentExpectedProviderImageCalls >
+            approvedImageBudget.expectedProviderImageCalls
+          : approvedImageBudget.expectedProviderImageCalls !==
+            currentExpectedProviderImageCalls
+      )
+    ) {
+      add(
+        'error',
+        'approved-image-budget-storyboard-drift',
+        project.plan?.scenarioBinding
+          ? `预算审批时全片预计 ${approvedImageBudget.expectedProviderImageCalls} 次图片 provider 调用，当前 storyboard 的结构化素材子集已需要 ${currentExpectedProviderImageCalls} 次；请重新规划并审批预算。`
+          : `预算审批时预计 ${approvedImageBudget.expectedProviderImageCalls} 次图片 provider 调用，当前 storyboard 预计 ${currentExpectedProviderImageCalls} 次；请重新审批预算。`,
+        'plan.approvedImageBudget.expectedProviderImageCalls',
+      );
+    }
+    if (
+      approvedImageBudget &&
+      approvedImageBudget.imageAttemptLimit <
+        currentExpectedProviderImageCalls
+    ) {
+      add(
+        'error',
+        'approved-image-budget-insufficient',
+        `当前 storyboard 预计 ${currentExpectedProviderImageCalls} 次图片 provider 调用，超过人批准上限 ${approvedImageBudget.imageAttemptLimit}。`,
+        'plan.approvedImageBudget.imageAttemptLimit',
+      );
+    }
+  }
+  if (!project.editorial) {
+    add('error', 'editorial-required', 'v9 项目必须包含已编译 editorial 系统。', 'editorial');
+  } else {
+    for (const issue of validateCompiledEditorial({
+      editorial: project.editorial,
+      scenes: project.scenes ?? [],
+      sceneTransitions: project.sceneTransitions ?? [],
+      fps: project.video?.fps,
+    })) {
+      add('error', issue.code, issue.message, issue.location);
+    }
+    for (const issue of validateEditorialTransitionExecution({
+      editorial: project.editorial,
+      scenes: project.scenes ?? [],
+    })) {
+      add('error', issue.code, issue.message, issue.location);
+    }
+    for (const [mediaIndex, media] of (project.editorial.media ?? []).entries()) {
+      const location = `editorial.media[${mediaIndex}]`;
+      try {
+        const file = resolvePublicFile(media.src);
+        if (!(await fileExists(file))) {
+          add('error', 'editorial-media-missing', `缺少 editorial 最终本地音频：${media.src}`, `${location}.src`);
+          continue;
+        }
+        const actualSha256 = await sha256File(file);
+        if (actualSha256 !== media.sha256) {
+          add('error', 'editorial-media-sha-drift', `editorial 音频 SHA-256 漂移：${media.src}`, `${location}.sha256`);
+        }
+        const inspected = await memoize(mediaProbeCache, file, () => probeMedia(file));
+        const actualDuration = Number(inspected.format?.duration);
+        if (!Number.isFinite(actualDuration) || Math.abs(actualDuration - media.durationSeconds) > 0.002) {
+          add(
+            'error',
+            'editorial-media-duration-drift',
+            `editorial 音频时长 ${media.durationSeconds}s 与实际文件 ${Number.isFinite(actualDuration) ? actualDuration.toFixed(6) : 'unknown'}s 不一致。`,
+            `${location}.durationSeconds`,
+          );
+        }
+        if (media.timingDataSrc) {
+          const timingFile = resolvePublicFile(media.timingDataSrc);
+          if (!(await fileExists(timingFile))) {
+            add('error', 'editorial-timing-data-missing', `缺少 editorial 实际时间数据：${media.timingDataSrc}`, `${location}.timingDataSrc`);
+          } else {
+            const timing = JSON.parse(await fs.readFile(timingFile, 'utf8'));
+            if (timing.mediaSha256 !== actualSha256 || Math.abs(Number(timing.durationSeconds) - actualDuration) > 0.002) {
+              add('error', 'editorial-timing-data-media-drift', 'timingDataSrc 未绑定当前最终本地音频的 SHA-256 与实际时长。', `${location}.timingDataSrc`);
+            }
+            const timingCues = new Map((timing.cues ?? []).map((cue) => [cue.id, cue]));
+            for (const cue of (project.editorial.cues ?? []).filter(
+              (candidate) => candidate.mediaId === media.id && candidate.source === 'detected',
+            )) {
+              const evidence = timingCues.get(cue.id);
+              if (
+                !evidence ||
+                evidence.kind !== cue.kind ||
+                Math.abs(Number(evidence.atSeconds) - cue.atSeconds) > 1e-6
+              ) {
+                add('error', 'editorial-detected-cue-drift', `detected cue ${cue.id} 与 timingDataSrc 不一致。`, `${location}.timingDataSrc`);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        add('error', 'editorial-media-proof', error.message, location);
+      }
+    }
+  }
+  for (const issue of validateSceneTransitionSequence({
+    scenes: project.scenes,
+    beatScenes: storyboard?.scenes ?? project.scenes,
+    sceneTransitions: project.sceneTransitions,
+  })) {
+    add('error', issue.code, issue.message, issue.location);
   }
 
   const structuralErrors = issues.some(({level}) => level === 'error');
@@ -435,6 +718,11 @@ export const validateProject = async (project, options = {}) => {
 
   if (project.plan?.status === 'resolved' && timeline.scenes.length > 0) {
     for (const issue of assessCreativePlanTimeline(project.plan, timeline)) {
+      add(issue.level, issue.code, issue.message, issue.location);
+    }
+  }
+  if (timeline.scenes.length > 0) {
+    for (const issue of assessTimelineContinuity(project, timeline)) {
       add(issue.level, issue.code, issue.message, issue.location);
     }
   }
@@ -489,17 +777,17 @@ export const validateProject = async (project, options = {}) => {
         }
         if (proof.kind === 'final' && proof.at >= 0.82) finalProof = true;
         if (
-          scene.transition?.type === 'fade' &&
           proofOverlapsTransition({
             at: proof.at,
-            transitionFrames: scene.transitionFrames,
+            enterTransitionFrames: scene.enterTransitionFrames,
+            exitTransitionFrames: scene.exitTransitionFrames,
             durationInFrames: scene.durationInFrames,
           })
         ) {
           add(
             'error',
             'scene-proof-transition-overlap',
-            '证明时刻不能落在淡入/淡出遮挡区内。',
+            '证明时刻不能落在场景边界转场区内。',
             `${proofLocation}.at`,
           );
         }
@@ -515,7 +803,8 @@ export const validateProject = async (project, options = {}) => {
               proof.at !== approved.at ||
               proof.label !== approved.label ||
               proof.kind !== approved.kind ||
-              JSON.stringify(proof.assertions) !== JSON.stringify(approved.assertions)
+              JSON.stringify(proof.assertions) !== JSON.stringify(approved.assertions) ||
+              JSON.stringify(proof.stateAssertions ?? []) !== JSON.stringify(approved.stateAssertions ?? [])
             );
           }));
       if (proofDrift) {
@@ -525,25 +814,21 @@ export const validateProject = async (project, options = {}) => {
     if (scene.durationInFrames <= 0) {
       add('error', 'scene-duration', '镜头计算时长必须大于 0。', sceneLocation);
     }
-    if (!scene.transition) {
-      add('error', 'transition-required', '每个镜头必须显式配置 transition。', `${sceneLocation}.transition`);
-    } else if (
-      !['fade', 'none'].includes(scene.transition.type) ||
-      !Number.isFinite(scene.transition.durationSeconds) ||
-      scene.transition.durationSeconds < 0
-    ) {
-      add('error', 'transition-invalid', 'transition 必须包含有效 type 和非负 durationSeconds。', `${sceneLocation}.transition`);
-    } else if (scene.transitionFrames * 2 >= scene.durationInFrames) {
-      add(
-        'warning',
-        'transition-too-long',
-        '转场时长占镜头时长的一半或更多。',
-        `${sceneLocation}.transition.durationSeconds`,
-      );
-    }
     if (!Number.isFinite(scene.tailSeconds) || scene.tailSeconds < 0) {
       add('error', 'scene-tail', 'tailSeconds 必须是非负秒数。', `${sceneLocation}.tailSeconds`);
     }
+    if (scene.appearance?.paperTexture && (
+      typeof scene.appearance.paperTexture.visible !== 'boolean' ||
+      !Number.isFinite(scene.appearance.paperTexture.opacity) ||
+      scene.appearance.paperTexture.opacity < 0 ||
+      scene.appearance.paperTexture.opacity > 1 ||
+      !['normal', 'multiply', 'screen', 'overlay'].includes(scene.appearance.paperTexture.blendMode)
+    )) add('error', 'scene-appearance-texture', 'appearance.paperTexture 无效。', `${sceneLocation}.appearance.paperTexture`);
+    if (scene.appearance?.chapter && (
+      typeof scene.appearance.chapter.visible !== 'boolean' ||
+      (scene.appearance.chapter.variant !== undefined && !['plain', 'paper-tab'].includes(scene.appearance.chapter.variant))
+    )) add('error', 'scene-appearance-chapter', 'appearance.chapter 无效。', `${sceneLocation}.appearance.chapter`);
+    if (scene.appearance?.subtitles && !['boxed', 'plain', 'hidden'].includes(scene.appearance.subtitles.variant)) add('error', 'scene-appearance-subtitles', 'appearance.subtitles.variant 无效。', `${sceneLocation}.appearance.subtitles.variant`);
 
     const narrationLocation = `${sceneLocation}.narration`;
     if (!Number.isFinite(scene.narration?.startSeconds) || scene.narration.startSeconds < 0) {
@@ -590,17 +875,76 @@ export const validateProject = async (project, options = {}) => {
       composition: scene.composition,
       video: project.video,
       proofTimes: scene.motion?.proofTimes ?? [],
+      durationSeconds: scene.durationInFrames / project.video.fps,
       location: `${sceneLocation}.composition`,
+      editorial: project.editorial,
+      sceneId: scene.id,
+      exclusionZones:
+        project.editorial?.responsiveProfiles?.find(
+          ({id}) => id === project.editorial.activeProfile,
+        )?.exclusionZones ?? [],
+      safeArea:
+        project.editorial?.responsiveProfiles?.find(
+          ({id}) => id === project.editorial.activeProfile,
+        )?.safeArea ?? {x: 0, y: 0, width: 1, height: 1},
     });
     for (const issue of compositionResult.issues) {
       add(issue.level, issue.code, issue.message, issue.location);
     }
 
     const actualPatterns = new Set(
-      compositionResult.groups.map(({node}) => node.pattern),
+      compositionResult.groups
+        .filter(
+          ({renderParticipation}) => renderParticipation === 'visible',
+        )
+        .map(({node}) => node.pattern),
     );
-    if (compositionResult.assets.some(({parent}) => parent === null)) {
+    if (compositionResult.freeNodes.length > 0) {
       actualPatterns.add('free');
+    }
+
+    const actualSequences = new Map(
+      compositionResult.sequences
+        .filter(
+          ({node}) =>
+            !compositionResult.derivationOnlyNodeIds.has(node.id),
+        )
+        .map(({node}) => [node.id, node]),
+    );
+    for (const planned of storyboardScene?.compositionPlan?.stateSequences ?? []) {
+      const actual = actualSequences.get(planned.nodeId);
+      if (!actual) {
+        add('error', 'composition-sequence-drift', `故事板要求状态序列 ${planned.nodeId}，项目镜头没有实现。`, `${sceneLocation}.composition`);
+        continue;
+      }
+      if (!stateSequenceMatchesStoryboardPlan(actual, planned)) {
+        add('error', 'composition-sequence-drift', `状态序列 ${planned.nodeId} 与故事板计划不一致。`, `${sceneLocation}.composition`);
+      }
+    }
+
+    for (const {node, parent} of compositionResult.sequences) {
+      const nodeLocation = `${sceneLocation}.composition.nodes#${node.id}`;
+      for (const state of node.states) {
+        try {
+          const assetFile = resolvePublicFile(state.src);
+          if (!(await fileExists(assetFile))) {
+            add('error', 'composition-sequence-state-missing', `缺少状态素材：${state.src}`, `${nodeLocation}.states#${state.id}.src`);
+            continue;
+          }
+          const inspection = await memoize(characterInspectionCache, assetFile, () => inspectCharacterPng(assetFile));
+          const alphaBandInspection = await inspectRectangularAlphaBands({
+            file: assetFile,
+            source: state.src,
+            location: `${nodeLocation}.states#${state.id}.src`,
+          });
+          assets.push({kind: node.assetRole, src: state.src, sceneId: scene.id, nodeId: node.id, stateId: state.id, parentId: parent?.id ?? null, registrationId: node.registration.id, alphaBandInspection, ...inspection});
+          if (!inspection.hasAlpha || inspection.transparentPixels === 0) add('error', 'composition-sequence-state-alpha', '状态素材必须包含有效透明区域。', `${nodeLocation}.states#${state.id}.src`);
+          const {width, height} = node.registration.canvas;
+          if (inspection.width !== width || inspection.height !== height) add('error', 'composition-sequence-state-dimensions', `状态必须与注册画布 ${width}x${height} 完全一致，当前为 ${inspection.width}x${inspection.height}。`, `${nodeLocation}.states#${state.id}.src`);
+        } catch (error) {
+          add('error', 'composition-sequence-state-inspect', error.message, `${nodeLocation}.states#${state.id}.src`);
+        }
+      }
     }
     for (const pattern of storyboardScene?.compositionPlan?.patterns ?? []) {
       if (!actualPatterns.has(pattern)) {
@@ -611,6 +955,10 @@ export const validateProject = async (project, options = {}) => {
           `${sceneLocation}.composition`,
         );
       }
+    }
+
+    for (const issue of validateDirectingExecution({scene, storyboardScene, location: sceneLocation})) {
+      add('error', issue.code, issue.message, issue.location);
     }
 
     for (const {node, parent} of compositionResult.assets) {
@@ -627,6 +975,13 @@ export const validateProject = async (project, options = {}) => {
           assetFile,
           () => isCutout ? inspectCharacterPng(assetFile) : inspectBackground(assetFile),
         );
+        const alphaBandInspection = isCutout
+          ? await inspectRectangularAlphaBands({
+              file: assetFile,
+              source: node.src,
+              location: `${nodeLocation}.src`,
+            })
+          : null;
         assets.push({
           kind: node.assetRole,
           src: node.src,
@@ -634,6 +989,7 @@ export const validateProject = async (project, options = {}) => {
           nodeId: node.id,
           parentId: parent?.id ?? null,
           registrationId: node.registrationId ?? null,
+          alphaBandInspection,
           ...inspection,
         });
         if (isCutout && (!inspection.hasAlpha || inspection.transparentPixels === 0)) {
@@ -671,6 +1027,81 @@ export const validateProject = async (project, options = {}) => {
         }
       } catch (error) {
         add('error', 'composition-asset-inspect', error.message, `${nodeLocation}.src`);
+      }
+    }
+    if (manifest) {
+      for (const {node: group} of compositionResult.groups.filter(
+        ({node}) =>
+          ['supported-subject', 'registered-depth-stack'].includes(
+            node.pattern,
+          ),
+      )) {
+        const groupLocation = `${sceneLocation}.composition.nodes#${group.id}`;
+        const assetNodes = (group.children ?? []).filter(
+          ({kind}) => kind === 'asset',
+        );
+        const records = assetNodes
+          .map(({src}) => manifestRecordForSource(src))
+          .filter(Boolean);
+        const result = assertRegisteredFamilyRecords({
+          records,
+          registration: group.registration,
+          pattern: group.pattern,
+          sourcePackageId:
+            group.pattern === 'registered-depth-stack'
+              ? group.layerStack?.sourcePackageId
+              : null,
+        });
+        const rolesMatchNodes = records.every((record) => {
+          const binding = record.registeredFamilyBinding;
+          return assetNodes.some(
+            (node) =>
+              node.id === binding?.nodeId &&
+              node.slot === binding?.slot &&
+              binding.role === binding.slot &&
+              node.registrationId === group.registration.id,
+          );
+        });
+        if (!result.passed || !rolesMatchNodes) {
+          add(
+            'error',
+            'composition-registered-family',
+            `${group.pattern} 必须消费三成员、层完整、共享注册画布族：${[
+              ...result.errors,
+              ...(!rolesMatchNodes ? ['成员 role/slot/nodeId/registrationId 绑定不一致'] : []),
+            ].join('；')}`,
+            groupLocation,
+          );
+        }
+      }
+    }
+
+    for (const {node, parent} of compositionResult.motifFields) {
+      const nodeLocation = `${sceneLocation}.composition.nodes#${node.id}`;
+      for (const motif of node.motifs ?? []) {
+        try {
+          const assetFile = resolvePublicFile(motif.src);
+          if (!(await fileExists(assetFile))) {
+            add('error', 'composition-motif-missing', `缺少 motif 素材：${motif.src}`, `${nodeLocation}.motifs#${motif.id}.src`);
+            continue;
+          }
+          const inspection = await memoize(
+            backgroundInspectionCache,
+            assetFile,
+            () => inspectBackground(assetFile),
+          );
+          assets.push({
+            kind: 'decorative',
+            src: motif.src,
+            sceneId: scene.id,
+            nodeId: node.id,
+            motifId: motif.id,
+            parentId: parent?.id ?? null,
+            ...inspection,
+          });
+        } catch (error) {
+          add('error', 'composition-motif-inspect', error.message, `${nodeLocation}.motifs#${motif.id}.src`);
+        }
       }
     }
 
@@ -712,54 +1143,126 @@ export const validateProject = async (project, options = {}) => {
         add('error', 'camera-keyframe-order', 'camera keyframes 必须按 at 严格递增。', `${sceneLocation}.camera.keyframes[${index}].at`);
       }
     }
+    for (const issue of validateParallaxRig({
+      camera: scene.camera,
+      composition: scene.composition,
+      location: `${sceneLocation}.camera.parallax`,
+    })) {
+      add(issue.level, issue.code, issue.message, issue.location);
+    }
 
-    if (!Array.isArray(scene.cues) || scene.cues.length === 0) {
-      add('error', 'scene-cues-required', '每个镜头必须包含与故事节拍对应的 cues。', `${sceneLocation}.cues`);
+    if (!Array.isArray(scene.events) || scene.events.length === 0) {
+      add('error', 'scene-events-required', '每个镜头必须包含与故事节拍对应的 events。', `${sceneLocation}.events`);
     }
     if (scene.audioEvents !== undefined) {
-      add('error', 'unsupported-audio-events', 'v4 只允许 scene.cues 作为视听事件源。', `${sceneLocation}.audioEvents`);
+      add('error', 'unsupported-audio-events', 'v9 只允许 scene.events 作为视听事件源。', `${sceneLocation}.audioEvents`);
     }
-    const cueIds = new Set();
-    const cueBeatIds = new Set();
-    const validTargets = new Set(['scene', ...compositionResult.nodeIds]);
+    const eventIds = new Set();
+    const eventBeatIds = new Set();
+    const validTargets = new Set(compositionResult.nodeIds);
+    const nodesById = new Map(flattenCompositionNodes(scene.composition?.nodes).map(({node}) => [node.id, node]));
     const proofTimesById = new Map((scene.motion?.proofTimes ?? []).map((proof) => [proof.id, proof]));
     const storyboardBeats = new Map((storyboardScene?.beats ?? []).map((beat) => [beat.id, beat]));
-    for (const [cueIndex, cue] of (scene.cues ?? []).entries()) {
-      const cueLocation = `${sceneLocation}.cues[${cueIndex}]`;
-      if (!cue.id || cueIds.has(cue.id)) add('error', 'scene-cue-id', 'cue id 缺失或重复。', `${cueLocation}.id`);
-      cueIds.add(cue.id);
-      if (!cue.beatId || cueBeatIds.has(cue.beatId)) add('error', 'scene-cue-beat', '每个 cue 必须唯一对应一个 beatId。', `${cueLocation}.beatId`);
-      cueBeatIds.add(cue.beatId);
-      const beat = storyboardBeats.get(cue.beatId);
-      if (!beat) add('error', 'scene-cue-beat-missing', `故事板中没有节拍 ${cue.beatId}。`, `${cueLocation}.beatId`);
-      if (!Number.isFinite(cue.at) || cue.at < 0 || cue.at > 1) add('error', 'scene-cue-time', 'cue.at 必须位于 0..1。', `${cueLocation}.at`);
-      if (beat && Math.abs(cue.at - beat.at) > 0.035) add('error', 'scene-cue-drift', 'cue.at 必须与故事板节拍保持在 0.035 以内。', `${cueLocation}.at`);
-      if (!isPositiveNumber(cue.durationSeconds)) add('error', 'scene-cue-duration', 'cue.durationSeconds 必须大于 0。', `${cueLocation}.durationSeconds`);
-      if (!validTargets.has(cue.targetId)) add('error', 'scene-cue-target', `cue 目标不存在：${cue.targetId}`, `${cueLocation}.targetId`);
-      if (!CUE_ACTIONS.includes(cue.action)) add('error', 'scene-cue-action', `未知 cue action：${cue.action}`, `${cueLocation}.action`);
-      if (!Number.isFinite(cue.intensity) || cue.intensity < 0 || cue.intensity > 3) add('error', 'scene-cue-intensity', 'cue.intensity 必须位于 0..3。', `${cueLocation}.intensity`);
-      if (cue.proofTimeId) {
-        const proof = proofTimesById.get(cue.proofTimeId);
+    let previousEventAt = -1;
+    for (const [eventIndex, event] of (scene.events ?? []).entries()) {
+      const eventLocation = `${sceneLocation}.events[${eventIndex}]`;
+      if (!event.id || eventIds.has(event.id)) add('error', 'scene-event-id', 'event id 缺失或重复。', `${eventLocation}.id`);
+      eventIds.add(event.id);
+      if (!event.beatId) add('error', 'scene-event-beat', '每个 event 必须对应一个 beatId。', `${eventLocation}.beatId`);
+      eventBeatIds.add(event.beatId);
+      const beat = storyboardBeats.get(event.beatId);
+      if (!beat) add('error', 'scene-event-beat-missing', `故事板中没有节拍 ${event.beatId}。`, `${eventLocation}.beatId`);
+      if (!Number.isFinite(event.at) || event.at < 0 || event.at > 1) add('error', 'scene-event-time', 'event.at 必须位于 0..1。', `${eventLocation}.at`);
+      if (Number.isFinite(event.at) && event.at < previousEventAt) add('error', 'scene-event-order', 'events 必须按 at 非递减排列。', `${eventLocation}.at`);
+      previousEventAt = Number.isFinite(event.at) ? event.at : previousEventAt;
+      if (beat && Math.abs(event.at - beat.at) > 0.035) add('error', 'scene-event-drift', 'event.at 必须与故事板节拍保持在 0.035 以内。', `${eventLocation}.at`);
+      if (beat?.proofTimeId && event.proofTimeId !== beat.proofTimeId) {
+        add(
+          'error',
+          'scene-event-proof-drift',
+          `event 必须使用故事板节拍批准的证明时刻 ${beat.proofTimeId}。`,
+          `${eventLocation}.proofTimeId`,
+        );
+      }
+      const visual = event.visual;
+      if (compositionResult.derivationOnlyNodeIds.has(event.targetId)) {
+        add(
+          'error',
+          'scene-event-derivation-only-target',
+          `event 不能指向不参与渲染的 derivation-only 节点：${event.targetId}`,
+          `${eventLocation}.targetId`,
+        );
+      } else if (!validTargets.has(event.targetId) && !(event.targetId === 'scene' && visual?.kind === 'hold')) add('error', 'scene-event-target', `event 目标必须是存在的组合节点；只有 hold 可使用 scene：${event.targetId}`, `${eventLocation}.targetId`);
+      if (visual === null) {
+        if (!event.sound) add('error', 'scene-event-empty', 'visual=null 的 event 必须包含 sound。', `${eventLocation}.visual`);
+      } else if (visual?.kind === 'visibility') {
+        if (!['show', 'hide'].includes(visual.action)) add('error', 'scene-event-visibility-action', 'visibility action 必须是 show 或 hide。', `${eventLocation}.visual.action`);
+        if (!['cut', 'fade-rise', 'fade-scale'].includes(visual.transition)) add('error', 'scene-event-visibility-transition', 'visibility transition 无效。', `${eventLocation}.visual.transition`);
+        if (visual.transition === 'cut' ? visual.durationSeconds !== 0 : !isPositiveNumber(visual.durationSeconds)) add('error', 'scene-event-visibility-duration', 'cut 时长必须为 0，其他可见性转场时长必须大于 0。', `${eventLocation}.visual.durationSeconds`);
+      } else if (visual?.kind === 'emphasis') {
+        if (!EMPHASIS_ACTIONS.includes(visual.action)) add('error', 'scene-event-emphasis-action', `未知 emphasis action：${visual.action}`, `${eventLocation}.visual.action`);
+        if (!isPositiveNumber(visual.durationSeconds)) add('error', 'scene-event-emphasis-duration', 'emphasis.durationSeconds 必须大于 0。', `${eventLocation}.visual.durationSeconds`);
+        if (!Number.isFinite(visual.intensity) || visual.intensity < 0 || visual.intensity > 3) add('error', 'scene-event-emphasis-intensity', 'emphasis.intensity 必须位于 0..3。', `${eventLocation}.visual.intensity`);
+      } else if (visual?.kind === 'hold') {
+        if (!isPositiveNumber(visual.durationSeconds)) add('error', 'scene-event-hold-duration', 'hold.durationSeconds 必须大于 0。', `${eventLocation}.visual.durationSeconds`);
+      } else {
+        add('error', 'scene-event-visual-kind', `未知 event visual kind：${visual?.kind}`, `${eventLocation}.visual`);
+      }
+      if (
+        visual?.kind !== 'visibility' &&
+        Number.isFinite(event.at) &&
+        Number.isFinite(visual?.durationSeconds) &&
+        event.at * (scene.durationInFrames / project.video.fps) + visual.durationSeconds >
+          scene.durationInFrames / project.video.fps + 1e-6
+      ) {
+        add('error', 'scene-event-window-overflow', 'event 动作窗口不得超出镜头结尾。', `${eventLocation}.visual.durationSeconds`);
+      }
+      if (event.proofTimeId) {
+        const proof = proofTimesById.get(event.proofTimeId);
         if (!proof) {
-          add('error', 'scene-cue-proof-missing', `cue 绑定的证明时刻不存在：${cue.proofTimeId}`, `${cueLocation}.proofTimeId`);
+          add('error', 'scene-event-proof-missing', `event 绑定的证明时刻不存在：${event.proofTimeId}`, `${eventLocation}.proofTimeId`);
         } else {
-          const cueWindowEnd = cue.at + cue.durationSeconds / Math.max(0.001, scene.durationInFrames / project.video.fps);
-          if (proof.at < cue.at - 0.01 || proof.at > cueWindowEnd + 0.01) {
-            add('error', 'scene-cue-proof-window', '绑定的证明时刻必须落在 cue 动作窗口内。', `${cueLocation}.proofTimeId`);
+          const proofWindow = resolveEventProofWindow({
+            event,
+            eventIndex,
+            events: scene.events ?? [],
+            sceneDurationSeconds: scene.durationInFrames / project.video.fps,
+          });
+          if (proof.at < proofWindow.start - 0.01 || proof.at > proofWindow.end + 0.01) {
+            const message = proofWindow.mode === 'persistent-visibility'
+              ? 'visibility 证明时刻必须位于动作开始后、同一目标下一次显隐变化前。'
+              : '绑定的证明时刻必须落在 event 动作窗口内。';
+            add('error', 'scene-event-proof-window', message, `${eventLocation}.proofTimeId`);
           }
         }
       }
-      if (beat?.audioCue && !cue.sound) add('error', 'scene-cue-sound-required', `节拍要求声音 ${beat.audioCue}，对应 cue 必须配置 sound。`, `${cueLocation}.sound`);
-      if (cue.sound) {
+      if (event.sound) {
         try {
-          if (!(await fileExists(resolvePublicFile(cue.sound.src)))) add('error', 'scene-cue-sound-missing', `缺少 cue 音效：${cue.sound.src}`, `${cueLocation}.sound.src`);
+          if (!(await fileExists(resolvePublicFile(event.sound.src)))) add('error', 'scene-event-sound-missing', `缺少 event 音效：${event.sound.src}`, `${eventLocation}.sound.src`);
         } catch (error) {
-          add('error', 'scene-cue-sound-path', error.message, `${cueLocation}.sound.src`);
+          add('error', 'scene-event-sound-path', error.message, `${eventLocation}.sound.src`);
         }
       }
     }
-    for (const beatId of storyboardBeats.keys()) {
-      if (!cueBeatIds.has(beatId)) add('error', 'scene-cue-coverage', `故事板节拍 ${beatId} 没有执行 cue。`, `${sceneLocation}.cues`);
+    for (const [beatId, beat] of storyboardBeats) {
+      const beatEvents = (scene.events ?? []).filter((event) => event.beatId === beatId);
+      if (!eventBeatIds.has(beatId)) add('error', 'scene-event-coverage', `故事板节拍 ${beatId} 没有执行 event。`, `${sceneLocation}.events`);
+      if (beat.audioCue && !beatEvents.some(({sound}) => Boolean(sound))) add('error', 'scene-event-sound-required', `节拍要求声音 ${beat.audioCue}，至少一个对应 event 必须配置 sound。`, `${sceneLocation}.events`);
+    }
+    const visibilityInitialStates = Object.fromEntries(
+      [...nodesById].map(([id, node]) => [id, node.visibility?.initial ?? 'visible']),
+    );
+    for (const issue of validateVisibilityLifecycle({
+      events: scene.events ?? [],
+      targetInitialStates: visibilityInitialStates,
+      durationSeconds: scene.durationInFrames / project.video.fps,
+    })) {
+      add(
+        'error',
+        issue.code,
+        issue.message,
+        `${sceneLocation}.events[${issue.eventIndex}].visual`,
+      );
     }
 
     let previousSubtitleEnd = -1;
@@ -816,46 +1319,113 @@ export const validateProject = async (project, options = {}) => {
       add('error', 'shared-asset-path', error.message, 'audio/theme');
     }
   }
-
-  const generatedImageBudget = project.plan?.assetBudget?.maxGeneratedImages;
-  if (Number.isInteger(generatedImageBudget) && generatedImageBudget > 0) {
-    const attempts = await readGenerationAttemptEvents(project.slug);
-    const manifestFile = path.join(
-      ROOT,
-      'projects',
-      project.slug,
-      'assets-manifest.json',
-    );
-    if (attempts.exists) {
-      const usage = summarizeGenerationAttempts(attempts.events);
-      if (usage.reserved > 0) {
-        add(
-          'error',
-          'asset-budget-reservations-open',
-          `仍有 ${usage.reserved} 次生图额度处于 reserved；请登记结果或显式关闭尝试。`,
-          'generation-attempts.jsonl',
-        );
+  if (project.theme?.fontFile) {
+    try {
+      const fontFile = resolvePublicFile(project.theme.fontFile);
+      if (await fileExists(fontFile)) {
+        const header = await fs.readFile(fontFile);
+        const signature = header.subarray(0, 4);
+        const extension = path.extname(fontFile).toLowerCase();
+        const valid =
+          (extension === '.woff2' && signature.toString('ascii') === 'wOF2') ||
+          (extension === '.woff' && signature.toString('ascii') === 'wOFF') ||
+          (extension === '.otf' && signature.toString('ascii') === 'OTTO') ||
+          (
+            extension === '.ttf' &&
+            (
+              signature.equals(Buffer.from([0x00, 0x01, 0x00, 0x00])) ||
+              signature.toString('ascii') === 'true'
+            )
+          );
+        if (!valid) {
+          add(
+            'error',
+            'font-load-invalid',
+            `字体文件头与扩展名不匹配，Chromium 无法确定性加载：${project.theme.fontFile}`,
+            'theme.fontFile',
+          );
+        }
       }
-      if (usage.used > generatedImageBudget) {
-        add(
-          'error',
-          'asset-budget-exceeded',
-          `${project.plan.productionProfile ?? 'balanced'} 档位预算最多 ${generatedImageBudget} 次计费生图，尝试账本已记录 ${usage.used} 次。`,
-          'plan.assetBudget.maxGeneratedImages',
-        );
-      }
-    } else if (await fileExists(manifestFile)) {
-      const manifest = await readJson(manifestFile);
-      const generatedImages = countProviderGeneratedImages(manifest.assets);
-      if (generatedImages > generatedImageBudget) {
-        add(
-          'error',
-          'asset-budget-exceeded',
-          `${project.plan.productionProfile ?? 'balanced'} 档位预算最多 ${generatedImageBudget} 张生成图，旧版 manifest 已记录 ${generatedImages} 张；请复用素材或在概念审批时显式升级档位。`,
-          'plan.assetBudget.maxGeneratedImages',
-        );
-      }
+    } catch (error) {
+      add('error', 'font-load-inspection', error.message, 'theme.fontFile');
     }
+  }
+
+  const profileHardCeiling =
+    project.plan?.assetBudget?.maxGeneratedImages ?? null;
+  const approvedImageAttemptLimit =
+    project.plan?.approvedImageBudget?.imageAttemptLimit ?? null;
+  const expectedProviderImageCalls =
+    project.plan?.approvedImageBudget?.expectedProviderImageCalls ?? null;
+  const attempts = await readGenerationAttemptEvents(project.slug);
+  const usage = attempts.exists
+    ? summarizeGenerationAttempts(attempts.events)
+    : {used: 0, reserved: 0, closed: 0, attempts: [], byStatus: {}};
+  const providerBudget = {
+    profileHardCeiling,
+    approvedImageAttemptLimit,
+    expectedProviderImageCalls,
+    used: usage.used,
+    reserved: usage.reserved,
+  };
+  if (usage.reserved > 0) {
+    add(
+      'error',
+      'asset-budget-reservations-open',
+      `仍有 ${usage.reserved} 次生图额度处于 reserved；请登记结果或显式关闭尝试。`,
+      'generation-attempts.jsonl',
+    );
+  }
+  if (
+    (usage.used > 0 || usage.reserved > 0) &&
+    !Number.isInteger(approvedImageAttemptLimit)
+  ) {
+    add(
+      'error',
+      'approved-image-budget-missing',
+      '尝试账本已有图片 provider 活动，但项目没有人批准的图片尝试上限。',
+      'plan.approvedImageBudget',
+    );
+  } else if (
+    Number.isInteger(approvedImageAttemptLimit) &&
+    usage.used > approvedImageAttemptLimit
+  ) {
+    add(
+      'error',
+      'asset-budget-exceeded',
+      `人批准上限为 ${approvedImageAttemptLimit} 次计费生图，尝试账本已记录 ${usage.used} 次。`,
+      'plan.approvedImageBudget.imageAttemptLimit',
+    );
+  }
+  if (!attempts.exists && await fileExists(manifestFile)) {
+    const manifest = await readJson(manifestFile);
+    const generatedImages = countProviderGeneratedImages(manifest.assets);
+    providerBudget.used = generatedImages;
+    if (
+      generatedImages > 0 &&
+      !Number.isInteger(approvedImageAttemptLimit)
+    ) {
+      add(
+        'error',
+        'approved-image-budget-missing',
+        `manifest 已记录 ${generatedImages} 张 provider 图片，但项目没有人批准的图片尝试上限。`,
+        'plan.approvedImageBudget',
+      );
+    } else if (
+      Number.isInteger(approvedImageAttemptLimit) &&
+      generatedImages > approvedImageAttemptLimit
+    ) {
+      add(
+        'error',
+        'asset-budget-exceeded',
+        `人批准上限为 ${approvedImageAttemptLimit} 张生成图，manifest 已记录 ${generatedImages} 张。`,
+        'plan.approvedImageBudget.imageAttemptLimit',
+      );
+    }
+  }
+
+  for (const issue of validateProductionContracts(project)) {
+    add(issue.level, issue.code, issue.message, issue.location);
   }
 
   const errors = issues.filter(({level}) => level === 'error').length;
@@ -865,6 +1435,7 @@ export const validateProject = async (project, options = {}) => {
     generatedAt: new Date().toISOString(),
     project: {slug: project.slug, title: project.title},
     plan: project.plan ?? null,
+    providerBudget,
     passed: errors === 0,
     summary: {errors, warnings, assetCount: assets.length},
     timeline,

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "projectSlug": "starter-demo",
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "frames": [
+    {
+      "sceneId": "starter",
+      "proofTimeId": "proof-establish",
+      "absoluteFrame": 3,
+      "fingerprint": "bundled-proof-establish",
+      "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg"
+    },
+    {
+      "sceneId": "starter",
+      "proofTimeId": "proof-action",
+      "absoluteFrame": 22,
+      "fingerprint": "bundled-proof-action",
+      "file": "dist/starter-demo/composition-proof/frames/proof-action.svg"
+    },
+    {
+      "sceneId": "starter",
+      "proofTimeId": "proof-final",
+      "absoluteFrame": 32,
+      "fingerprint": "bundled-proof-final",
+      "file": "dist/starter-demo/composition-proof/frames/proof-final.svg"
+    }
+  ],
+  "composites": [
+    {
+      "compositeId": "event:starter:establish",
+      "sceneId": "starter",
+      "pattern": "event",
+      "fingerprint": "776d53c5075d587c236cab4a7c8d6612931cc7741dd2abcea6f4403ffeee6366",
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-establish",
+          "absoluteFrame": 3,
+          "frameFingerprint": "bundled-proof-establish",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ]
+    },
+    {
+      "compositeId": "event:starter:subject-arrives",
+      "sceneId": "starter",
+      "pattern": "event",
+      "fingerprint": "8254e55472f3cf6b61fed57a868396201848957b11bbe16e2b2e6d0de75f853e",
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-action",
+          "absoluteFrame": 22,
+          "frameFingerprint": "bundled-proof-action",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ]
+    },
+    {
+      "compositeId": "event:starter:lockup",
+      "sceneId": "starter",
+      "pattern": "event",
+      "fingerprint": "313e7dbce6b2f6dd1777308ecd86062ad63cbfee6be4f30849421a23e2cc2297",
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-final",
+          "absoluteFrame": 32,
+          "frameFingerprint": "bundled-proof-final",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ]
+    }
+  ],
+  "assetEvidence": [],
+  "cache": {
+    "frames": {
+      "reused": 0,
+      "rendered": 3
+    },
+    "composites": {
+      "reused": 0,
+      "generated": 3
+    },
+    "evidence": {
+      "reused": 0,
+      "generated": 0
+    }
+  }
+}

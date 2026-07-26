@@ -1,9 +1,50 @@
 {
   "$schema": "../../schemas/quality-report.schema.json",
-  "schemaVersion": 2,
+  "schemaVersion": 6,
   "projectSlug": "starter-demo",
   "updatedAt": "2026-01-01T00:00:00.000Z",
-  "cueEvents": [],
+  "eventTimeline": [
+    {
+      "sceneId": "starter",
+      "eventId": "establish",
+      "beatId": "establish",
+      "targetId": "background",
+      "visualKind": "emphasis",
+      "action": "pulse",
+      "localFrame": 0,
+      "absoluteFrame": 0,
+      "seconds": 0,
+      "proofTimeId": "proof-establish",
+      "sound": null
+    },
+    {
+      "sceneId": "starter",
+      "eventId": "subject-arrives",
+      "beatId": "subject-arrives",
+      "targetId": "traveler",
+      "visualKind": "visibility",
+      "action": "show",
+      "localFrame": 18,
+      "absoluteFrame": 18,
+      "seconds": 0.6,
+      "proofTimeId": "proof-action",
+      "sound": null
+    },
+    {
+      "sceneId": "starter",
+      "eventId": "lockup",
+      "beatId": "lockup",
+      "targetId": "traveler",
+      "visualKind": "emphasis",
+      "action": "settle",
+      "localFrame": 32,
+      "absoluteFrame": 32,
+      "seconds": 1.0666666666666667,
+      "proofTimeId": "proof-final",
+      "sound": null
+    }
+  ],
+  "assetHistory": [],
   "assets": [
     {
       "assetId": "runtime-35227d004842",
@@ -12,7 +53,19 @@
       "sources": [
         "scene:starter:node:background"
       ],
+      "reviewScope": "runtime-visible",
+      "semanticBinding": null,
+      "registeredFamilyBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "recoverySourceFile": null,
+      "recoverySourceSha256": null,
+      "recoveryEvidenceFiles": [],
+      "manifestRecordId": null,
+      "manifestSha256": null,
+      "semanticContractFingerprints": {},
       "sha256": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
+      "fingerprint": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
       "requiredChecks": [
         "no-text",
         "no-watermark",
@@ -22,7 +75,63 @@
       ],
       "technical": {
         "passed": true,
-        "checks": []
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 107301
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "minimum-resolution",
+            "passed": true,
+            "expected": "960x540",
+            "actual": "1920x1080"
+          },
+          {
+            "id": "rectangular-alpha-band-free",
+            "passed": true,
+            "expected": "no error-severity low-alpha rectangular band",
+            "actual": {
+              "schemaVersion": 1,
+              "thresholds": {
+                "lowAlphaMinimum": 4,
+                "lowAlphaMaximum": 96,
+                "minimumRunPixels": 24,
+                "minimumRunRatio": 0.42,
+                "warningRunRatio": 0.75,
+                "maximumBandThicknessRatio": 0.025,
+                "boundaryToleranceRatio": 0.012,
+                "rectangleMinimumSeparationRatio": 0.08
+              },
+              "derivationRegions": [],
+              "sourceSize": {
+                "width": 1920,
+                "height": 1080
+              },
+              "renderSize": null,
+              "passed": true,
+              "severity": "info",
+              "scales": [
+                {
+                  "label": "original",
+                  "width": 1920,
+                  "height": 1080,
+                  "passed": true,
+                  "severity": "info",
+                  "diagnostics": [],
+                  "failures": []
+                }
+              ],
+              "failures": [],
+              "failureMessage": null
+            }
+          }
+        ]
       },
       "semanticChecks": {
         "no-text": "passed",
@@ -31,10 +140,11 @@
         "safe-area-clear": "passed",
         "style-consistent": "passed"
       },
-      "status": "passed",
       "reviewer": "bundled-fixture",
       "reviewedAt": "2026-01-01T00:00:00.000Z",
-      "note": "Repository-owned technical fixture"
+      "note": "Repository-owned technical fixture",
+      "evidenceFiles": [],
+      "status": "passed"
     },
     {
       "assetId": "runtime-904ce3e224ac",
@@ -43,7 +153,19 @@
       "sources": [
         "scene:starter:node:traveler"
       ],
+      "reviewScope": "runtime-visible",
+      "semanticBinding": null,
+      "registeredFamilyBinding": null,
+      "stateSheetBinding": null,
+      "stateSheetRecoveryBinding": null,
+      "recoverySourceFile": null,
+      "recoverySourceSha256": null,
+      "recoveryEvidenceFiles": [],
+      "manifestRecordId": null,
+      "manifestSha256": null,
+      "semanticContractFingerprints": {},
       "sha256": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
+      "fingerprint": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
       "requiredChecks": [
         "subject-complete",
         "identity-consistent",
@@ -52,7 +174,68 @@
       ],
       "technical": {
         "passed": true,
-        "checks": []
+        "checks": [
+          {
+            "id": "file-exists",
+            "passed": true,
+            "actual": 80871
+          },
+          {
+            "id": "dimensions-readable",
+            "passed": true,
+            "actual": "1920x1080"
+          },
+          {
+            "id": "alpha-present",
+            "passed": true,
+            "actual": true
+          },
+          {
+            "id": "key-edge-clean",
+            "passed": true,
+            "expected": "<= 0.12",
+            "actual": 0
+          },
+          {
+            "id": "rectangular-alpha-band-free",
+            "passed": true,
+            "expected": "no error-severity low-alpha rectangular band",
+            "actual": {
+              "schemaVersion": 1,
+              "thresholds": {
+                "lowAlphaMinimum": 4,
+                "lowAlphaMaximum": 96,
+                "minimumRunPixels": 24,
+                "minimumRunRatio": 0.42,
+                "warningRunRatio": 0.75,
+                "maximumBandThicknessRatio": 0.025,
+                "boundaryToleranceRatio": 0.012,
+                "rectangleMinimumSeparationRatio": 0.08
+              },
+              "derivationRegions": [],
+              "sourceSize": {
+                "width": 1920,
+                "height": 1080
+              },
+              "renderSize": null,
+              "passed": true,
+              "severity": "info",
+              "scales": [
+                {
+                  "label": "original",
+                  "width": 1920,
+                  "height": 1080,
+                  "passed": true,
+                  "severity": "info",
+                  "diagnostics": [],
+                  "failures": []
+                }
+              ],
+              "failures": [],
+              "failureMessage": null
+            }
+          }
+        ]
       },
       "semanticChecks": {
         "subject-complete": "passed",
@@ -60,11 +243,263 @@
         "edge-clean": "passed",
         "style-consistent": "passed"
       },
-      "status": "passed",
       "reviewer": "bundled-fixture",
       "reviewedAt": "2026-01-01T00:00:00.000Z",
-      "note": "Repository-owned technical fixture"
+      "note": "Repository-owned technical fixture",
+      "evidenceFiles": [],
+      "status": "passed"
     }
   ],
-  "composites": []
+  "composites": [
+    {
+      "compositeId": "event:starter:establish",
+      "sceneId": "starter",
+      "pattern": "event",
+      "nodeId": "background",
+      "memberNodeIds": [
+        "background"
+      ],
+      "memberHashes": {
+        "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
+      },
+      "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
+      "fingerprint": "776d53c5075d587c236cab4a7c8d6612931cc7741dd2abcea6f4403ffeee6366",
+      "proofTimeIds": [
+        "proof-establish"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-establish",
+          "absoluteFrame": 3,
+          "frameFingerprint": "bundled-proof-establish",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "reviewScope": "runtime-visible",
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "776d53c5075d587c236cab4a7c8d6612931cc7741dd2abcea6f4403ffeee6366",
+            "actual": "776d53c5075d587c236cab4a7c8d6612931cc7741dd2abcea6f4403ffeee6366"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "event-proof-bound",
+            "passed": true,
+            "actual": "proof-establish"
+          },
+          {
+            "id": "event-sound-valid",
+            "passed": true,
+            "actual": "not-required"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "bundled-fixture",
+      "reviewedAt": "2026-01-01T00:00:00.000Z",
+      "note": "Repository-owned technical fixture proof",
+      "evidenceFiles": [
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "event:starter:subject-arrives",
+      "sceneId": "starter",
+      "pattern": "event",
+      "nodeId": "traveler",
+      "memberNodeIds": [
+        "traveler"
+      ],
+      "memberHashes": {
+        "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
+      },
+      "compositionHash": "fa68dd4364ec2771470f7fc185f31cb023bd33736f0066df4044339ddeaea941",
+      "fingerprint": "8254e55472f3cf6b61fed57a868396201848957b11bbe16e2b2e6d0de75f853e",
+      "proofTimeIds": [
+        "proof-action"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-action",
+          "absoluteFrame": 22,
+          "frameFingerprint": "bundled-proof-action",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "reviewScope": "runtime-visible",
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "8254e55472f3cf6b61fed57a868396201848957b11bbe16e2b2e6d0de75f853e",
+            "actual": "8254e55472f3cf6b61fed57a868396201848957b11bbe16e2b2e6d0de75f853e"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "event-proof-bound",
+            "passed": true,
+            "actual": "proof-action"
+          },
+          {
+            "id": "event-sound-valid",
+            "passed": true,
+            "actual": "not-required"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "bundled-fixture",
+      "reviewedAt": "2026-01-01T00:00:00.000Z",
+      "note": "Repository-owned technical fixture proof",
+      "evidenceFiles": [
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "event:starter:lockup",
+      "sceneId": "starter",
+      "pattern": "event",
+      "nodeId": "traveler",
+      "memberNodeIds": [
+        "traveler"
+      ],
+      "memberHashes": {
+        "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
+      },
+      "compositionHash": "2fd24fa9491ccc0c2497848473aad57bcaf7b25b24fed12aba11410e8117968e",
+      "fingerprint": "313e7dbce6b2f6dd1777308ecd86062ad63cbfee6be4f30849421a23e2cc2297",
+      "proofTimeIds": [
+        "proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-final",
+          "absoluteFrame": 32,
+          "frameFingerprint": "bundled-proof-final",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "reviewScope": "runtime-visible",
+      "requiredChecks": [
+        "visual-event-visible",
+        "sound-event-bound",
+        "proof-time-bound",
+        "final-state-preserved"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "313e7dbce6b2f6dd1777308ecd86062ad63cbfee6be4f30849421a23e2cc2297",
+            "actual": "313e7dbce6b2f6dd1777308ecd86062ad63cbfee6be4f30849421a23e2cc2297"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 1
+          },
+          {
+            "id": "event-proof-bound",
+            "passed": true,
+            "actual": "proof-final"
+          },
+          {
+            "id": "event-sound-valid",
+            "passed": true,
+            "actual": "not-required"
+          }
+        ]
+      },
+      "semanticChecks": {
+        "visual-event-visible": "passed",
+        "sound-event-bound": "passed",
+        "proof-time-bound": "passed",
+        "final-state-preserved": "passed"
+      },
+      "reviewer": "bundled-fixture",
+      "reviewedAt": "2026-01-01T00:00:00.000Z",
+      "note": "Repository-owned technical fixture proof",
+      "evidenceFiles": [
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        }
+      ],
+      "status": "passed"
+    }
+  ],
+  "reviewSurfaceFingerprint": "0909dc042f1030a887acd8be3bc566af89430b62ebb8c448960d3eea4139f478"
 }

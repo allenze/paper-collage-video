@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -19,9 +20,23 @@ import {
   collectCompositeQualityTargets,
   prepareQualityReport,
 } from '../scripts/quality-lib.mjs';
-import {validateSemanticContracts} from '../scripts/semantic-contract-lib.mjs';
+import {
+  requiredChecksForSemanticBinding,
+  validateSemanticContracts,
+  validateSemanticEvidenceTargets,
+} from '../scripts/semantic-contract-lib.mjs';
+import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const manifestFixture = (projectSlug, assets) => ({
+  schemaVersion: 4,
+  projectSlug,
+  assets: assets.map((record, index) => ({
+    recordId: String(index + 1).padStart(64, '0'),
+    lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+    ...record,
+  })),
+});
 
 const fingerprint = ({face, body, head, detail, palette}) => ({
   faceOrFront: face,
@@ -111,12 +126,53 @@ test('semantic contracts reject cloned coexisting identities and broken force pa
   );
 });
 
-test('schema-v3 image requests classify semantic risk independently from composition families', () => {
+test('semantic targets can bind compiled storyboard nodes before runtime composition exists', () => {
+  const document = {
+    schemaVersion: 1,
+    projectSlug: 'planned-contract',
+    status: 'ready',
+    contracts: [mechanismContract()],
+  };
+  const storyboard = {
+    scenes: [{
+      id: 'scene-a',
+      beats: [{treatments: [{targetId: 'machine'}]}],
+      proofTimes: [{id: 'final'}],
+    }],
+  };
+  assert.deepEqual(validateSemanticEvidenceTargets(document, {scenes: []}, {storyboard, allowPlanned: true}), []);
+  assert.ok(validateSemanticEvidenceTargets(document, {scenes: []}).some((message) => message.includes('未知场景')));
+});
+
+test('diagram composite checks do not automatically become raster asset checks', () => {
+  const diagram = {
+    id: 'diagram-contract',
+    kind: 'diagram',
+    evidenceTargets: [{
+      id: 'diagram-final',
+      scope: 'composite',
+      checks: ['diagram-edge-clean', 'small-text-legible', 'no-procedural-noise-on-semantic-lines'],
+      shots: [{sceneId: 'scene-a', proofTimeIds: ['final']}],
+    }],
+  };
+  assert.deepEqual(
+    requiredChecksForSemanticBinding({riskClass: 'diagram-critical'}, [diagram]),
+    ['diagram-edge-clean'],
+  );
+  diagram.evidenceTargets[0].scope = 'asset';
+  assert.deepEqual(
+    requiredChecksForSemanticBinding({riskClass: 'diagram-critical'}, [diagram]),
+    ['diagram-edge-clean', 'small-text-legible', 'no-procedural-noise-on-semantic-lines'],
+  );
+});
+
+test('schema-v7 image requests classify semantic risk independently from composition families', () => {
   const base = {
-    schemaVersion: 3,
+    schemaVersion: 7,
     projectSlug: 'contract-test',
     assetId: 'cast-master',
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     output: 'public/cast.png',
     prompt: 'A recurring cast in one full-frame plate.',
     compositionBinding: {
@@ -138,7 +194,7 @@ test('schema-v3 image requests classify semantic risk independently from composi
     semanticBinding: {
       riskClass: 'identity-critical',
       contractIds: ['recurring-cast'],
-      generationFamily: {familyId: 'cast-family', memberIds: ['member-a', 'member-b'], referenceAssetIds: []},
+      generationFamily: {familyId: 'cast-family', identityMemberIds: ['member-a', 'member-b'], referenceAssetIds: []},
     },
   }));
   assert.throws(
@@ -152,10 +208,11 @@ test('multi-contract images inherit checks and identity family rules from every 
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const requestFile = path.join(projectDirectory, 'requests', 'machine-cast.json');
   const request = {
-    schemaVersion: 3,
+    schemaVersion: 7,
     projectSlug: slug,
     assetId: 'machine-cast',
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     output: `public/projects/${slug}/machine-cast.png`,
     prompt: 'Two recurring operators using a complete working machine.',
     compositionBinding: {
@@ -184,7 +241,7 @@ test('multi-contract images inherit checks and identity family rules from every 
     await assert.rejects(() => loadAssetRequest(path.relative(ROOT, requestFile)), /绑定 identity 契约.*generationFamily/);
 
     request.semanticBinding.generationFamily = {
-      familyId: 'cast-family', memberIds: ['member-a', 'member-b'], referenceAssetIds: [],
+      familyId: 'cast-family', identityMemberIds: ['member-a', 'member-b'], referenceAssetIds: [],
     };
     await fs.writeFile(requestFile, `${JSON.stringify(request, null, 2)}\n`);
     await assert.rejects(() => loadAssetRequest(path.relative(ROOT, requestFile)), /不得省略任一绑定契约要求/);
@@ -198,7 +255,7 @@ test('multi-contract images inherit checks and identity family rules from every 
   }
 });
 
-test('new ledger-enabled projects cannot bypass semantic contracts with schema-v2 images', async () => {
+test('old image request schemas are rejected instead of bypassing semantic contracts', async () => {
   const slug = `request-v3-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const requestFile = path.join(projectDirectory, 'requests', 'legacy.json');
@@ -210,6 +267,7 @@ test('new ledger-enabled projects cannot bypass semantic contracts with schema-v
       projectSlug: slug,
       assetId: 'legacy-image',
       capability: 'image',
+  outputSurface: {mode: 'opaque'},
       output: `public/projects/${slug}/legacy.png`,
       prompt: 'Legacy image request',
       compositionBinding: {
@@ -219,7 +277,7 @@ test('new ledger-enabled projects cannot bypass semantic contracts with schema-v
     }, null, 2)}\n`);
     await assert.rejects(
       () => loadAssetRequest(path.relative(ROOT, requestFile)),
-      /必须使用 schema-v3 image request/,
+      /schemaVersion 必须为 7/,
     );
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
@@ -232,10 +290,11 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
   const output = path.join(ROOT, 'public', 'projects', slug, 'wrong-size.png');
   const provider = {id: 'test-image', adapter: 'host', model: 'fixture'};
   const request = {
-    schemaVersion: 3,
+    schemaVersion: 7,
     projectSlug: slug,
     assetId: 'diagram-card',
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     output: path.relative(ROOT, output),
     prompt: 'A clean diagram card.',
     compositionBinding: {
@@ -248,15 +307,19 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
     await fs.mkdir(projectDirectory, {recursive: true});
     await fs.mkdir(path.dirname(output), {recursive: true});
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify({
-      schemaVersion: 4,
+      schemaVersion: 6,
       slug,
-      plan: {productionProfile: 'draft', assetBudget: {maxGeneratedImages: 1}},
+      plan: {
+        productionProfile: 'draft',
+        assetBudget: {maxGeneratedImages: 6},
+        approvedImageBudget: {imageAttemptLimit: 1},
+      },
       video: {width: 100, height: 100, fps: 30},
       audio: {narration: {volume: 1}},
       scenes: [],
     }, null, 2)}\n`);
     await fs.writeFile(path.join(projectDirectory, 'generation-attempts.jsonl'), '');
-    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({schemaVersion: 3, projectSlug: slug, assets: []})}\n`);
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, []))}\n`);
     const reserved = await reserveGenerationAttempt({request, provider});
     await assert.rejects(() => reserveGenerationAttempt({request: {...request, assetId: 'second-card'}, provider}), /预算已用尽/);
 
@@ -270,10 +333,63 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
     assert.equal(summary.used, 1);
     assert.equal(summary.reserved, 0);
     assert.equal(summary.byStatus.rejected, 1);
+    assert.equal(
+      summary.attempts[0].outputSha256,
+      createHash('sha256').update(await fs.readFile(output)).digest('hex'),
+    );
     await assert.rejects(() => reserveGenerationAttempt({request: {...request, assetId: 'third-card'}, provider}), /预算已用尽/);
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(path.join(ROOT, 'public', 'projects', slug), {recursive: true, force: true});
+  }
+});
+
+test('attempt ledger enforces the narrower human-approved cap instead of the profile ceiling', async () => {
+  const slug = `attempt-approved-cap-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const request = (assetId) => ({
+    schemaVersion: 7,
+    projectSlug: slug,
+    assetId,
+    capability: 'image',
+    outputSurface: {mode: 'opaque'},
+    compositionBinding: {derivation: {method: 'provider-generation'}},
+  });
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      JSON.stringify({
+        plan: {
+          assetBudget: {maxGeneratedImages: 6},
+          approvedImageBudget: {imageAttemptLimit: 2},
+        },
+      }),
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'generation-attempts.jsonl'),
+      '',
+    );
+    const first = await reserveGenerationAttempt({
+      request: request('first'),
+      provider: {id: 'provider'},
+    });
+    const second = await reserveGenerationAttempt({
+      request: request('second'),
+      provider: {id: 'provider'},
+    });
+    assert.equal(first.budget.maximum, 2);
+    assert.equal(second.budget.maximum, 2);
+    await assert.rejects(
+      () =>
+        reserveGenerationAttempt({
+          request: request('third'),
+          provider: {id: 'provider'},
+        }),
+      /批准上限 2/,
+    );
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
   }
 });
 
@@ -293,7 +409,7 @@ test('diagram filters fail deterministically and semantic proof targets span sce
         ...(id === 'scene-a' ? [{id: 'diagram', kind: 'asset', assetRole: 'decorative', src: `projects/${slug}/card.svg`, z: 2, transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0}, motion: {keyframes: [{at: 0}, {at: 1}]}}] : []),
       ],
     },
-    cues: [],
+    events: [],
   });
   const diagram = {
     id: 'diagram-contract',
@@ -310,24 +426,20 @@ test('diagram filters fail deterministically and semantic proof targets span sce
     await fs.mkdir(publicDirectory, {recursive: true});
     await fs.writeFile(cardFile, '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><filter id="noise"><feTurbulence/></filter><text filter="url(#noise)" x="5" y="50">A</text></svg>');
     await sharp({create: {width: 100, height: 100, channels: 4, background: '#806040'}}).png().toFile(castFile);
-    const project = {
-      schemaVersion: 4,
+    const project = withCompiledEditorialFixture({
       slug,
       quality: {minimumAssetScale: 1},
       video: {width: 100, height: 100, fps: 30},
       audio: {narration: {volume: 1}},
       scenes: [scene('scene-a'), scene('scene-b')],
-    };
+      sceneTransitions: [{id: 'a-b', fromSceneId: 'scene-a', toSceneId: 'scene-b', intent: 'impact', rationale: 'The fixture deliberately tests an abrupt semantic boundary.', treatment: {type: 'cut', motivation: 'impact', durationSeconds: 0}}],
+    });
     await fs.writeFile(path.join(projectDirectory, 'project.json'), `${JSON.stringify(project, null, 2)}\n`);
-    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify({
-      schemaVersion: 3,
-      projectSlug: slug,
-      assets: [{
+    await fs.writeFile(path.join(projectDirectory, 'assets-manifest.json'), `${JSON.stringify(manifestFixture(slug, [{
         assetId: 'diagram-card', capability: 'image', file: path.relative(ROOT, cardFile),
         request: {quality: {kind: 'diagram'}, semanticBinding: {riskClass: 'diagram-critical', contractIds: ['diagram-contract']}},
         semanticBinding: {riskClass: 'diagram-critical', contractIds: ['diagram-contract']},
-      }],
-    }, null, 2)}\n`);
+      }]), null, 2)}\n`);
     await fs.writeFile(path.join(projectDirectory, 'semantic-contracts.json'), `${JSON.stringify({
       schemaVersion: 1,
       projectSlug: slug,
@@ -355,15 +467,21 @@ test('manual attempt closure requires truthful quota semantics', async () => {
   const slug = `attempt-close-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = {
-    schemaVersion: 3,
+    schemaVersion: 7,
     projectSlug: slug,
     assetId: 'asset',
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     compositionBinding: {derivation: {method: 'provider-generation'}},
   };
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
-    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({plan: {assetBudget: {maxGeneratedImages: 2}}}));
+    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({
+      plan: {
+        assetBudget: {maxGeneratedImages: 6},
+        approvedImageBudget: {imageAttemptLimit: 2},
+      },
+    }));
     const reserved = await reserveGenerationAttempt({request, provider: {id: 'provider'}});
     await assert.rejects(
       () => closeGenerationAttempt({slug, attemptId: reserved.event.attemptId, status: 'rejected', quotaConsumed: false}),
@@ -374,19 +492,106 @@ test('manual attempt closure requires truthful quota semantics', async () => {
   }
 });
 
+test('a succeeded closed attempt can recover one provenance record without consuming quota twice', async () => {
+  const slug = `attempt-recover-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const output = path.join(ROOT, 'public', 'projects', slug, 'asset.png');
+  const provider = {id: 'provider', adapter: 'host', model: 'fixture'};
+  const request = {
+    schemaVersion: 7,
+    projectSlug: slug,
+    assetId: 'asset',
+    capability: 'image',
+    output: path.relative(ROOT, output),
+    outputSurface: {mode: 'opaque'},
+    prompt: 'A deterministic fixture.',
+    compositionBinding: {
+      sceneId: 'scene-a',
+      nodeId: 'asset',
+      pattern: 'free',
+      outputRole: 'plate',
+      canvas: {width: 16, height: 16},
+      derivation: {method: 'provider-generation'},
+    },
+    semanticBinding: {riskClass: 'decorative', contractIds: []},
+  };
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(path.dirname(output), {recursive: true});
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      JSON.stringify({
+        plan: {
+          assetBudget: {maxGeneratedImages: 6},
+          approvedImageBudget: {imageAttemptLimit: 1},
+        },
+      }),
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'assets-manifest.json'),
+      JSON.stringify(manifestFixture(slug, [])),
+    );
+    await sharp({
+      create: {width: 16, height: 16, channels: 3, background: '#886644'},
+    }).png().toFile(output);
+    const reserved = await reserveGenerationAttempt({request, provider});
+    const sha256 = createHash('sha256').update(await fs.readFile(output)).digest('hex');
+    await closeGenerationAttempt({
+      slug,
+      attemptId: reserved.event.attemptId,
+      status: 'succeeded',
+      quotaConsumed: true,
+      output: path.relative(ROOT, output),
+      outputSha256: sha256,
+    });
+    const recovered = await recordAssetProvenance({
+      request,
+      output,
+      provider,
+      attemptId: reserved.event.attemptId,
+      recoverClosedAttempt: true,
+    });
+    assert.equal(recovered.record.recoveredFromClosedAttempt, true);
+    await assert.rejects(
+      recordAssetProvenance({
+        request,
+        output,
+        provider,
+        attemptId: reserved.event.attemptId,
+        recoverClosedAttempt: true,
+      }),
+      /已经存在资产登记/,
+    );
+    const summary = summarizeGenerationAttempts(
+      (await readGenerationAttemptEvents(slug)).events,
+    );
+    assert.equal(summary.used, 1);
+    assert.equal(summary.byStatus.succeeded, 1);
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(path.join(ROOT, 'public', 'projects', slug), {recursive: true, force: true});
+  }
+});
+
 test('parallel reservations cannot oversubscribe the approved image budget', async () => {
   const slug = `attempt-race-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = (assetId) => ({
-    schemaVersion: 3,
+    schemaVersion: 7,
     projectSlug: slug,
     assetId,
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     compositionBinding: {derivation: {method: 'provider-generation'}},
   });
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
-    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({plan: {assetBudget: {maxGeneratedImages: 1}}}));
+    await fs.writeFile(path.join(projectDirectory, 'project.json'), JSON.stringify({
+      plan: {
+        assetBudget: {maxGeneratedImages: 6},
+        approvedImageBudget: {imageAttemptLimit: 1},
+      },
+    }));
     await fs.writeFile(path.join(projectDirectory, 'generation-attempts.jsonl'), '');
     const results = await Promise.allSettled([
       reserveGenerationAttempt({request: request('first'), provider: {id: 'provider'}}),

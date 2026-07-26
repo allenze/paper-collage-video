@@ -8,6 +8,10 @@ import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {
+  assertAssetManifest,
+  transitionAssetLifecycle,
+} from '../scripts/asset-manifest-lib.mjs';
+import {
   deepMerge,
   expandCommandTemplate,
   recordAssetProvenance,
@@ -15,6 +19,7 @@ import {
   runProviderCommand,
   validateAssetRequest,
   validateProviderConfig,
+  verifyOutputFile,
 } from '../scripts/provider-lib.mjs';
 import {
   countProviderGeneratedImages,
@@ -22,10 +27,93 @@ import {
   inspectCharacterPng,
   resolveRenderConcurrency,
 } from '../scripts/project-lib.mjs';
+import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+test('asset lifecycle preserves audit records and enforces one active record', () => {
+  const record = (recordId, status) => ({
+    recordId,
+    assetId: 'hero',
+    lifecycle: {status, changedAt: '2026-07-23T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+  });
+  const manifest = {
+    schemaVersion: 4,
+    projectSlug: 'lifecycle-fixture',
+    assets: [record('1'.repeat(64), 'active')],
+  };
+  assert.doesNotThrow(() => assertAssetManifest(manifest, 'lifecycle-fixture'));
+  transitionAssetLifecycle(manifest, 'hero', 'rejected', {reason: 'human rejected'});
+  assert.equal(manifest.assets[0].lifecycle.status, 'rejected');
+  transitionAssetLifecycle(manifest, 'hero', 'active', {reason: 'human restored'});
+  assert.equal(manifest.assets[0].lifecycle.status, 'active');
+  manifest.assets.push(record('2'.repeat(64), 'active'));
+  assert.throws(() => assertAssetManifest(manifest, 'lifecycle-fixture'), /多个 active/);
+});
+
+test('manual image imports record provenance without a generation attempt', async () => {
+  const slug = `manual-image-import-${process.pid}-${Date.now()}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const output = path.join(publicDirectory, 'manual.png');
+  try {
+    await fsp.mkdir(projectDirectory, {recursive: true});
+    await fsp.mkdir(publicDirectory, {recursive: true});
+    await sharp({
+      create: {
+        width: 8,
+        height: 8,
+        channels: 4,
+        background: {r: 18, g: 42, b: 73, alpha: 1},
+      },
+    }).png().toFile(output);
+    const result = await recordAssetProvenance({
+      request: {
+        schemaVersion: 7,
+        projectSlug: slug,
+        assetId: 'manual-source',
+        capability: 'image',
+        output: path.relative(ROOT, output),
+        prompt: 'Import the already-authorized local source.',
+        outputSurface: {mode: 'opaque'},
+        compositionBinding: {
+          sceneId: 'scene-01',
+          nodeId: 'manual-source',
+          pattern: 'free',
+          canvas: {width: 8, height: 8},
+          derivation: {
+            method: 'manual-import',
+            parentAssetId: 'authorized-source',
+          },
+        },
+      },
+      output,
+      provider: {
+        id: 'manual-image',
+        label: 'Authorized local image',
+        adapter: 'manual',
+        tool: null,
+        model: null,
+      },
+      externalId: 'local-source-fixture',
+    });
+    assert.equal(result.record.adapter, 'manual');
+    assert.equal(result.record.attemptId, null);
+    assert.equal(result.record.externalId, 'local-source-fixture');
+    const manifest = JSON.parse(
+      await fsp.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'),
+    );
+    assert.equal(manifest.assets.length, 1);
+    assert.equal(manifest.assets[0].lifecycle.status, 'active');
+  } finally {
+    await fsp.rm(projectDirectory, {recursive: true, force: true});
+    await fsp.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
 const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
+  schemaVersion: 10,
+  slug,
   arc: 'A concise progression from setup through action to resolution.',
   style: {
     visualThesis: 'Layered paper depth carries the story.',
@@ -40,22 +128,30 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
     message: `Narrative beat ${index + 1}`,
     blueprint: index === sceneCount - 1 ? 'quiet-lockup' : 'layered-reveal',
     estimatedDurationSeconds: durationSeconds / sceneCount,
-    compositionPlan: {
-      patterns: ['free'],
-      relationships: [
-        {id: `s${index + 1}-free`, subject: 'subject', predicate: 'free', object: 'background', proof: 'Independent cutout remains readable'},
-      ],
-    },
     beats: [
-      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', motion: 'Scene reveal', audioCue: null},
-      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', motion: 'Subject lift', audioCue: null},
-      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', motion: 'Settle all layers', audioCue: null},
+      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', audioCue: null, proofTimeId: null, treatments: [{id: `s${index + 1}-establish-hold`, targetId: 'stage', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: null, rationale: 'Hold a readable opening composition.'}]},
+      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', audioCue: null, proofTimeId: `s${index + 1}-proof-action`, treatments: [{id: `s${index + 1}-action-hold`, targetId: 'subject', importance: 'hero', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-action`, rationale: 'Keep the action target readable in this integration fixture.'}]},
+      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', audioCue: null, proofTimeId: `s${index + 1}-proof-final`, treatments: [{id: `s${index + 1}-settle-hold`, targetId: 'subject', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-final`, rationale: 'Settle the final composition.'}]},
     ],
     proofTimes: [
-      {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable']},
-      {id: `s${index + 1}-proof-action`, at: 0.5, label: 'Action', kind: 'peak', assertions: ['Action is visible']},
-      {id: `s${index + 1}-proof-final`, at: 0.9, label: 'Resolved', kind: 'final', assertions: ['Final composition is stable']},
+      {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable'], stateAssertions: []},
+      {id: `s${index + 1}-proof-action`, at: 0.5, label: 'Action', kind: 'peak', assertions: ['Action is visible'], stateAssertions: []},
+      {id: `s${index + 1}-proof-final`, at: 0.9, label: 'Resolved', kind: 'final', assertions: ['Final composition is stable'], stateAssertions: []},
     ],
+  })),
+  editorial: createEditorialFixture({
+    sceneIds: Array.from(
+      {length: sceneCount},
+      (_, index) => `scene-${String(index + 1).padStart(2, '0')}`,
+    ),
+    durationSeconds,
+  }),
+  sceneTransitions: Array.from({length: Math.max(0, sceneCount - 1)}, (_, index) => ({
+    id: `scene-${String(index + 1).padStart(2, '0')}-to-scene-${String(index + 2).padStart(2, '0')}`,
+    fromSceneId: `scene-${String(index + 1).padStart(2, '0')}`,
+    toSceneId: `scene-${String(index + 2).padStart(2, '0')}`,
+    intent: 'continuity',
+    rationale: 'Keep the synthetic fixture moving through one continuous story.',
   })),
 });
 
@@ -70,16 +166,31 @@ const writeAndLockStoryboard = async ({slug, projectDirectory, sceneCount, durat
 };
 
 test('preview rendering caps concurrency at available CPU capacity', () => {
-  assert.equal(resolveRenderConcurrency(16), 8);
-  assert.equal(resolveRenderConcurrency(8), 8);
-  assert.equal(resolveRenderConcurrency(4), 4);
-  assert.equal(resolveRenderConcurrency(1), 1);
-  assert.equal(resolveRenderConcurrency(0), 1);
+  assert.equal(resolveRenderConcurrency(16, 8, undefined), 8);
+  assert.equal(resolveRenderConcurrency(8, 8, undefined), 8);
+  assert.equal(resolveRenderConcurrency(4, 8, undefined), 4);
+  assert.equal(resolveRenderConcurrency(1, 8, undefined), 1);
+  assert.equal(resolveRenderConcurrency(0, 8, undefined), 1);
+});
+
+test('preview rendering accepts a bounded explicit concurrency override', () => {
+  assert.equal(resolveRenderConcurrency(16, 8, '1'), 1);
+  assert.equal(resolveRenderConcurrency(16, 8, '4'), 4);
+  assert.equal(resolveRenderConcurrency(16, 8, '12'), 8);
+  assert.throws(
+    () => resolveRenderConcurrency(16, 8, '0'),
+    /positive integer/,
+  );
+  assert.throws(
+    () => resolveRenderConcurrency(16, 8, 'many'),
+    /positive integer/,
+  );
 });
 
 test('generated-image budgets exclude deterministic derivatives and manual SVG assets', () => {
   const image = (method) => ({
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     request: {compositionBinding: {derivation: {method}}},
   });
   assert.equal(
@@ -202,7 +313,7 @@ test('command adapters write a local output and provenance records its hash', as
     );
     const recorded = await recordAssetProvenance({
       request: {
-        schemaVersion: 2,
+        schemaVersion: 7,
         projectSlug: slug,
         assetId: 'draft-script',
         capability: 'text',
@@ -221,21 +332,68 @@ test('command adapters write a local output and provenance records its hash', as
     assert.equal(recorded.record.familyFingerprint, null);
     const manifest = JSON.parse(await fsp.readFile(recorded.manifestFile, 'utf8'));
     assert.equal(manifest.assets[0].assetId, 'draft-script');
+    assert.equal(manifest.assets[0].lifecycle.status, 'active');
+    await fsp.writeFile(output, 'replacement output');
+    await recordAssetProvenance({
+      request: recorded.record.request,
+      output,
+      provider: {id: 'test-command', adapter: 'command', model: 'test-model'},
+    });
+    const replaced = JSON.parse(await fsp.readFile(recorded.manifestFile, 'utf8'));
+    assert.equal(replaced.schemaVersion, 4);
+    assert.equal(replaced.assets.length, 2);
+    assert.equal(replaced.assets[0].lifecycle.status, 'superseded');
+    assert.equal(replaced.assets[0].lifecycle.supersededBy, replaced.assets[1].recordId);
+    assert.equal(replaced.assets[1].lifecycle.status, 'active');
   } finally {
     await fsp.rm(projectDirectory, {recursive: true, force: true});
   }
 });
 
-test('v2 image requests require complete composition bindings', () => {
+test('voice outputs are measured and rejected before recording when scene timing cannot fit', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'voice-timing-'));
+  const output = path.join(directory, 'tone.wav');
+  try {
+    const generated = spawnSync('ffmpeg', [
+      '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
+      '-t', '1.2', '-y', output,
+    ], {encoding: 'utf8'});
+    assert.equal(generated.status, 0, generated.stderr);
+    const base = {
+      schemaVersion: 7,
+      projectSlug: 'voice-timing-test',
+      assetId: 'scene-one-narration',
+      capability: 'voice',
+      output: path.relative(ROOT, output),
+      text: 'A short line.',
+      timingBinding: {sceneId: 'scene-01', minDurationSeconds: 1, maxDurationSeconds: 2},
+    };
+    assert.doesNotThrow(() => validateAssetRequest(base));
+    const measured = await verifyOutputFile(output, base);
+    assert.ok(measured.metadata.durationSeconds >= 1.19);
+    await assert.rejects(
+      verifyOutputFile(output, {
+        ...base,
+        timingBinding: {sceneId: 'scene-01', maxDurationSeconds: 1},
+      }),
+      /超过 scene-01 允许的最长/,
+    );
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('v7 image requests require complete composition and semantic bindings', () => {
   assert.throws(
-    () => validateAssetRequest({schemaVersion: 2, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
+    () => validateAssetRequest({schemaVersion: 7, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
     /compositionBinding/,
   );
   assert.doesNotThrow(() => validateAssetRequest({
-    schemaVersion: 2,
+    schemaVersion: 7,
     projectSlug: 'binding-test',
     assetId: 'water',
     capability: 'image',
+  outputSurface: {mode: 'opaque'},
     output: 'public/water.png',
     prompt: 'derive water from registered master',
     compositionBinding: {
@@ -243,7 +401,97 @@ test('v2 image requests require complete composition bindings', () => {
       sourceMasterAssetId: 'river-master', outputRole: 'lower-band', canvas: {width: 1920, height: 1080},
       derivation: {method: 'alpha-extraction', parentAssetId: 'river-master'},
     },
+    semanticBinding: {riskClass: 'topology-critical', contractIds: ['river-topology']},
   }));
+});
+
+test('image output surfaces reject baked transparency and invalid chroma boundaries', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'provider-surface-'));
+  const opaque = path.join(directory, 'opaque.png');
+  const alpha = path.join(directory, 'alpha.png');
+  const mixedSheet = path.join(directory, 'mixed-sheet.png');
+  const checkerSheet = path.join(directory, 'checker-sheet.png');
+  const request = {
+    schemaVersion: 7,
+    capability: 'image',
+    compositionBinding: {canvas: {width: 32, height: 32}},
+  };
+  try {
+    await sharp({
+      create: {width: 32, height: 32, channels: 3, background: '#cccccc'},
+    }).png().toFile(opaque);
+    await assert.rejects(
+      verifyOutputFile(opaque, {...request, outputSurface: {mode: 'alpha'}}),
+      /真实透明像素/,
+    );
+    await assert.rejects(
+      verifyOutputFile(opaque, {
+        ...request,
+        outputSurface: {mode: 'chroma-key', keyColor: '#00ff00', tolerance: 8},
+      }),
+      /可靠色键面/,
+    );
+    await sharp({
+      create: {width: 32, height: 32, channels: 4, background: '#cccccc00'},
+    }).png().toFile(alpha);
+    await assert.rejects(
+      verifyOutputFile(alpha, {...request, outputSurface: {mode: 'opaque'}}),
+      /声明 opaque/,
+    );
+    await assert.doesNotReject(
+      verifyOutputFile(alpha, {...request, outputSurface: {mode: 'alpha'}}),
+    );
+    const sheetRequest = {
+      ...request,
+      compositionBinding: {canvas: {width: 128, height: 128}},
+      outputSurface: {mode: 'layer-sheet'},
+      layerPackageBinding: {
+        sheetLayout: {
+          columns: 2,
+          rows: 2,
+          providerSource: {
+            canvasMode: 'provider-native',
+            minimumWidth: 64,
+            minimumHeight: 64,
+            cellExtraction: 'explicit-rects',
+          },
+          cells: [
+            {packageRole: 'reference', row: 0, column: 0, outputSurface: {mode: 'opaque'}},
+            {packageRole: 'support-rear', row: 0, column: 1, outputSurface: {mode: 'opaque'}},
+            {packageRole: 'subject', row: 1, column: 0, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8, keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'}}},
+            {packageRole: 'support-front', row: 1, column: 1, outputSurface: {mode: 'chroma-key', keyColor: '#ff00ff', tolerance: 8, keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'}}},
+          ],
+        },
+      },
+    };
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="66" height="66">
+        <rect width="66" height="66" fill="#ffffff"/>
+        <rect x="0" y="0" width="32" height="32" fill="#173f72"/>
+        <rect x="34" y="0" width="32" height="32" fill="#173f72"/>
+        <rect x="0" y="34" width="32" height="32" fill="#fa02ce"/>
+        <ellipse cx="16" cy="50" rx="9" ry="6" fill="#f5bd20"/>
+        <rect x="34" y="34" width="32" height="32" fill="#fa03cd"/>
+        <path d="M34 60 Q50 42 66 60 V66 H34 Z" fill="#2f733f"/>
+      </svg>
+    `)).png().toFile(mixedSheet);
+    const observed = await verifyOutputFile(mixedSheet, sheetRequest);
+    assert.deepEqual(
+      observed.keyPlaneObservation.cells.map(
+        ({packageRole, observedKeyColor}) => [packageRole, observedKeyColor],
+      ),
+      [['subject', '#fa02ce'], ['support-front', '#fa03cd']],
+    );
+    await sharp({
+      create: {width: 66, height: 66, channels: 3, background: '#dddddd'},
+    }).png().toFile(checkerSheet);
+    await assert.rejects(
+      verifyOutputFile(checkerSheet, sheetRequest),
+      /observed key plane 不合格/,
+    );
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
+  }
 });
 
 test('bundled provider status is valid and defers host capability selection', () => {
@@ -276,7 +524,7 @@ test('bundled provider status is valid and defers host capability selection', ()
 });
 
 test('new projects require a locked storyboard before concept approval', async () => {
-  const slug = `v4-smoke-${process.pid}`;
+  const slug = `v9-smoke-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
   try {
@@ -296,15 +544,22 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 4);
+    assert.equal(project.schemaVersion, 10);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
+    assert.equal(project.plan.schemaVersion, 4);
+    assert.equal(project.plan.motionBudget, null);
+    assert.equal(project.plan.approvedImageBudget, null);
     assert.equal(manifest.projectSlug, slug);
-    assert.equal(manifest.schemaVersion, 3);
+    assert.equal(manifest.schemaVersion, 4);
     assert.deepEqual(manifest.assets, []);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
+    const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
+    assert.equal(storyboardTemplate.schemaVersion, 10);
+    assert.deepEqual(storyboardTemplate.sceneTransitions, []);
+    assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
     assert.ok(fs.existsSync(path.join(publicDirectory, 'assets', 'style', '.gitkeep')));
     assert.ok(
@@ -460,6 +715,13 @@ test('new projects require a locked storyboard before concept approval', async (
       durationSeconds: 45,
     });
     assert.equal(storyboard.status, 0, storyboard.stderr);
+    const compiledStoryboard = JSON.parse(
+      await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
+    );
+    assert.equal(compiledStoryboard.schemaVersion, 10);
+    assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
+    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'paper-slide'));
+    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.motivation === 'semantic-default'));
 
     const compactStatus = spawnSync(
       process.execPath,
@@ -552,6 +814,21 @@ test('concept and all providers can be confirmed in one workflow command', async
       `${JSON.stringify(
         {
           note: 'Approve the concept, balanced budget, and detected providers',
+          planDecision: {
+            productionProfile: 'balanced',
+            durationSeconds: 30,
+            sceneCount: 3,
+            durationAuthority: 'content-derived',
+          },
+          sourcePackageDecision: {
+            requiredProviderImageCalls: 0,
+            expectedProviderImageCalls: 0,
+            hardCeiling: 20,
+            sourcePackagePlans: [],
+          },
+          budgetDecision: {
+            imageAttemptLimit: 2,
+          },
           selections: {
             text: {providerId: 'host-text'},
             image: {providerId: 'manual-image'},
@@ -579,6 +856,24 @@ test('concept and all providers can be confirmed in one workflow command', async
     );
     assert.equal(production.stage, 'style-review');
     assert.equal(production.approvals.concept.status, 'approved');
+    const approvedProject = JSON.parse(
+      await fsp.readFile(path.join(projectDirectory, 'project.json'), 'utf8'),
+    );
+    assert.deepEqual(
+      {
+        imageAttemptLimit:
+          approvedProject.plan.approvedImageBudget.imageAttemptLimit,
+        expectedProviderImageCalls:
+          approvedProject.plan.approvedImageBudget.expectedProviderImageCalls,
+        profileHardCeiling:
+          approvedProject.plan.approvedImageBudget.profileHardCeiling,
+      },
+      {
+        imageAttemptLimit: 2,
+        expectedProviderImageCalls: 0,
+        profileHardCeiling: 20,
+      },
+    );
     const providers = spawnSync(
       process.execPath,
       [path.join(ROOT, 'scripts', 'provider-status.mjs'), slug, '--json'],
@@ -650,7 +945,7 @@ test('generic chroma key removes magenta while preserving an opaque green subjec
   const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'paper-key-test-'));
   const input = path.join(directory, 'magenta.png');
   const output = path.join(directory, 'alpha.png');
-  const metadata = path.join(directory, 'alpha.key.json');
+  const metadata = `${output}.key.json`;
   try {
     const subject = await sharp({
       create: {width: 40, height: 40, channels: 3, background: '#00cc33'},
@@ -696,8 +991,41 @@ test('generic chroma key removes magenta while preserving an opaque green subjec
     assert.ok(center[3] > 250, `center alpha was eroded: ${center}`);
     const inspection = await inspectCharacterPng(output);
     assert.match(inspection.keyColor, /^#f[0-9a-f]0[0-9a-f]f[0-9a-f]$/i);
+    assert.equal(inspection.keyColorSource, 'metadata');
+    const transparentRgb = pixel(0, 0).slice(0, 3);
+    assert.ok(transparentRgb.every((channel) => channel !== 255 || transparentRgb[1] !== 0));
+    const resized = await sharp(output)
+      .resize(24, 24)
+      .flatten({background: '#777777'})
+      .raw()
+      .toBuffer();
+    let magentaPixels = 0;
+    for (let index = 0; index < resized.length; index += 3) {
+      if (resized[index] > 180 && resized[index + 2] > 180 && resized[index + 1] < 100) magentaPixels += 1;
+    }
+    assert.equal(magentaPixels, 0);
     assert.ok(inspection.keyEdgeRatio < 0.2, inspection);
     assert.ok(fs.existsSync(metadata));
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('neutral transparent RGB is not mistaken for a chroma key without metadata', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'paper-neutral-key-test-'));
+  const output = path.join(directory, 'neutral.png');
+  try {
+    const pixels = Buffer.alloc(8 * 8 * 4);
+    for (let index = 0; index < pixels.length; index += 4) {
+      pixels[index] = 243;
+      pixels[index + 1] = 235;
+      pixels[index + 2] = 216;
+      pixels[index + 3] = 0;
+    }
+    await sharp(pixels, {raw: {width: 8, height: 8, channels: 4}}).png().toFile(output);
+    const inspection = await inspectCharacterPng(output);
+    assert.equal(inspection.keyColor, null);
+    assert.equal(inspection.keyColorSource, null);
   } finally {
     await fsp.rm(directory, {recursive: true, force: true});
   }

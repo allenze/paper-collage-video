@@ -2,9 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   assessCreativePlanTimeline,
+  assertApprovedImageBudgetDecision,
+  assertConfirmedPlanDecision,
   buildCreativePlan,
   deriveAssetBudget,
+  deriveMotionBudget,
   deriveCreativePlanMode,
+  deriveDurationAuthority,
+  summarizeConceptDecision,
+  summarizeProductionProfiles,
   validateCreativePlan,
 } from '../scripts/creative-plan-lib.mjs';
 
@@ -22,15 +28,24 @@ const make = (overrides) =>
 
 test('creative planning supports all four partial-input modes', () => {
   const none = make({});
+  assert.equal(none.schemaVersion, 4);
   assert.equal(none.inputMode, 'none');
   assert.equal(none.productionProfile, 'balanced');
   assert.deepEqual(none.assetBudget, {
     backgrounds: 3,
     environmentLayers: 2,
-    characterSheets: 1,
+    characterSheets: 2,
     styleSamples: 1,
-    maxGeneratedImages: 7,
+    baseImageAttempts: 8,
+    layerPackageAttemptReserve: 12,
+    maxGeneratedImages: 20,
   });
+  assert.deepEqual(none.motionBudget, {
+    maxPoseSheetCalls: 2,
+    maxStatesPerSheet: 4,
+    maxContinuousTargets: 12,
+  });
+  assert.equal(none.approvedImageBudget, null);
   assert.deepEqual(none.requested, {durationSeconds: null, sceneCount: null});
 
   const durationOnly = make({
@@ -64,15 +79,41 @@ test('creative planning supports all four partial-input modes', () => {
 });
 
 test('production profiles set explicit generated-image budgets', () => {
+  assert.deepEqual(deriveMotionBudget('full-depth', 1), {
+    maxPoseSheetCalls: 2,
+    maxStatesPerSheet: 6,
+    maxContinuousTargets: 6,
+  });
+  assert.deepEqual(deriveAssetBudget('full-depth', 1), {
+    backgrounds: 1,
+    environmentLayers: 2,
+    characterSheets: 2,
+    styleSamples: 1,
+    baseImageAttempts: 6,
+    layerPackageAttemptReserve: 6,
+    maxGeneratedImages: 12,
+  });
   assert.deepEqual(deriveAssetBudget('draft', 6), {
     backgrounds: 6,
     environmentLayers: 2,
     characterSheets: 2,
     styleSamples: 1,
-    maxGeneratedImages: 11,
+    baseImageAttempts: 11,
+    layerPackageAttemptReserve: 12,
+    maxGeneratedImages: 23,
   });
-  assert.equal(deriveAssetBudget('balanced', 6).maxGeneratedImages, 13);
-  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 23);
+  assert.equal(deriveAssetBudget('balanced', 6).maxGeneratedImages, 38);
+  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 61);
+  assert.deepEqual(deriveMotionBudget('draft', 6), {
+    maxPoseSheetCalls: 2,
+    maxStatesPerSheet: 4,
+    maxContinuousTargets: 12,
+  });
+  assert.deepEqual(deriveMotionBudget('full-depth', 6), {
+    maxPoseSheetCalls: 6,
+    maxStatesPerSheet: 6,
+    maxContinuousTargets: 36,
+  });
   assert.equal(
     make({productionProfile: 'full-depth'}).productionProfile,
     'full-depth',
@@ -80,6 +121,85 @@ test('production profiles set explicit generated-image budgets', () => {
   assert.throws(
     () => make({productionProfile: 'unbounded'}),
     /productionProfile/,
+  );
+});
+
+test('concept decisions expose bounded profile choices with exact scene budgets', () => {
+  const plan = make({sceneCount: 2, productionProfile: 'full-depth'});
+  const decision = summarizeConceptDecision(plan);
+  assert.equal(decision.durationAuthority, 'content-derived');
+  assert.deepEqual(
+    decision.profileOptions.map(({id, assetBudget}) => [id, assetBudget.maxGeneratedImages]),
+    [
+      ['draft', 9],
+      ['balanced', 14],
+      ['full-depth', 21],
+    ],
+  );
+  assert.deepEqual(
+    decision.profileOptions.map(({id, motionBudget}) => [id, motionBudget.maxPoseSheetCalls]),
+    [['draft', 1], ['balanced', 1], ['full-depth', 2]],
+  );
+  assert.ok(
+    summarizeProductionProfiles(2).every(
+      ({summary, finalImpact}) => summary.length > 10 && finalImpact.length > 10,
+    ),
+  );
+  assert.doesNotThrow(() => assertConfirmedPlanDecision({
+    productionProfile: 'full-depth',
+    durationSeconds: 30,
+    sceneCount: 2,
+    durationAuthority: 'content-derived',
+  }, plan));
+  assert.throws(
+    () => assertConfirmedPlanDecision({...decision, productionProfile: 'balanced'}, plan),
+    /productionProfile 必须与当前计划一致/,
+  );
+  assert.equal(
+    deriveDurationAuthority(make({requestedDurationSeconds: 30})),
+    'human-target',
+  );
+});
+
+test('human-approved image limit is narrower than the profile ceiling and covers expected calls', () => {
+  const plan = make({
+    sceneCount: 1,
+    productionProfile: 'draft',
+  });
+  const directingSummary = {
+    generationBudget: {expectedProviderImageCalls: 1},
+  };
+  assert.deepEqual(
+    assertApprovedImageBudgetDecision(
+      {imageAttemptLimit: 2},
+      plan,
+      directingSummary,
+      {at},
+    ),
+    {
+      imageAttemptLimit: 2,
+      expectedProviderImageCalls: 1,
+      profileHardCeiling: 6,
+      approvedAt: at,
+    },
+  );
+  assert.throws(
+    () =>
+      assertApprovedImageBudgetDecision(
+        {imageAttemptLimit: 0},
+        plan,
+        directingSummary,
+      ),
+    /低于当前 storyboard 预计需要的 1 次/,
+  );
+  assert.throws(
+    () =>
+      assertApprovedImageBudgetDecision(
+        {imageAttemptLimit: 7},
+        plan,
+        directingSummary,
+      ),
+    /超过 draft profile hard ceiling 6/,
   );
 });
 
@@ -120,7 +240,7 @@ test('input mode is derived independently for duration and scene count', () => {
   );
 });
 
-test('resolved plans enforce scene count and surface meaningful duration drift', () => {
+test('resolved plans enforce scene count without padding inferred duration', () => {
   const plan = make({durationSeconds: 30, sceneCount: 3});
   assert.deepEqual(
     assessCreativePlanTimeline(plan, {
@@ -134,7 +254,7 @@ test('resolved plans enforce scene count and surface meaningful duration drift',
     scenes: [{}, {}],
   });
   assert.equal(issues.find(({code}) => code === 'plan-scene-count').level, 'error');
-  assert.equal(issues.find(({code}) => code === 'plan-duration-drift').level, 'warning');
+  assert.equal(issues.some(({code}) => code === 'plan-duration-drift'), false);
 
   const explicitDuration = make({
     requestedDurationSeconds: 30,
@@ -147,6 +267,14 @@ test('resolved plans enforce scene count and surface meaningful duration drift',
   });
   assert.equal(
     explicitIssues.find(({code}) => code === 'plan-duration-drift').level,
+    'error',
+  );
+  const deficitIssues = assessCreativePlanTimeline(explicitDuration, {
+    durationSeconds: 24,
+    scenes: [{}, {}, {}],
+  });
+  assert.equal(
+    deficitIssues.find(({code}) => code === 'duration-content-deficit').level,
     'error',
   );
 });

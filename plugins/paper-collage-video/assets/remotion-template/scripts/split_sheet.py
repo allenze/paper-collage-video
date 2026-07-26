@@ -21,6 +21,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--padding", type=int, default=20)
     parser.add_argument("--key-threshold", type=float, default=48.0)
     parser.add_argument("--suffix", default="key")
+    parser.add_argument("--preserve-canvas", action="store_true")
     return parser.parse_args()
 
 
@@ -69,7 +70,7 @@ def main() -> None:
             round((row + 1) * cell_height),
         )
         cell = source.crop(bounds)
-        crop = padded_bbox(
+        crop = (0, 0, cell.width, cell.height) if args.preserve_canvas else padded_bbox(
             foreground_bbox(cell, args.key_threshold),
             cell.width,
             cell.height,

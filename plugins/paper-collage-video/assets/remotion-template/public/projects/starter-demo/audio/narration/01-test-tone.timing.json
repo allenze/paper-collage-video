@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "mediaSha256": "d4e35edac80579ac885bac35bfdddc80626d07b65ce7ecb64aa46a1f570735f0",
+  "durationSeconds": 1,
+  "cues": [
+    {
+      "id": "starter-open-cue",
+      "kind": "narration-phrase",
+      "atSeconds": 0.08
+    },
+    {
+      "id": "starter-action-cue",
+      "kind": "semantic-emphasis",
+      "atSeconds": 0.5
+    },
+    {
+      "id": "starter-final-cue",
+      "kind": "sentence",
+      "atSeconds": 0.9
+    }
+  ]
+}

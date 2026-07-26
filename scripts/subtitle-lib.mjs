@@ -1,6 +1,13 @@
+const CLOSING_PUNCTUATION = '”’」』）》】〕〉》';
+const closingPunctuationPattern = `[${CLOSING_PUNCTUATION}]*`;
+
 const punctuationPause = (text) => {
-  if (/[。！？!?]$/.test(text)) return 1.8;
-  if (/[，、；：,;:]$/.test(text)) return 0.8;
+  if (new RegExp(`[。！？!?]${closingPunctuationPattern}$`, 'u').test(text)) {
+    return 1.8;
+  }
+  if (new RegExp(`[，、；：,;:]${closingPunctuationPattern}$`, 'u').test(text)) {
+    return 0.8;
+  }
   return 0;
 };
 
@@ -21,12 +28,31 @@ const splitLongSegment = (segment, maximumCharacters) => {
   return output;
 };
 
+const attachLeadingClosers = (segments) => {
+  const output = [];
+  const leadingClosers = new RegExp(`^([${CLOSING_PUNCTUATION}]+)(.*)$`, 'us');
+  for (const segment of segments) {
+    const match = segment.match(leadingClosers);
+    if (!match || output.length === 0) {
+      output.push(segment);
+      continue;
+    }
+    output[output.length - 1] += match[1];
+    if (match[2]) output.push(match[2]);
+  }
+  return output;
+};
+
 export const segmentSubtitleText = (text, maximumCharacters) =>
-  String(text ?? '')
-    .split(/(?<=[。！？!?])/u)
-    .map((segment) => segment.trim())
-    .filter(Boolean)
-    .flatMap((segment) => splitLongSegment(segment, maximumCharacters));
+  attachLeadingClosers(
+    attachLeadingClosers(
+      String(text ?? '')
+        .split(/(?<=[。！？!?])/u)
+        .map((segment) => segment.trim())
+        .filter(Boolean),
+    )
+      .flatMap((segment) => splitLongSegment(segment, maximumCharacters)),
+  );
 
 export const deriveSubtitleCues = ({
   text,

@@ -49,6 +49,7 @@ try {
     if (!(await fileExists(manifestFile))) continue;
     const manifest = await readJson(manifestFile);
     for (const record of manifest.assets ?? []) {
+      if (record.lifecycle?.status !== 'active') continue;
       if (record.requestFingerprint !== targetFingerprint) continue;
       let source;
       try {

@@ -1,10 +1,10 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 10,
   "slug": "starter-demo",
   "title": "Paper Collage Starter",
   "plan": {
-    "schemaVersion": 1,
+    "schemaVersion": 4,
     "slug": "starter-demo",
     "status": "resolved",
     "inputMode": "both",
@@ -14,14 +14,27 @@
       "environmentLayers": 1,
       "characterSheets": 1,
       "styleSamples": 1,
-      "maxGeneratedImages": 4
+      "baseImageAttempts": 4,
+      "layerPackageAttemptReserve": 2,
+      "maxGeneratedImages": 6
+    },
+    "motionBudget": {
+      "maxPoseSheetCalls": 1,
+      "maxStatesPerSheet": 4,
+      "maxContinuousTargets": 2
+    },
+    "approvedImageBudget": {
+      "imageAttemptLimit": 1,
+      "expectedProviderImageCalls": 0,
+      "profileHardCeiling": 6,
+      "approvedAt": "2026-01-01T00:00:00.000Z"
     },
     "requested": {
-      "durationSeconds": 2,
+      "durationSeconds": 1.2,
       "sceneCount": 1
     },
     "resolved": {
-      "durationSeconds": 2,
+      "durationSeconds": 1.2,
       "sceneCount": 1,
       "estimatedNarrationSeconds": 1,
       "rationale": "Bundled technical fixture",
@@ -69,7 +82,7 @@
       "id": "starter",
       "label": "纸片分层视频",
       "eyebrow": "STARTER",
-      "tailSeconds": 1,
+      "tailSeconds": 0.2,
       "motion": {
         "blueprint": "layered-reveal",
         "intensity": 0.7,
@@ -82,16 +95,18 @@
             "kind": "establish",
             "assertions": [
               "背景完整建立"
-            ]
+            ],
+            "stateAssertions": []
           },
           {
             "id": "proof-action",
-            "at": 0.5,
+            "at": 0.62,
             "label": "主体进入画面",
             "kind": "peak",
             "assertions": [
               "主体位于画面中央"
-            ]
+            ],
+            "stateAssertions": []
           },
           {
             "id": "proof-final",
@@ -100,7 +115,8 @@
             "kind": "final",
             "assertions": [
               "主体与标题构图稳定"
-            ]
+            ],
+            "stateAssertions": []
           }
         ]
       },
@@ -144,6 +160,9 @@
             "assetRole": "character",
             "src": "projects/starter-demo/assets/characters/alpha/01-traveler.png",
             "z": 4,
+            "visibility": {
+              "initial": "hidden"
+            },
             "transform": {
               "x": 0,
               "y": 0,
@@ -188,52 +207,380 @@
         "preset": "push",
         "intensity": 0.6
       },
-      "transition": {
-        "type": "none",
-        "durationSeconds": 0
-      },
       "narration": {
         "src": "projects/starter-demo/audio/narration/01-test-tone.wav",
         "startSeconds": 0,
         "durationSeconds": 1,
-        "text": ""
+        "text": "纸片分层视频"
       },
       "subtitles": [
         {
           "fromSeconds": 0,
-          "toSeconds": 1.8,
-          "text": "Paper Collage Video"
+          "toSeconds": 1,
+          "text": "纸片分层视频"
         }
       ],
-      "cues": [
+      "events": [
         {
           "id": "establish",
           "beatId": "establish",
+          "proofTimeId": "proof-establish",
           "at": 0,
-          "durationSeconds": 0.35,
-          "targetId": "scene",
-          "action": "reveal",
-          "intensity": 0.7
+          "targetId": "background",
+          "visual": {
+            "kind": "emphasis",
+            "action": "pulse",
+            "durationSeconds": 0.35,
+            "intensity": 0.35
+          }
         },
         {
           "id": "subject-arrives",
           "beatId": "subject-arrives",
+          "proofTimeId": "proof-action",
           "at": 0.5,
-          "durationSeconds": 0.5,
           "targetId": "traveler",
-          "action": "lift",
-          "intensity": 0.8
+          "visual": {
+            "kind": "visibility",
+            "action": "show",
+            "transition": "fade-rise",
+            "durationSeconds": 0.5
+          }
         },
         {
           "id": "lockup",
           "beatId": "lockup",
+          "proofTimeId": "proof-final",
           "at": 0.9,
-          "durationSeconds": 0.25,
           "targetId": "traveler",
-          "action": "settle",
-          "intensity": 0.55
+          "visual": {
+            "kind": "emphasis",
+            "action": "settle",
+            "durationSeconds": 0.1,
+            "intensity": 0.55
+          }
         }
       ]
     }
-  ]
+  ],
+  "sceneTransitions": [],
+  "editorial": {
+    "timebase": {
+      "fps": 30,
+      "rounding": "nearest"
+    },
+    "wordTimingPolicy": "phrase-fallback",
+    "media": [
+      {
+        "id": "starter-narration",
+        "kind": "narration",
+        "src": "projects/starter-demo/audio/narration/01-test-tone.wav",
+        "sha256": "d4e35edac80579ac885bac35bfdddc80626d07b65ce7ecb64aa46a1f570735f0",
+        "durationSeconds": 1,
+        "timelineMode": "scene-local",
+        "timingDataSrc": "projects/starter-demo/audio/narration/01-test-tone.timing.json"
+      }
+    ],
+    "cues": [
+      {
+        "id": "starter-open-cue",
+        "kind": "narration-phrase",
+        "source": "detected",
+        "timingBasis": "actual-audio",
+        "mediaId": "starter-narration",
+        "sceneId": "starter",
+        "atSeconds": 0.08,
+        "priority": 70,
+        "toleranceSeconds": 0.04
+      },
+      {
+        "id": "starter-action-cue",
+        "kind": "semantic-emphasis",
+        "source": "authored",
+        "timingBasis": "actual-audio",
+        "mediaId": "starter-narration",
+        "sceneId": "starter",
+        "atSeconds": 0.5,
+        "priority": 90,
+        "toleranceSeconds": 0.04
+      },
+      {
+        "id": "starter-final-cue",
+        "kind": "sentence",
+        "source": "detected",
+        "timingBasis": "actual-audio",
+        "mediaId": "starter-narration",
+        "sceneId": "starter",
+        "atSeconds": 0.9,
+        "priority": 80,
+        "toleranceSeconds": 0.04
+      }
+    ],
+    "editPoints": [
+      {
+        "id": "starter-open",
+        "cueIds": [
+          "starter-open-cue"
+        ],
+        "conflictPolicy": "highest-priority"
+      },
+      {
+        "id": "starter-action",
+        "cueIds": [
+          "starter-action-cue"
+        ],
+        "conflictPolicy": "highest-priority"
+      },
+      {
+        "id": "starter-final",
+        "cueIds": [
+          "starter-final-cue"
+        ],
+        "conflictPolicy": "highest-priority"
+      }
+    ],
+    "bindings": [
+      {
+        "id": "starter-action-binding",
+        "sceneId": "starter",
+        "targetType": "graphic-action",
+        "targetId": "traveler",
+        "editPointId": "starter-action",
+        "mode": "element"
+      }
+    ],
+    "responsiveProfiles": [
+      {
+        "id": "16:9",
+        "width": 1920,
+        "height": 1080,
+        "safeArea": {
+          "x": 0.06,
+          "y": 0.06,
+          "width": 0.88,
+          "height": 0.88
+        },
+        "densityBudget": 8,
+        "typographyScale": 1,
+        "parallaxScale": 1,
+        "exclusionZones": []
+      },
+      {
+        "id": "9:16",
+        "width": 1080,
+        "height": 1920,
+        "safeArea": {
+          "x": 0.08,
+          "y": 0.05,
+          "width": 0.84,
+          "height": 0.9
+        },
+        "densityBudget": 6,
+        "typographyScale": 0.92,
+        "parallaxScale": 0.72,
+        "exclusionZones": []
+      },
+      {
+        "id": "1:1",
+        "width": 1080,
+        "height": 1080,
+        "safeArea": {
+          "x": 0.07,
+          "y": 0.07,
+          "width": 0.86,
+          "height": 0.86
+        },
+        "densityBudget": 7,
+        "typographyScale": 0.96,
+        "parallaxScale": 0.86,
+        "exclusionZones": []
+      }
+    ],
+    "sceneDirecting": [
+      {
+        "sceneId": "starter",
+        "compositionProfile": "starter-balanced",
+        "typographyProfile": "editorial-default",
+        "subjectFraming": {
+          "mode": "contain",
+          "focusPoint": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        },
+        "placements": []
+      }
+    ],
+    "transitions": [],
+    "activeProfile": "16:9",
+    "resolvedEditPoints": [
+      {
+        "id": "starter-open",
+        "sceneId": "starter",
+        "cueIds": [
+          "starter-open-cue"
+        ],
+        "resolvedSeconds": 0.08,
+        "mediaFrame": 2,
+        "sceneFrame": 2,
+        "renderFrame": 2,
+        "priority": 70,
+        "toleranceSeconds": 0.04,
+        "conflictPolicy": "highest-priority",
+        "sources": [
+          "detected"
+        ],
+        "timingBasis": [
+          "actual-audio"
+        ]
+      },
+      {
+        "id": "starter-action",
+        "sceneId": "starter",
+        "cueIds": [
+          "starter-action-cue"
+        ],
+        "resolvedSeconds": 0.5,
+        "mediaFrame": 15,
+        "sceneFrame": 15,
+        "renderFrame": 15,
+        "priority": 90,
+        "toleranceSeconds": 0.04,
+        "conflictPolicy": "highest-priority",
+        "sources": [
+          "authored"
+        ],
+        "timingBasis": [
+          "actual-audio"
+        ]
+      },
+      {
+        "id": "starter-final",
+        "sceneId": "starter",
+        "cueIds": [
+          "starter-final-cue"
+        ],
+        "resolvedSeconds": 0.9,
+        "mediaFrame": 27,
+        "sceneFrame": 27,
+        "renderFrame": 27,
+        "priority": 80,
+        "toleranceSeconds": 0.04,
+        "conflictPolicy": "highest-priority",
+        "sources": [
+          "detected"
+        ],
+        "timingBasis": [
+          "actual-audio"
+        ]
+      }
+    ],
+    "conflicts": [],
+    "responsivePlans": [
+      {
+        "profileId": "16:9",
+        "width": 1920,
+        "height": 1080,
+        "safeArea": {
+          "x": 0.06,
+          "y": 0.06,
+          "width": 0.88,
+          "height": 0.88
+        },
+        "exclusionZones": [],
+        "densityBudget": 8,
+        "scenes": [
+          {
+            "sceneId": "starter",
+            "compositionProfile": "starter-balanced",
+            "typographyProfile": "editorial-default",
+            "subjectFraming": {
+              "mode": "contain",
+              "focusPoint": {
+                "x": 0.5,
+                "y": 0.5
+              }
+            },
+            "parallaxScale": 1,
+            "cropFocus": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "densityUsed": 0,
+            "placements": []
+          }
+        ]
+      },
+      {
+        "profileId": "9:16",
+        "width": 1080,
+        "height": 1920,
+        "safeArea": {
+          "x": 0.08,
+          "y": 0.05,
+          "width": 0.84,
+          "height": 0.9
+        },
+        "exclusionZones": [],
+        "densityBudget": 6,
+        "scenes": [
+          {
+            "sceneId": "starter",
+            "compositionProfile": "starter-balanced",
+            "typographyProfile": "editorial-default",
+            "subjectFraming": {
+              "mode": "contain",
+              "focusPoint": {
+                "x": 0.5,
+                "y": 0.5
+              }
+            },
+            "parallaxScale": 1,
+            "cropFocus": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "densityUsed": 0,
+            "placements": []
+          }
+        ]
+      },
+      {
+        "profileId": "1:1",
+        "width": 1080,
+        "height": 1080,
+        "safeArea": {
+          "x": 0.07,
+          "y": 0.07,
+          "width": 0.86,
+          "height": 0.86
+        },
+        "exclusionZones": [],
+        "densityBudget": 7,
+        "scenes": [
+          {
+            "sceneId": "starter",
+            "compositionProfile": "starter-balanced",
+            "typographyProfile": "editorial-default",
+            "subjectFraming": {
+              "mode": "contain",
+              "focusPoint": {
+                "x": 0.5,
+                "y": 0.5
+              }
+            },
+            "parallaxScale": 1,
+            "cropFocus": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "densityUsed": 0,
+            "placements": []
+          }
+        ]
+      }
+    ],
+    "transitionPlans": [],
+    "fingerprint": "d42157ad921b36c1976ae7b1220dcb4da544af88fe600532426877cd2d1eee61"
+  }
 }

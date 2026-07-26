@@ -27,9 +27,13 @@ const exists = async (file) => {
   }
 };
 
-const runInherited = (command, args, cwd) =>
+const runInherited = (command, args, cwd, environment = {}) =>
   new Promise((resolve, reject) => {
-    const child = spawn(command, args, {cwd, stdio: 'inherit'});
+    const child = spawn(command, args, {
+      cwd,
+      stdio: 'inherit',
+      env: {...process.env, ...environment},
+    });
     child.once('error', reject);
     child.once('exit', (code, signal) => {
       if (code === 0) resolve();
@@ -38,10 +42,18 @@ const runInherited = (command, args, cwd) =>
   });
 
 const installDependencies = async (target) => {
+  const cacheRoot = path.join(target, '.cache');
+  const npmCache = path.join(cacheRoot, 'npm');
+  const pipCache = path.join(cacheRoot, 'pip');
+  await Promise.all([
+    fs.mkdir(npmCache, {recursive: true}),
+    fs.mkdir(pipCache, {recursive: true}),
+  ]);
   await runInherited(
     process.platform === 'win32' ? 'npm.cmd' : 'npm',
     ['ci'],
     target,
+    {npm_config_cache: npmCache},
   );
 
   const python = process.platform === 'win32' ? 'python' : 'python3';
@@ -55,6 +67,7 @@ const installDependencies = async (target) => {
     virtualPython,
     ['-m', 'pip', 'install', '-r', 'requirements.txt'],
     target,
+    {PIP_CACHE_DIR: pipCache},
   );
 };
 

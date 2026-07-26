@@ -6,23 +6,26 @@
   "required": ["schemaVersion", "projectSlug", "assets"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 3},
+    "schemaVersion": {"const": 4},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "assets": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["assetId", "capability", "file", "provider", "adapter", "requestFingerprint", "reusedFrom", "sha256", "sizeBytes", "recordedAt", "request", "compositionBinding", "familyFingerprint"],
+        "required": ["recordId", "assetId", "capability", "file", "provider", "adapter", "requestFingerprint", "reusedFrom", "sha256", "sizeBytes", "recordedAt", "request", "compositionBinding", "familyFingerprint", "lifecycle"],
         "properties": {
+          "recordId": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "assetId": {"type": "string"},
           "capability": {"enum": ["text", "image", "voice"]},
           "file": {"type": "string"},
           "provider": {"type": "string"},
-          "adapter": {"enum": ["host", "command", "manual"]},
+          "adapter": {"enum": ["host", "command", "manual", "registered-sheet-cell", "registered-family-member", "looping-strip-derivative"]},
           "tool": {"type": ["string", "null"]},
           "model": {"type": ["string", "null"]},
           "externalId": {"type": ["string", "null"]},
           "attemptId": {"type": ["string", "null"]},
+          "recoveredFromClosedAttempt": {"type": "boolean"},
+          "recoveredFromRejectedAttempt": {"type": "boolean"},
           "requestFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "reusedFrom": {"type": ["string", "null"]},
           "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
@@ -40,8 +43,41 @@
           "recordedAt": {"type": "string", "format": "date-time"},
           "request": {"type": "object"},
           "compositionBinding": {"type": ["object", "null"]},
+          "stateBinding": {"type": ["object", "null"]},
+          "stateSheetBinding": {"type": ["object", "null"]},
+          "stateSheetRecoveryBinding": {"type": ["object", "null"]},
+          "sourceSheetAssetId": {"type": ["string", "null"]},
+          "registeredFamilyBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/registered-family-binding.schema.json"}
+            ]
+          },
+          "loopingStripBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/composition.schema.json#/$defs/loopingStripBinding"}
+            ]
+          },
           "semanticBinding": {"type": ["object", "null"]},
-          "familyFingerprint": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+          "providerObservation": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/provider-observation.schema.json"}
+            ]
+          },
+          "familyFingerprint": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+          "lifecycle": {
+            "type": "object",
+            "required": ["status", "changedAt", "reason", "supersededBy"],
+            "properties": {
+              "status": {"enum": ["active", "superseded", "rejected", "recovery-source"]},
+              "changedAt": {"type": "string", "format": "date-time"},
+              "reason": {"type": "string"},
+              "supersededBy": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }

@@ -1,6 +1,6 @@
 {
-  "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 1,
+  "$schema": "../../schemas/storyboard-authoring.schema.json",
+  "schemaVersion": 10,
   "slug": "{{slug}}",
   "status": "pending",
   "arc": "",
@@ -11,5 +11,6 @@
     "layerStrategy": ""
   },
   "scenes": [],
+  "sceneTransitions": [],
   "updatedAt": "{{createdAt}}"
 }

@@ -4,6 +4,34 @@
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-27
+
+### Added
+
+- Project/Storyboard schema v10、layer-complete source package、`registered-depth-stack`、三画幅 reveal envelopes，以及在 provider 调用前锁定的完整 rear/subject/front 语义。
+- Registered-family v2、asset-request v7 与 identity-bound state sheets：支持注册 sheet、完整上下文 layer edits、逐状态 anchor/facing/identity 证据和确定性本地派生。
+- `looping-environment`、可见 world surfaces、多主体 screen/world anchor、near-layer 遮挡和带符号 trajectory contracts，用于可证明的持续横向世界与竞速叙事。
+- Editorial v9 的实际音频 edit points、编辑型字体、解释型注释、数据驱动 SVG、响应式导演计划和语义高级切换。
+- `motionPolicy=locked-static` 与受人工授权的 preview semantic revision；修订会保留 provider 上限并失效所有相关旧证明。
+- 完全本地的 registered-family、alpha-band、VOX Phase 2 和 looping-world proof fixtures，包括 16:9、9:16、1:1 实际渲染和 fingerprint 报告。
+
+### Changed
+
+- 新项目先选择画幅、三张版本化视觉风格和视差偏好，再比较 draft/balanced/full-depth 三个完整故事、动画、provider 与成本方案；profile ceiling 只表示规划容量，真实调用受人类批准的精确 cap 约束。
+- 每个故事关键动作必须路由到真实 registered state、local motion 或 layer package，不能只用计数声明覆盖。
+- `project:assets-ready` 现在封印素材、质量、字幕、音频、时间线和 fingerprint；preview/final 只接受当前 seal，并将字幕证明与 composition proof 分离。
+- 质量审核绑定 surface、target、report、evidence 和 contact-sheet 生命周期；任何相关 hash 变化都会使旧批准失效。
+- 最新系统只维护当前 schema 和输出能力，不加载、迁移或保留旧项目格式的兼容分支。
+- `remotion` 与 `@remotion/cli` 同步升级到 4.0.499；PostCSS 更新到兼容补丁 8.5.23，`fast-uri` 保持已修复的 3.1.4。
+
+### Fixed
+
+- 修复关键动作只在 scenario 计数、状态身份/朝向/锚点不可证、world strip 矩形合法但真实像素不可用，以及单主体模型无法表达多角色世界锚定的问题。
+- 修复静态镜头被 profile 动画计数反向污染、人工语义修订没有正式入口，以及修订后旧 style/proof/render 证据仍可能被复用的问题。
+- 修复质量审核可能跨 surface 或 target 复用、字幕交付证据未独立封印，以及资产变更后 preview/final 生命周期失效不完整的问题。
+- 在 provider reservation 前阻断缺少完整 rear plate、subject silhouette、front overlay、共享注册画布、三画幅 reveal envelope 或 active identity reference 的生产计划。
+- 缺失实际音频 timing、无效字体签名、annotation 越界、alpha/key edge 污染、状态锚点漂移、错误朝向和 trajectory 逆行现在会确定性阻断。
+
 ## [0.8.0] - 2026-07-21
 
 ### Added
@@ -95,7 +123,8 @@
 - The repository now keeps one complete showcase, `tie-chu-mo-zhen`; older
   production demos and the legacy one-shot composition were removed.
 
-[Unreleased]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.8.0...v0.16.0
 [0.8.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.6.0...v0.8.0
 [0.6.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.4.0...v0.5.0

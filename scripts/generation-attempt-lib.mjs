@@ -26,17 +26,11 @@ const stableValue = (value) => {
 
 export const generationRequestFingerprint = (request) =>
   createHash('sha256')
-    .update(JSON.stringify(stableValue({
-      schemaVersion: request.schemaVersion,
-      projectSlug: request.projectSlug,
-      assetId: request.assetId,
-      capability: request.capability,
-      prompt: request.prompt ?? null,
-      model: request.model ?? null,
-      settings: request.settings ?? {},
-      compositionBinding: request.compositionBinding ?? null,
-      semanticBinding: request.semanticBinding ?? null,
-    })))
+    .update(JSON.stringify(stableValue(
+      Object.fromEntries(
+        Object.entries(request ?? {}).filter(([key]) => key !== '$schema'),
+      ),
+    )))
     .digest('hex');
 
 export const isQuotaConsumingImageRequest = (request) =>
@@ -100,6 +94,13 @@ export const summarizeGenerationAttempts = (events) => {
   };
 };
 
+export const readGenerationAttempt = async ({slug, attemptId}) => {
+  const loaded = await readGenerationAttemptEvents(slug);
+  const attempt = reduceGenerationAttempts(loaded.events).get(attemptId);
+  if (!attempt) throw new Error(`生成尝试不存在：${attemptId}`);
+  return {file: loaded.file, attempt};
+};
+
 const appendEvent = async (file, event) => {
   await fs.mkdir(path.dirname(file), {recursive: true});
   await fs.appendFile(file, `${JSON.stringify(event)}\n`, 'utf8');
@@ -140,9 +141,14 @@ export const reserveGenerationAttempt = async ({request, provider, model = null}
   }
   const projectFile = path.join(ROOT, 'projects', request.projectSlug, 'project.json');
   const project = JSON.parse(await fs.readFile(projectFile, 'utf8'));
-  const maximum = project.plan?.assetBudget?.maxGeneratedImages;
-  if (!Number.isInteger(maximum) || maximum < 1) {
-    throw new Error('生成图预算尚未通过概念审批，不能发起生图。');
+  const maximum = project.plan?.approvedImageBudget?.imageAttemptLimit;
+  if (!Number.isInteger(maximum) || maximum < 0) {
+    throw new Error(
+      '人批准的图片尝试上限尚未通过概念审批并写入 approvedImageBudget，不能发起生图。',
+    );
+  }
+  if (maximum === 0) {
+    throw new Error('人批准的图片尝试上限为 0，不能发起生图。');
   }
   return withLedgerLock(request.projectSlug, async () => {
     const loaded = await readGenerationAttemptEvents(request.projectSlug);
@@ -187,6 +193,35 @@ export const assertReservedGenerationAttempt = async ({request, provider, attemp
     throw new Error(`生成尝试 ${attemptId} 的请求已变化，请重新预留。`);
   }
   return {file: loaded.file, attempt};
+};
+
+export const assertRecoverableGenerationAttempt = async ({
+  request,
+  provider,
+  attemptId,
+  output = null,
+  outputSha256 = null,
+}) => {
+  const loaded = await readGenerationAttempt({slug: request.projectSlug, attemptId});
+  const {attempt} = loaded;
+  if (attempt.status !== 'succeeded' || attempt.quotaConsumed !== true) {
+    throw new Error(
+      `生成尝试 ${attemptId} 不是已计费成功记录，不能 recover-record（当前 ${attempt.status}）。`,
+    );
+  }
+  if (attempt.assetId !== request.assetId || attempt.provider !== provider.id) {
+    throw new Error(`生成尝试 ${attemptId} 的资产或 provider 不匹配。`);
+  }
+  if (attempt.requestFingerprint !== generationRequestFingerprint(request)) {
+    throw new Error(`生成尝试 ${attemptId} 的请求已变化，不能恢复登记。`);
+  }
+  if (output && attempt.output && attempt.output !== output) {
+    throw new Error(`生成尝试 ${attemptId} 的输出路径与待登记文件不匹配。`);
+  }
+  if (outputSha256 && attempt.outputSha256 && attempt.outputSha256 !== outputSha256) {
+    throw new Error(`生成尝试 ${attemptId} 的输出哈希与待登记文件不匹配。`);
+  }
+  return loaded;
 };
 
 export const closeGenerationAttempt = async ({

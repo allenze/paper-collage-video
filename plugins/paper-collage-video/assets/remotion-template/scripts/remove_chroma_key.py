@@ -24,6 +24,7 @@ def parse_args() -> argparse.Namespace:
         help="auto, #rrggbb, or r,g,b",
     )
     parser.add_argument("--matte-erode", type=int, default=0)
+    parser.add_argument("--edge-padding", type=int, default=6)
     parser.add_argument("--metadata", type=Path)
     parser.add_argument("--force", action="store_true")
     return parser.parse_args()
@@ -77,6 +78,36 @@ def despill(rgb: np.ndarray, key: np.ndarray, alpha_u8: np.ndarray) -> np.ndarra
     return rgb - strength[:, :, None] * key_direction[None, None, :]
 
 
+def pad_transparent_rgb(
+    rgb: np.ndarray,
+    alpha_u8: np.ndarray,
+    iterations: int,
+) -> np.ndarray:
+    """Extend subject edge colors into transparent pixels for safe resampling."""
+    result = rgb.copy()
+    filled = alpha_u8 > 0
+    height, width = filled.shape
+    for _ in range(iterations):
+        pending = ~filled
+        if not np.any(pending):
+            break
+        color_sum = np.zeros_like(result)
+        neighbor_count = np.zeros((height, width), dtype=np.float32)
+        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+            source_y = slice(max(0, -dy), min(height, height - dy))
+            source_x = slice(max(0, -dx), min(width, width - dx))
+            target_y = slice(max(0, dy), min(height, height + dy))
+            target_x = slice(max(0, dx), min(width, width + dx))
+            valid = filled[source_y, source_x]
+            color_sum[target_y, target_x] += result[source_y, source_x] * valid[:, :, None]
+            neighbor_count[target_y, target_x] += valid
+        newly_filled = pending & (neighbor_count > 0)
+        result[newly_filled] = color_sum[newly_filled] / neighbor_count[newly_filled, None]
+        filled[newly_filled] = True
+    result[~filled] = 235.0
+    return result
+
+
 def main() -> None:
     args = parse_args()
     if args.out.exists() and not args.force:
@@ -85,6 +116,8 @@ def main() -> None:
         raise SystemExit("opaque-threshold must be larger than transparent-threshold")
     if args.matte_erode < 0:
         raise SystemExit("matte-erode must be zero or positive")
+    if args.edge_padding < 0:
+        raise SystemExit("edge-padding must be zero or positive")
 
     source = Image.open(args.input).convert("RGB")
     rgb = np.asarray(source, dtype=np.float32)
@@ -103,10 +136,8 @@ def main() -> None:
         alpha_image = alpha_image.filter(ImageFilter.GaussianBlur(args.edge_feather))
     alpha_u8 = np.asarray(alpha_image, dtype=np.uint8)
 
-    # Preserve fully transparent source RGB so validators can infer the actual key
-    # color. Despill only follows the sampled chroma direction and only affects the
-    # feathered edge, so green clothing or other opaque subject colors survive.
     rgb = despill(rgb, key, alpha_u8)
+    rgb = pad_transparent_rgb(rgb, alpha_u8, args.edge_padding)
 
     rgba = np.dstack([np.uint8(np.clip(rgb, 0, 255)), alpha_u8])
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -125,7 +156,7 @@ def main() -> None:
         args.metadata.write_text(
             json.dumps(
                 {
-                    "schemaVersion": 1,
+                    "schemaVersion": 2,
                     "input": str(args.input),
                     "output": str(args.out),
                     "keyColor": key_hex,
@@ -133,6 +164,12 @@ def main() -> None:
                     "opaqueThreshold": args.opaque_threshold,
                     "edgeFeather": args.edge_feather,
                     "matteErode": args.matte_erode,
+                    "despill": "key-chroma-edge",
+                    "transparentRgb": {
+                        "mode": "edge-pad-neutral",
+                        "paddingPixels": args.edge_padding,
+                        "neutralRgb": [235, 235, 235],
+                    },
                     "transparentPixels": transparent,
                     "partialPixels": partial,
                     "totalPixels": total,

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "projectSlug": "starter-demo",
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "fingerprint": "d0407e655aecb040073e28dd9a43b2bf4ba5486facbf88d9ced63a320c628239",
+  "basis": {
+    "projectSlug": "starter-demo",
+    "visualFingerprint": "3dcf3d4387c3df7bb23c72655e3dabeed6cb55701bb894e01563da54c30087af",
+    "audioFingerprint": "fad8b06dd1caee36083a6324faccdb29c7429f309a3e64c8eceaa0c14c51c27c",
+    "storyboardFingerprint": "6b7fded67a112b16cd46ce8e040692c54016eae2bf3238316172f23b1ec46053",
+    "validationFingerprint": "9a77d137ff713a39f0dba7ea95114faf0667946932ce13c1b9ebae5e93f9097f",
+    "qualityFingerprint": "df130501bc42237180b65eefeb62b9182c33a00bd38cdde48e55ac8c45e91a5a",
+    "subtitleFingerprint": "93e7d68d7a620f8277f9d91184f3611c1317eba5deeb97d615b9225e8d82d99f",
+    "subtitleContract": {
+      "schemaVersion": 1,
+      "contract": "subtitle-surface-v1",
+      "passed": true,
+      "fingerprint": "93e7d68d7a620f8277f9d91184f3611c1317eba5deeb97d615b9225e8d82d99f",
+      "summary": {
+        "totalScenes": 1,
+        "requiredScenes": 1,
+        "passedScenes": 1
+      },
+      "layout": {
+        "contract": "responsive-safe-area-v1",
+        "safeArea": {
+          "x": 0.06,
+          "y": 0.06,
+          "width": 0.88,
+          "height": 0.88
+        },
+        "leftPercent": 10.999999999999998,
+        "rightPercent": 10.999999999999998,
+        "bottomPixels": 76.79999999999994,
+        "maxWidth": 0.78
+      },
+      "font": {
+        "file": null,
+        "family": null,
+        "source": "runtime-fallback",
+        "exists": true
+      },
+      "scenes": [
+        {
+          "sceneId": "starter",
+          "required": true,
+          "visible": true,
+          "cueCount": 1,
+          "cueText": "纸片分层视频",
+          "narrationText": "纸片分层视频",
+          "narrationTextPresent": true,
+          "textMatches": true,
+          "rangesValid": true,
+          "ordered": true,
+          "coverage": {
+            "coveredFrames": 30,
+            "narrationFrames": 30,
+            "ratio": 1,
+            "passed": true
+          },
+          "cues": [
+            {
+              "from": 0,
+              "to": 30,
+              "text": "纸片分层视频",
+              "fadeFrames": 6
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "checks": [
+        {
+          "id": "subtitle-narration-text",
+          "passed": true,
+          "expected": "every narration source has non-empty transcript text",
+          "actual": "1/1 narrated scenes"
+        },
+        {
+          "id": "subtitle-cues-present",
+          "passed": true,
+          "expected": "every narrated scene has visible subtitle cues",
+          "actual": "1/1 narrated scenes"
+        },
+        {
+          "id": "subtitle-transcript-match",
+          "passed": true,
+          "expected": "subtitle text matches narration text after whitespace normalization",
+          "actual": "1/1 narrated scenes"
+        },
+        {
+          "id": "subtitle-narration-coverage",
+          "passed": true,
+          "expected": "ordered cues stay in narration window and cover at least 80%",
+          "actual": [
+            {
+              "sceneId": "starter",
+              "ratio": 1
+            }
+          ]
+        },
+        {
+          "id": "subtitle-safe-area",
+          "passed": true,
+          "expected": "responsive-safe-area-v1",
+          "actual": {
+            "profile": "16:9",
+            "safeArea": {
+              "x": 0.06,
+              "y": 0.06,
+              "width": 0.88,
+              "height": 0.88
+            },
+            "maxWidth": 0.78
+          }
+        },
+        {
+          "id": "subtitle-font-source",
+          "passed": true,
+          "expected": "runtime fallback stack",
+          "actual": "runtime fallback stack"
+        }
+      ]
+    }
+  }
+}

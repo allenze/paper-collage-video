@@ -9,11 +9,14 @@ import {
   mergeReviewDocument,
   PRODUCTION_STAGES,
   renderReviewSection,
+  resolveAssetsReadyMode,
   summarizeResumeState,
   transitionProduction,
+  transitionDirectingRevision,
   transitionRender,
   transitionWorkItem,
 } from '../scripts/production-state.mjs';
+import {assertAssetsReadySealCurrent} from '../scripts/assets-ready-seal-lib.mjs';
 
 const approval = (status = 'pending', note = '') => ({
   status,
@@ -42,6 +45,7 @@ const makeState = (stage) => ({
     prompts: 'projects/test-film/prompts.json',
     review: 'projects/test-film/review.md',
     validationReport: null,
+    assetsReadySeal: null,
     preview: null,
     final: null,
     report: null,
@@ -159,6 +163,83 @@ test('resume summaries omit completed history and expose one handoff decision', 
     summarizeResumeState(state).control.nextCommand,
     'npm run project:assets-ready -- test-film',
   );
+});
+
+test('assets-ready advances once and becomes an idempotent preview recheck', () => {
+  assert.equal(resolveAssetsReadyMode('asset-production'), 'advance');
+  assert.equal(resolveAssetsReadyMode('preview'), 'recheck');
+  assert.equal(resolveAssetsReadyMode('human-review'), 'recheck');
+  assert.throws(() => resolveAssetsReadyMode('style-review'), /只能在/);
+});
+
+test('assets-ready seal is recorded and invalidated with preview revisions', () => {
+  const ready = transitionProduction(makeState('asset-production'), 'assets-ready', {
+    artifacts: {
+      validationReport: 'dist/test-film/validation-report.json',
+      assetsReadySeal: 'dist/test-film/assets-ready-seal.json',
+    },
+  });
+  assert.equal(ready.stage, 'preview');
+  assert.equal(
+    ready.artifacts.assetsReadySeal,
+    'dist/test-film/assets-ready-seal.json',
+  );
+  ready.stage = 'human-review';
+  ready.artifacts.preview = 'dist/test-film/preview.mp4';
+  const revised = transitionProduction(ready, 'request-preview-revision', {
+    note: '字幕位置需要调整',
+  });
+  assert.equal(revised.stage, 'asset-production');
+  assert.equal(revised.artifacts.assetsReadySeal, null);
+  assert.equal(revised.artifacts.preview, null);
+  assert.equal(revised.artifacts.report, null);
+});
+
+test('assets-ready cannot be asserted without the canonical seal', async () => {
+  await assert.rejects(
+    () => assertAssetsReadySealCurrent(`missing-seal-${process.pid}`),
+    /必须运行 project:assets-ready/,
+  );
+});
+
+test('directing revision is a gated preview-return transition', () => {
+  const current = makeState('asset-production');
+  current.approvals.preview = approval('changes-requested', '节奏需调整');
+  current.history.push({
+    at: '2026-07-23T00:00:00.000Z',
+    action: 'request-preview-revision',
+    stage: 'asset-production',
+    note: '节奏需调整',
+  });
+  current.artifacts.preview = 'dist/test-film/preview.mp4';
+  const next = transitionDirectingRevision(current, {
+    changedSceneIds: ['scene-01'],
+    reportPath: 'projects/test-film/directing-revision.json',
+    at: '2026-07-23T01:00:00.000Z',
+  });
+  assert.equal(next.stage, 'asset-production');
+  assert.equal(next.artifacts.preview, null);
+  assert.equal(next.approvals.concept.status, 'approved');
+  assert.equal(next.history.at(-1).action, 'revise-preview-directing');
+  assert.throws(() => transitionDirectingRevision(makeState('asset-production'), {
+    changedSceneIds: ['scene-01'],
+    reportPath: 'projects/test-film/directing-revision.json',
+  }), /只能响应已记录/);
+});
+
+test('directing revision can correct execution topology during style review without fabricating style approval', () => {
+  const current = makeState('style-review');
+  current.approvals.concept = approval('approved', '概念已确认');
+  current.approvals.styleAndVoice = approval('pending');
+  const next = transitionDirectingRevision(current, {
+    source: 'style-review',
+    changedSceneIds: ['scene-01'],
+    reportPath: 'projects/test-film/directing-revision.json',
+    at: '2026-07-25T01:00:00.000Z',
+  });
+  assert.equal(next.stage, 'style-review');
+  assert.equal(next.approvals.styleAndVoice.status, 'pending');
+  assert.equal(next.history.at(-1).note.startsWith('style-review'), true);
 });
 
 test('a successful final render completes local delivery without publication approval', () => {

@@ -1,3 +1,5 @@
+import {TIMING_CONTINUITY_THRESHOLDS} from './timeline-continuity-lib.mjs';
+
 export const CREATIVE_PLAN_MODES = [
   'none',
   'duration-only',
@@ -6,6 +8,53 @@ export const CREATIVE_PLAN_MODES = [
 ];
 
 export const PRODUCTION_PROFILES = ['draft', 'balanced', 'full-depth'];
+
+export const PRODUCTION_PROFILE_DEFINITIONS = {
+  draft: {
+    label: '轻量成片',
+    summary: '以零成本本地运动为主；只为无法用变换表达的必要语义动作生成状态。',
+    finalImpact: '不是静态幻灯片：角色和镜头仍会移动、呼吸、渐显与转场，但动作细节和景深更克制。',
+  },
+  balanced: {
+    label: '均衡动画',
+    summary: '本地运动与关键状态序列结合；主要动作通常使用 2–4 格状态，并选择性分层。',
+    finalImpact: '主要动作真正发生变化，关键镜头具备前中后景、视差和适量环境生命。',
+  },
+  'full-depth': {
+    label: '完整纵深',
+    summary: '更完整的动作家族、4–6 格关键状态、丰富层次、视差、循环世界和环境生命。',
+    finalImpact: '角色动作更细，空间更深，天气与环境元素更丰富；只增加服务叙事的细节。',
+  },
+};
+
+export const deriveMotionBudget = (productionProfile, sceneCount) => {
+  if (!PRODUCTION_PROFILES.includes(productionProfile)) {
+    throw new Error(`productionProfile 必须是：${PRODUCTION_PROFILES.join(', ')}。`);
+  }
+  if (!Number.isInteger(sceneCount) || sceneCount < 1) {
+    throw new Error('sceneCount 必须是正整数。');
+  }
+  return {
+    maxPoseSheetCalls: {
+      draft: Math.max(1, Math.ceil(sceneCount / 4)),
+      balanced: Math.max(1, Math.ceil(sceneCount / 2)),
+      // A single continuous shot can still contain two independently animated
+      // hero identities. Do not make authors collapse them into one unrelated
+      // state sheet merely because the film has one scene.
+      'full-depth': Math.max(2, sceneCount),
+    }[productionProfile],
+    maxStatesPerSheet: {
+      draft: 4,
+      balanced: 4,
+      'full-depth': 6,
+    }[productionProfile],
+    maxContinuousTargets: {
+      draft: sceneCount * 2,
+      balanced: sceneCount * 4,
+      'full-depth': sceneCount * 6,
+    }[productionProfile],
+  };
+};
 
 export const deriveAssetBudget = (productionProfile, sceneCount) => {
   if (!PRODUCTION_PROFILES.includes(productionProfile)) {
@@ -21,23 +70,129 @@ export const deriveAssetBudget = (productionProfile, sceneCount) => {
     balanced: Math.min(4, Math.ceil((sceneCount * 2) / 3)),
     'full-depth': sceneCount * 2,
   }[productionProfile];
-  const characterSheets = {
-    draft: Math.max(1, Math.ceil(sceneCount / 5)),
-    balanced: Math.max(1, Math.ceil(sceneCount / 3)),
-    'full-depth': Math.max(1, Math.ceil((sceneCount * 2) / 3)),
-  }[productionProfile];
+  const characterSheets = deriveMotionBudget(
+    productionProfile,
+    sceneCount,
+  ).maxPoseSheetCalls;
   const budget = {
     backgrounds: sceneCount,
     environmentLayers,
     characterSheets,
     styleSamples: 1,
   };
+  const baseImageAttempts = Object.values(budget).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+  const layerPackageAttemptReserve =
+    {
+      draft: 2,
+      balanced: 4,
+      'full-depth': 6,
+    }[productionProfile] * sceneCount;
   return {
     ...budget,
-    maxGeneratedImages: Object.values(budget).reduce(
-      (sum, count) => sum + count,
-      0,
-    ),
+    baseImageAttempts,
+    layerPackageAttemptReserve,
+    maxGeneratedImages:
+      baseImageAttempts + layerPackageAttemptReserve,
+  };
+};
+
+export const summarizeProductionProfiles = (sceneCount) =>
+  PRODUCTION_PROFILES.map((id) => ({
+    id,
+    ...PRODUCTION_PROFILE_DEFINITIONS[id],
+    assetBudget: deriveAssetBudget(id, sceneCount),
+    motionBudget: deriveMotionBudget(id, sceneCount),
+  }));
+
+export const deriveDurationAuthority = (plan) =>
+  plan?.requested?.durationSeconds == null ? 'content-derived' : 'human-target';
+
+export const summarizeConceptDecision = (plan) => {
+  assertCreativePlanReady(plan, {slug: plan?.slug ?? null});
+  return {
+    productionProfile: plan.productionProfile,
+    durationSeconds: plan.resolved.durationSeconds,
+    sceneCount: plan.resolved.sceneCount,
+    durationAuthority: deriveDurationAuthority(plan),
+    assetBudget: plan.assetBudget,
+    motionBudget: plan.motionBudget,
+    approvedImageBudget: plan.approvedImageBudget,
+    storyScope: plan.storyScope ?? null,
+    scenarioBinding: plan.scenarioBinding ?? null,
+    profilePromise: plan.profilePromise ?? null,
+    profileOptions: summarizeProductionProfiles(plan.resolved.sceneCount),
+  };
+};
+
+export const assertConfirmedPlanDecision = (decision, plan) => {
+  if (!decision || typeof decision !== 'object' || Array.isArray(decision)) {
+    throw new Error(
+      '确认文件必须包含 planDecision，记录批准的 productionProfile、durationSeconds、sceneCount 和 durationAuthority。',
+    );
+  }
+  const expected = summarizeConceptDecision(plan);
+  for (const key of [
+    'productionProfile',
+    'durationSeconds',
+    'sceneCount',
+    'durationAuthority',
+  ]) {
+    if (decision[key] !== expected[key]) {
+      throw new Error(
+        `planDecision.${key} 必须与当前计划一致：expected ${expected[key]}, received ${decision[key] ?? 'missing'}。`,
+      );
+    }
+  }
+  return expected;
+};
+
+export const assertApprovedImageBudgetDecision = (
+  decision,
+  plan,
+  directingSummary,
+  {at = new Date().toISOString()} = {},
+) => {
+  if (!decision || typeof decision !== 'object' || Array.isArray(decision)) {
+    throw new Error(
+      '确认文件必须包含 budgetDecision，记录人批准的 imageAttemptLimit。',
+    );
+  }
+  const imageAttemptLimit = decision.imageAttemptLimit;
+  if (!Number.isInteger(imageAttemptLimit) || imageAttemptLimit < 0) {
+    throw new Error('budgetDecision.imageAttemptLimit 必须是非负整数。');
+  }
+  const storyboardProviderImageCalls =
+    directingSummary?.generationBudget?.expectedProviderImageCalls ?? 0;
+  const expectedProviderImageCalls =
+    plan?.scenarioBinding?.expectedProviderImageCalls ??
+    storyboardProviderImageCalls;
+  if (storyboardProviderImageCalls > expectedProviderImageCalls) {
+    throw new Error(
+      `当前 storyboard 的结构化素材预计 ${storyboardProviderImageCalls} 次图片调用，超过所选 scenario 的全片预计 ${expectedProviderImageCalls} 次；请重新规划并审批。`,
+    );
+  }
+  const profileHardCeiling = plan?.assetBudget?.maxGeneratedImages;
+  if (!Number.isInteger(profileHardCeiling) || profileHardCeiling < 0) {
+    throw new Error('当前 Creative Plan 缺少有效的图片 profile hard ceiling。');
+  }
+  if (imageAttemptLimit < expectedProviderImageCalls) {
+    throw new Error(
+      `批准的图片尝试上限 ${imageAttemptLimit} 低于当前 storyboard 预计需要的 ${expectedProviderImageCalls} 次；请缩小范围或提高上限。`,
+    );
+  }
+  if (imageAttemptLimit > profileHardCeiling) {
+    throw new Error(
+      `批准的图片尝试上限 ${imageAttemptLimit} 超过 ${plan.productionProfile} profile hard ceiling ${profileHardCeiling}；请提高档位或降低上限。`,
+    );
+  }
+  return {
+    imageAttemptLimit,
+    expectedProviderImageCalls,
+    profileHardCeiling,
+    approvedAt: at,
   };
 };
 
@@ -45,6 +200,9 @@ const isPositiveNumber = (value) =>
   typeof value === 'number' && Number.isFinite(value) && value > 0;
 
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
+
+const isNonNegativeInteger = (value) =>
+  Number.isInteger(value) && value >= 0;
 
 const isDateTime = (value) =>
   typeof value === 'string' && Number.isFinite(Date.parse(value));
@@ -64,8 +222,8 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!plan || typeof plan !== 'object' || Array.isArray(plan)) {
     return [{code: 'plan-missing', message: '缺少创作规格计划。', location: 'plan'}];
   }
-  if (plan.schemaVersion !== 1) {
-    add('plan-schema-version', 'plan.schemaVersion 必须为 1。', 'plan.schemaVersion');
+  if (plan.schemaVersion !== 4) {
+    add('plan-schema-version', 'plan.schemaVersion 必须为 4。', 'plan.schemaVersion');
   }
   if (slug && plan.slug !== slug) {
     add('plan-slug', `plan.slug 必须为 ${slug}。`, 'plan.slug');
@@ -73,10 +231,7 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!['pending', 'resolved'].includes(plan.status)) {
     add('plan-status', 'plan.status 必须为 pending 或 resolved。', 'plan.status');
   }
-  if (
-    plan.productionProfile !== undefined &&
-    !PRODUCTION_PROFILES.includes(plan.productionProfile)
-  ) {
+  if (!PRODUCTION_PROFILES.includes(plan.productionProfile)) {
     add(
       'plan-production-profile',
       `plan.productionProfile 必须是 ${PRODUCTION_PROFILES.join(', ')}。`,
@@ -113,10 +268,70 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!isDateTime(plan.updatedAt)) {
     add('plan-updated-at', 'plan.updatedAt 必须是有效时间。', 'plan.updatedAt');
   }
+  if (plan.approvedImageBudget !== null) {
+    const approval = plan.approvedImageBudget;
+    if (!approval || typeof approval !== 'object' || Array.isArray(approval)) {
+      add(
+        'plan-approved-image-budget',
+        'approvedImageBudget 必须是对象或 null。',
+        'plan.approvedImageBudget',
+      );
+    } else {
+      if (!isNonNegativeInteger(approval.imageAttemptLimit)) {
+        add(
+          'plan-approved-image-attempt-limit',
+          '批准的图片尝试上限必须是非负整数。',
+          'plan.approvedImageBudget.imageAttemptLimit',
+        );
+      }
+      if (!isNonNegativeInteger(approval.expectedProviderImageCalls)) {
+        add(
+          'plan-approved-image-expected-calls',
+          '批准记录中的预计图片调用必须是非负整数。',
+          'plan.approvedImageBudget.expectedProviderImageCalls',
+        );
+      }
+      if (!isNonNegativeInteger(approval.profileHardCeiling)) {
+        add(
+          'plan-approved-image-profile-ceiling',
+          '批准记录中的 profile hard ceiling 必须是非负整数。',
+          'plan.approvedImageBudget.profileHardCeiling',
+        );
+      }
+      if (!isDateTime(approval.approvedAt)) {
+        add(
+          'plan-approved-image-at',
+          '批准记录必须包含有效 approvedAt。',
+          'plan.approvedImageBudget.approvedAt',
+        );
+      }
+      if (
+        isNonNegativeInteger(approval.imageAttemptLimit) &&
+        isNonNegativeInteger(approval.expectedProviderImageCalls) &&
+        approval.imageAttemptLimit < approval.expectedProviderImageCalls
+      ) {
+        add(
+          'plan-approved-image-below-expected',
+          '批准的图片尝试上限不能低于审批时的预计 provider 图片调用。',
+          'plan.approvedImageBudget',
+        );
+      }
+    }
+  }
 
   if (plan.status === 'pending') {
     if (plan.resolved !== null) {
       add('plan-pending-resolution', 'pending 计划的 resolved 必须为 null。', 'plan.resolved');
+    }
+    if (plan.assetBudget !== null || plan.motionBudget !== null) {
+      add('plan-pending-budgets', 'pending 计划的 assetBudget 与 motionBudget 必须为 null。', 'plan');
+    }
+    if (plan.approvedImageBudget !== null) {
+      add(
+        'plan-pending-approved-image-budget',
+        'pending 计划不能包含已批准图片预算。',
+        'plan.approvedImageBudget',
+      );
     }
     return issues;
   }
@@ -159,7 +374,9 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!isDateTime(resolved.resolvedAt)) {
     add('plan-resolved-at', 'plan.resolved.resolvedAt 必须是有效时间。', 'plan.resolved.resolvedAt');
   }
-  if (plan.assetBudget !== undefined) {
+  if (!plan.assetBudget || typeof plan.assetBudget !== 'object') {
+    add('plan-asset-budget-required', 'resolved 计划必须包含 assetBudget。', 'plan.assetBudget');
+  } else {
     let expectedBudget = null;
     try {
       expectedBudget = deriveAssetBudget(
@@ -179,6 +396,209 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
         'plan.assetBudget',
       );
     }
+    if (
+      plan.approvedImageBudget &&
+      expectedBudget &&
+      plan.approvedImageBudget.profileHardCeiling !==
+        expectedBudget.maxGeneratedImages
+    ) {
+      add(
+        'plan-approved-image-ceiling-drift',
+        '批准记录中的 profile hard ceiling 已与当前制作档位漂移；请重新进行概念与预算审批。',
+        'plan.approvedImageBudget.profileHardCeiling',
+      );
+    }
+    if (
+      plan.approvedImageBudget &&
+      plan.scenarioBinding &&
+      (
+        plan.approvedImageBudget.expectedProviderImageCalls !==
+          plan.scenarioBinding.expectedProviderImageCalls ||
+        plan.approvedImageBudget.imageAttemptLimit !==
+          plan.scenarioBinding.proposedImageAttemptLimit
+      )
+    ) {
+      add(
+        'plan-approved-scenario-budget-drift',
+        '批准预算必须与人工选择的 scenario expected calls 和 proposed cap 一致。',
+        'plan.approvedImageBudget',
+      );
+    }
+    if (
+      plan.approvedImageBudget &&
+      expectedBudget &&
+      plan.approvedImageBudget.imageAttemptLimit >
+        expectedBudget.maxGeneratedImages
+    ) {
+      add(
+        'plan-approved-image-over-profile',
+        '批准的图片尝试上限不能超过当前制作档位 hard ceiling。',
+        'plan.approvedImageBudget.imageAttemptLimit',
+      );
+    }
+  }
+  if (!plan.motionBudget || typeof plan.motionBudget !== 'object') {
+    add('plan-motion-budget-required', 'resolved 计划必须包含 motionBudget。', 'plan.motionBudget');
+  } else {
+    let expectedBudget = null;
+    try {
+      expectedBudget = deriveMotionBudget(
+        plan.productionProfile ?? 'balanced',
+        resolved.sceneCount,
+      );
+    } catch {
+      // The profile/scene issue is reported separately.
+    }
+    if (
+      expectedBudget &&
+      JSON.stringify(plan.motionBudget) !== JSON.stringify(expectedBudget)
+    ) {
+      add(
+        'plan-motion-budget',
+        'plan.motionBudget 必须与 productionProfile 和幕数匹配。',
+        'plan.motionBudget',
+      );
+    }
+  }
+  if (
+    plan.storyScope !== undefined &&
+    !['concise', 'standard', 'expanded'].includes(plan.storyScope)
+  ) {
+    add(
+      'plan-story-scope',
+      'plan.storyScope 必须是 concise、standard 或 expanded。',
+      'plan.storyScope',
+    );
+  }
+  if (plan.scenarioBinding !== undefined) {
+    const binding = plan.scenarioBinding;
+    const expectedScope = {
+      draft: 'concise',
+      balanced: 'standard',
+      'full-depth': 'expanded',
+    }[plan.productionProfile];
+    if (plan.storyScope !== expectedScope) {
+      add(
+        'plan-scenario-story-scope',
+        `scenario-bound ${plan.productionProfile} 计划的 storyScope 必须为 ${expectedScope}。`,
+        'plan.storyScope',
+      );
+    }
+    if (binding.optionId !== plan.productionProfile) {
+      add(
+        'plan-scenario-profile',
+        'scenarioBinding.optionId 必须与 productionProfile 一致。',
+        'plan.scenarioBinding.optionId',
+      );
+    }
+    for (const key of ['scenarioSetFingerprint', 'optionFingerprint']) {
+      if (!/^[a-f0-9]{64}$/.test(binding[key] ?? '')) {
+        add(
+          'plan-scenario-fingerprint',
+          `scenarioBinding.${key} 必须是 sha256。`,
+          `plan.scenarioBinding.${key}`,
+        );
+      }
+    }
+    if (!isPositiveInteger(binding.expectedProviderImageCalls)) {
+      add(
+        'plan-scenario-expected-calls',
+        'scenarioBinding.expectedProviderImageCalls 必须是正整数。',
+        'plan.scenarioBinding.expectedProviderImageCalls',
+      );
+    }
+    if (
+      !isPositiveInteger(binding.proposedImageAttemptLimit) ||
+      binding.proposedImageAttemptLimit < binding.expectedProviderImageCalls ||
+      binding.proposedImageAttemptLimit > plan.assetBudget?.maxGeneratedImages
+    ) {
+      add(
+        'plan-scenario-proposed-cap',
+        'scenario proposed cap 必须覆盖预计调用且不超过 profile hard ceiling。',
+        'plan.scenarioBinding.proposedImageAttemptLimit',
+      );
+    }
+    if (!isDateTime(binding.selectedAt)) {
+      add(
+        'plan-scenario-selected-at',
+        'scenarioBinding.selectedAt 必须是有效时间。',
+        'plan.scenarioBinding.selectedAt',
+      );
+    }
+    const promise = plan.profilePromise;
+    const promiseKeys = [
+      'minRequiredStateFamilies',
+      'minEnhancementStateFamilies',
+      'minTotalStates',
+      'minLocalMotionTargets',
+      'minLayeredScenes',
+      'minParallaxScenes',
+      'minAmbientScenes',
+    ];
+    if (
+      !promise ||
+      promiseKeys.some((key) => !isNonNegativeInteger(promise[key]))
+    ) {
+      add(
+        'plan-profile-promise',
+        'scenario-bound 计划必须包含完整的非负 profilePromise。',
+        'plan.profilePromise',
+      );
+    }
+    const revision = plan.profilePromiseRevision;
+    if (revision !== undefined) {
+      const immutableKeys = [
+        'minRequiredStateFamilies',
+        'minEnhancementStateFamilies',
+        'minTotalStates',
+        'minLayeredScenes',
+      ];
+      const reducibleKeys = [
+        'minLocalMotionTargets',
+        'minParallaxScenes',
+        'minAmbientScenes',
+      ];
+      if (
+        !revision ||
+        typeof revision !== 'object' ||
+        !revision.authorizationId ||
+        !/^[a-f0-9]{64}$/.test(revision.authorizationFingerprint ?? '') ||
+        !Array.isArray(revision.lockedSceneIds) ||
+        revision.lockedSceneIds.length < 1 ||
+        new Set(revision.lockedSceneIds).size !== revision.lockedSceneIds.length ||
+        !Array.isArray(revision.equivalentQualityEvidence) ||
+        revision.equivalentQualityEvidence.length < 1 ||
+        !isDateTime(revision.decidedAt) ||
+        promiseKeys.some(
+          (key) =>
+            !isNonNegativeInteger(revision.original?.[key]) ||
+            !isNonNegativeInteger(revision.recalculated?.[key]),
+        ) ||
+        immutableKeys.some(
+          (key) => revision.recalculated[key] !== revision.original[key],
+        ) ||
+        reducibleKeys.some(
+          (key) => revision.recalculated[key] > revision.original[key],
+        ) ||
+        JSON.stringify(promise) !== JSON.stringify(revision.recalculated)
+      ) {
+        add(
+          'plan-profile-promise-revision',
+          'profilePromiseRevision 必须绑定人工授权、locked-static 镜头、等价质量说明，并且只能下调局部动效/视差/环境动效下限。',
+          'plan.profilePromiseRevision',
+        );
+      }
+    }
+  } else if (
+    plan.storyScope !== undefined ||
+    plan.profilePromise !== undefined ||
+    plan.profilePromiseRevision !== undefined
+  ) {
+    add(
+      'plan-scenario-fields-without-binding',
+      'storyScope 与 profilePromise 只能随 scenarioBinding 一起出现。',
+      'plan',
+    );
   }
   if (
     isPositiveNumber(requestedDuration) &&
@@ -227,7 +647,7 @@ export const buildCreativePlan = ({
     sceneCount: requestedSceneCount,
   };
   const plan = {
-    schemaVersion: 1,
+    schemaVersion: 4,
     slug,
     status: 'resolved',
     inputMode: deriveCreativePlanMode(requested),
@@ -241,6 +661,8 @@ export const buildCreativePlan = ({
       resolvedAt: at,
     },
     assetBudget: deriveAssetBudget(productionProfile, sceneCount),
+    motionBudget: deriveMotionBudget(productionProfile, sceneCount),
+    approvedImageBudget: null,
     updatedAt: at,
   };
   assertCreativePlanReady(plan, {slug});
@@ -261,16 +683,29 @@ export const assessCreativePlanTimeline = (plan, timeline) => {
     });
   }
   const actualDuration = Number(timeline?.durationSeconds ?? 0);
-  const durationDrift = Math.abs(actualDuration - target.durationSeconds);
-  const tolerance = Math.max(2, target.durationSeconds * 0.1);
-  if (durationDrift > tolerance) {
-    const durationWasExplicit = plan.requested?.durationSeconds != null;
-    issues.push({
-      level: durationWasExplicit ? 'error' : 'warning',
-      code: 'plan-duration-drift',
-      message: `${durationWasExplicit ? '用户指定' : 'Skill 推导'}约 ${target.durationSeconds}s，时间线实际 ${actualDuration.toFixed(3)}s；偏差超过 ${tolerance.toFixed(1)}s。`,
-      location: 'plan.resolved.durationSeconds',
-    });
+  const durationWasExplicit = plan.requested?.durationSeconds != null;
+  if (durationWasExplicit) {
+    const tolerance = Math.max(
+      TIMING_CONTINUITY_THRESHOLDS.explicitDurationToleranceSeconds,
+      target.durationSeconds *
+        TIMING_CONTINUITY_THRESHOLDS.explicitDurationToleranceRatio,
+    );
+    const durationDrift = actualDuration - target.durationSeconds;
+    if (durationDrift < -tolerance) {
+      issues.push({
+        level: 'error',
+        code: 'duration-content-deficit',
+        message: `用户指定 ${target.durationSeconds}s，但实测内容时间线只有 ${actualDuration.toFixed(3)}s；缺少 ${Math.abs(durationDrift).toFixed(3)}s。请增加旁白或有效动作、缩短目标时长，不要用静止尾帧补足。`,
+        location: 'plan.resolved.durationSeconds',
+      });
+    } else if (durationDrift > tolerance) {
+      issues.push({
+        level: 'error',
+        code: 'plan-duration-drift',
+        message: `用户指定 ${target.durationSeconds}s，时间线实际 ${actualDuration.toFixed(3)}s；超出 ${tolerance.toFixed(1)}s 的交付容差。`,
+        location: 'plan.resolved.durationSeconds',
+      });
+    }
   }
   return issues;
 };

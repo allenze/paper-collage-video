@@ -32,6 +32,7 @@
       "required": ["id", "checks", "shots"],
       "properties": {
         "id": {"$ref": "#/$defs/id"},
+        "scope": {"enum": ["asset", "composite"]},
         "checks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
         "shots": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/shot"}}
       },

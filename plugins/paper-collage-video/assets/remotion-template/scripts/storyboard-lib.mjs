@@ -1,6 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {
+  COMPOSITION_PATTERNS,
+  RELATIONSHIP_PREDICATES,
+  compileStoryboardDirecting,
+  validateCompiledDirecting,
+} from './motion-treatment-lib.mjs';
+import {validateSceneTransitionSequence} from '../src/sceneTimeline.mjs';
+import {validateCompiledEditorial} from './editorial-system-lib.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -18,16 +26,7 @@ export const STORY_BLUEPRINTS = [
 ];
 
 export const PROOF_KINDS = ['establish', 'action', 'peak', 'final'];
-export const COMPOSITION_PATTERNS = ['free', 'supported-subject', 'registered-environment'];
-export const RELATIONSHIP_PREDICATES = [
-  'free',
-  'inside',
-  'on',
-  'held-by',
-  'worn-by',
-  'above-boundary',
-  'below-boundary',
-];
+export {COMPOSITION_PATTERNS, RELATIONSHIP_PREDICATES, compileStoryboardDirecting};
 
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 const normalizedTime = (value) =>
@@ -41,8 +40,8 @@ export const storyboardFileFor = (slug) => {
 export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 1) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 1。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 10) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 10。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -51,6 +50,15 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
     add('storyboard-status', 'storyboard.status 必须为 pending 或 ready。', 'status');
   }
   if (storyboard?.status !== 'ready') return issues;
+
+  for (const editorialIssue of validateCompiledEditorial({
+    editorial: storyboard.editorial,
+    scenes: storyboard.scenes ?? [],
+    sceneTransitions: storyboard.sceneTransitions ?? [],
+    fps: storyboard.editorial?.timebase?.fps,
+  })) {
+    add(editorialIssue.code, editorialIssue.message, editorialIssue.location);
+  }
 
   if (!nonEmpty(storyboard.arc)) add('storyboard-arc', '故事板必须写明全片叙事弧。', 'arc');
   const style = storyboard.style;
@@ -78,6 +86,12 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       `故事板需要 ${plan.resolved?.sceneCount} 个镜头，当前为 ${scenes.length} 个。`,
       'scenes',
     );
+  }
+  for (const issue of validateSceneTransitionSequence({
+    scenes,
+    sceneTransitions: storyboard.sceneTransitions,
+  })) {
+    add(`storyboard-${issue.code}`, issue.message, issue.location);
   }
   const sceneIds = new Set();
   let estimatedDuration = 0;
@@ -109,8 +123,8 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       ) {
         add('storyboard-composition-pattern', 'compositionPlan.patterns 必须使用受支持的组合模式。', `${location}.compositionPlan.patterns`);
       }
-      if (!Array.isArray(compositionPlan.relationships) || compositionPlan.relationships.length === 0) {
-        add('storyboard-composition-relationships', 'compositionPlan.relationships 至少需要一项。', `${location}.compositionPlan.relationships`);
+      if (!Array.isArray(compositionPlan.relationships)) {
+        add('storyboard-composition-relationships', 'compositionPlan.relationships 必须是数组。', `${location}.compositionPlan.relationships`);
       }
       const relationshipIds = new Set();
       for (const [relationshipIndex, relationship] of (compositionPlan.relationships ?? []).entries()) {
@@ -127,18 +141,78 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         }
         const requiredPattern = ['inside', 'on', 'held-by', 'worn-by'].includes(relationship.predicate)
           ? 'supported-subject'
-          : ['above-boundary', 'below-boundary'].includes(relationship.predicate)
-            ? 'registered-environment'
-            : 'free';
+          : 'registered-environment';
         if (!(compositionPlan.patterns ?? []).includes(requiredPattern)) {
           add('storyboard-relationship-pattern', `关系 ${relationship.id} 必须声明模式 ${requiredPattern}。`, `${location}.compositionPlan.patterns`);
         }
+      }
+      if (!Array.isArray(compositionPlan.stateSequences)) {
+        add('storyboard-state-sequences', 'compositionPlan.stateSequences 必须是数组。', `${location}.compositionPlan.stateSequences`);
+      }
+      const sequenceIds = new Set();
+      for (const [sequenceIndex, sequence] of (compositionPlan.stateSequences ?? []).entries()) {
+        const sequenceLocation = `${location}.compositionPlan.stateSequences[${sequenceIndex}]`;
+        if (!nonEmpty(sequence.nodeId) || sequenceIds.has(sequence.nodeId)) add('storyboard-sequence-node-id', '状态序列 nodeId 缺失或重复。', `${sequenceLocation}.nodeId`);
+        sequenceIds.add(sequence.nodeId);
+        if (!nonEmpty(sequence.poseFamilyId)) add('storyboard-sequence-family', '状态序列必须声明 poseFamilyId。', `${sequenceLocation}.poseFamilyId`);
+        const playback = sequence.playback;
+        if (!['once', 'loop', 'ping-pong'].includes(playback?.mode) || !(Number.isInteger(playback?.cycles) && playback.cycles > 0)) {
+          add('storyboard-sequence-playback', '状态序列 playback 必须声明有效 mode 与正整数 cycles。', `${sequenceLocation}.playback`);
+        }
+        if (playback?.mode === 'once' && playback.cycles !== 1) add('storyboard-sequence-once-cycles', 'once playback 的 cycles 必须为 1。', `${sequenceLocation}.playback.cycles`);
+        if (playback?.activeFrom !== undefined && !(normalizedTime(playback.activeFrom) && playback.activeFrom > 0 && playback.activeFrom < 1)) add('storyboard-sequence-active-from', 'activeFrom 必须位于 0..1 之间。', `${sequenceLocation}.playback.activeFrom`);
+        if ((playback?.activeUntil === undefined) !== (playback?.holdStateId === undefined)) add('storyboard-sequence-hold-window', 'activeUntil 与 holdStateId 必须同时声明。', `${sequenceLocation}.playback`);
+        if (playback?.activeUntil !== undefined && !(normalizedTime(playback.activeUntil) && playback.activeUntil > 0 && playback.activeUntil < 1)) add('storyboard-sequence-active-until', 'activeUntil 必须位于 0..1 之间。', `${sequenceLocation}.playback.activeUntil`);
+        if (playback?.activeFrom !== undefined && playback?.activeUntil !== undefined && playback.activeFrom >= playback.activeUntil) add('storyboard-sequence-active-window', 'activeFrom 必须早于 activeUntil。', `${sequenceLocation}.playback`);
+        if (playback?.activeStateIds !== undefined && (
+          playback.activeFrom === undefined ||
+          !Array.isArray(playback.activeStateIds) ||
+          playback.activeStateIds.length < 2 ||
+          new Set(playback.activeStateIds).size !== playback.activeStateIds.length
+        )) add('storyboard-sequence-active-states', 'activeStateIds 需要 activeFrom 和至少两个不重复状态。', `${sequenceLocation}.playback.activeStateIds`);
+        if (!['cut', 'crossfade'].includes(sequence.transition)) add('storyboard-sequence-transition', '状态序列 transition 无效。', `${sequenceLocation}.transition`);
+        const stateIds = new Set();
+        let previousStateAt = -1;
+        if (!Array.isArray(sequence.states) || sequence.states.length < 2) add('storyboard-sequence-states', '状态序列至少需要两个状态。', `${sequenceLocation}.states`);
+        for (const [stateIndex, state] of (sequence.states ?? []).entries()) {
+          const stateLocation = `${sequenceLocation}.states[${stateIndex}]`;
+          if (!nonEmpty(state.id) || stateIds.has(state.id)) add('storyboard-sequence-state-id', '状态 id 缺失或重复。', `${stateLocation}.id`);
+          stateIds.add(state.id);
+          if (!normalizedTime(state.at) || state.at <= previousStateAt) add('storyboard-sequence-state-at', '状态 at 必须位于 0..1 且严格递增。', `${stateLocation}.at`);
+          previousStateAt = state.at;
+          if (!nonEmpty(state.visualChange)) add('storyboard-sequence-visual-change', '状态必须描述可见变化。', `${stateLocation}.visualChange`);
+        }
+        if (sequence.states?.[0]?.at !== 0) add('storyboard-sequence-start', '状态序列必须从 at=0 开始。', `${sequenceLocation}.states[0].at`);
+        if (playback?.holdStateId !== undefined && !stateIds.has(playback.holdStateId)) add('storyboard-sequence-hold-state', 'holdStateId 必须引用一个已声明状态。', `${sequenceLocation}.playback.holdStateId`);
+        if (playback?.activeStateIds !== undefined) {
+          const stateIndex = new Map((sequence.states ?? []).map(({id}, index) => [id, index]));
+          for (const id of playback.activeStateIds) {
+            if (!stateIds.has(id)) add('storyboard-sequence-active-state', `activeStateIds 引用了未知状态 ${id}。`, `${sequenceLocation}.playback.activeStateIds`);
+          }
+          for (let index = 1; index < playback.activeStateIds.length; index += 1) {
+            if (stateIndex.get(playback.activeStateIds[index - 1]) >= stateIndex.get(playback.activeStateIds[index])) add('storyboard-sequence-active-order', 'activeStateIds 必须与 states 的顺序一致。', `${sequenceLocation}.playback.activeStateIds`);
+          }
+          const activeIds = new Set(playback.activeStateIds);
+          for (const state of sequence.states ?? []) {
+            if (!activeIds.has(state.id) && state.id !== playback.holdStateId && state.at >= playback.activeFrom) add('storyboard-sequence-prelude-state', `前置状态 ${state.id} 必须早于 activeFrom。`, `${sequenceLocation}.states`);
+          }
+        }
+      }
+      if (!Array.isArray(compositionPlan.continuousMotions)) {
+        add('storyboard-continuous-motions', 'compositionPlan.continuousMotions 必须是数组。', `${location}.compositionPlan.continuousMotions`);
+      }
+      if (!Array.isArray(compositionPlan.visibilityEvents)) {
+        add('storyboard-visibility-events', 'compositionPlan.visibilityEvents 必须是数组。', `${location}.compositionPlan.visibilityEvents`);
+      }
+      if (!Array.isArray(compositionPlan.graphics)) {
+        add('storyboard-graphics', 'compositionPlan.graphics 必须是数组。', `${location}.compositionPlan.graphics`);
       }
     }
     if (!Array.isArray(scene.beats) || scene.beats.length < 3) {
       add('storyboard-beats', '每个镜头至少需要 3 个节拍。', `${location}.beats`);
     }
     const beatIds = new Set();
+    const beatEvidenceBindings = [];
     let previousBeat = -1;
     for (const [beatIndex, beat] of (scene.beats ?? []).entries()) {
       const beatLocation = `${location}.beats[${beatIndex}]`;
@@ -148,11 +222,26 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         add('storyboard-beat-time', '节拍 at 必须位于 0..1 且严格递增。', `${beatLocation}.at`);
       }
       previousBeat = beat.at;
-      for (const key of ['purpose', 'visual', 'motion']) {
+      for (const key of ['purpose', 'visual']) {
         if (!nonEmpty(beat[key])) add(`storyboard-beat-${key}`, `${key} 不能为空。`, `${beatLocation}.${key}`);
+      }
+      if (!Array.isArray(beat.treatments) || beat.treatments.length === 0) {
+        add('storyboard-beat-treatments', '每个节拍至少需要一个导演 treatment。', `${beatLocation}.treatments`);
       }
       if (beat.audioCue !== null && beat.audioCue !== undefined && !nonEmpty(beat.audioCue)) {
         add('storyboard-beat-audio', 'audioCue 必须为非空字符串或 null。', `${beatLocation}.audioCue`);
+      }
+      if (!Object.hasOwn(beat, 'proofTimeId')) {
+        add('storyboard-beat-proof-field', 'v5 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
+      }
+      if (beat.proofTimeId !== null && beat.proofTimeId !== undefined && !nonEmpty(beat.proofTimeId)) {
+        add('storyboard-beat-proof-id', 'proofTimeId 必须为非空字符串或 null。', `${beatLocation}.proofTimeId`);
+      }
+      if (beat.audioCue && !nonEmpty(beat.proofTimeId)) {
+        add('storyboard-audio-proof-required', '带 audioCue 的节拍必须绑定事件级 proofTimeId。', `${beatLocation}.proofTimeId`);
+      }
+      if (nonEmpty(beat.proofTimeId)) {
+        beatEvidenceBindings.push({proofTimeId: beat.proofTimeId, location: beatLocation});
       }
     }
     if (!Array.isArray(scene.proofTimes) || scene.proofTimes.length < 3) {
@@ -176,7 +265,29 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       if (!Array.isArray(proof.assertions) || proof.assertions.length === 0 || proof.assertions.some((item) => !nonEmpty(item))) {
         add('storyboard-proof-assertions', '证明时刻必须声明至少一项可见关系断言。', `${proofLocation}.assertions`);
       }
+      if (!Array.isArray(proof.stateAssertions)) add('storyboard-proof-state-assertions', 'v5 proofTime 必须显式声明 stateAssertions 数组。', `${proofLocation}.stateAssertions`);
       if (proof.kind === 'final' && proof.at >= 0.82) hasFinal = true;
+    }
+    for (const sequence of compositionPlan?.stateSequences ?? []) {
+      const plannedStates = new Set(sequence.states.map(({id}) => id));
+      const assertedStates = new Set((scene.proofTimes ?? []).flatMap((proof) =>
+        (proof.stateAssertions ?? []).filter(({nodeId}) => nodeId === sequence.nodeId).map(({stateId}) => stateId),
+      ));
+      for (const stateId of assertedStates) {
+        if (!plannedStates.has(stateId)) add('storyboard-proof-state-unknown', `状态证明引用了未知状态 ${stateId}。`, `${location}.proofTimes`);
+      }
+      for (const stateId of plannedStates) {
+        if (!assertedStates.has(stateId)) add('storyboard-proof-state-coverage', `状态 ${sequence.nodeId}/${stateId} 缺少证明时刻。`, `${location}.proofTimes`);
+      }
+    }
+    for (const binding of beatEvidenceBindings) {
+      if (!proofIds.has(binding.proofTimeId)) {
+        add(
+          'storyboard-beat-proof-missing',
+          `节拍绑定的证明时刻不存在：${binding.proofTimeId}。`,
+          `${binding.location}.proofTimeId`,
+        );
+      }
     }
     if (!hasFinal) add('storyboard-final-proof', '每个镜头必须在 0.82 之后设置 final 证明时刻。', `${location}.proofTimes`);
   }
@@ -189,6 +300,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       'scenes',
     );
   }
+  issues.push(...validateCompiledDirecting(storyboard, {plan}));
   return issues;
 };
 
@@ -215,16 +327,29 @@ export const summarizeStoryboard = (storyboard) => ({
   status: storyboard?.status ?? 'missing',
   arc: storyboard?.status === 'ready' ? storyboard.arc : null,
   sceneCount: Array.isArray(storyboard?.scenes) ? storyboard.scenes.length : 0,
+  transitionCount: Array.isArray(storyboard?.sceneTransitions) ? storyboard.sceneTransitions.length : 0,
   scenes:
     storyboard?.status === 'ready'
-      ? storyboard.scenes.map(({id, title, narrativeRole, blueprint, compositionPlan, beats, proofTimes}) => ({
+      ? storyboard.scenes.map(({id, title, narrativeRole, blueprint, compositionPlan, directing, beats, proofTimes}) => ({
           id,
           title,
           narrativeRole,
           blueprint,
           patterns: compositionPlan.patterns,
+          treatmentCount: directing.treatmentCount,
+          riskScore: directing.riskScore,
           beatCount: beats.length,
+          evidenceBoundBeatCount: beats.filter(({proofTimeId}) => Boolean(proofTimeId)).length,
           proofCount: proofTimes.length,
         }))
       : [],
+  directing: storyboard?.status === 'ready'
+      ? {
+        fingerprint: storyboard.directingSummary?.fingerprint ?? null,
+        styleProofPlan: storyboard.directingSummary?.styleProofPlan ?? null,
+        estimatedPoseSheetCalls: storyboard.directingSummary?.estimatedPoseSheetCalls ?? 0,
+        avoidedIsolatedStateCalls: storyboard.directingSummary?.avoidedIsolatedStateCalls ?? 0,
+        generationBudget: storyboard.directingSummary?.generationBudget ?? null,
+      }
+    : null,
 });

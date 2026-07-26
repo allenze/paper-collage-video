@@ -1,7 +1,9 @@
 # Paper Collage Composition Contract v4
 
-Status: implemented and validated
+Status: historical composition design; runtime patterns remain current, storyboard authoring was superseded by Storyboard v4 treatments on 2026-07-22
 Date: 2026-07-20
+
+Do not hand-author the `compositionPlan` examples in this document. The current Storyboard v4 authoring contract declares orthogonal beat treatments and deterministically compiles these v4 composition patterns as execution output.
 
 ## 1. Problem
 
@@ -286,9 +288,9 @@ The runtime derives both visual action and sound scheduling from the same cue. R
 
 New cue actions such as `drop-impact` or `carve` must be registered in one action catalog used by schema, validation, runtime, report, and Skill reference. They must not be implemented as duplicated lists.
 
-## 6. Storyboard composition plan
+## 6. Compiled storyboard composition plan
 
-Each storyboard scene adds a compact `compositionPlan` before asset production:
+The current Storyboard v4 compiler derives a compact `compositionPlan` from approved treatments before asset production:
 
 ```json
 {
@@ -312,7 +314,7 @@ Each storyboard scene adds a compact `compositionPlan` before asset production:
 }
 ```
 
-The plan is approved with the existing concept/storyboard decision. It describes meaning in human-readable terms and bounded pattern names; it does not expose raw production coordinates to the human.
+The author approves human-readable treatment meaning in the existing concept/storyboard decision. The compiler owns the bounded pattern names and derived plan; raw production coordinates remain outside the human decision.
 
 Skill routing rules are mandatory:
 

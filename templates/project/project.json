@@ -1,10 +1,22 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 10,
   "slug": "{{slug}}",
   "title": "{{title}}",
-  "plan": {
+  "intake": {
     "schemaVersion": 1,
+    "status": "pending",
+    "aspectRatio": null,
+    "visualStylePreset": null,
+    "parallaxPreference": null,
+    "styleCatalogVersion": null,
+    "styleCatalogFingerprint": null,
+    "confirmedAt": null,
+    "note": "",
+    "updatedAt": "{{createdAt}}"
+  },
+  "plan": {
+    "schemaVersion": 4,
     "slug": "{{slug}}",
     "status": "pending",
     "inputMode": "none",
@@ -15,6 +27,8 @@
     },
     "resolved": null,
     "assetBudget": null,
+    "motionBudget": null,
+    "approvedImageBudget": null,
     "updatedAt": "{{createdAt}}"
   },
   "quality": {
@@ -57,5 +71,9 @@
       "truePeakDbtp": -1
     }
   },
-  "scenes": []
+  "editorial": {
+    "status": "pending"
+  },
+  "scenes": [],
+  "sceneTransitions": []
 }
