@@ -1411,6 +1411,33 @@ const summarizeEntries = (entries) => {
   return {total: entries.length, passed: entries.length - failed.length - pending.length, pending: pending.length, failed: failed.length};
 };
 
+const qualityEntryId = (entry) => entry.assetId ?? entry.compositeId;
+
+export const qualityReviewTargetFingerprint = (entry) =>
+  hashCompositionValue({
+    id: qualityEntryId(entry),
+    contentFingerprint: entry.fingerprint ?? entry.sha256 ?? null,
+    requiredChecks: entry.requiredChecks ?? [],
+    technical: entry.technical ?? null,
+    proofFrames: entry.proofFrames ?? [],
+    evidenceFiles: entry.evidenceFiles ?? [],
+  });
+
+export const refreshQualityReviewSurfaceFingerprint = (report) => {
+  const entries = [...(report.assets ?? []), ...(report.composites ?? [])]
+    .map((entry) => ({
+      id: qualityEntryId(entry),
+      targetFingerprint: qualityReviewTargetFingerprint(entry),
+    }))
+    .sort((left, right) => left.id.localeCompare(right.id));
+  report.reviewSurfaceFingerprint = hashCompositionValue({
+    contract: 'quality-review-surface-v1',
+    projectSlug: report.projectSlug,
+    entries,
+  });
+  return report.reviewSurfaceFingerprint;
+};
+
 export const summarizeQualityReport = (report) => {
   const assets = summarizeEntries(report.assets ?? []);
   const composites = summarizeEntries(report.composites ?? []);
@@ -1520,7 +1547,7 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const timeline = deriveTimeline(project);
   const report = {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: slug,
     updatedAt: new Date().toISOString(),
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
@@ -1536,13 +1563,26 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
     assets: inspectedAssets,
     composites: inspectedComposites,
   };
+  refreshQualityReviewSurfaceFingerprint(report);
   if (write) await writeJson(file, report);
   return {file, ...summarizeQualityReport(report)};
 };
 
-export const recordQualityReviews = async ({slug, reviews}) => {
+export const recordQualityReviews = async ({
+  slug,
+  reviews,
+  sourceReportFingerprint = null,
+}) => {
   if (!Array.isArray(reviews) || reviews.length === 0) throw new Error('批量质量记录必须包含至少一项 review。');
   const prepared = await prepareQualityReport(slug, {write: false});
+  if (
+    sourceReportFingerprint !== null &&
+    sourceReportFingerprint !== prepared.report.reviewSurfaceFingerprint
+  ) {
+    throw new Error(
+      `质量审核 scaffold 已过期：记录 ${sourceReportFingerprint}，当前 ${prepared.report.reviewSurfaceFingerprint}。重新运行 project:quality ${slug} scaffold --force。`,
+    );
+  }
   const entries = [...prepared.report.assets, ...prepared.report.composites];
   const normalized = [];
   const reviewedIds = new Set();
@@ -1550,6 +1590,15 @@ export const recordQualityReviews = async ({slug, reviews}) => {
     const reviewId = review.assetId ?? review.compositeId;
     const entry = entries.find((candidate) => (candidate.assetId ?? candidate.compositeId) === reviewId);
     if (!entry) throw new Error(`未知质量对象：${reviewId}`);
+    const targetFingerprint = qualityReviewTargetFingerprint(entry);
+    if (
+      review.targetFingerprint !== undefined &&
+      review.targetFingerprint !== targetFingerprint
+    ) {
+      throw new Error(
+        `${reviewId} 的审核目标已过期：记录 ${review.targetFingerprint}，当前 ${targetFingerprint}。`,
+      );
+    }
     if (reviewedIds.has(reviewId)) throw new Error(`批量质量记录不能重复包含对象：${reviewId}`);
     reviewedIds.add(reviewId);
     if (!review.reviewer?.trim()) throw new Error(`${reviewId} 的质量记录必须提供 reviewer。`);
@@ -1589,6 +1638,7 @@ export const recordQualityReviews = async ({slug, reviews}) => {
     changedIds.push(item.reviewId);
   }
   prepared.report.updatedAt = new Date().toISOString();
+  refreshQualityReviewSurfaceFingerprint(prepared.report);
   await writeJson(prepared.file, prepared.report);
   return {file: prepared.file, changedIds, changedAssets: changedIds.filter((id) => prepared.report.assets.some(({assetId}) => assetId === id)), changedComposites: changedIds.filter((id) => prepared.report.composites.some(({compositeId}) => compositeId === id)), ...summarizeQualityReport(prepared.report)};
 };
@@ -1684,9 +1734,17 @@ export const createQualityReviewScaffold = ({
   const entries = [...status.report.assets, ...status.report.composites]
     .filter((entry) => includePassed || entry.status !== 'passed');
   return {
-    schemaVersion: 1,
+    $schema: '../../schemas/quality-review-scaffold.schema.json',
+    schemaVersion: 2,
     projectSlug,
     generatedAt: new Date().toISOString(),
+    sourceReport: {
+      file: path.relative(ROOT, status.file ?? qualityReportPath(projectSlug)),
+      schemaVersion: status.report.schemaVersion,
+      fingerprint:
+        status.report.reviewSurfaceFingerprint ??
+        refreshQualityReviewSurfaceFingerprint(status.report),
+    },
     instructions:
       'Inspect every evidence file. Move each pending check into passedChecks or failedChecks and write a concrete note; never pass a check only to unblock production.',
     reviews: entries.map((entry) => {
@@ -1694,6 +1752,7 @@ export const createQualityReviewScaffold = ({
       const compositeId = entry.compositeId ?? null;
       return {
         ...(assetId ? {assetId} : {compositeId}),
+        targetFingerprint: qualityReviewTargetFingerprint(entry),
         reviewer,
         requiredChecks: entry.requiredChecks,
         pendingChecks: Object.entries(entry.semanticChecks)
@@ -1751,8 +1810,218 @@ export const buildQualityReviewScaffold = async ({
     }
   }
   status.report.updatedAt = new Date().toISOString();
+  refreshQualityReviewSurfaceFingerprint(status.report);
+  scaffold.sourceReport = {
+    file: path.relative(ROOT, status.file),
+    schemaVersion: status.report.schemaVersion,
+    fingerprint: status.report.reviewSurfaceFingerprint,
+  };
+  const currentEntries = new Map(
+    [...status.report.assets, ...status.report.composites].map((entry) => [
+      qualityEntryId(entry),
+      entry,
+    ]),
+  );
+  for (const review of scaffold.reviews) {
+    review.targetFingerprint = qualityReviewTargetFingerprint(
+      currentEntries.get(review.assetId ?? review.compositeId),
+    );
+  }
   await writeJson(status.file, status.report);
   return {status, scaffold};
+};
+
+export const assertQualityReviewScaffoldCurrent = async ({
+  slug,
+  scaffold,
+  status = null,
+}) => {
+  if (scaffold?.schemaVersion !== 2 || scaffold?.projectSlug !== slug) {
+    throw new Error(`质量审核 scaffold 必须是 ${slug} 的 schemaVersion 2 文件。`);
+  }
+  if (!scaffold?.sourceReport?.fingerprint) {
+    throw new Error('质量审核 scaffold 缺少 sourceReport.fingerprint。');
+  }
+  const prepared = status ?? await prepareQualityReport(slug, {write: false});
+  if (
+    scaffold.sourceReport.fingerprint !==
+    prepared.report.reviewSurfaceFingerprint
+  ) {
+    throw new Error(
+      `质量审核 scaffold 已过期：记录 ${scaffold.sourceReport.fingerprint}，当前 ${prepared.report.reviewSurfaceFingerprint}。`,
+    );
+  }
+  const entries = new Map(
+    [...prepared.report.assets, ...prepared.report.composites].map((entry) => [
+      qualityEntryId(entry),
+      entry,
+    ]),
+  );
+  for (const review of scaffold.reviews ?? []) {
+    const reviewId = review.assetId ?? review.compositeId;
+    const entry = entries.get(reviewId);
+    if (!entry) throw new Error(`质量审核 scaffold 引用了未知对象：${reviewId}`);
+    const expected = qualityReviewTargetFingerprint(entry);
+    if (review.targetFingerprint !== expected) {
+      throw new Error(
+        `${reviewId} 的审核目标已过期：记录 ${review.targetFingerprint ?? 'missing'}，当前 ${expected}。`,
+      );
+    }
+  }
+  return prepared;
+};
+
+const escapeSvgText = (value) =>
+  String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+
+const qualityReviewPanel = async ({review, index}) => {
+  const imageEvidence = [];
+  for (const evidence of review.evidenceFiles ?? []) {
+    try {
+      const file = assertWorkspaceFile(evidence);
+      if (!(await fileExists(file))) continue;
+      const metadata = await sharp(file).metadata();
+      if (metadata.width && metadata.height) {
+        imageEvidence.push({
+          file,
+          relativeFile: path.relative(ROOT, file),
+          sha256: await hashFile(file),
+        });
+      }
+    } catch {
+      // Non-image evidence remains available in the scaffold but is not a panel.
+    }
+  }
+  const selected = imageEvidence[0] ?? null;
+  const panelWidth = 360;
+  const imageHeight = 202;
+  const labelHeight = 58;
+  const image = selected
+    ? await sharp(selected.file)
+        .resize(panelWidth, imageHeight, {
+          fit: 'contain',
+          background: '#1c1714',
+        })
+        .flatten({background: '#1c1714'})
+        .png()
+        .toBuffer()
+    : Buffer.from(`
+        <svg width="${panelWidth}" height="${imageHeight}">
+          <rect width="100%" height="100%" fill="#1c1714"/>
+          <text x="50%" y="50%" text-anchor="middle" fill="#b9aa96"
+            font-size="18" font-family="Arial, PingFang SC, sans-serif">no image evidence</text>
+        </svg>
+      `);
+  const id = review.assetId ?? review.compositeId;
+  const label = Buffer.from(`
+    <svg width="${panelWidth}" height="${labelHeight}">
+      <rect width="100%" height="100%" fill="#2b1713"/>
+      <text x="12" y="23" fill="#f6ead2" font-size="15"
+        font-family="Arial, PingFang SC, sans-serif">${escapeSvgText(`${index + 1}. ${id}`)}</text>
+      <text x="12" y="45" fill="#d9c6aa" font-size="12"
+        font-family="Arial, PingFang SC, sans-serif">${escapeSvgText(
+          `${(review.pendingChecks ?? []).length} pending · ${selected?.relativeFile ?? 'no image evidence'}`,
+        )}</text>
+    </svg>
+  `);
+  return {
+    id,
+    targetFingerprint: review.targetFingerprint,
+    evidence: imageEvidence.map(({file: _file, ...evidence}) => evidence),
+    panel: await sharp({
+      create: {
+        width: panelWidth,
+        height: imageHeight + labelHeight,
+        channels: 3,
+        background: '#1c1714',
+      },
+    })
+      .composite([
+        {input: image, left: 0, top: 0},
+        {input: label, left: 0, top: imageHeight},
+      ])
+      .jpeg({quality: 90})
+      .toBuffer(),
+  };
+};
+
+export const createQualityReviewContactSheets = async ({
+  slug,
+  scaffold,
+  outputDirectory = path.join(
+    ROOT,
+    'dist',
+    slug,
+    'quality-review-contact-sheets',
+  ),
+}) => {
+  const status = await assertQualityReviewScaffoldCurrent({slug, scaffold});
+  const directory = assertWorkspaceFile(outputDirectory);
+  await fs.mkdir(directory, {recursive: true});
+  const panels = await Promise.all(
+    (scaffold.reviews ?? []).map((review, index) =>
+      qualityReviewPanel({review, index}),
+    ),
+  );
+  if (panels.length === 0) {
+    throw new Error('当前质量审核 scaffold 没有待展示的 review。');
+  }
+  const scaffoldFingerprint = hashCompositionValue(scaffold);
+  const pageSize = 18;
+  const pages = [];
+  for (let pageIndex = 0; pageIndex < panels.length; pageIndex += pageSize) {
+    const pagePanels = panels.slice(pageIndex, pageIndex + pageSize);
+    const columns = Math.min(3, pagePanels.length);
+    const rows = Math.ceil(pagePanels.length / columns);
+    const panelWidth = 360;
+    const panelHeight = 260;
+    const padding = 20;
+    const gap = 12;
+    const width =
+      padding * 2 + panelWidth * columns + gap * Math.max(0, columns - 1);
+    const height =
+      padding * 2 + panelHeight * rows + gap * Math.max(0, rows - 1);
+    const composite = pagePanels.map((panel, panelIndex) => ({
+      input: panel.panel,
+      left: padding + (panelIndex % columns) * (panelWidth + gap),
+      top: padding + Math.floor(panelIndex / columns) * (panelHeight + gap),
+    }));
+    const pageNumber = pages.length + 1;
+    const pageFile = path.join(
+      directory,
+      `quality-review-${status.report.reviewSurfaceFingerprint.slice(0, 12)}-page-${String(pageNumber).padStart(2, '0')}.jpg`,
+    );
+    await sharp({
+      create: {width, height, channels: 3, background: '#100d0b'},
+    })
+      .composite(composite)
+      .jpeg({quality: 90})
+      .toFile(pageFile);
+    pages.push({
+      page: pageNumber,
+      file: path.relative(ROOT, pageFile),
+      sha256: await hashFile(pageFile),
+      reviewIds: pagePanels.map(({id}) => id),
+    });
+  }
+  const index = {
+    $schema:
+      '../../schemas/quality-review-contact-sheet.schema.json',
+    schemaVersion: 1,
+    projectSlug: slug,
+    generatedAt: new Date().toISOString(),
+    sourceReport: scaffold.sourceReport,
+    scaffoldFingerprint,
+    pages,
+    reviews: panels.map(({panel: _panel, ...panel}) => panel),
+  };
+  const indexFile = path.join(directory, 'index.json');
+  await writeJson(indexFile, index);
+  return {file: indexFile, index};
 };
 
 export const formatQualityStatus = (status) => `${status.ready ? '✓' : '✗'} quality: ${status.passed}/${status.total} passed, ${status.pending} pending, ${status.failed} failed (assets ${status.scopes.assets.passed}/${status.scopes.assets.total}, composites ${status.scopes.composites.passed}/${status.scopes.composites.total})`;

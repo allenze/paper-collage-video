@@ -1,8 +1,9 @@
 {
   "$schema": "../../schemas/quality-report.schema.json",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "projectSlug": "{{slug}}",
   "updatedAt": "{{createdAt}}",
+  "reviewSurfaceFingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
   "eventTimeline": [],
   "assetHistory": [],
   "assets": [],

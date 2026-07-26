@@ -20,6 +20,8 @@ export const RUNTIME_BUILD_INPUTS = [
   'schemas/provider-observation.schema.json',
   'schemas/project.schema.json',
   'schemas/quality-report.schema.json',
+  'schemas/quality-review-scaffold.schema.json',
+  'schemas/quality-review-contact-sheet.schema.json',
   'schemas/looping-strip.schema.json',
   'schemas/registered-family.schema.json',
   'schemas/registered-family-binding.schema.json',

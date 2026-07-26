@@ -3,12 +3,13 @@
   "$id": "https://local.paper-collage.dev/quality-report.schema.json",
   "title": "Paper Collage Asset and Composite Quality Report",
   "type": "object",
-  "required": ["schemaVersion", "projectSlug", "updatedAt", "eventTimeline", "assetHistory", "assets", "composites"],
+  "required": ["schemaVersion", "projectSlug", "updatedAt", "reviewSurfaceFingerprint", "eventTimeline", "assetHistory", "assets", "composites"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 4},
+    "schemaVersion": {"const": 5},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "updatedAt": {"type": "string", "format": "date-time"},
+    "reviewSurfaceFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "eventTimeline": {"type": "array", "items": {"type": "object"}},
     "assetHistory": {
       "type": "array",

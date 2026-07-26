@@ -726,9 +726,11 @@ await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 4,
+    schemaVersion: 5,
     projectSlug: 'starter-demo',
     updatedAt: at,
+    reviewSurfaceFingerprint:
+      '0000000000000000000000000000000000000000000000000000000000000000',
     eventTimeline: [],
     assetHistory: [],
     assets: await Promise.all(
@@ -877,6 +879,9 @@ for (const composite of starterPreparedQuality.report.composites) {
   );
   composite.status = 'passed';
 }
+runtimeQualityLib.refreshQualityReviewSurfaceFingerprint(
+  starterPreparedQuality.report,
+);
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   starterPreparedQuality.report,

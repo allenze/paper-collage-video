@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.paper-collage.dev/quality-review-scaffold.schema.json",
+  "title": "Paper Collage Quality Review Scaffold",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "projectSlug",
+    "generatedAt",
+    "sourceReport",
+    "instructions",
+    "reviews"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 2},
+    "projectSlug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "generatedAt": {"type": "string", "format": "date-time"},
+    "sourceReport": {"$ref": "#/$defs/sourceReport"},
+    "instructions": {"type": "string", "minLength": 1},
+    "reviews": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/review"}
+    }
+  },
+  "$defs": {
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourceReport": {
+      "type": "object",
+      "required": ["file", "schemaVersion", "fingerprint"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "schemaVersion": {"const": 5},
+        "fingerprint": {"$ref": "#/$defs/fingerprint"}
+      },
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "required": [
+        "targetFingerprint",
+        "reviewer",
+        "requiredChecks",
+        "pendingChecks",
+        "passedChecks",
+        "failedChecks",
+        "evidenceFiles",
+        "note"
+      ],
+      "properties": {
+        "assetId": {"type": "string", "minLength": 1},
+        "compositeId": {"type": "string", "minLength": 1},
+        "targetFingerprint": {"$ref": "#/$defs/fingerprint"},
+        "reviewer": {"type": "string", "minLength": 1},
+        "requiredChecks": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "pendingChecks": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "passedChecks": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "failedChecks": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "evidenceFiles": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "note": {"type": "string"}
+      },
+      "oneOf": [
+        {
+          "required": ["assetId"],
+          "not": {"required": ["compositeId"]}
+        },
+        {
+          "required": ["compositeId"],
+          "not": {"required": ["assetId"]}
+        }
+      ],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

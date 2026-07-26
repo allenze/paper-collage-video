@@ -193,11 +193,12 @@ test('project:new initializes a full-coverage production metrics file', async ()
   }
 });
 
-test('quality scaffold and record-batch measure one AI review session', async () => {
+test('quality record-batch emits output and creates a bound incremental scaffold', async () => {
   const slug = `production-metrics-review-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
   const backgroundFile = path.join(publicDirectory, 'assets', 'plates', 'background.png');
+  const accentFile = path.join(publicDirectory, 'assets', 'plates', 'accent.png');
   const createdAt = new Date(Date.now() - 2_000).toISOString();
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
@@ -205,6 +206,9 @@ test('quality scaffold and record-batch measure one AI review session', async ()
     await sharp({
       create: {width: 640, height: 360, channels: 3, background: '#d8c7a2'},
     }).png().toFile(backgroundFile);
+    await sharp({
+      create: {width: 96, height: 96, channels: 4, background: '#b45f45'},
+    }).png().toFile(accentFile);
     await writeJson(
       path.join(projectDirectory, 'production.json'),
       productionState({slug, createdAt, updatedAt: createdAt}),
@@ -228,6 +232,14 @@ test('quality scaffold and record-batch measure one AI review session', async ()
             z: 0,
             transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
             motion: {keyframes: [{at: 0, scale: 1}, {at: 1, scale: 1}]},
+          }, {
+            id: 'accent',
+            kind: 'asset',
+            assetRole: 'decorative',
+            src: `projects/${slug}/assets/plates/accent.png`,
+            z: 1,
+            transform: {x: 0.7, y: 0.2, width: 0.12, anchorX: 0.5, anchorY: 0.5},
+            motion: {keyframes: [{at: 0, scale: 1}, {at: 1, scale: 1}]},
           }],
         },
       }],
@@ -248,13 +260,16 @@ test('quality scaffold and record-batch measure one AI review session', async ()
       {cwd: ROOT, encoding: 'utf8'},
     );
     assert.equal(scaffoldResult.status, 0, scaffoldResult.stderr);
+    assert.match(scaffoldResult.stdout, /质量审核脚手架/);
     const scaffold = JSON.parse(await fs.readFile(scaffoldFile, 'utf8'));
-    assert.ok(scaffold.reviews.length > 0);
-    for (const review of scaffold.reviews) {
+    assert.equal(scaffold.schemaVersion, 2);
+    assert.equal(scaffold.reviews.length, 2);
+    for (const review of scaffold.reviews.slice(0, 1)) {
       review.passedChecks = review.pendingChecks;
       review.failedChecks = [];
       review.note = 'Inspected test fixture';
     }
+    scaffold.reviews = scaffold.reviews.slice(0, 1);
     await writeJson(scaffoldFile, scaffold);
     const recordResult = spawnSync(
       'npm',
@@ -270,15 +285,57 @@ test('quality scaffold and record-batch measure one AI review session', async ()
       {cwd: ROOT, encoding: 'utf8'},
     );
     assert.equal(recordResult.status, 0, recordResult.stderr);
+    assert.match(recordResult.stdout, /quality: 1\/2 passed/);
+    assert.match(recordResult.stdout, /remaining: 1 review/);
+    const pendingFile = path.join(
+      projectDirectory,
+      'quality-review-scaffold.pending.json',
+    );
+    const pendingScaffold = JSON.parse(await fs.readFile(pendingFile, 'utf8'));
+    assert.equal(pendingScaffold.schemaVersion, 2);
+    assert.equal(pendingScaffold.reviews.length, 1);
+    assert.match(
+      pendingScaffold.sourceReport.fingerprint,
+      /^[a-f0-9]{64}$/,
+    );
+    for (const review of pendingScaffold.reviews) {
+      review.passedChecks = review.pendingChecks;
+      review.failedChecks = [];
+      review.note = 'Inspected remaining fixture';
+    }
+    await writeJson(pendingFile, pendingScaffold);
+    const finalRecord = spawnSync(
+      'npm',
+      [
+        'run',
+        'project:quality',
+        '--',
+        slug,
+        'record-batch',
+        `--input=${path.relative(ROOT, pendingFile)}`,
+        '--quiet',
+      ],
+      {cwd: ROOT, encoding: 'utf8'},
+    );
+    assert.equal(finalRecord.status, 0, finalRecord.stderr);
+    assert.match(finalRecord.stdout, /quality: 2\/2 passed/);
     const metrics = JSON.parse(await fs.readFile(productionMetricsPath(slug), 'utf8'));
-    const reviewSegment = metrics.segments.find(({operation}) => operation === 'quality-review');
-    assert.equal(reviewSegment.category, 'ai-review');
-    assert.equal(reviewSegment.status, 'completed');
-    assert.ok(reviewSegment.durationMs >= 0);
-    assert.equal(metrics.summary.aiReview.segmentCount, 1);
+    const reviewSegments = metrics.segments.filter(
+      ({operation}) => operation === 'quality-review',
+    );
+    assert.equal(reviewSegments.length, 2);
+    assert.ok(
+      reviewSegments.every(
+        ({category, status, durationMs}) =>
+          category === 'ai-review' &&
+          status === 'completed' &&
+          durationMs >= 0,
+      ),
+    );
+    assert.equal(metrics.summary.aiReview.segmentCount, 2);
     assert.equal(
       metrics.summary.byCategory['deterministic-check'].segmentCount,
-      2,
+      3,
     );
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});

@@ -6,10 +6,12 @@ import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {createRequestFingerprint} from '../scripts/provider-lib.mjs';
 import {
+  assertQualityReviewScaffoldCurrent,
   assertQualityReady,
   buildQualityReviewScaffold,
   collectCompositeQualityTargets,
   compositionProofReportPath,
+  createQualityReviewContactSheets,
   createQualityReviewScaffold,
   prepareQualityReport,
   recordQualityReviews,
@@ -164,6 +166,13 @@ test('quality scaffold exposes pending checks and current proof evidence without
     compositionProof,
   });
   assert.equal(scaffold.reviews.length, 2);
+  assert.equal(scaffold.schemaVersion, 2);
+  assert.match(scaffold.sourceReport.fingerprint, /^[a-f0-9]{64}$/);
+  assert.ok(
+    scaffold.reviews.every(({targetFingerprint}) =>
+      /^[a-f0-9]{64}$/.test(targetFingerprint),
+    ),
+  );
   assert.deepEqual(scaffold.reviews[0].pendingChecks, ['silhouette-fidelity']);
   assert.deepEqual(scaffold.reviews[0].passedChecks, []);
   assert.ok(scaffold.reviews[0].evidenceFiles.includes('dist/scaffold/evidence/alpha.png'));
@@ -541,8 +550,31 @@ test('required asset quality resets on hashes and batch reviews write atomically
 
     const built = await buildQualityReviewScaffold({slug, reviewer: 'test-vision'});
     assert.ok(built.scaffold.reviews.every(({evidenceFiles}) => evidenceFiles.length > 0));
+    assert.equal(built.scaffold.schemaVersion, 2);
+    assert.equal(
+      built.scaffold.sourceReport.fingerprint,
+      built.status.report.reviewSurfaceFingerprint,
+    );
+    await assert.doesNotReject(() =>
+      assertQualityReviewScaffoldCurrent({slug, scaffold: built.scaffold}),
+    );
+    const contactSheets = await createQualityReviewContactSheets({
+      slug,
+      scaffold: built.scaffold,
+    });
+    assert.equal(
+      contactSheets.index.sourceReport.fingerprint,
+      built.scaffold.sourceReport.fingerprint,
+    );
+    assert.ok(contactSheets.index.pages.length > 0);
+    assert.ok(
+      contactSheets.index.pages.every(({sha256}) =>
+        /^[a-f0-9]{64}$/.test(sha256),
+      ),
+    );
     status = await recordQualityReviews({
       slug,
+      sourceReportFingerprint: built.scaffold.sourceReport.fingerprint,
       reviews: built.scaffold.reviews.map(({evidenceFiles, pendingChecks, ...review}) => ({
         ...review,
         passedChecks: pendingChecks,
@@ -562,6 +594,23 @@ test('required asset quality resets on hashes and batch reviews write atomically
     await fs.writeFile(backgroundFile, changedBackground);
     status = await prepareQualityReport(slug);
     assert.equal(status.ready, false);
+    await assert.rejects(
+      () =>
+        recordQualityReviews({
+          slug,
+          sourceReportFingerprint: built.scaffold.sourceReport.fingerprint,
+          reviews: built.scaffold.reviews,
+        }),
+      /scaffold 已过期/,
+    );
+    await assert.rejects(
+      () =>
+        createQualityReviewContactSheets({
+          slug,
+          scaffold: built.scaffold,
+        }),
+      /scaffold 已过期/,
+    );
     assert.equal(
       status.report.assets.find(({kind}) => kind === 'background').status,
       'pending',
@@ -569,6 +618,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(publicDirectory, {recursive: true, force: true});
+    await fs.rm(path.join(ROOT, 'dist', slug), {recursive: true, force: true});
   }
 });
 

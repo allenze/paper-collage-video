@@ -30,7 +30,7 @@
       "compositeId": "event:starter:establish",
       "sceneId": "starter",
       "pattern": "event",
-      "fingerprint": "91e98966d5b90e8331ec76c84c82f52d6f5cb0dde23f25e98c64d625c2810d3a",
+      "fingerprint": "4159febf1db93028804b045c61426a718143669b9a386530889e24d35a0d175b",
       "proofFrames": [
         {
           "sceneId": "starter",
@@ -53,7 +53,7 @@
       "compositeId": "event:starter:subject-arrives",
       "sceneId": "starter",
       "pattern": "event",
-      "fingerprint": "6c7f0d42205b5b0d850085c4a7762871410f8506197aab4add87b709b0bfbe3e",
+      "fingerprint": "8d6696d6ff9e9fd037621d0586ee49bf80cf1045afb828014fa1b20f1c9ef029",
       "proofFrames": [
         {
           "sceneId": "starter",
@@ -76,7 +76,7 @@
       "compositeId": "event:starter:lockup",
       "sceneId": "starter",
       "pattern": "event",
-      "fingerprint": "56932376e5c9c00ad6773fca94f08ce98d60d3352a18870775c0a9c710d35844",
+      "fingerprint": "691a67e8fe90d92211d170c589b63f67fdb5ce6f9336baeb6e404776d5d96b50",
       "proofFrames": [
         {
           "sceneId": "starter",

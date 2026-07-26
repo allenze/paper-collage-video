@@ -16,13 +16,27 @@ const category = valueFor('--category');
 const operation = valueFor('--operation');
 const script = valueFor('--script');
 const slugIndex = Number(valueFor('--slug-index') ?? 0);
-const slug = childArgs[slugIndex];
+const qualityActions = new Set([
+  'prepare',
+  'status',
+  'scaffold',
+  'contact-sheet',
+  'record',
+  'record-batch',
+]);
+const slug =
+  script === 'scripts/project-quality.mjs' &&
+  qualityActions.has(childArgs[0])
+    ? childArgs[1]
+    : childArgs[slugIndex];
 
 const run = (file, commandArgs) => new Promise((resolve, reject) => {
   const child = spawn(process.execPath, [file, ...commandArgs], {
     cwd: ROOT,
-    stdio: 'inherit',
+    stdio: ['inherit', 'pipe', 'pipe'],
   });
+  child.stdout.on('data', (chunk) => process.stdout.write(chunk));
+  child.stderr.on('data', (chunk) => process.stderr.write(chunk));
   child.once('error', reject);
   child.once('exit', (code, signal) => resolve({code, signal}));
 });

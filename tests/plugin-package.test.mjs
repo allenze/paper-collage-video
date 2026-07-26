@@ -195,7 +195,8 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.deepEqual(starterProject.sceneTransitions, []);
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
   assert.equal(starterManifest.schemaVersion, 4);
-  assert.equal(starterQuality.schemaVersion, 4);
+  assert.equal(starterQuality.schemaVersion, 5);
+  assert.match(starterQuality.reviewSurfaceFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(starterQuality.eventTimeline.length, 3);
   assert.equal(starterQuality.composites.length, 3);
   assert.ok(starterQuality.composites.every(({status}) => status === 'passed'));
@@ -301,6 +302,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/storyboard-authoring.schema.json',
     'schemas/providers.schema.json',
     'schemas/quality-report.schema.json',
+    'schemas/quality-review-scaffold.schema.json',
+    'schemas/quality-review-contact-sheet.schema.json',
     'schemas/registered-family.schema.json',
     'schemas/registered-family-binding.schema.json',
     'schemas/provider-observation.schema.json',
