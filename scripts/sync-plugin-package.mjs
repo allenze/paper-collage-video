@@ -3,7 +3,6 @@ import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
-import sharp from 'sharp';
 import {createProductionMetrics} from './production-metrics-lib.mjs';
 import {compileStoryboardDirecting} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildManifest} from './runtime-build-lib.mjs';
@@ -784,13 +783,25 @@ const travelerFile = path.join(
   'alpha',
   '01-traveler.png',
 );
+const [backgroundData, travelerData] = await Promise.all([
+  fs.readFile(backgroundFile),
+  fs.readFile(travelerFile),
+]);
+const starterProofSvg = [
+  '<svg xmlns="http://www.w3.org/2000/svg"',
+  ` width="${project.video.width}"`,
+  ` height="${project.video.height}"`,
+  ` viewBox="0 0 ${project.video.width} ${project.video.height}">`,
+  `<image href="data:image/png;base64,${backgroundData.toString('base64')}"`,
+  ` width="${project.video.width}" height="${project.video.height}"/>`,
+  `<image href="data:image/png;base64,${travelerData.toString('base64')}"`,
+  ` width="${project.video.width}" height="${project.video.height}"/>`,
+  '</svg>\n',
+].join('');
 const starterProofFiles = new Map();
 for (const proof of project.scenes[0].motion.proofTimes) {
-  const file = path.join(starterProofFrameDirectory, `${proof.id}.png`);
-  await sharp(backgroundFile)
-    .composite([{input: travelerFile}])
-    .png()
-    .toFile(file);
+  const file = path.join(starterProofFrameDirectory, `${proof.id}.svg`);
+  await fs.writeFile(file, starterProofSvg, 'utf8');
   starterProofFiles.set(proof.id, path.relative(RUNTIME_ROOT, file));
 }
 
@@ -905,6 +916,8 @@ await writeJson(
 const starterQualityReady = await runtimeQualityLib.assertQualityReady(
   'starter-demo',
 );
+starterQualityReady.report.updatedAt = at;
+await writeJson(starterQualityReady.file, starterQualityReady.report);
 const runtimeAssetsReadySealLib = await import(
   `${pathToFileURL(path.join(RUNTIME_ROOT, 'scripts', 'assets-ready-seal-lib.mjs')).href}?sync=${Date.now()}`,
 );

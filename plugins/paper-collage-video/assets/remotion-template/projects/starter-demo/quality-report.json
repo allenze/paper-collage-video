@@ -2,7 +2,7 @@
   "$schema": "../../schemas/quality-report.schema.json",
   "schemaVersion": 6,
   "projectSlug": "starter-demo",
-  "updatedAt": "2026-07-26T19:11:24.479Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z",
   "eventTimeline": [
     {
       "sceneId": "starter",
@@ -273,9 +273,9 @@
           "proofTimeId": "proof-establish",
           "absoluteFrame": 3,
           "frameFingerprint": "bundled-proof-establish",
-          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.png",
-          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.png",
-          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.png",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
           "bounds": {
             "left": 0,
             "top": 0,
@@ -328,8 +328,8 @@
       "note": "Repository-owned technical fixture proof",
       "evidenceFiles": [
         {
-          "file": "dist/starter-demo/composition-proof/frames/proof-establish.png",
-          "sha256": "86b44267bcb268bb47ae1b6036a671624bf5f73e778a9334b97dc1c53453fef5"
+          "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
         }
       ],
       "status": "passed"
@@ -356,9 +356,9 @@
           "proofTimeId": "proof-action",
           "absoluteFrame": 22,
           "frameFingerprint": "bundled-proof-action",
-          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
-          "crop": "dist/starter-demo/composition-proof/frames/proof-action.png",
-          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
           "bounds": {
             "left": 0,
             "top": 0,
@@ -411,8 +411,8 @@
       "note": "Repository-owned technical fixture proof",
       "evidenceFiles": [
         {
-          "file": "dist/starter-demo/composition-proof/frames/proof-action.png",
-          "sha256": "86b44267bcb268bb47ae1b6036a671624bf5f73e778a9334b97dc1c53453fef5"
+          "file": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
         }
       ],
       "status": "passed"
@@ -439,9 +439,9 @@
           "proofTimeId": "proof-final",
           "absoluteFrame": 32,
           "frameFingerprint": "bundled-proof-final",
-          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.png",
-          "crop": "dist/starter-demo/composition-proof/frames/proof-final.png",
-          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.png",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
           "bounds": {
             "left": 0,
             "top": 0,
@@ -494,12 +494,12 @@
       "note": "Repository-owned technical fixture proof",
       "evidenceFiles": [
         {
-          "file": "dist/starter-demo/composition-proof/frames/proof-final.png",
-          "sha256": "86b44267bcb268bb47ae1b6036a671624bf5f73e778a9334b97dc1c53453fef5"
+          "file": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
         }
       ],
       "status": "passed"
     }
   ],
-  "reviewSurfaceFingerprint": "ac3ed6ceff6739e9131acfab345690160e86af43ef64620741917d9b021abd8c"
+  "reviewSurfaceFingerprint": "0909dc042f1030a887acd8be3bc566af89430b62ebb8c448960d3eea4139f478"
 }

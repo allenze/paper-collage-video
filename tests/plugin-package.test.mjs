@@ -189,6 +189,15 @@ test('packaged runtime is lightweight and independent from production projects',
   const starterSeal = readJson(
     path.join(RUNTIME_ROOT, 'dist', 'starter-demo', 'assets-ready-seal.json'),
   );
+  const starterProof = readJson(
+    path.join(
+      RUNTIME_ROOT,
+      'dist',
+      'starter-demo',
+      'composition-proof',
+      'report.json',
+    ),
+  );
   assert.equal(starterProject.schemaVersion, 10);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
@@ -202,6 +211,7 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
   assert.equal(starterManifest.schemaVersion, 4);
   assert.equal(starterQuality.schemaVersion, 6);
+  assert.equal(starterQuality.updatedAt, '2026-01-01T00:00:00.000Z');
   assert.match(starterQuality.reviewSurfaceFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(starterQuality.eventTimeline.length, 3);
   assert.equal(starterQuality.composites.length, 3);
@@ -220,6 +230,16 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(starterSeal.schemaVersion, 1);
   assert.equal(starterSeal.projectSlug, 'starter-demo');
   assert.match(starterSeal.fingerprint, /^[a-f0-9]{64}$/);
+  assert.equal(starterProof.frames.length, 3);
+  for (const frame of starterProof.frames) {
+    assert.match(frame.file, /\.svg$/);
+    const svg = fs.readFileSync(path.join(RUNTIME_ROOT, frame.file), 'utf8');
+    assert.equal(
+      (svg.match(/data:image\/png;base64,/g) ?? []).length,
+      2,
+      `${frame.file} must embed both canonical starter fixture layers`,
+    );
+  }
   assert.equal(starterMetrics.summary.aiReview.durationMs, 0);
 
   for (const relative of [

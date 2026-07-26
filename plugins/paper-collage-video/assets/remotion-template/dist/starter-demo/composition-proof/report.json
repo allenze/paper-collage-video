@@ -8,21 +8,21 @@
       "proofTimeId": "proof-establish",
       "absoluteFrame": 3,
       "fingerprint": "bundled-proof-establish",
-      "file": "dist/starter-demo/composition-proof/frames/proof-establish.png"
+      "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg"
     },
     {
       "sceneId": "starter",
       "proofTimeId": "proof-action",
       "absoluteFrame": 22,
       "fingerprint": "bundled-proof-action",
-      "file": "dist/starter-demo/composition-proof/frames/proof-action.png"
+      "file": "dist/starter-demo/composition-proof/frames/proof-action.svg"
     },
     {
       "sceneId": "starter",
       "proofTimeId": "proof-final",
       "absoluteFrame": 32,
       "fingerprint": "bundled-proof-final",
-      "file": "dist/starter-demo/composition-proof/frames/proof-final.png"
+      "file": "dist/starter-demo/composition-proof/frames/proof-final.svg"
     }
   ],
   "composites": [
@@ -37,9 +37,9 @@
           "proofTimeId": "proof-establish",
           "absoluteFrame": 3,
           "frameFingerprint": "bundled-proof-establish",
-          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.png",
-          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.png",
-          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.png",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
           "bounds": {
             "left": 0,
             "top": 0,
@@ -60,9 +60,9 @@
           "proofTimeId": "proof-action",
           "absoluteFrame": 22,
           "frameFingerprint": "bundled-proof-action",
-          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
-          "crop": "dist/starter-demo/composition-proof/frames/proof-action.png",
-          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.png",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
           "bounds": {
             "left": 0,
             "top": 0,
@@ -83,9 +83,9 @@
           "proofTimeId": "proof-final",
           "absoluteFrame": 32,
           "frameFingerprint": "bundled-proof-final",
-          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.png",
-          "crop": "dist/starter-demo/composition-proof/frames/proof-final.png",
-          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.png",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
           "bounds": {
             "left": 0,
             "top": 0,
