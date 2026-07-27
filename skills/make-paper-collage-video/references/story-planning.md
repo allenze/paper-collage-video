@@ -31,6 +31,15 @@ do not replace the later story-specific style sample. Parallax is motion
 treatment, not a fourth visual style. Do not ask the production profile or cost
 in the intake popup.
 
+Confirming intake materializes the selected catalog entry as
+`project.json.styleProfile`: a fingerprinted, immutable project snapshot of
+generation directives, motion preferences, the exact render theme/cutout
+treatment, required quality checks, review focus, and reference image.
+`project.json.theme` must equal `styleProfile.render.theme`; neither is a prose
+hint or a palette suggestion. Planning scenarios bind the selected profile id,
+catalog version, and profile fingerprint so a later style change invalidates
+the scenario instead of silently changing production behavior.
+
 ## Compare Three Story and Production Scenarios
 
 Using only the host model, author one shared story skeleton plus exactly three

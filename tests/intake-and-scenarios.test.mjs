@@ -24,7 +24,10 @@ import {validateCreativePlan} from '../scripts/creative-plan-lib.mjs';
 import {
   summarizeProfileFulfillment,
 } from '../scripts/motion-treatment-lib.mjs';
-import {loadStyleCatalog} from '../scripts/style-catalog-lib.mjs';
+import {
+  loadStyleCatalog,
+  materializeStyleProfile,
+} from '../scripts/style-catalog-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const at = '2026-07-25T00:00:00.000Z';
@@ -206,6 +209,19 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
   assert.equal(catalog.styles.length, 3);
   assert.match(catalog.fingerprint, /^[a-f0-9]{64}$/);
   assert.equal(new Set(catalog.styles.map(({image}) => image)).size, 3);
+  assert.equal(
+    new Set(catalog.styles.map(({profileFingerprint}) => profileFingerprint))
+      .size,
+    3,
+  );
+  assert.equal(
+    new Set(
+      catalog.styles.map(
+        ({profile}) => profile.render.theme.cutout.shadowBlurPx,
+      ),
+    ).size,
+    3,
+  );
   const dimensions = new Set();
   for (const style of catalog.styles) {
     assert.equal((await fs.stat(style.absolutePath)).isFile(), true);
@@ -238,10 +254,18 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
       image.sha256,
     );
   }
-  const validator = new Ajv2020({
+  const styleProfileSchema = JSON.parse(
+    await fs.readFile(
+      path.join(ROOT, 'schemas', 'style-profile.schema.json'),
+      'utf8',
+    ),
+  );
+  const ajv = new Ajv2020({
     strict: false,
     formats: {'date-time': true},
-  }).compile(
+  });
+  ajv.addSchema(styleProfileSchema);
+  const validator = ajv.compile(
     JSON.parse(
       await fs.readFile(
         path.join(ROOT, 'schemas', 'style-catalog.schema.json'),
@@ -256,6 +280,19 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
     ),
   );
   assert.equal(validator(persisted), true, JSON.stringify(validator.errors));
+  const executable = materializeStyleProfile(
+    catalog,
+    'hand-drawn-cutout-explainer',
+  );
+  assert.equal(
+    executable.render.theme.cutout.shadowBlurPx,
+    7,
+  );
+  assert.ok(
+    executable.quality.requiredAssetChecks.includes(
+      'style-profile-conformant',
+    ),
+  );
 });
 
 test('intake locks the two supported aspect ratios and separates parallax from visual style', async () => {
@@ -277,6 +314,12 @@ test('intake locks the two supported aspect ratios and separates parallax from v
     label: '竖屏 9:16',
   });
   assert.equal(intake.visualStylePreset.includes('parallax'), false);
+  assert.equal(
+    intake.styleProfileFingerprint,
+    catalog.styles.find(
+      ({id}) => id === intake.visualStylePreset,
+    ).profileFingerprint,
+  );
   assert.match(intakeDecisionFingerprint(intake), /^[a-f0-9]{64}$/);
 });
 
@@ -324,6 +367,11 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
     ],
   );
   assert.ok(scenarios.options.every(({plannedFulfillment}) => plannedFulfillment.passed));
+  assert.deepEqual(scenarios.styleProfileBinding, {
+    id: intake.visualStylePreset,
+    catalogVersion: intake.styleCatalogVersion,
+    profileFingerprint: intake.styleProfileFingerprint,
+  });
   const validator = new Ajv2020({
     strict: false,
     formats: {'date-time': true},

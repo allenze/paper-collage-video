@@ -13,7 +13,14 @@
     "paperEdge": "#fff5dc",
     "foreground": "#54231d",
     "texture": "textures/paper-grain.png",
-    "fontFamily": "STKaiti, KaiTi, serif"
+    "fontFamily": "STKaiti, KaiTi, serif",
+    "cutout": {
+      "edgeWidthPx": 3,
+      "shadowOffsetXPx": 0,
+      "shadowOffsetYPx": 10,
+      "shadowBlurPx": 7,
+      "shadowColor": "rgba(20,15,12,.28)"
+    }
   },
   "audio": {"narration": {"volume": 0}, "music": null},
   "scenes": [

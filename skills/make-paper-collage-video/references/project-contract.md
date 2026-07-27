@@ -10,8 +10,8 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
 | `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
 | `storyboard.json` | Approved schema-v10 beat treatments, editorial authoring, intent-routed scene boundaries, layer source packages, and compiler-owned edit/directing/proof plans and fingerprints |
-| `project.json` | Creative Plan v4 profile ceilings, human-approved image-attempt cap, exact source-package decision, and v10 Remotion execution tree |
-| `requests/*.json` | Per-output generation/import request plus composition binding |
+| `project.json` | Frozen executable Style Profile, materialized theme, Creative Plan v4 ceilings/cap/source-package decision, and v10 Remotion execution tree |
+| `requests/*.json` | Per-output generation/import request plus exact style/composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
 | `assets-manifest.json` | Provider provenance, source families, fingerprints, hashes, and active/superseded/rejected/recovery-source lifecycle |
@@ -19,7 +19,7 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `dist/<slug>/assets-ready-seal.json` | Current project, runtime, storyboard, validation, quality, audio, and subtitle delivery fingerprints required by preview/final rendering |
 | `review.md` | Generated approval summary plus natural-language revision history |
 
-Never ask the human to edit machine JSON. Paths in `project.json` are relative to `public/`; production artifacts are relative to the workspace root.
+Never ask the human to edit machine JSON. Paths in `project.json` are relative to `public/`; production artifacts are relative to the workspace root. A confirmed project must carry `intake.schemaVersion=2` plus a complete `styleProfile` snapshot whose catalog/profile fingerprints still match the current built-in catalog. Pending intake must keep `styleProfile=null`.
 
 `production-metrics.json` records wrapped command time, quality-review sessions, and image-attempt windows. Its `summary.aiReview.percentOfObservation` is the comparison field for AI-review share. Review sessions include host-model inspection, tool orchestration, and any pause before `record-batch`; image attempts likewise include the full reserve-to-close window. The runtime does not estimate provider-only inference time or tokens when the host does not expose them. `summary.unattributedMs` is deliberately unlabeled because it can contain human waits, agent work, or uninstrumented operations. A lazily created file for an older project reports partial coverage.
 
@@ -110,7 +110,12 @@ contract. Visible derived consumers own composition, occlusion, depth,
 responsive, and semantic review; the derivation-only family owns deterministic
 completeness, provenance, and derivation integrity.
 
-`theme.canvas` is a required opaque six-digit hex color. The renderer places it beneath every scene-specific background and uses it as the dip cover, so even a translucent scene treatment cannot expose pixels from the outgoing scene.
+`theme` is not free-form authoring after intake: it must equal
+`styleProfile.render.theme`. The profile owns palette, paper texture, and the
+cutout edge/shadow treatment applied to character/prop raster surfaces.
+`theme.canvas` is a required opaque six-digit hex color. The renderer places it
+beneath every scene-specific background and uses it as the dip cover, so even a
+translucent scene treatment cannot expose pixels from the outgoing scene.
 
 `state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, an `anchorPolicy`, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Every state declares facing, normalized anchors, and an identity-reference asset id plus SHA-256. The state-sheet processor verifies the current identity asset, rejects anchor drift, and writes fingerprinted per-state anchor overlays before registering derived cells. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
@@ -276,6 +281,7 @@ Fix a wrong mask, crop, anchor, registration, or derivative without another huma
 Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion,
 extraction, layer/state-sheet processing, editorial/directing compilation,
 proof, attempt accounting, or report logic ad hoc. Only the current Creative
-Plan v4, project/storyboard schema v10, quality-report schema v6, asset-request
-schema v7, registered-family schema v2, and current style-proof contract are
-supported; older contracts are intentionally not migrated or executed.
+Plan v4, project/storyboard schema v10, executable Style Profile schema v1,
+quality-report schema v6, asset-request schema v8, registered-family schema v2,
+and current style-proof contract are supported; older contracts are
+intentionally not migrated or executed.

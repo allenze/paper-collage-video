@@ -14,6 +14,7 @@ import {
 import {
   deepMerge,
   expandCommandTemplate,
+  loadAssetRequest,
   recordAssetProvenance,
   resolveConfirmedProvider,
   runProviderCommand,
@@ -21,6 +22,11 @@ import {
   validateProviderConfig,
   verifyOutputFile,
 } from '../scripts/provider-lib.mjs';
+import {
+  loadStyleCatalog,
+  materializeStyleProfile,
+  styleProfileBinding,
+} from '../scripts/style-catalog-lib.mjs';
 import {
   countProviderGeneratedImages,
   deriveContactSheetSamples,
@@ -30,6 +36,18 @@ import {
 import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const STYLE_REQUEST = {
+  styleProfileBinding: {
+    schemaVersion: 1,
+    id: 'hand-drawn-cutout-explainer',
+    catalogVersion: 'fixture',
+    profileFingerprint: 'a'.repeat(64),
+    directives: ['fixture ink', 'fixture paper', 'Avoid: fixture gloss'],
+  },
+  quality: {
+    requiredChecks: ['style-profile-conformant'],
+  },
+};
 
 test('asset lifecycle preserves audit records and enforces one active record', () => {
   const record = (recordId, status) => ({
@@ -69,10 +87,11 @@ test('manual image imports record provenance without a generation attempt', asyn
     }).png().toFile(output);
     const result = await recordAssetProvenance({
       request: {
-        schemaVersion: 7,
+        schemaVersion: 8,
         projectSlug: slug,
         assetId: 'manual-source',
         capability: 'image',
+        ...STYLE_REQUEST,
         output: path.relative(ROOT, output),
         prompt: 'Import the already-authorized local source.',
         outputSurface: {mode: 'opaque'},
@@ -313,7 +332,7 @@ test('command adapters write a local output and provenance records its hash', as
     );
     const recorded = await recordAssetProvenance({
       request: {
-        schemaVersion: 7,
+        schemaVersion: 8,
         projectSlug: slug,
         assetId: 'draft-script',
         capability: 'text',
@@ -360,7 +379,7 @@ test('voice outputs are measured and rejected before recording when scene timing
     ], {encoding: 'utf8'});
     assert.equal(generated.status, 0, generated.stderr);
     const base = {
-      schemaVersion: 7,
+      schemaVersion: 8,
       projectSlug: 'voice-timing-test',
       assetId: 'scene-one-narration',
       capability: 'voice',
@@ -383,16 +402,25 @@ test('voice outputs are measured and rejected before recording when scene timing
   }
 });
 
-test('v7 image requests require complete composition and semantic bindings', () => {
+test('v8 image requests require executable style, composition, and semantic bindings', () => {
   assert.throws(
-    () => validateAssetRequest({schemaVersion: 7, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
+    () => validateAssetRequest({schemaVersion: 8, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
     /compositionBinding/,
   );
   assert.doesNotThrow(() => validateAssetRequest({
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: 'binding-test',
     assetId: 'water',
     capability: 'image',
+    ...STYLE_REQUEST,
+    quality: {
+      requiredChecks: [
+        'style-profile-conformant',
+        'silhouette-fidelity',
+        'negative-space-clean',
+        'background-leak-free',
+      ],
+    },
   outputSurface: {mode: 'opaque'},
     output: 'public/water.png',
     prompt: 'derive water from registered master',
@@ -405,6 +433,69 @@ test('v7 image requests require complete composition and semantic bindings', () 
   }));
 });
 
+test('loaded image requests must execute the current project Style Profile', async () => {
+  const slug = `style-request-${process.pid}-${Date.now()}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const requestFile = path.join(projectDirectory, 'requests', 'plate.json');
+  try {
+    const catalog = await loadStyleCatalog({root: ROOT});
+    const styleProfile = materializeStyleProfile(
+      catalog,
+      'hand-drawn-cutout-explainer',
+    );
+    const binding = styleProfileBinding(styleProfile);
+    await fsp.mkdir(path.dirname(requestFile), {recursive: true});
+    await fsp.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      `${JSON.stringify({styleProfile}, null, 2)}\n`,
+    );
+    const request = {
+      schemaVersion: 8,
+      projectSlug: slug,
+      assetId: 'plate',
+      capability: 'image',
+      output: `public/projects/${slug}/plate.png`,
+      prompt: `Create a paper plate. ${binding.directives.join(' ')}`,
+      styleProfileBinding: binding,
+      outputSurface: {mode: 'opaque'},
+      compositionBinding: {
+        sceneId: 'scene',
+        nodeId: 'plate',
+        pattern: 'free',
+        outputRole: 'plate',
+        canvas: {width: 100, height: 100},
+        derivation: {method: 'provider-generation'},
+      },
+      semanticBinding: {riskClass: 'decorative', contractIds: []},
+      quality: {
+        kind: 'image',
+        requiredChecks: styleProfile.quality.requiredAssetChecks,
+      },
+    };
+    await fsp.writeFile(
+      requestFile,
+      `${JSON.stringify(request, null, 2)}\n`,
+    );
+    const loaded = await loadAssetRequest(path.relative(ROOT, requestFile));
+    assert.equal(
+      loaded.request.styleProfileBinding.profileFingerprint,
+      styleProfile.profileFingerprint,
+    );
+
+    request.styleProfileBinding.profileFingerprint = 'b'.repeat(64);
+    await fsp.writeFile(
+      requestFile,
+      `${JSON.stringify(request, null, 2)}\n`,
+    );
+    await assert.rejects(
+      () => loadAssetRequest(path.relative(ROOT, requestFile)),
+      /styleProfileBinding 与当前 project.styleProfile 不一致/,
+    );
+  } finally {
+    await fsp.rm(projectDirectory, {recursive: true, force: true});
+  }
+});
+
 test('image output surfaces reject baked transparency and invalid chroma boundaries', async () => {
   const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'provider-surface-'));
   const opaque = path.join(directory, 'opaque.png');
@@ -412,7 +503,7 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
   const mixedSheet = path.join(directory, 'mixed-sheet.png');
   const checkerSheet = path.join(directory, 'checker-sheet.png');
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     capability: 'image',
     compositionBinding: {canvas: {width: 32, height: 32}},
   };

@@ -105,7 +105,7 @@ test('rejected output becomes an auditable recovery source without mutating its 
   const sourceSha256 = await sha256File(sourceFile);
   const requestRelative = `projects/${slug}/requests/layer-sheet.json`;
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId: 'recovery-layer-sheet',
     capability: 'image',
@@ -360,7 +360,7 @@ test('rejected standalone chroma-key output recovers only from one full-canvas o
   const sourceSha256 = await sha256File(sourceFile);
   const requestRelative = `projects/${slug}/requests/grass.json`;
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId: 'standalone-grass',
     capability: 'image',

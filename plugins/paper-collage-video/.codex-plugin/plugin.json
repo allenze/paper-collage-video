@@ -1,7 +1,7 @@
 {
   "name": "paper-collage-video",
-  "version": "0.16.0",
-  "description": "Create editable paper-collage and hand-drawn explainer videos with visual intake cards, three costed planning scenarios, enforced production-depth promises, registered asset families, and proof-backed rendering.",
+  "version": "0.17.0-dev.1",
+  "description": "Create editable paper-collage and hand-drawn explainer videos with executable style profiles, visual intake cards, three costed planning scenarios, enforced production-depth promises, registered asset families, and proof-backed rendering.",
   "author": {
     "name": "Paper Collage Video Contributors"
   },
@@ -14,8 +14,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "纸片分层视频制作",
-    "shortDescription": "先选风格，再比较三档成本与动画深度的纸片视频",
-    "longDescription": "初始化独立的 Remotion 工作区，先用三张内置风格卡确认画幅、视觉语言和视差偏好，再比较轻量成片、均衡动画、完整纵深三个故事与成本方案。用 Storyboard v10、质量下限、完整分层注册组合、状态序列、景深视差和正式工程证明交付可恢复、可编辑的纸片拼贴与手绘解释视频。",
+    "shortDescription": "把风格选择冻结为可执行约束，再比较三档成本与动画深度",
+    "longDescription": "初始化独立的 Remotion 工作区，先用三张内置风格卡确认画幅、视觉语言和视差偏好，并把选择冻结为贯通素材生成、渲染主题、动效偏好、质量门禁与指纹失效的可执行风格档案；再比较轻量成片、均衡动画、完整纵深三个故事与成本方案。用 Storyboard v10、质量下限、完整分层注册组合、状态序列、景深视差和正式工程证明交付可恢复、可编辑的纸片拼贴与手绘解释视频。",
     "developerName": "Paper Collage Video Contributors",
     "category": "Creativity",
     "capabilities": [

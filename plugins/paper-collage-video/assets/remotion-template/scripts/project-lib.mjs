@@ -12,6 +12,11 @@ import {
 } from './creative-plan-lib.mjs';
 import {validateIntake} from './intake-lib.mjs';
 import {
+  assertStyleProfileCurrent,
+  loadStyleCatalog,
+  validateStyleProfileSnapshot,
+} from './style-catalog-lib.mjs';
+import {
   loadStoryboard,
   STORY_BLUEPRINTS,
   validateStoryboard,
@@ -473,9 +478,19 @@ export const validateProject = async (project, options = {}) => {
   if (!project.title || typeof project.title !== 'string') {
     add('error', 'title', '项目必须有标题。', 'title');
   }
-  if (project.intake !== undefined) {
+  if (project.intake === undefined) {
+    add('error', 'intake-required', 'v10 项目必须包含 intake。', 'intake');
+  } else {
     for (const issue of validateIntake(project.intake)) {
       add('error', 'intake-invalid', issue.message, issue.location);
+    }
+    if (project.intake.status === 'pending' && project.styleProfile !== null) {
+      add(
+        'error',
+        'style-profile-premature',
+        'pending intake 的 styleProfile 必须为 null。',
+        'styleProfile',
+      );
     }
     if (
       project.intake.status === 'confirmed' &&
@@ -492,6 +507,51 @@ export const validateProject = async (project, options = {}) => {
         'video 尺寸必须与已确认 intake.aspectRatio 一致。',
         'video',
       );
+    }
+    if (project.intake.status === 'confirmed') {
+      for (const issue of validateStyleProfileSnapshot(project.styleProfile)) {
+        add('error', 'style-profile-invalid', issue.message, issue.location);
+      }
+      if (
+        project.styleProfile?.id !== project.intake.visualStylePreset ||
+        project.styleProfile?.catalogVersion !==
+          project.intake.styleCatalogVersion ||
+        project.styleProfile?.catalogFingerprint !==
+          project.intake.styleCatalogFingerprint ||
+        project.styleProfile?.profileFingerprint !==
+          project.intake.styleProfileFingerprint
+      ) {
+        add(
+          'error',
+          'style-profile-intake-drift',
+          'styleProfile 必须与已确认 intake 的风格、目录及 Profile 指纹一致。',
+          'styleProfile',
+        );
+      }
+      if (
+        JSON.stringify(project.theme) !==
+        JSON.stringify(project.styleProfile?.render?.theme)
+      ) {
+        add(
+          'error',
+          'style-profile-theme-drift',
+          'project.theme 必须由已确认 styleProfile.render.theme 原样物化。',
+          'theme',
+        );
+      }
+      try {
+        assertStyleProfileCurrent({
+          styleProfile: project.styleProfile,
+          catalog: await loadStyleCatalog(),
+        });
+      } catch (error) {
+        add(
+          'error',
+          'style-profile-catalog-drift',
+          error.message,
+          'styleProfile',
+        );
+      }
     }
   }
   if (!isPositiveNumber(project.video?.width)) {

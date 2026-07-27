@@ -7,6 +7,7 @@
     "slug",
     "status",
     "intakeFingerprint",
+    "styleProfileBinding",
     "requested",
     "commonStory",
     "options",
@@ -22,6 +23,30 @@
       "oneOf": [
         {"type": "null"},
         {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      ]
+    },
+    "styleProfileBinding": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["id", "catalogVersion", "profileFingerprint"],
+          "properties": {
+            "id": {
+              "enum": [
+                "childrens-picture-book-paper",
+                "hand-drawn-cutout-explainer",
+                "archival-collage"
+              ]
+            },
+            "catalogVersion": {"type": "string", "minLength": 1},
+            "profileFingerprint": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "requested": {
@@ -399,6 +424,7 @@
       "then": {
         "properties": {
           "intakeFingerprint": {"type": "null"},
+          "styleProfileBinding": {"type": "null"},
           "commonStory": {"type": "null"},
           "options": {"maxItems": 0},
           "fingerprint": {"type": "null"}
@@ -410,6 +436,7 @@
       "then": {
         "properties": {
           "intakeFingerprint": {"type": "string"},
+          "styleProfileBinding": {"type": "object"},
           "commonStory": {"type": "object"},
           "options": {"minItems": 3, "maxItems": 3},
           "fingerprint": {"type": "string"}

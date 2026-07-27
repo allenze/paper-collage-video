@@ -21,6 +21,21 @@ import {
 import {resolveTargetViewportSnapshot} from '../scripts/world-motion-proof-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const STYLE_REQUEST = {
+  styleProfileBinding: {
+    schemaVersion: 1,
+    id: 'hand-drawn-cutout-explainer',
+    catalogVersion: 'fixture',
+    profileFingerprint: 'a'.repeat(64),
+    directives: ['fixture ink', 'fixture paper', 'Avoid: fixture gloss'],
+  },
+  quality: {
+    requiredChecks: [
+      'style-profile-conformant',
+      'identity-family-consistent',
+    ],
+  },
+};
 const anchorPolicy = {requiredAnchorIds: ['ground-contact'], maximumDrift: 0.02};
 const stateContract = (state) => ({
   ...state,
@@ -29,10 +44,11 @@ const stateContract = (state) => ({
 });
 
 const sheetRequest = () => ({
-  schemaVersion: 7,
+  schemaVersion: 8,
   projectSlug: 'fixture-project',
   assetId: 'reader-state-sheet',
   capability: 'image',
+  ...STYLE_REQUEST,
   outputSurface: {mode: 'opaque'},
   output: 'public/projects/fixture-project/assets/reader-state-sheet.png',
   prompt: 'A registered 2x2 pose sheet on a uniform chroma background.',
@@ -131,6 +147,7 @@ test('multi-state provider requests reject isolated cells and require context-pr
       'cell-separation',
       'reference-conformant',
       'untargeted-cells-unchanged',
+      'style-profile-conformant',
     ],
   };
   assert.equal(validateAssetRequest(masked), masked);

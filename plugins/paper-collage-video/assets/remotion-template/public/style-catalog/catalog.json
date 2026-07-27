@@ -1,26 +1,179 @@
 {
   "$schema": "../../schemas/style-catalog.schema.json",
-  "schemaVersion": 1,
-  "version": "2026-07-25.2",
+  "schemaVersion": 2,
+  "version": "2026-07-27.1",
   "canonicalSubject": "同一森林跑道中的乌龟与兔子，用于只比较视觉语言，不代表项目最终构图。",
   "styles": [
     {
       "id": "childrens-picture-book-paper",
       "label": "儿童绘本纸片",
       "summary": "圆润、温暖、层次清楚，适合儿童故事和轻松寓言。",
-      "image": "style-catalog/childrens-picture-book-paper.png"
+      "image": "style-catalog/childrens-picture-book-paper.png",
+      "profile": {
+        "schemaVersion": 1,
+        "generation": {
+          "promptDirectives": [
+            "Use rounded hand-cut paper shapes with warm watercolor grain and soft child-friendly proportions.",
+            "Keep faces, silhouettes, and foreground actions simple, readable, and emotionally clear."
+          ],
+          "negativeDirectives": [
+            "Photorealism, hard 3D plastic surfaces, and dense adult editorial detail."
+          ],
+          "compositionPrinciples": [
+            "Favor broad color blocks and generous breathing room around the main action.",
+            "Use three clearly separated paper depths without hiding the character silhouette."
+          ],
+          "preferredSurfaces": ["alpha", "opaque", "layer-sheet"]
+        },
+        "motion": {
+          "pacing": "gentle",
+          "preferredIdlePresets": ["breathe", "float", "sway"],
+          "preferredTransitions": ["page-turn", "paper-wipe", "paper-iris"]
+        },
+        "render": {
+          "theme": {
+            "canvas": "#6f3d2f",
+            "sceneBackground": "#d89b63",
+            "accent": "#d65a4a",
+            "ink": "#4a3027",
+            "subtitle": "#fff8e8",
+            "subtitleBackground": "rgba(74, 48, 39, .78)",
+            "paperEdge": "#fff4dc",
+            "foreground": "#9f563d",
+            "texture": "textures/paper-grain.png",
+            "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
+            "cutout": {
+              "edgeWidthPx": 4,
+              "shadowOffsetXPx": 0,
+              "shadowOffsetYPx": 8,
+              "shadowBlurPx": 8,
+              "shadowColor": "rgba(64, 39, 28, .24)"
+            }
+          }
+        },
+        "quality": {
+          "requiredAssetChecks": ["style-consistent", "style-profile-conformant"],
+          "requiredCompositeChecks": ["style-profile-consistent"],
+          "reviewFocus": [
+            "Rounded warm paper shapes match the selected reference card.",
+            "The frame remains inviting, uncluttered, and readable for children."
+          ]
+        }
+      }
     },
     {
       "id": "hand-drawn-cutout-explainer",
       "label": "手绘剪纸 / 手绘解释",
       "summary": "手绘线条、剪纸边缘和解释性图形，适合知识讲解与活泼叙事。",
-      "image": "style-catalog/hand-drawn-cutout-explainer.png"
+      "image": "style-catalog/hand-drawn-cutout-explainer.png",
+      "profile": {
+        "schemaVersion": 1,
+        "generation": {
+          "promptDirectives": [
+            "Use visible hand-drawn ink contours, cut-paper edges, and graphic explanatory marks.",
+            "Build clear modular layers that can support annotations, mechanisms, and lively local motion."
+          ],
+          "negativeDirectives": [
+            "Polished corporate vectors, photorealism, and unstructured decorative clutter."
+          ],
+          "compositionPrinciples": [
+            "Give the hero action a strong silhouette and reserve clean space for explanatory graphics.",
+            "Mix imperfect paper geometry with disciplined visual hierarchy and explicit relationships."
+          ],
+          "preferredSurfaces": ["alpha", "chroma-key", "opaque", "layer-sheet"]
+        },
+        "motion": {
+          "pacing": "playful",
+          "preferredIdlePresets": ["breathe", "drift", "sway"],
+          "preferredTransitions": ["paper-slide", "torn-wipe", "paper-shutters"]
+        },
+        "render": {
+          "theme": {
+            "canvas": "#6e1e19",
+            "sceneBackground": "#8a271f",
+            "accent": "#e3a43a",
+            "ink": "#3f241c",
+            "subtitle": "#fff8ea",
+            "subtitleBackground": "rgba(58, 25, 18, .76)",
+            "paperEdge": "#f5eedc",
+            "foreground": "#8d251e",
+            "texture": "textures/paper-grain.png",
+            "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
+            "cutout": {
+              "edgeWidthPx": 3,
+              "shadowOffsetXPx": 0,
+              "shadowOffsetYPx": 10,
+              "shadowBlurPx": 7,
+              "shadowColor": "rgba(20, 15, 12, .28)"
+            }
+          }
+        },
+        "quality": {
+          "requiredAssetChecks": ["style-consistent", "style-profile-conformant"],
+          "requiredCompositeChecks": ["style-profile-consistent"],
+          "reviewFocus": [
+            "Hand-drawn contours and physical cut-paper edges remain visible across assets.",
+            "Explanatory graphics support the story without replacing semantic action."
+          ]
+        }
+      }
     },
     {
       "id": "archival-collage",
       "label": "复古档案拼贴",
       "summary": "旧纸、印刷网点和档案照片感，适合历史、纪实与怀旧叙事。",
-      "image": "style-catalog/archival-collage.png"
+      "image": "style-catalog/archival-collage.png",
+      "profile": {
+        "schemaVersion": 1,
+        "generation": {
+          "promptDirectives": [
+            "Use aged paper, restrained sepia color, halftone print texture, and archival cutout framing.",
+            "Treat photographs and documents as tactile evidence layers with legible hierarchy."
+          ],
+          "negativeDirectives": [
+            "Glossy modern gradients, neon color, and playful preschool proportions."
+          ],
+          "compositionPrinciples": [
+            "Organize evidence in measured overlapping planes with one dominant archival focal point.",
+            "Preserve readable margins, captions, and document edges instead of filling every gap."
+          ],
+          "preferredSurfaces": ["alpha", "opaque", "layer-sheet"]
+        },
+        "motion": {
+          "pacing": "measured",
+          "preferredIdlePresets": ["drift", "still", "breathe"],
+          "preferredTransitions": ["dip-to-paper", "page-turn", "torn-wipe"]
+        },
+        "render": {
+          "theme": {
+            "canvas": "#342d27",
+            "sceneBackground": "#756552",
+            "accent": "#a84d3f",
+            "ink": "#26211d",
+            "subtitle": "#f3e8d0",
+            "subtitleBackground": "rgba(38, 33, 29, .82)",
+            "paperEdge": "#d9ccb0",
+            "foreground": "#4a4036",
+            "texture": "textures/paper-grain.png",
+            "fontFamily": "Songti SC, STSong, \"Noto Serif SC\", serif",
+            "cutout": {
+              "edgeWidthPx": 2,
+              "shadowOffsetXPx": 2,
+              "shadowOffsetYPx": 6,
+              "shadowBlurPx": 4,
+              "shadowColor": "rgba(24, 20, 17, .38)"
+            }
+          }
+        },
+        "quality": {
+          "requiredAssetChecks": ["style-consistent", "style-profile-conformant"],
+          "requiredCompositeChecks": ["style-profile-consistent"],
+          "reviewFocus": [
+            "Paper age, print texture, and archival framing agree with the reference card.",
+            "Evidence hierarchy stays sober and legible without decorative nostalgia overpowering facts."
+          ]
+        }
+      }
     }
   ]
 }

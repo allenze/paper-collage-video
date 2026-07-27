@@ -22,6 +22,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const makeProject = (slug) => withCompiledEditorialFixture({
   slug,
   title: 'Cache Test',
+  styleProfile: {
+    id: 'hand-drawn-cutout-explainer',
+    profileFingerprint: 'a'.repeat(64),
+  },
   video: {width: 1920, height: 1080, fps: 30},
   theme: {
     canvas: '#000',
@@ -33,6 +37,13 @@ const makeProject = (slug) => withCompiledEditorialFixture({
     paperEdge: '#fff',
     foreground: '#fff',
     texture: `projects/${slug}/texture.png`,
+    cutout: {
+      edgeWidthPx: 3,
+      shadowOffsetXPx: 0,
+      shadowOffsetYPx: 10,
+      shadowBlurPx: 7,
+      shadowColor: 'rgba(20,15,12,.28)',
+    },
   },
   audio: {
     narration: {volume: 1},
@@ -104,6 +115,15 @@ test('render fingerprints separate visual changes from audio-only changes', asyn
     const changedVisual = await createRenderFingerprints(visualOnly, 'preview');
     assert.notEqual(changedVisual.visual, original.visual);
     assert.equal(changedVisual.audio, original.audio);
+    const changedStyleProfile = structuredClone(project);
+    changedStyleProfile.styleProfile.profileFingerprint = 'b'.repeat(64);
+    changedStyleProfile.styleProfile.id = 'archival-collage';
+    const changedStyle = await createRenderFingerprints(
+      changedStyleProfile,
+      'preview',
+    );
+    assert.notEqual(changedStyle.visual, original.visual);
+    assert.equal(changedStyle.audio, original.audio);
     const retimed = structuredClone(project);
     retimed.scenes[0].narration.startSeconds = 0.2;
     assert.notEqual(

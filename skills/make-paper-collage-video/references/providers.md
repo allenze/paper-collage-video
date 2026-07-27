@@ -18,13 +18,19 @@ Use `provider:select` only for an isolated change or fallback. A provider switch
 | `command` | User CLI/wrapper/private adapter | `provider:run` executes without a shell and records success |
 | `manual` | Authorized supplied or deterministic local asset | Copy/derive output, then `provider:record` |
 
-## Schema-v7 Image Requests and Reuse
+## Schema-v8 Image Requests and Reuse
 
-Every new image request uses schema v7 and requires `compositionBinding`,
-`semanticBinding`, and an explicit `outputSurface`. Use `alpha` only when the
-file must contain real transparent pixels, `chroma-key` with a declared edge
-key color, `opaque` for a fully opaque plate, or `layer-sheet` for the mixed
-surface of a registered 2×2 source. In a layer sheet, reference/rear cells are
+Every new image request uses schema v8 and requires the current project's exact
+`styleProfileBinding`, `compositionBinding`, `semanticBinding`, explicit
+`outputSurface`, and `quality`. Copy the binding from the frozen profile rather
+than paraphrasing it, include every binding directive verbatim in `prompt`, and
+include every `styleProfile.quality.requiredAssetChecks` value in
+`quality.requiredChecks`. The binding covers positive, negative, and
+composition directives; its fingerprint makes style changes invalidate reuse.
+Use `alpha` only when the file must contain real transparent pixels,
+`chroma-key` with a declared edge key color, `opaque` for a fully opaque plate,
+or `layer-sheet` for the mixed surface of a registered 2×2 source. In a layer
+sheet, reference/rear cells are
 opaque and subject/front cells use real alpha or a declared flat chroma key.
 For host image models without reliable native alpha, chroma key is the default:
 choose a color absent from every cutout (often `#ff00ff` for yellow/green paper),
@@ -44,17 +50,31 @@ and context-preserving recovery policy.
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "projectSlug": "example",
   "assetId": "boat-layer-sheet",
   "capability": "image",
   "output": "public/projects/example/assets/boat/layer-sheet.png",
-  "prompt": "Create one registered 2x2 sheet: flat reference, clean rear plate, complete boat silhouette, complete front wave overlay",
+  "prompt": "Use visible hand-drawn ink contours, cut-paper edges, and graphic explanatory marks. Build clear modular layers that can support annotations, mechanisms, and lively local motion. Avoid: Polished corporate vectors, photorealism, and unstructured decorative clutter. Composition: Give the hero action a strong silhouette and reserve clean space for explanatory graphics. Composition: Mix imperfect paper geometry with disciplined visual hierarchy and explicit relationships. Create one registered 2x2 sheet: flat reference, clean rear plate, complete boat silhouette, complete front wave overlay.",
+  "styleProfileBinding": {
+    "schemaVersion": 1,
+    "id": "hand-drawn-cutout-explainer",
+    "catalogVersion": "2026-07-27.1",
+    "profileFingerprint": "6c415494cdad395860cdd2576c330f0abe4cdf3a29a101baf4e7c19ff84e02b2",
+    "directives": [
+      "Use visible hand-drawn ink contours, cut-paper edges, and graphic explanatory marks.",
+      "Build clear modular layers that can support annotations, mechanisms, and lively local motion.",
+      "Avoid: Polished corporate vectors, photorealism, and unstructured decorative clutter.",
+      "Composition: Give the hero action a strong silhouette and reserve clean space for explanatory graphics.",
+      "Composition: Mix imperfect paper geometry with disciplined visual hierarchy and explicit relationships."
+    ]
+  },
   "outputSurface": {"mode": "layer-sheet"},
   "compositionBinding": {
     "sceneId": "scene-01",
     "nodeId": "boat-depth-stack",
     "pattern": "registered-depth-stack",
+    "outputRole": "registered-sheet",
     "registrationId": "boat-family-01",
     "sourceMasterAssetId": "boat-master",
     "canvas": {"width": 2048, "height": 2048},
@@ -99,7 +119,15 @@ and context-preserving recovery policy.
       "fallback": "full-source-regeneration"
     }
   },
-  "semanticBinding": {"riskClass": "topology-critical", "contractIds": ["boat-topology"]}
+  "semanticBinding": {"riskClass": "topology-critical", "contractIds": ["boat-topology"]},
+  "quality": {
+    "kind": "image",
+    "requiredChecks": [
+      "style-consistent",
+      "style-profile-conformant",
+      "subject-complete"
+    ]
+  }
 }
 ```
 
@@ -159,7 +187,7 @@ isolation.
 For recovery, follow this order:
 
 1. rerun local splitting/keying when no new pixels are needed;
-2. create a schema-v7 `masked-sheet-edit` request that names the complete recorded sheet as `stateSheetRecoveryBinding.sourceSheetAssetId`, uses the same id as `compositionBinding.derivation.parentAssetId`, includes it in `generationFamily.referenceAssetIds`, supplies a full-canvas `maskAssetId`, and names only the failed `targetStateIds`;
+2. create a schema-v8 `masked-sheet-edit` request that preserves the exact current `styleProfileBinding`, names the complete recorded sheet as `stateSheetRecoveryBinding.sourceSheetAssetId`, uses the same id as `compositionBinding.derivation.parentAssetId`, includes it in `generationFamily.referenceAssetIds`, supplies a full-canvas `maskAssetId`, and names only the failed `targetStateIds`;
 3. if untargeted cells cannot remain unchanged, create a `full-sheet-regeneration` request whose target ids equal every member of the state sheet.
 
 The validator rejects a provider-generation/edit request for one `stateBinding` when its generation family contains multiple states. A masked edit also requires `identity-family-consistent`, `cell-separation`, `reference-conformant`, and `untargeted-cells-unchanged`; quality preparation compares untargeted source and result pixels. This is context-preserving regional repair, not isolated cell generation.

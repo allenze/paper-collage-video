@@ -459,6 +459,11 @@ export const buildPlanningScenarios = ({
     slug,
     status: 'ready',
     intakeFingerprint: intakeDecisionFingerprint(intake),
+    styleProfileBinding: {
+      id: intake.visualStylePreset,
+      catalogVersion: intake.styleCatalogVersion,
+      profileFingerprint: intake.styleProfileFingerprint,
+    },
     requested,
     commonStory: input.commonStory,
     options,

@@ -16,6 +16,24 @@ import {
 import {validateAssetRequest} from '../scripts/provider-lib.mjs';
 import {buildLayerStackProof} from '../scripts/layer-stack-proof-lib.mjs';
 
+const STYLE_REQUEST = {
+  styleProfileBinding: {
+    schemaVersion: 1,
+    id: 'hand-drawn-cutout-explainer',
+    catalogVersion: 'fixture',
+    profileFingerprint: 'a'.repeat(64),
+    directives: ['fixture ink', 'fixture paper', 'Avoid: fixture gloss'],
+  },
+  quality: {
+    requiredChecks: [
+      'style-profile-conformant',
+      'silhouette-fidelity',
+      'negative-space-clean',
+      'background-leak-free',
+    ],
+  },
+};
+
 const revealEnvelope = {
   '16:9': {x: 0.04, y: 0.03, scale: 0.05, rotationDegrees: 2},
   '9:16': {x: 0.02, y: 0.04, scale: 0.04, rotationDegrees: 1},
@@ -179,7 +197,7 @@ test('v3 production profiles reserve explicit layer-package attempts without aut
   );
 });
 
-test('schema-v7 rejects isolated depth members and accepts one complete 2x2 layer sheet request', () => {
+test('schema-v8 rejects isolated depth members and accepts one complete 2x2 layer sheet request', () => {
   const recoveryPolicy = {
     completeSourceContext: true,
     localDeterministicFixFirst: true,
@@ -188,10 +206,11 @@ test('schema-v7 rejects isolated depth members and accepts one complete 2x2 laye
     fallback: 'full-source-regeneration',
   };
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: 'layer-request',
     assetId: 'boat-layer-sheet',
     capability: 'image',
+    ...STYLE_REQUEST,
     output: 'public/projects/layer-request/boat-layer-sheet.png',
     prompt: 'Reference plus complete rear, subject, and front layers.',
     outputSurface: {mode: 'layer-sheet'},

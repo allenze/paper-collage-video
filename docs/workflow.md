@@ -122,12 +122,12 @@ npm run project:resume -- <slug>
 ## 状态与来源边界
 
 - `brief.md`：人的意图、事实、风格、格式和权利边界；
-- `project.json.intake`：画幅、内置视觉风格、视差偏好及风格目录指纹；
+- `project.json.intake` / `project.json.styleProfile`：画幅、内置视觉风格与视差偏好，以及冻结后的生成指令、动效偏好、渲染主题、质量门禁、参考图和风格指纹；
 - `planning-scenarios.json`：共同故事骨架、三档详细方案、预计调用、建议 cap、hard ceiling 和质量承诺；
 - `production.json`：阶段、审批、粗粒度批次、产物、事件历史；
 - `storyboard.json`：已批准的 v10 节拍 treatments、source package、edit points 与三画幅/高级切换导演计划，以及编译生成的动作/调用预算、风险排名和证明指纹；
 - `project.json.plan`：Creative Plan v4 scenario 指纹、story scope、profile ceiling、质量下限和人批图片 attempt 上限；
-- `requests/*.json` / `assets-manifest.json`：schema-v7 逐素材输入、layer package/组合绑定与注册源家族；
+- `requests/*.json` / `assets-manifest.json`：schema-v8 逐素材输入、可执行风格绑定、layer package/组合绑定与注册源家族；
 - `quality-report.json`：逐文件和组合关系的技术/语义质量与指纹；
 - `review.md`：自动审批摘要与自然语言修改历史。
 

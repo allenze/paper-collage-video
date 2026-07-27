@@ -3,6 +3,20 @@
   "schemaVersion": 10,
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
+  "intake": {
+    "schemaVersion": 2,
+    "status": "pending",
+    "aspectRatio": null,
+    "visualStylePreset": null,
+    "parallaxPreference": null,
+    "styleCatalogVersion": null,
+    "styleCatalogFingerprint": null,
+    "styleProfileFingerprint": null,
+    "confirmedAt": null,
+    "note": "Bundled deterministic fixture.",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "styleProfile": null,
   "plan": {
     "schemaVersion": 4,
     "slug": "vox-primitives",
@@ -28,7 +42,14 @@
     "paperEdge": "#f5eedc",
     "foreground": "#263a3d",
     "texture": "textures/paper-grain.png",
-    "fontFamily": "Arial, Helvetica, sans-serif"
+    "fontFamily": "Arial, Helvetica, sans-serif",
+    "cutout": {
+      "edgeWidthPx": 3,
+      "shadowOffsetXPx": 0,
+      "shadowOffsetYPx": 10,
+      "shadowBlurPx": 7,
+      "shadowColor": "rgba(20,15,12,.28)"
+    }
   },
   "voice": {"mode": "fictional", "provider": "local-fixture", "displayName": "Engineering tone"},
   "audio": {

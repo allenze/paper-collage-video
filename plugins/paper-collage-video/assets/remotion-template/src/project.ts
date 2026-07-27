@@ -893,6 +893,13 @@ export type ProjectTheme = {
   paperEdge: string;
   foreground: string;
   texture: string;
+  cutout: {
+    edgeWidthPx: number;
+    shadowOffsetXPx: number;
+    shadowOffsetYPx: number;
+    shadowBlurPx: number;
+    shadowColor: string;
+  };
   fontFamily?: string;
   fontFile?: string;
 };
@@ -948,6 +955,38 @@ export type PaperCollageProject = {
   schemaVersion: 10;
   slug: string;
   title: string;
+  styleProfile: null | {
+    schemaVersion: 1;
+    id:
+      | 'childrens-picture-book-paper'
+      | 'hand-drawn-cutout-explainer'
+      | 'archival-collage';
+    label: string;
+    summary: string;
+    catalogVersion: string;
+    catalogFingerprint: string;
+    profileFingerprint: string;
+    referenceImage: string;
+    generation: {
+      promptDirectives: string[];
+      negativeDirectives: string[];
+      compositionPrinciples: string[];
+      preferredSurfaces: Array<
+        'alpha' | 'chroma-key' | 'opaque' | 'layer-sheet' | 'seamless-strip-x'
+      >;
+    };
+    motion: {
+      pacing: 'gentle' | 'playful' | 'measured';
+      preferredIdlePresets: Array<'float' | 'breathe' | 'drift' | 'sway' | 'still'>;
+      preferredTransitions: string[];
+    };
+    render: {theme: ProjectTheme};
+    quality: {
+      requiredAssetChecks: string[];
+      requiredCompositeChecks: string[];
+      reviewFocus: string[];
+    };
+  };
   plan: {
     schemaVersion: 4;
     slug: string;

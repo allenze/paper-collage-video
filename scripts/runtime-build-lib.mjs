@@ -31,6 +31,7 @@ export const RUNTIME_BUILD_INPUTS = [
   'schemas/storyboard.schema.json',
   'schemas/storyboard-authoring.schema.json',
   'schemas/style-catalog.schema.json',
+  'schemas/style-profile.schema.json',
   'public/style-catalog/catalog.json',
   'public/style-catalog/generation-provenance.json',
   'public/style-catalog/childrens-picture-book-paper.png',

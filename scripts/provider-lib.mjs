@@ -32,6 +32,10 @@ import {
 import {
   inspectStateAnchorRegistration,
 } from './state-sheet-lib.mjs';
+import {
+  styleProfileBinding,
+  validateStyleProfileBinding,
+} from './style-catalog-lib.mjs';
 
 export const PROVIDER_CAPABILITIES = ['text', 'image', 'voice'];
 export const PROVIDER_ADAPTERS = ['host', 'command', 'manual'];
@@ -54,6 +58,7 @@ const IMAGE_QUALITY_CHECKS = [
   'no-people',
   'safe-area-clear',
   'style-consistent',
+  'style-profile-conformant',
   'subject-complete',
   'identity-consistent',
   'identity-distinct-within-frame',
@@ -114,6 +119,7 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     model: model ?? request.model ?? null,
     settings: request.settings ?? {},
     quality: request.quality ?? null,
+    styleProfileBinding: request.styleProfileBinding ?? null,
     compositionBinding: request.compositionBinding ?? null,
     stateBinding: request.stateBinding ?? null,
     stateSheetBinding: request.stateSheetBinding ?? null,
@@ -683,7 +689,7 @@ export const inspectStateSheetRecoveryMask = async ({maskFile, stateSheetBinding
 
 export const validateAssetRequest = (request) => {
   const errors = [];
-  if (request?.schemaVersion !== 7) errors.push('schemaVersion 必须为 7');
+  if (request?.schemaVersion !== 8) errors.push('schemaVersion 必须为 8');
   if (!SLUG_PATTERN.test(request?.projectSlug ?? '')) errors.push('projectSlug 格式无效');
   if (!SLUG_PATTERN.test(request?.assetId ?? '')) errors.push('assetId 格式无效');
   if (!PROVIDER_CAPABILITIES.includes(request?.capability)) errors.push('capability 必须是 text、image 或 voice');
@@ -694,15 +700,28 @@ export const validateAssetRequest = (request) => {
     errors.push('image request 缺少 compositionBinding');
   }
   if (request?.capability === 'image' && !isPlainObject(request.semanticBinding)) {
-    errors.push('schema-v7 image request 缺少 semanticBinding');
+    errors.push('schema-v8 image request 缺少 semanticBinding');
   }
   if (request?.capability === 'image') {
+    const styleIssues = validateStyleProfileBinding(
+      request.styleProfileBinding,
+    );
+    errors.push(...styleIssues.map(({message}) => message));
+    if (
+      !isPlainObject(request.quality) ||
+      !Array.isArray(request.quality.requiredChecks) ||
+      !request.quality.requiredChecks.includes('style-profile-conformant')
+    ) {
+      errors.push(
+        'schema-v8 image request 的 quality.requiredChecks 必须包含 style-profile-conformant',
+      );
+    }
     const surface = request.outputSurface;
     if (
       !isPlainObject(surface) ||
       !['alpha', 'chroma-key', 'opaque', 'layer-sheet', 'seamless-strip-x'].includes(surface.mode)
     ) {
-      errors.push('schema-v7 image request 缺少有效 outputSurface');
+      errors.push('schema-v8 image request 缺少有效 outputSurface');
     } else {
       if (
         surface.mode === 'chroma-key' &&
@@ -1200,6 +1219,47 @@ export const validateAssetRequest = (request) => {
 export const loadAssetRequest = async (requestInput) => {
   const file = resolveWorkspacePath(requestInput, 'request 路径');
   const request = validateAssetRequest(await readJson(file));
+  if (request.capability === 'image') {
+    const projectFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'project.json',
+    );
+    if (!(await fileExists(projectFile))) {
+      throw new Error('image request 缺少当前 project.json，无法验证 styleProfileBinding');
+    }
+    const project = await readJson(projectFile);
+    if (!project.styleProfile) {
+      throw new Error('image request 只能在项目确认 executable styleProfile 后执行');
+    }
+    const expectedStyleBinding = styleProfileBinding(project.styleProfile);
+    if (
+      JSON.stringify(stableValue(request.styleProfileBinding)) !==
+      JSON.stringify(stableValue(expectedStyleBinding))
+    ) {
+      throw new Error(
+        'styleProfileBinding 与当前 project.styleProfile 不一致；请重新生成请求',
+      );
+    }
+    const missingDirectives = expectedStyleBinding.directives.filter(
+      (directive) => !request.prompt.includes(directive),
+    );
+    if (missingDirectives.length > 0) {
+      throw new Error(
+        `image request.prompt 未执行当前 Style Profile 指令：${missingDirectives.join('；')}`,
+      );
+    }
+    const missingStyleChecks =
+      project.styleProfile.quality.requiredAssetChecks.filter(
+        (check) => !request.quality.requiredChecks.includes(check),
+      );
+    if (missingStyleChecks.length > 0) {
+      throw new Error(
+        `quality.requiredChecks 缺少当前 Style Profile 检查：${missingStyleChecks.join(', ')}`,
+      );
+    }
+  }
   await assertRequestSemanticContracts(request);
   if (request.layerPackageBinding) {
     const storyboardFile = path.join(

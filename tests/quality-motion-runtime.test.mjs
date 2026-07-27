@@ -124,19 +124,23 @@ test('request fingerprints ignore project-specific destinations but preserve gen
 test('quality scaffold exposes pending checks and current proof evidence without pre-approving them', () => {
   const status = {
     report: {
+      styleProfile: {
+        referenceFile:
+          'public/style-catalog/hand-drawn-cutout-explainer.png',
+      },
       assets: [{
         assetId: 'subject',
         file: 'public/projects/scaffold/subject.png',
         sources: ['scene:scene-01:node:subject-node'],
-        requiredChecks: ['subject-complete', 'silhouette-fidelity'],
-        semanticChecks: {'subject-complete': 'passed', 'silhouette-fidelity': 'pending'},
+        requiredChecks: ['subject-complete', 'silhouette-fidelity', 'style-profile-conformant'],
+        semanticChecks: {'subject-complete': 'passed', 'silhouette-fidelity': 'pending', 'style-profile-conformant': 'pending'},
         status: 'pending',
       }],
       composites: [{
         compositeId: 'group:scene-01:rig',
         memberNodeIds: ['subject-node'],
-        requiredChecks: ['support-contact'],
-        semanticChecks: {'support-contact': 'pending'},
+        requiredChecks: ['support-contact', 'style-profile-consistent'],
+        semanticChecks: {'support-contact': 'pending', 'style-profile-consistent': 'pending'},
         status: 'pending',
       }],
     },
@@ -173,10 +177,91 @@ test('quality scaffold exposes pending checks and current proof evidence without
       /^[a-f0-9]{64}$/.test(targetFingerprint),
     ),
   );
-  assert.deepEqual(scaffold.reviews[0].pendingChecks, ['silhouette-fidelity']);
+  assert.deepEqual(scaffold.reviews[0].pendingChecks, [
+    'silhouette-fidelity',
+    'style-profile-conformant',
+  ]);
   assert.deepEqual(scaffold.reviews[0].passedChecks, []);
   assert.ok(scaffold.reviews[0].evidenceFiles.includes('dist/scaffold/evidence/alpha.png'));
+  assert.ok(
+    scaffold.reviews[0].evidenceFiles.includes(
+      'public/style-catalog/hand-drawn-cutout-explainer.png',
+    ),
+  );
   assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
+  assert.ok(
+    scaffold.reviews[1].evidenceFiles.includes(
+      'public/style-catalog/hand-drawn-cutout-explainer.png',
+    ),
+  );
+});
+
+test('executable style profiles create one fingerprinted whole-film quality target', async () => {
+  const project = withCompiledEditorialFixture({
+    slug: 'style-profile-target',
+    styleProfile: {
+      id: 'hand-drawn-cutout-explainer',
+      profileFingerprint: 'a'.repeat(64),
+      quality: {
+        requiredCompositeChecks: ['style-profile-consistent'],
+      },
+    },
+    theme: {
+      canvas: '#000000',
+      sceneBackground: '#111111',
+      accent: '#ffffff',
+      ink: '#ffffff',
+      subtitle: '#ffffff',
+      subtitleBackground: '#000000',
+      paperEdge: '#ffffff',
+      foreground: '#111111',
+      texture: 'textures/paper-grain.png',
+      cutout: {
+        edgeWidthPx: 3,
+        shadowOffsetXPx: 0,
+        shadowOffsetYPx: 10,
+        shadowBlurPx: 7,
+        shadowColor: 'rgba(20,15,12,.28)',
+      },
+    },
+    video: {width: 100, height: 100, fps: 30},
+    audio: {narration: {volume: 1}},
+    scenes: [{
+      id: 'scene',
+      label: 'Scene',
+      eyebrow: '',
+      tailSeconds: 0,
+      motion: {
+        blueprint: 'layered-reveal',
+        intensity: 1,
+        seed: 1,
+        proofTimes: [{
+          id: 'final',
+          at: 0.9,
+          label: 'Final',
+          kind: 'final',
+          assertions: ['Style is readable'],
+          stateAssertions: [],
+        }],
+      },
+      camera: {preset: 'static', intensity: 0},
+      narration: {src: 'missing.wav', startSeconds: 0, durationSeconds: 1, text: 'x'},
+      subtitles: [],
+      events: [],
+      composition: {
+        coordinateSpace: {width: 100, height: 100},
+        nodes: [],
+      },
+    }],
+    sceneTransitions: [],
+  });
+  const targets = await collectCompositeQualityTargets(project);
+  const target = targets.find(
+    ({compositeId}) =>
+      compositeId === 'style-profile:hand-drawn-cutout-explainer',
+  );
+  assert.deepEqual(target.requiredChecks, ['style-profile-consistent']);
+  assert.match(target.fingerprint, /^[a-f0-9]{64}$/);
 });
 
 test('v9 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {

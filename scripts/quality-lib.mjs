@@ -57,6 +57,7 @@ export const ASSET_QUALITY_CHECKS = [
   'no-people',
   'safe-area-clear',
   'style-consistent',
+  'style-profile-conformant',
   'subject-complete',
   'identity-consistent',
   'identity-distinct-within-frame',
@@ -79,6 +80,7 @@ export const ASSET_QUALITY_CHECKS = [
 ];
 
 export const COMPOSITE_QUALITY_CHECKS = [
+  'style-profile-consistent',
   'support-contact',
   'inside-or-on-readable',
   'front-occlusion',
@@ -493,7 +495,17 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       (asset.semanticBinding?.contractIds ?? [])
         .map((id) => [id, semanticContracts.fingerprints.get(id) ?? null]),
     );
-    return {...asset, assetId, semanticContractFingerprints};
+    return {
+      ...asset,
+      assetId,
+      semanticContractFingerprints,
+      styleProfileBinding: project.styleProfile
+        ? {
+            id: project.styleProfile.id,
+            profileFingerprint: project.styleProfile.profileFingerprint,
+          }
+        : null,
+    };
   });
 };
 
@@ -1041,12 +1053,69 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       }
     }
   }
+  if (project.styleProfile && (project.scenes ?? []).length > 0) {
+    const visibleNodes = (project.scenes ?? []).flatMap((scene) =>
+      flattenCompositionNodes(scene.composition?.nodes)
+        .filter(({renderParticipation}) => renderParticipation === 'visible')
+        .map(({node}) => ({sceneId: scene.id, node})),
+    );
+    const memberHashes = await hashReferencedFiles(
+      (project.scenes ?? []).flatMap((scene) =>
+        collectRuntimeVisibleCompositionSources(scene.composition),
+      ),
+    );
+    const proofShots = (project.scenes ?? []).map((scene) => ({
+      sceneId: scene.id,
+      nodeId: 'project-style',
+      proofTimeIds: (scene.motion?.proofTimes ?? []).map(({id}) => id),
+    }));
+    targets.push({
+      compositeId: `style-profile:${project.styleProfile.id}`,
+      sceneId: project.scenes[0].id,
+      pattern: 'style-target',
+      nodeId: 'project-style',
+      memberNodeIds: visibleNodes.map(
+        ({sceneId, node}) => `${sceneId}:${node.id}`,
+      ),
+      memberHashes,
+      compositionHash: hashCompositionValue({
+        theme: project.theme,
+        scenes: project.scenes.map(({id, appearance, composition}) => ({
+          id,
+          appearance,
+          composition,
+        })),
+      }),
+      fingerprint: hashCompositionValue({
+        runtimeSurfaceFingerprint,
+        styleProfile: project.styleProfile,
+        theme: project.theme,
+        scenes: project.scenes.map(
+          ({id, appearance, composition, camera}) => ({
+            id,
+            appearance,
+            composition,
+            camera,
+          }),
+        ),
+        memberHashes,
+      }),
+      proofTimeIds: [
+        ...new Set(proofShots.flatMap(({proofTimeIds}) => proofTimeIds)),
+      ],
+      proofShots,
+      requiredChecks: project.styleProfile.quality.requiredCompositeChecks,
+      reviewScope: 'runtime-visible',
+      styleOnly: true,
+    });
+  }
   return targets;
 };
 
 export const collectStyleProofTargets = async (project, directingTarget) => {
   const allTargets = (await collectCompositeQualityTargets(project)).filter(
-    ({reviewScope}) => reviewScope === 'runtime-visible',
+    ({reviewScope, pattern}) =>
+      reviewScope === 'runtime-visible' && pattern !== 'style-target',
   );
   const matchesDirectingTarget = (target) => {
     const shots = target.proofShots ?? [{
@@ -1804,31 +1873,34 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const inspectedAssets = await Promise.all(assets.map(async (asset) => {
     const absoluteFile = assertWorkspaceFile(asset.file);
     const sha256 = (await fileExists(absoluteFile)) ? await hashFile(absoluteFile) : null;
+    const baseRequiredChecks =
+      asset.requiredChecks !== undefined
+        ? asset.requiredChecks
+        : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image;
     const requiredChecks = [
-      ...new Set(
-        asset.requiredChecks !== undefined
-          ? asset.requiredChecks
-          : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image,
-      ),
+      ...new Set([
+        ...baseRequiredChecks,
+        ...(asset.reviewScope === 'derivation-only'
+          ? []
+          : project.styleProfile?.quality?.requiredAssetChecks ?? []),
+      ]),
     ];
     const unknownChecks = requiredChecks.filter((check) => !ASSET_QUALITY_CHECKS.includes(check));
     if (unknownChecks.length) throw new Error(`${asset.assetId} 含未知资产质量检查：${unknownChecks.join(', ')}`);
-    const fingerprint = asset.semanticBinding ||
-      asset.stateSheetRecoveryBinding ||
-      asset.registeredFamilyBinding
-      ? hashCompositionValue({
-          sha256,
-          semanticBinding: asset.semanticBinding,
-          semanticContractFingerprints: asset.semanticContractFingerprints,
-          stateSheetBinding: asset.stateSheetBinding,
-          stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
-          registeredFamilyBinding: asset.registeredFamilyBinding,
-          recoverySourceSha256: asset.recoverySourceSha256,
-          reviewScope: asset.reviewScope,
-          manifestRecordId: asset.manifestRecordId,
-          manifestSha256: asset.manifestSha256,
-        })
-      : sha256;
+    const fingerprint = hashCompositionValue({
+      sha256,
+      styleProfileFingerprint:
+        project.styleProfile?.profileFingerprint ?? null,
+      semanticBinding: asset.semanticBinding,
+      semanticContractFingerprints: asset.semanticContractFingerprints,
+      stateSheetBinding: asset.stateSheetBinding,
+      stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
+      registeredFamilyBinding: asset.registeredFamilyBinding,
+      recoverySourceSha256: asset.recoverySourceSha256,
+      reviewScope: asset.reviewScope,
+      manifestRecordId: asset.manifestRecordId,
+      manifestSha256: asset.manifestSha256,
+    });
     const review = await preservedReview({previous: previousAssets.get(asset.assetId), fingerprint, requiredChecks});
     const technical = await inspectTechnicalQuality({asset, project});
     return {...asset, sha256, fingerprint, requiredChecks, technical, ...review, status: entryStatus({technical, semanticChecks: review.semanticChecks})};
@@ -1876,6 +1948,20 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
     schemaVersion: 6,
     projectSlug: slug,
     updatedAt: new Date().toISOString(),
+    styleProfile: project.styleProfile
+      ? {
+          id: project.styleProfile.id,
+          profileFingerprint: project.styleProfile.profileFingerprint,
+          referenceFile: path.join(
+            'public',
+            project.styleProfile.referenceImage,
+          ),
+          referenceSha256: await hashFile(
+            resolvePublicFile(project.styleProfile.referenceImage),
+          ),
+          reviewFocus: project.styleProfile.quality.reviewFocus,
+        }
+      : null,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     assetHistory: (manifest.assets ?? [])
       .filter(({lifecycle}) => lifecycle.status !== 'active')
@@ -2016,6 +2102,12 @@ export const createQualityReviewScaffold = ({
   const proofAssets = proofReports.flatMap((report) => report.assetEvidence ?? []);
   const evidenceForAsset = (asset) => {
     const files = [asset.file];
+    if (
+      asset.requiredChecks?.includes('style-profile-conformant') &&
+      status.report.styleProfile?.referenceFile
+    ) {
+      files.push(status.report.styleProfile.referenceFile);
+    }
     const normalizedAssetFile = path.normalize(asset.file);
     for (const entry of proofAssets) {
       const sourceFile = entry.source
@@ -2045,6 +2137,12 @@ export const createQualityReviewScaffold = ({
       compositeId === composite.compositeId,
     );
     const files = (proof?.proofFrames ?? []).flatMap(proofEvidenceFiles);
+    if (
+      composite.requiredChecks?.includes('style-profile-consistent') &&
+      status.report.styleProfile?.referenceFile
+    ) {
+      files.push(status.report.styleProfile.referenceFile);
+    }
     files.push(
       ...(proof?.loopingWorldProof?.strips ?? [])
         .map(({derivationReport}) => derivationReport)

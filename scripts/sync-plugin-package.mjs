@@ -437,6 +437,20 @@ const project = {
   schemaVersion: 10,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
+  intake: {
+    schemaVersion: 2,
+    status: 'pending',
+    aspectRatio: null,
+    visualStylePreset: null,
+    parallaxPreference: null,
+    styleCatalogVersion: null,
+    styleCatalogFingerprint: null,
+    styleProfileFingerprint: null,
+    confirmedAt: null,
+    note: '',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  styleProfile: null,
   plan: {
     schemaVersion: 4,
     slug: 'starter-demo',
@@ -485,6 +499,13 @@ const project = {
     paperEdge: '#f5eedc',
     foreground: '#8d251e',
     texture: 'textures/paper-grain.png',
+    cutout: {
+      edgeWidthPx: 3,
+      shadowOffsetXPx: 0,
+      shadowOffsetYPx: 10,
+      shadowBlurPx: 7,
+      shadowColor: 'rgba(20,15,12,.28)',
+    },
   },
   voice: {mode: 'fictional', provider: 'fixture', displayName: 'Test tone fixture'},
   audio: {
@@ -875,6 +896,16 @@ const starterPreparedQuality = await runtimeQualityLib.prepareQualityReport(
   {write: false},
 );
 starterPreparedQuality.report.updatedAt = at;
+for (const asset of starterPreparedQuality.report.assets) {
+  asset.semanticChecks = Object.fromEntries(
+    asset.requiredChecks.map((check) => [check, 'passed']),
+  );
+  asset.reviewer = 'bundled-fixture';
+  asset.reviewedAt = at;
+  asset.note = 'Repository-owned technical fixture asset';
+  asset.evidenceFiles = [];
+  asset.status = 'passed';
+}
 for (const composite of starterPreparedQuality.report.composites) {
   composite.semanticChecks = Object.fromEntries(
     composite.requiredChecks.map((check) => [check, 'passed']),

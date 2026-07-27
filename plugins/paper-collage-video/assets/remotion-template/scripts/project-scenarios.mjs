@@ -25,6 +25,9 @@ const printScenarios = (scenarios) => {
     return;
   }
   console.log(`✓ 三档规划：共同故事骨架 ${scenarios.commonStory.beats.length} 个节拍`);
+  console.log(
+    `  executable style: ${scenarios.styleProfileBinding.id} · ${scenarios.styleProfileBinding.profileFingerprint}`,
+  );
   for (const option of scenarios.options) {
     const estimate = option.providerEstimate;
     console.log(

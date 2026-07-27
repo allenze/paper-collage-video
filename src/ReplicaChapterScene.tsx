@@ -53,6 +53,15 @@ const clamp = {
   extrapolateRight: 'clamp',
 } as const;
 
+export const cutoutFilter = (
+  paperEdge: string,
+  treatment: ProjectTheme['cutout'],
+) =>
+  `drop-shadow(${treatment.edgeWidthPx}px 0 ${paperEdge}) ` +
+  `drop-shadow(${-treatment.edgeWidthPx}px 0 ${paperEdge}) ` +
+  `drop-shadow(${treatment.shadowOffsetXPx}px ${treatment.shadowOffsetYPx}px ` +
+  `${treatment.shadowBlurPx}px ${treatment.shadowColor})`;
+
 const phaseFor = (id: string, seed: number) => {
   let value = seed >>> 0;
   for (const character of id) value = Math.imul(value ^ character.charCodeAt(0), 16777619);
@@ -199,6 +208,7 @@ const AssetView = ({
   seed,
   renderZ,
   paperEdge,
+  cutoutTreatment,
   cameraX,
   cameraY,
   cameraZoom,
@@ -216,6 +226,7 @@ const AssetView = ({
   seed: number;
   renderZ: number;
   paperEdge: string;
+  cutoutTreatment: ProjectTheme['cutout'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -231,7 +242,7 @@ const AssetView = ({
       style={{
         ...containerStyle({node, resolved, renderZ}),
         filter: cutout
-          ? `drop-shadow(3px 0 ${paperEdge}) drop-shadow(-3px 0 ${paperEdge}) drop-shadow(0 10px 7px rgba(20,15,12,.28))`
+          ? cutoutFilter(paperEdge, cutoutTreatment)
           : undefined,
         ...clipStyle({node, boundaries}),
       }}
@@ -257,6 +268,7 @@ const StateSequenceView = ({
   seed,
   renderZ,
   paperEdge,
+  cutoutTreatment,
   cameraX,
   cameraY,
   cameraZoom,
@@ -274,6 +286,7 @@ const StateSequenceView = ({
   seed: number;
   renderZ: number;
   paperEdge: string;
+  cutoutTreatment: ProjectTheme['cutout'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -292,7 +305,7 @@ const StateSequenceView = ({
       style={{
         ...containerStyle({node, resolved, renderZ}),
         height: registeredHeight,
-        filter: `drop-shadow(3px 0 ${paperEdge}) drop-shadow(-3px 0 ${paperEdge}) drop-shadow(0 10px 7px rgba(20,15,12,.28))`,
+        filter: cutoutFilter(paperEdge, cutoutTreatment),
         ...clipStyle({node, boundaries}),
       }}
     >
@@ -582,6 +595,7 @@ const GroupView = ({
   seed,
   renderZ,
   paperEdge,
+  cutoutTreatment,
   cameraX,
   cameraY,
   cameraZoom,
@@ -601,6 +615,7 @@ const GroupView = ({
   seed: number;
   renderZ: number;
   paperEdge: string;
+  cutoutTreatment: ProjectTheme['cutout'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -702,6 +717,7 @@ const GroupView = ({
             seed={seed}
             renderZ={['supported-subject', 'registered-depth-stack'].includes(node.pattern) ? slotOrder(child, node.support?.layering) : child.z}
             paperEdge={paperEdge}
+            cutoutTreatment={cutoutTreatment}
             cameraX={cameraX}
             cameraY={cameraY}
             cameraZoom={cameraZoom}
@@ -730,6 +746,7 @@ const CompositionNodeView = ({
   seed,
   renderZ = node.z,
   paperEdge,
+  cutoutTreatment,
   cameraX,
   cameraY,
   cameraZoom,
@@ -752,6 +769,7 @@ const CompositionNodeView = ({
   seed: number;
   renderZ?: number;
   paperEdge: string;
+  cutoutTreatment: ProjectTheme['cutout'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -766,9 +784,9 @@ const CompositionNodeView = ({
   if (node.kind === 'group' && node.renderParticipation === 'derivation-only') {
     return null;
   }
-  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
-  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
-  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
+  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cutoutTreatment, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
+  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cutoutTreatment, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
+  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cutoutTreatment, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
   if (node.kind === 'typography') {
     const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
     return <TypographyView node={node as CompositionTypographyNode} sceneId={sceneId} frame={frame} editorial={editorial} container={containerStyle({node, resolved, renderZ})} width={resolved.width} height={resolved.height ?? parent.height} />;
@@ -805,6 +823,7 @@ const CompositionNodeView = ({
             durationSeconds={durationSeconds}
             seed={seed}
             paperEdge={paperEdge}
+            cutoutTreatment={cutoutTreatment}
             cameraX={0}
             cameraY={0}
             cameraZoom={1}
@@ -884,7 +903,7 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme, editorial}: 
       <AbsoluteFill>
         <AbsoluteFill style={{transform: `translate3d(${cameraX}px, ${cameraY}px, 0) scale(${cameraZoom})`, transformOrigin: '50% 54%'}}>
           {[...scene.composition.nodes].sort((a, b) => a.z - b.z).map((node) => (
-            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} sceneId={scene.id} editorial={editorial} rootNodes={scene.composition.nodes} zones={zones} />
+            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} cutoutTreatment={theme.cutout} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} sceneId={scene.id} editorial={editorial} rootNodes={scene.composition.nodes} zones={zones} />
           ))}
         </AbsoluteFill>
         {paperTexture.visible ? <AbsoluteFill style={{opacity: paperTexture.opacity, mixBlendMode: paperTexture.blendMode, backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}

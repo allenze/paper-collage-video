@@ -3,6 +3,20 @@
   "schemaVersion": 10,
   "slug": "starter-demo",
   "title": "Paper Collage Workspace",
+  "intake": {
+    "schemaVersion": 2,
+    "status": "pending",
+    "aspectRatio": null,
+    "visualStylePreset": null,
+    "parallaxPreference": null,
+    "styleCatalogVersion": null,
+    "styleCatalogFingerprint": null,
+    "styleProfileFingerprint": null,
+    "confirmedAt": null,
+    "note": "Bundled deterministic fixture.",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "styleProfile": null,
   "plan": {
     "schemaVersion": 4,
     "slug": "starter-demo",
@@ -36,7 +50,14 @@
     "subtitleBackground": "rgba(58, 25, 18, .72)",
     "paperEdge": "#f5eedc",
     "foreground": "#8d251e",
-    "texture": "textures/paper-grain.png"
+    "texture": "textures/paper-grain.png",
+    "cutout": {
+      "edgeWidthPx": 3,
+      "shadowOffsetXPx": 0,
+      "shadowOffsetYPx": 10,
+      "shadowBlurPx": 7,
+      "shadowColor": "rgba(20,15,12,.28)"
+    }
   },
   "voice": {
     "mode": "fictional",

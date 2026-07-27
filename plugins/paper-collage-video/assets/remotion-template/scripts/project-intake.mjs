@@ -11,6 +11,7 @@ import {loadProject, writeJson} from './project-lib.mjs';
 import {loadProduction} from './production-state.mjs';
 import {
   loadStyleCatalog,
+  materializeStyleProfile,
   styleCatalogDecision,
 } from './style-catalog-lib.mjs';
 
@@ -86,12 +87,22 @@ try {
       ? JSON.parse(await fs.readFile(resolveWorkspacePath(input, 'intake selection 路径'), 'utf8'))
       : JSON.parse(inline);
     const intake = confirmIntake({selection, catalog});
+    const styleProfile = materializeStyleProfile(
+      catalog,
+      intake.visualStylePreset,
+    );
     const video = {
       ...project.video,
       width: ASPECT_RATIOS[intake.aspectRatio].width,
       height: ASPECT_RATIOS[intake.aspectRatio].height,
     };
-    await writeJson(paths.projectFile, {...project, intake, video});
+    await writeJson(paths.projectFile, {
+      ...project,
+      intake,
+      styleProfile,
+      theme: structuredClone(styleProfile.render.theme),
+      video,
+    });
     console.log(`✓ intake 已确认：${intake.aspectRatio} · ${intake.visualStylePreset} · parallax=${intake.parallaxPreference}`);
     console.log(`✓ intake fingerprint：${intakeDecisionFingerprint(intake)}`);
     console.log('下一步：生成共同故事骨架与三个 planning scenarios；此时仍不得调用图片 provider。');

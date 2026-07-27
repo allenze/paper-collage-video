@@ -5,7 +5,8 @@ authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
-`quality-report.json` v6 contains `eventTimeline`, current `assets`,
+`quality-report.json` v6 contains the current executable `styleProfile`
+reference/fingerprint/review focus, `eventTimeline`, current `assets`,
 `composites`, non-current `assetHistory`, per-entry `reviewScope`, and one
 `reviewSurfaceFingerprint` over the exact review targets, technical results, and
 evidence hashes. A visible consumer uses `runtime-visible`; an active provider or
@@ -61,6 +62,25 @@ Semantic risk adds evidence-backed checks:
 - diagram: `diagram-edge-clean`, `small-text-legible`, `no-procedural-noise-on-semantic-lines`.
 
 The runtime deterministically rejects `feTurbulence`, `feDisplacementMap`, and `feBlend` in diagram-critical SVG files. Raster diagrams and physical correctness still require original-resolution semantic evidence.
+
+## Executable Style Profile Review
+
+Every current source or visible asset inherits the selected profile's
+`requiredAssetChecks`; its quality fingerprint binds the profile fingerprint
+even when the file bytes are unchanged. Composition quality adds exactly one
+whole-film `style-profile:<id>` target with the profile's
+`requiredCompositeChecks`. Its fingerprint binds the profile snapshot, render
+theme, runtime, scenes, and participating asset hashes. Therefore changing a
+palette, cutout edge/shadow treatment, directive, required check, reference
+card, or profile id invalidates stale asset/composite approvals.
+
+The scaffold includes the frozen style-card reference as evidence and repeats
+`styleProfile.quality.reviewFocus` for the reviewer. Asset approval must verify
+`style-profile-conformant`; whole-film approval must verify
+`style-profile-consistent`. A technically valid alpha edge or registered family
+does not prove either check. Compare the actual evidence with the bundled
+reference at useful resolution and judge the profile's named visual traits
+across scenes, not just one isolated sample.
 
 For the style gate, run:
 

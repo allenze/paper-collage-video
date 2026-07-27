@@ -92,7 +92,8 @@ structural minimum exceeds the ceiling.
 
 ### Registered layer sheet
 
-Use one schema-v7 image request with:
+Use one schema-v8 image request with the current project's exact
+`styleProfileBinding`, all bound directives present in the prompt, and:
 
 - `sourceStrategy=registered-layer-sheet`;
 - `packageRole=registered-sheet`;

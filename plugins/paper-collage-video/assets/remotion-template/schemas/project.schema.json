@@ -3,13 +3,21 @@
   "$id": "https://local.paper-collage.dev/project.schema.json",
   "title": "Paper Collage Project v10",
   "type": "object",
-  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
+  "required": ["schemaVersion", "slug", "title", "intake", "styleProfile", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
     "schemaVersion": {"const": 10},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "intake": {"$ref": "#/$defs/intake"},
+    "styleProfile": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "$ref": "https://local.paper-collage.dev/style-profile.schema.json#/$defs/snapshot"
+        }
+      ]
+    },
     "plan": {"$ref": "#/$defs/plan"},
     "quality": {
       "type": "object",
@@ -27,7 +35,9 @@
       },
       "additionalProperties": false
     },
-    "theme": {"$ref": "#/$defs/theme"},
+    "theme": {
+      "$ref": "https://local.paper-collage.dev/style-profile.schema.json#/$defs/theme"
+    },
     "voice": {"$ref": "#/$defs/voice"},
     "audio": {"$ref": "#/$defs/audio"},
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialProject"},
@@ -47,12 +57,13 @@
         "parallaxPreference",
         "styleCatalogVersion",
         "styleCatalogFingerprint",
+        "styleProfileFingerprint",
         "confirmedAt",
         "note",
         "updatedAt"
       ],
       "properties": {
-        "schemaVersion": {"const": 1},
+        "schemaVersion": {"const": 2},
         "status": {"enum": ["pending", "confirmed"]},
         "aspectRatio": {
           "oneOf": [
@@ -85,6 +96,12 @@
           ]
         },
         "styleCatalogFingerprint": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          ]
+        },
+        "styleProfileFingerprint": {
           "oneOf": [
             {"type": "null"},
             {"type": "string", "pattern": "^[a-f0-9]{64}$"}
@@ -354,24 +371,6 @@
       },
       "additionalProperties": false
     },
-    "theme": {
-      "type": "object",
-      "required": ["canvas", "sceneBackground", "accent", "ink", "subtitle", "subtitleBackground", "paperEdge", "foreground", "texture"],
-      "properties": {
-        "canvas": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
-        "sceneBackground": {"type": "string"},
-        "accent": {"type": "string"},
-        "ink": {"type": "string"},
-        "subtitle": {"type": "string"},
-        "subtitleBackground": {"type": "string"},
-        "paperEdge": {"type": "string"},
-        "foreground": {"type": "string"},
-        "texture": {"type": "string"},
-        "fontFamily": {"type": "string"},
-        "fontFile": {"type": "string"}
-      },
-      "additionalProperties": false
-    },
     "voice": {
       "type": "object",
       "required": ["mode"],
@@ -637,5 +636,27 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "intake": {
+            "properties": {"status": {"const": "pending"}}
+          }
+        }
+      },
+      "then": {"properties": {"styleProfile": {"type": "null"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "intake": {
+            "properties": {"status": {"const": "confirmed"}}
+          }
+        }
+      },
+      "then": {"properties": {"styleProfile": {"type": "object"}}}
+    }
+  ],
   "additionalProperties": false
 }
