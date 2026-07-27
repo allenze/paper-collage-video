@@ -6,6 +6,11 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {createProductionMetrics} from './production-metrics-lib.mjs';
 import {compileStoryboardDirecting} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildManifest} from './runtime-build-lib.mjs';
+import {
+  loadStyleCatalog,
+  materializeStyleProfile,
+} from './style-catalog-lib.mjs';
+import {motionLanguageCard} from './motion-contract-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -109,6 +114,8 @@ for (const entry of [
   'scripts/layer-stack-proof-lib.mjs',
   'scripts/looping-strip-lib.mjs',
   'scripts/motion-treatment-lib.mjs',
+  'scripts/motion-contract-lib.mjs',
+  'scripts/motion-approval-lib.mjs',
   'scripts/process-character-sheet.mjs',
   'scripts/derive-registered-family.mjs',
   'scripts/derive-looping-strip.mjs',
@@ -171,8 +178,8 @@ for (const entry of [
   'scripts/storyboard-lib.mjs',
   'scripts/render-phase2-proof.mjs',
   'scripts/render-looping-world-proof.mjs',
-  'scripts/schema-v10.mjs',
-  'scripts/validate_v10_schemas.py',
+  'scripts/schema-v11.mjs',
+  'scripts/validate_v11_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-looping-world-proof.mjs',
   'scripts/verify-vox-sample.mjs',
@@ -231,6 +238,7 @@ for (const entry of [
   'tests/state-sequence-v5.test.mjs',
   'tests/production-state.test.mjs',
   'tests/directing-revision.test.mjs',
+  'tests/motion-contract.test.mjs',
   'tests/quality-motion-runtime.test.mjs',
   'tests/runtime-surface-scope.test.mjs',
   'tests/storyboard-motion.test.mjs',
@@ -246,6 +254,7 @@ for (const entry of [
   'fixtures/vox-primitives',
   'fixtures/directing-revision-fixture.mjs',
   'fixtures/editorial-fixture.mjs',
+  'fixtures/motion-contract-fixture.mjs',
   'fixtures/phase2-proof-fixture.mjs',
   'fixtures/looping-world-fixture.mjs',
   'public/fixtures/composition-v4',
@@ -328,7 +337,7 @@ const workspacePackage = {
     'proof:looping-world:render': rootPackage.scripts['proof:looping-world:render'],
     'proof:looping-world:verify': rootPackage.scripts['proof:looping-world:verify'],
     'proof:looping-world': rootPackage.scripts['proof:looping-world'],
-    'schema:v10': rootPackage.scripts['schema:v10'],
+    'schema:v11': rootPackage.scripts['schema:v11'],
     dev: 'remotion studio src/index.ts --props=projects/starter-demo/project.json',
     check: rootPackage.scripts.check,
     bundle: rootPackage.scripts.bundle,
@@ -432,25 +441,30 @@ const starterEditorial = {
   activeProfile: '16:9',
 };
 
+const starterStyleProfile = materializeStyleProfile(
+  await loadStyleCatalog(),
+  'childrens-picture-book-paper',
+);
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 11,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   intake: {
     schemaVersion: 2,
-    status: 'pending',
-    aspectRatio: null,
-    visualStylePreset: null,
-    parallaxPreference: null,
-    styleCatalogVersion: null,
-    styleCatalogFingerprint: null,
-    styleProfileFingerprint: null,
-    confirmedAt: null,
-    note: '',
+    status: 'confirmed',
+    aspectRatio: '16:9',
+    visualStylePreset: starterStyleProfile.id,
+    parallaxPreference: 'auto',
+    styleCatalogVersion: starterStyleProfile.catalogVersion,
+    styleCatalogFingerprint: starterStyleProfile.catalogFingerprint,
+    styleProfileFingerprint: starterStyleProfile.profileFingerprint,
+    confirmedAt: '2026-01-01T00:00:00.000Z',
+    note: 'Bundled fixture',
     updatedAt: '2026-01-01T00:00:00.000Z',
   },
-  styleProfile: null,
+  styleProfile: starterStyleProfile,
+  motionContract: null,
   plan: {
     schemaVersion: 4,
     slug: 'starter-demo',
@@ -489,24 +503,7 @@ const project = {
   },
   quality: {minimumAssetScale: 0.5},
   video: {width: 1920, height: 1080, fps: 30},
-  theme: {
-    canvas: '#6e1e19',
-    sceneBackground: '#8a271f',
-    accent: '#a33a2d',
-    ink: '#4a291f',
-    subtitle: '#fff8ea',
-    subtitleBackground: 'rgba(58, 25, 18, .72)',
-    paperEdge: '#f5eedc',
-    foreground: '#8d251e',
-    texture: 'textures/paper-grain.png',
-    cutout: {
-      edgeWidthPx: 3,
-      shadowOffsetXPx: 0,
-      shadowOffsetYPx: 10,
-      shadowBlurPx: 7,
-      shadowColor: 'rgba(20,15,12,.28)',
-    },
-  },
+  theme: structuredClone(starterStyleProfile.render.theme),
   voice: {mode: 'fictional', provider: 'fixture', displayName: 'Test tone fixture'},
   audio: {
     narration: {volume: 1},
@@ -580,15 +577,30 @@ const project = {
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 11,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',
   style: {
     visualThesis: '以可见纸张深度和克制动作证明可编辑的拼贴空间。',
     compositionRules: ['主体保持在字幕安全区上方', '前中后景至少形成两个深度层次'],
-    motionLanguage: ['先建立空间，再触发主体，最后稳定锁定'],
     layerStrategy: '背景承载空间，透明主体承载动作，前景纸片负责压边。',
+  },
+  motionDirection: {
+    schemaVersion: 1,
+    summary: '先建立纸面空间，再让主体完成清晰动作，最后留出可读稳定段。',
+    pacing: 'gentle',
+    performance: {
+      grammar: ['establish', 'action', 'settle'],
+      anticipation: 'selective',
+      followThrough: 'selective',
+      poseStrategy: 'mixed',
+      minimumFinalHoldRatio: 0.1,
+    },
+    camera: {strategy: 'motivated'},
+    transitions: {strategy: 'story-led'},
+    ambient: {strategy: 'selective'},
+    styleDeviationRationale: null,
   },
   editorial: starterEditorial,
   scenes: [
@@ -600,9 +612,9 @@ const storyboard = compileStoryboardDirecting({
       blueprint: 'layered-reveal',
       estimatedDurationSeconds: 1.2,
       beats: [
-        {id: 'establish', at: 0, purpose: '建立空间', visual: '纸面与背景出现', audioCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
-        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', audioCue: null, proofTimeId: 'proof-action', treatments: [{id: 'show-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'visibility-change', motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体从明确的隐藏状态持续出现，并在事件后保持可见。'}]},
-        {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', audioCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
+        {id: 'establish', at: 0, performanceRole: 'establish', purpose: '建立空间', visual: '纸面与背景出现', audioCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
+        {id: 'subject-arrives', at: 0.5, performanceRole: 'action', purpose: '交付主体', visual: '人物纸片进入中心', audioCue: null, proofTimeId: 'proof-action', treatments: [{id: 'show-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'visibility-change', motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体从明确的隐藏状态持续出现，并在事件后保持可见。'}]},
+        {id: 'lockup', at: 0.9, performanceRole: 'settle', purpose: '稳定结论', visual: '人物与标题形成锁定构图', audioCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
       ],
       proofTimes: [
         {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},
@@ -613,7 +625,8 @@ const storyboard = compileStoryboardDirecting({
   ],
   sceneTransitions: [],
   updatedAt: '2026-01-01T00:00:00.000Z',
-}, {plan: project.plan});
+}, {plan: project.plan, styleProfile: project.styleProfile});
+project.motionContract = storyboard.motionContract;
 project.editorial = storyboard.editorial;
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'project.json'),
@@ -622,6 +635,10 @@ await writeJson(
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'storyboard.json'),
   storyboard,
+);
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'motion-language-card.json'),
+  motionLanguageCard(storyboard.motionContract),
 );
 
 const at = '2026-01-01T00:00:00.000Z';
@@ -645,6 +662,8 @@ const production = {
     storyboard: 'projects/starter-demo/storyboard.json',
     prompts: 'projects/starter-demo/prompts.json',
     review: 'projects/starter-demo/review.md',
+    motionLanguageCard: 'projects/starter-demo/motion-language-card.json',
+    motionApproval: 'projects/starter-demo/motion-approval.json',
     validationReport: null,
     assetsReadySeal: null,
     preview: null,
@@ -657,6 +676,23 @@ const production = {
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production.json'),
   production,
+);
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'motion-approval.json'),
+  {
+    schemaVersion: 1,
+    slug: 'starter-demo',
+    approvedAt: at,
+    humanNote: 'Bundled fixture',
+    styleProfileBinding: storyboard.motionContract.styleProfileBinding,
+    motionApprovalFingerprint:
+      storyboard.motionContract.approvalFingerprint,
+    approvedExecutionFingerprint: storyboard.motionContract.fingerprint,
+    styleProofPlanFingerprint:
+      storyboard.directingSummary.styleProofPlan.fingerprint,
+    styleProofReport: 'dist/starter-demo/style-motion-proof.json',
+    styleProofReportSha256: '0'.repeat(64),
+  },
 );
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
@@ -750,9 +786,11 @@ await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 6,
+    schemaVersion: 7,
     projectSlug: 'starter-demo',
     updatedAt: at,
+    styleProfile: null,
+    motionContract: null,
     reviewSurfaceFingerprint:
       '0000000000000000000000000000000000000000000000000000000000000000',
     eventTimeline: [],

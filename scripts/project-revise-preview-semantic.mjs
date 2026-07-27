@@ -17,6 +17,7 @@ import {
   storyboardFileFor,
 } from './storyboard-lib.mjs';
 import {prepareSemanticRevision} from './directing-revision-lib.mjs';
+import {motionLanguageCard} from './motion-contract-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -79,6 +80,7 @@ try {
     currentStoryboard,
     suppliedStoryboard,
     plan: project.plan,
+    styleProfile: project.styleProfile,
     production: state,
     authorization,
     reportPath,
@@ -91,8 +93,13 @@ try {
       {
         ...project,
         plan: result.plan,
+        motionContract: result.storyboard.motionContract,
         editorial: result.storyboard.editorial,
       },
+    ),
+    writeJson(
+      paths.motionLanguageCardFile,
+      motionLanguageCard(result.storyboard.motionContract),
     ),
     writeJson(
       path.join(productionPaths.projectDirectory, 'semantic-revision.json'),

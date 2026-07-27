@@ -28,6 +28,7 @@ import {
   createEditorialFixture,
   withCompiledEditorialFixture,
 } from '../fixtures/editorial-fixture.mjs';
+import {FIXTURE_STYLE_PROFILE} from '../fixtures/motion-contract-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const still = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]};
@@ -382,7 +383,11 @@ test('the no-provider VOX fixture compiles and executes every new primitive', ()
     mediaSha256: '1c14b9f9cc430154dd3a74fc5267a83233f2e04e492444376c27dd956134177f',
     durationSeconds: 6,
   });
-  const storyboard = compileStoryboardDirecting(storyboardInput);
+  const storyboard = compileStoryboardDirecting(storyboardInput, {
+    plan: project.plan,
+    styleProfile: FIXTURE_STYLE_PROFILE,
+  });
+  project.motionContract = storyboard.motionContract;
   assert.equal(project.plan.assetBudget.maxGeneratedImages, 21);
   assert.deepEqual(
     validateSceneTransitionSequence({

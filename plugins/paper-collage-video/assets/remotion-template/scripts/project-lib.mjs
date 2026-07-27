@@ -22,6 +22,7 @@ import {
   validateStoryboard,
 } from './storyboard-lib.mjs';
 import {validateDirectingExecution} from './motion-treatment-lib.mjs';
+import {validateMotionContractExecution} from './motion-contract-lib.mjs';
 import {
   EMPHASIS_ACTIONS,
   flattenCompositionNodes,
@@ -98,6 +99,8 @@ export const projectPaths = (slug) => ({
   productionFile: path.join(ROOT, 'projects', slug, 'production.json'),
   productionMetricsFile: path.join(ROOT, 'projects', slug, 'production-metrics.json'),
   storyboardFile: path.join(ROOT, 'projects', slug, 'storyboard.json'),
+  motionLanguageCardFile: path.join(ROOT, 'projects', slug, 'motion-language-card.json'),
+  motionApprovalFile: path.join(ROOT, 'projects', slug, 'motion-approval.json'),
   reviewFile: path.join(ROOT, 'projects', slug, 'review.md'),
   semanticContractsFile: path.join(ROOT, 'projects', slug, 'semantic-contracts.json'),
   generationAttemptsFile: path.join(ROOT, 'projects', slug, 'generation-attempts.jsonl'),
@@ -127,8 +130,8 @@ export const loadProject = async (slug) => {
   assertSlug(slug);
   const paths = projectPaths(slug);
   const project = await readJson(paths.projectFile);
-  if (project.schemaVersion !== 10) {
-    throw new Error('project.json 必须使用 schemaVersion 10；旧项目不会自动迁移。');
+  if (project.schemaVersion !== 11) {
+    throw new Error('project.json 必须使用 schemaVersion 11；旧项目不会自动迁移。');
   }
   return {paths, project};
 };
@@ -469,8 +472,8 @@ export const validateProject = async (project, options = {}) => {
     return inspection;
   };
 
-  if (project.schemaVersion !== 10) {
-    add('error', 'schema-version', 'schemaVersion 必须为 10。', 'schemaVersion');
+  if (project.schemaVersion !== 11) {
+    add('error', 'schema-version', 'schemaVersion 必须为 11。', 'schemaVersion');
   }
   if (!SLUG_PATTERN.test(project.slug ?? '')) {
     add('error', 'slug', 'slug 格式无效。', 'slug');
@@ -479,7 +482,7 @@ export const validateProject = async (project, options = {}) => {
     add('error', 'title', '项目必须有标题。', 'title');
   }
   if (project.intake === undefined) {
-    add('error', 'intake-required', 'v10 项目必须包含 intake。', 'intake');
+    add('error', 'intake-required', 'v11 项目必须包含 intake。', 'intake');
   } else {
     for (const issue of validateIntake(project.intake)) {
       add('error', 'intake-invalid', issue.message, issue.location);
@@ -639,7 +642,11 @@ export const validateProject = async (project, options = {}) => {
     }
   }
   if (storyboard) {
-    for (const issue of validateStoryboard(storyboard, {slug: project.slug, plan: project.plan})) {
+    for (const issue of validateStoryboard(storyboard, {
+      slug: project.slug,
+      plan: project.plan,
+      styleProfile: project.styleProfile,
+    })) {
       add('error', issue.code, issue.message, `storyboard.${issue.location}`);
     }
     if (storyboard.status !== 'ready') {
@@ -647,6 +654,12 @@ export const validateProject = async (project, options = {}) => {
     }
     if (JSON.stringify(project.sceneTransitions ?? []) !== JSON.stringify(storyboard.sceneTransitions ?? [])) {
       add('error', 'scene-transitions-drift', 'project.sceneTransitions 必须与已批准故事板完全一致。', 'sceneTransitions');
+    }
+    for (const issue of validateMotionContractExecution({
+      project,
+      storyboard,
+    })) {
+      add('error', issue.code, issue.message, issue.location);
     }
     const projectEditorial = project.editorial
       ? {...project.editorial, activeProfile: undefined}

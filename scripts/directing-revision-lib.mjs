@@ -22,6 +22,7 @@ const sceneConcept = (scene) => ({
   staticRationale: scene.staticRationale ?? null,
   beats: (scene.beats ?? []).map((beat) => ({
     id: beat.id,
+    performanceRole: beat.performanceRole,
     purpose: beat.purpose,
     visual: beat.visual,
     audioCue: beat.audioCue,
@@ -39,6 +40,7 @@ export const storyboardConceptFingerprint = (storyboard) =>
   hashCompositionValue({
     arc: storyboard.arc,
     style: storyboard.style,
+    motionDirection: storyboard.motionDirection,
     scenes: (storyboard.scenes ?? []).map(sceneConcept),
   });
 
@@ -52,6 +54,7 @@ export const storyboardAuthoringFromCompiled = (storyboard) => ({
       )
     : storyboard.editorial,
   scenes: (storyboard.scenes ?? []).map(({compositionPlan, directing, ...scene}) => scene),
+  motionContract: undefined,
   directingSummary: undefined,
 });
 
@@ -136,6 +139,7 @@ export const prepareDirectingRevision = ({
   currentStoryboard,
   suppliedStoryboard,
   plan,
+  styleProfile,
   production,
   reportPath,
   source = 'preview',
@@ -145,21 +149,33 @@ export const prepareDirectingRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 11,
     slug: currentStoryboard.slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(authored.sceneTransitions),
     updatedAt: at,
-  }, {plan});
+  }, {plan, styleProfile});
 
-  const issues = validateStoryboard(candidate, {slug: currentStoryboard.slug, plan});
+  const issues = validateStoryboard(candidate, {
+    slug: currentStoryboard.slug,
+    plan,
+    styleProfile,
+  });
   if (issues.length > 0) {
     throw new Error(issues.map(({location, message}) => `${location}: ${message}`).join('\n'));
   }
   const beforeConcept = storyboardConceptFingerprint(currentStoryboard);
   const afterConcept = storyboardConceptFingerprint(candidate);
   if (beforeConcept !== afterConcept) {
-    throw new Error('导演重编不得改变已批准的故事概念、风格、镜头语义、节拍语义或证明断言。');
+      throw new Error('导演重编不得改变已批准的故事概念、风格、镜头语义、节拍语义或证明断言。');
+  }
+  if (
+    currentStoryboard.motionContract?.approvalFingerprint !==
+    candidate.motionContract?.approvalFingerprint
+  ) {
+    throw new Error(
+      '导演重编不得改变已批准的全片动作语言或节拍角色；请返回现有风格/动作语言 gate。',
+    );
   }
 
   const previousScenes = new Map(currentStoryboard.scenes.map((scene) => [scene.id, scene]));
@@ -197,6 +213,19 @@ export const prepareDirectingRevision = ({
     createdAt: at,
     oldDirectingFingerprint: currentStoryboard.directingSummary?.fingerprint ?? null,
     newDirectingFingerprint: candidate.directingSummary?.fingerprint ?? null,
+    motionContract: {
+      oldApprovalFingerprint:
+        currentStoryboard.motionContract?.approvalFingerprint ?? null,
+      newApprovalFingerprint:
+        candidate.motionContract?.approvalFingerprint ?? null,
+      oldExecutionFingerprint:
+        currentStoryboard.motionContract?.fingerprint ?? null,
+      newExecutionFingerprint:
+        candidate.motionContract?.fingerprint ?? null,
+      approvalPreserved:
+        currentStoryboard.motionContract?.approvalFingerprint ===
+        candidate.motionContract?.approvalFingerprint,
+    },
     protectedConceptFingerprint: beforeConcept,
     changedSceneIds: [...changedSceneIds].sort(),
     changedScenes,
@@ -245,6 +274,7 @@ export const prepareSemanticRevision = ({
   currentStoryboard,
   suppliedStoryboard,
   plan,
+  styleProfile,
   production,
   authorization,
   reportPath,
@@ -270,10 +300,12 @@ export const prepareSemanticRevision = ({
     hashCompositionValue(currentStoryboard.arc) !==
       hashCompositionValue(authored.arc) ||
     hashCompositionValue(currentStoryboard.style) !==
-      hashCompositionValue(authored.style)
+      hashCompositionValue(authored.style) ||
+    hashCompositionValue(currentStoryboard.motionDirection) !==
+      hashCompositionValue(authored.motionDirection)
   ) {
     throw new Error(
-      '语义重编授权按镜头生效；全片 arc 或 style 变化必须返回其所属概念/风格决策。',
+      '语义重编授权按镜头生效；全片 arc、style 或 motionDirection 变化必须返回其所属概念/风格决策。',
     );
   }
   const profileRecalculation =
@@ -303,17 +335,18 @@ export const prepareSemanticRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 11,
     slug: currentStoryboard.slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(
       authored.sceneTransitions,
     ),
     updatedAt: at,
-  }, {plan: nextPlan});
+  }, {plan: nextPlan, styleProfile});
   const issues = validateStoryboard(candidate, {
     slug: currentStoryboard.slug,
     plan: nextPlan,
+    styleProfile,
   });
   if (issues.length > 0) {
     throw new Error(
@@ -373,6 +406,18 @@ export const prepareSemanticRevision = ({
     reportPath,
     at,
   });
+  const motionApprovalInvalidated =
+    currentStoryboard.motionContract?.approvalFingerprint !==
+    candidate.motionContract?.approvalFingerprint;
+  if (motionApprovalInvalidated) {
+    nextProduction.approvals.styleAndVoice = {
+      status: 'pending',
+      decidedAt: null,
+      note: '',
+    };
+    nextProduction.artifacts.motionApproval = null;
+    nextProduction.stage = 'style-review';
+  }
   nextProduction.artifacts.semanticRevision = reportPath;
   nextProduction.artifacts.directingRevision = null;
   const historyEntry = nextProduction.history.at(-1);
@@ -397,6 +442,7 @@ export const prepareSemanticRevision = ({
     profilePromiseRecalculation: profileRecalculation,
     executionSyncRequired: true,
     providerApprovalRequired: false,
+    motionApprovalInvalidated,
     invalidatedArtifacts: [
       'styleProof',
       'validationReport',

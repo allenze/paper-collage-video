@@ -1,5 +1,9 @@
 import {createEditorialFixture} from './editorial-fixture.mjs';
 import {compileStoryboardDirecting} from '../scripts/storyboard-lib.mjs';
+import {
+  createMotionDirectionFixture,
+  FIXTURE_STYLE_PROFILE,
+} from './motion-contract-fixture.mjs';
 
 export const LOOPING_WORLD_SLUG = 'vox-looping-world-proof';
 export const LOOPING_WORLD_SCENE_ID = 'road-journey';
@@ -242,7 +246,7 @@ const createLoopingWorldEditorial = ({media}) => {
 
 export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
   $schema: '../../schemas/storyboard-authoring.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 11,
   slug: LOOPING_WORLD_SLUG,
   status: 'ready',
   arc: 'A paper car crosses a continuous world whose mountains, trees, road, and foreground grass reveal distinct travel speeds without visible seams.',
@@ -252,12 +256,12 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
       'Keep the tracked car inside the focal corridor while far, mid, ground, and near strips scroll behind and in front of it.',
       'Use the foreground grass as a real occluder and keep every looping strip wider than its target viewport.',
     ],
-    motionLanguage: [
-      'Drive world travel with one compiler-owned horizontal phase and derive strictly ordered speeds from depth.',
-      'Combine a slow camera push-pull with car suspension motion without disguising the camera-compensated world displacement.',
-    ],
     layerStrategy: 'Far mountains, mid trees, ground road, tracked paper car, and near grass share one semantic looping environment stack.',
   },
+  motionDirection: createMotionDirectionFixture({
+    summary:
+      'Establish the layered road, sustain one continuous world-travel action, then settle with the tracked car readable.',
+  }),
   editorial: createLoopingWorldEditorial({media}),
   scenes: [{
     id: LOOPING_WORLD_SCENE_ID,
@@ -270,6 +274,7 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
       {
         id: 'world-open',
         at: 0.12,
+        performanceRole: 'establish',
         purpose: 'establish',
         visual: 'The paper car and four depth planes are readable.',
         audioCue: null,
@@ -283,6 +288,7 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
       {
         id: 'world-travel',
         at: 0.5,
+        performanceRole: 'action',
         purpose: 'demonstrate',
         visual: 'The continuous paper world crosses a seam at depth-relative speeds.',
         audioCue: null,
@@ -292,6 +298,7 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
       {
         id: 'world-resolve',
         at: 0.88,
+        performanceRole: 'settle',
         purpose: 'resolve',
         visual: 'The car remains readable after multiple wraps and a camera pull-back.',
         audioCue: null,
@@ -345,7 +352,10 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
 export const compileLoopingWorldStoryboard = ({media}) =>
   compileStoryboardDirecting(
     createLoopingWorldStoryboardAuthoring({media}),
-    {plan: createLoopingWorldPlan()},
+    {
+      plan: createLoopingWorldPlan(),
+      styleProfile: FIXTURE_STYLE_PROFILE,
+    },
   );
 
 const createWorldGroup = ({profile, stripAssets, carSrc, finishMarkerSrc}) => ({
@@ -446,7 +456,7 @@ export const createLoopingWorldProject = ({
   const storyboard = compileLoopingWorldStoryboard({media});
   return {
     $schema: '../../schemas/project.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 11,
     slug: LOOPING_WORLD_SLUG,
     title: `VOX Phase 2.5 Looping World · ${profileId}`,
     intake: {
@@ -463,6 +473,7 @@ export const createLoopingWorldProject = ({
       updatedAt: LOOPING_WORLD_UPDATED_AT,
     },
     styleProfile: null,
+    motionContract: storyboard.motionContract,
     plan: createLoopingWorldPlan(),
     quality: {minimumAssetScale: 1},
     video: {width: profile.width, height: profile.height, fps: LOOPING_WORLD_FPS},

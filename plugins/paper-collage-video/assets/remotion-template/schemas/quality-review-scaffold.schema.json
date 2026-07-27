@@ -37,7 +37,7 @@
       "required": ["file", "schemaVersion", "fingerprint"],
       "properties": {
         "file": {"type": "string", "minLength": 1},
-        "schemaVersion": {"const": 6},
+        "schemaVersion": {"const": 7},
         "fingerprint": {"$ref": "#/$defs/fingerprint"}
       },
       "additionalProperties": false

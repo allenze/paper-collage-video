@@ -1,3 +1,23 @@
+# Paper Collage Video 0.18.0-dev.1
+
+Paper Collage Video 0.18.0-dev.1 turns whole-film motion direction into an
+executable, attributable, and reviewable production contract.
+
+- Project and Storyboard v11 replace descriptive `style.motionLanguage` prose
+  with structured `motionDirection` and per-beat `performanceRole`.
+- The storyboard compiler owns `motionContract`, with separate human approval
+  and exact execution fingerprints.
+- The existing style/fictional-voice gate now shows
+  `motion-language-card.json`; `approve-style-voice` records the human note and
+  exact bindings in `motion-approval.json` without adding a new gate.
+- Style proof v7 binds both motion fingerprints. Quality report v7 adds one
+  `motion-contract:whole-film` target for grammar, cadence, camera, transition,
+  ambient, and event/proof synchronization.
+- Runtime validation requires every approved performance phrase to exist as an
+  event and proof moment. Assets-ready, render cache, delivery seals, reports,
+  runtime fingerprints, tests, templates, and packaged plugin all share the
+  same contract.
+
 # Paper Collage Video 0.16.0
 
 Paper Collage Video 0.16.0 turns the repository into a stricter, evidence-bound

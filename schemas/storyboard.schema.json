@@ -1,16 +1,22 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard.schema.json",
-  "title": "Compiled Paper Collage Storyboard v10",
+  "title": "Compiled Paper Collage Storyboard v11",
   "type": "object",
-  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "editorial", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
+  "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "motionDirection", "motionContract", "editorial", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 10},
+    "schemaVersion": {"const": 11},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"const": "ready"},
     "arc": {"type": "string", "minLength": 1},
     "style": {"$ref": "#/$defs/style"},
+    "motionDirection": {
+      "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/authoring"
+    },
+    "motionContract": {
+      "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/compiled"
+    },
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialCompiled"},
     "scenes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/compiledScene"}},
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}},
@@ -21,11 +27,10 @@
   "$defs": {
     "style": {
       "type": "object",
-      "required": ["visualThesis", "compositionRules", "motionLanguage", "layerStrategy"],
+      "required": ["visualThesis", "compositionRules", "layerStrategy"],
       "properties": {
         "visualThesis": {"type": "string", "minLength": 1},
         "compositionRules": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
-        "motionLanguage": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
         "layerStrategy": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
@@ -269,10 +274,13 @@
     },
     "beat": {
       "type": "object",
-      "required": ["id", "at", "purpose", "visual", "audioCue", "proofTimeId", "treatments"],
+      "required": ["id", "at", "performanceRole", "purpose", "visual", "audioCue", "proofTimeId", "treatments"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "performanceRole": {
+          "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/performanceRole"
+        },
         "purpose": {"type": "string", "minLength": 1},
         "visual": {"type": "string", "minLength": 1},
         "audioCue": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
@@ -614,11 +622,12 @@
     },
     "styleProofPlan": {
       "type": "object",
-      "required": ["requiredCoverage", "targets", "sourceFamilyKeys", "fingerprint"],
+      "required": ["requiredCoverage", "targets", "sourceFamilyKeys", "motionContractFingerprint", "fingerprint"],
       "properties": {
         "requiredCoverage": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
         "targets": {"type": "array", "items": {"$ref": "#/$defs/styleProofTarget"}},
         "sourceFamilyKeys": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "motionContractFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       },
       "additionalProperties": false

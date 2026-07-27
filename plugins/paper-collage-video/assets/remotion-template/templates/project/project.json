@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "slug": "{{slug}}",
   "title": "{{title}}",
   "intake": {
@@ -17,6 +17,7 @@
     "updatedAt": "{{createdAt}}"
   },
   "styleProfile": null,
+  "motionContract": null,
   "plan": {
     "schemaVersion": 4,
     "slug": "{{slug}}",

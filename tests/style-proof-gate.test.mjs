@@ -187,11 +187,12 @@ const writeFixture = async (slug) => {
     sceneTransitions: [],
   });
   const storyboard = {
-    schemaVersion: 10,
+    schemaVersion: 11,
     slug,
     status: 'ready',
     directingSummary: {
       styleProofPlan: {
+        motionContractFingerprint: 'd'.repeat(64),
         requiredCoverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
         targets: [{
           sceneId: 'scene',
@@ -206,6 +207,37 @@ const writeFixture = async (slug) => {
         sourceFamilyKeys: ['target:subject'],
         fingerprint: 'c'.repeat(64),
       },
+    },
+    motionContract: {
+      schemaVersion: 1,
+      direction: {
+        summary: 'Fixture motion direction',
+      },
+      styleProfileBinding: {
+        id: 'childrens-picture-book-paper',
+        profileFingerprint: 'f'.repeat(64),
+        pacing: 'gentle',
+      },
+      scenes: [{
+        sceneId: 'scene',
+        phrases: [
+          {role: 'establish', beatId: 'establish', proofTimeId: 'establish'},
+          {role: 'action', beatId: 'action', proofTimeId: 'action'},
+          {role: 'settle', beatId: 'settle', proofTimeId: 'final'},
+        ],
+      }],
+      transitions: [],
+      editorialFingerprint: 'b'.repeat(64),
+      requiredCompositeChecks: [
+        'motion-grammar-consistent',
+        'pacing-cadence-consistent',
+        'camera-strategy-consistent',
+        'transition-strategy-consistent',
+        'ambient-strategy-consistent',
+        'sync-anchors-current',
+      ],
+      fingerprint: 'd'.repeat(64),
+      approvalFingerprint: 'e'.repeat(64),
     },
     scenes: [{
       id: 'scene',
@@ -268,10 +300,12 @@ const writeProofEvidence = async ({slug, project, files}) => {
   await fs.writeFile(
     styleProofReportPath(slug),
     `${JSON.stringify({
-      schemaVersion: 6,
+      schemaVersion: 7,
       scope: 'style',
       slug,
       planFingerprint: 'c'.repeat(64),
+      motionContractFingerprint: 'd'.repeat(64),
+      motionApprovalFingerprint: 'e'.repeat(64),
       directingTargets: [{
         sceneId: 'scene',
         treatmentId: 'subject-on-support',
@@ -435,6 +469,18 @@ test('style topology gate rejects hard-alpha false confidence, unrelated evidenc
     await assert.rejects(() => assertStyleProofReady(slug), /尚未全部通过|尚未通过完整素材质量检查/);
     await fs.copyFile(fixture.files.subject, evidencePath);
     await assert.doesNotReject(() => assertStyleProofReady(slug));
+    fixture.project.motionContract = {
+      ...JSON.parse(
+        await fs.readFile(
+          path.join(fixture.projectDirectory, 'storyboard.json'),
+          'utf8',
+        ),
+      ).motionContract,
+    };
+    await fs.writeFile(
+      path.join(fixture.projectDirectory, 'project.json'),
+      `${JSON.stringify(fixture.project, null, 2)}\n`,
+    );
     const approvedAdvance = spawnSync(
       process.execPath,
       [path.join(ROOT, 'scripts', 'project-advance.mjs'), slug, 'approve-style-voice', '--note=fixture approval'],

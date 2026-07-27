@@ -259,7 +259,7 @@ test('derivation-only registered family passes deterministic checks without huma
       });
     }
     const project = {
-      schemaVersion: 10,
+      schemaVersion: 11,
       slug,
       video: {width: 100, height: 100, fps: 30},
       quality: {minimumAssetScale: 1},

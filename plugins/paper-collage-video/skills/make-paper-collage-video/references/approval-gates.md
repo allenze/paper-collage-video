@@ -8,7 +8,7 @@ Require explicit decisions for:
 
 1. Initial intake: `16:9|9:16`, one of three built-in visual styles, and text-only parallax preference.
 2. Combined scenario, story scope, duration/scenes, production profile, exact budget cap, facts, and provider plan.
-3. Story-specific visual sample, fictional voice, and 3–5 second motion/topology proof.
+3. Story-specific visual sample, fictional voice, whole-film action-language card, and 3–5 second motion/topology proof.
 4. Rendered preview and requested creative changes.
 
 The first intake never authorizes provider spend. The combined second decision may authorize both providers and concept when the request clearly names both. Preserve the human's wording. If approval is ambiguous, ask one concise question.
@@ -31,13 +31,25 @@ invalidates all dependent style/proof/render evidence.
   mechanism-, or diagram-critical sample, then create at most one representative
   source package, a short fictional-voice audition, and one 3–5 second proof
   when motion is new or coupled topology is present. A topology or
-  limited-animation proof uses the actual v10 group/state sequence and renderer.
+  limited-animation proof uses the actual v11 group/state sequence and renderer.
   A `registered-depth-stack` uses its compiled layer-complete source package and
   family-aware proof: neutral reconstruction, reference comparison,
   checkerboard exploded members, and both extremes of the 16:9, 9:16, and 1:1
   reveal envelopes. Standard alpha/tight/motion evidence remains required where
   applicable. Coupled approval cannot advance while that evidence is missing,
   stale, or semantically pending.
+- The style/voice gate also owns motion-language approval. Show
+  `motion-language-card.json` with the sample and proof. It must expose the
+  whole-film grammar, pacing, camera/transition/ambient strategy, per-scene
+  performance roles and proof anchors, final holds, exceptions, and
+  `approvalFingerprint`. `approve-style-voice` writes the attributable human
+  note and current Style Profile/motion/style-proof bindings to
+  `motion-approval.json`. This is not a fourth gate.
+- A directing-only timing or treatment refinement may keep that approval only
+  when `approvalFingerprint` is unchanged; its exact execution fingerprint
+  still invalidates stale proof, quality, and render artifacts. Changing motion
+  grammar, performance roles, proof bindings, transition intent, locked-static
+  exception, or Style Profile returns to this gate.
 - After style approval, produce autonomously within the approved asset budget.
 - Reuse exact-match assets and deterministic local processing before regeneration.
 - Disclose the compiled source-package strategy, base/reserve/hard ceiling,

@@ -9,8 +9,10 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `brief.md` | Human intent, audience, facts, format, style, rights, prohibitions |
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
 | `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
-| `storyboard.json` | Approved schema-v10 beat treatments, editorial authoring, intent-routed scene boundaries, layer source packages, and compiler-owned edit/directing/proof plans and fingerprints |
-| `project.json` | Frozen executable Style Profile, materialized theme, Creative Plan v4 ceilings/cap/source-package decision, and v10 Remotion execution tree |
+| `storyboard.json` | Approved schema-v11 motion direction, beat performance roles/treatments, editorial authoring, scene boundaries, layer source packages, and compiler-owned motion/edit/directing/proof plans and fingerprints |
+| `motion-language-card.json` | Human-readable whole-film action grammar, pacing, scene phrases, final holds, exceptions, and approval/execution fingerprints |
+| `motion-approval.json` | Attributable style/voice-gate approval binding the human note, Style Profile, motion fingerprints, and style proof |
+| `project.json` | Frozen executable Style Profile, compiled motion contract, materialized theme, Creative Plan v4 ceilings/cap/source-package decision, and v11 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus exact style/composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
@@ -47,9 +49,9 @@ report, and contact-sheet artifact. A `locked-static` scene may lower only the
 three motion-scene floors recorded in `profilePromiseRevision`; state-family,
 layer, call, and semantic-action promises remain fixed.
 
-`approve-style-voice` requires a current schema-v6
+`approve-style-voice` requires a current schema-v7
 `style-motion-proof.json` with `scope=style`, bound to the compiler-owned
-multidimensional `styleProofPlan` fingerprint and its complete target list. The
+multidimensional `styleProofPlan`, both motion-contract fingerprints, and its complete target list. The
 plan covers the highest semantic-risk classes, every concrete coupled
 relationship, and state-sequence behavior while minimizing distinct source
 families. Every selected target, including `free`, must have at least one
@@ -80,9 +82,9 @@ only as a `recovery-source` record produced by
 `provider:recover-rejected-source`, never by hand-editing the manifest or
 ledger. Its original attempt stays rejected and consumed.
 
-## v10 Project, v9 Editorial, Composition, and Boundary Tree
+## v11 Project, Motion Contract v1, v9 Editorial, Composition, and Boundary Tree
 
-Schema v10 is the only supported Project, Storyboard Authoring, and Compiled
+Schema v11 is the only supported Project, Storyboard Authoring, and Compiled
 Storyboard contract. Creative Plan v4 owns the approved profile, its planning
 ceiling, and `approvedImageBudget`: the narrower exact attempt cap authorized by
 the human. The storyboard compiler owns
@@ -100,6 +102,16 @@ normalized to the immediate parent. Older projects are not parsed or migrated;
 regenerate their equivalent output from the latest contract when needed. There
 is no legacy loader, dual schema, deprecated field, compatibility adapter, or
 version-conditioned renderer branch.
+
+Storyboard authoring owns one structured `motionDirection` plus one
+`performanceRole` and `proofTimeId` per beat. The compiler owns
+`motionContract`; it binds the Style Profile, per-scene phrase/treatment
+coverage, transition recipes, and compiled editorial fingerprint. Its
+`approvalFingerprint` covers stable human-visible motion semantics, while its
+full `fingerprint` covers exact execution. Do not restore the superseded
+`style.motionLanguage` prose field or hand-author either fingerprint. Read
+`motion-contract-v1.md` for approval, revision, runtime, and whole-film quality
+rules.
 
 A top-level `supported-subject` or `registered-depth-stack` group may explicitly
 declare `renderParticipation=derivation-only` when it exists only to bind a
@@ -218,7 +230,7 @@ reveal envelope, or render size invalidates cached evidence.
 Derivation method is part of correctness. Complex silhouettes and negative spaces require capable segmentation/matting or careful manual tracing; a coarse enclosing polygon is invalid even when it has clean hard alpha. When extraction quality cannot be proved, keep the complete master rigid and use whole-family/camera motion instead of fabricating independent parts.
 
 Every adjacent scene pair has one top-level `sceneTransitions[]` record with
-narrative `intent` and `rationale`. An intent-only schema-v10 authoring record
+narrative `intent` and `rationale`. An intent-only schema-v11 authoring record
 compiles to a deterministic default `treatment`; an explicit treatment
 separately declares type, motivation, duration, optional direction, and optional
 boundary beat. Runtime types are `paper-slide`, `paper-wipe`, `torn-wipe`,
@@ -237,9 +249,10 @@ plus before/at/after frames.
 
 ## Proof and Event Contract
 
-- Storyboard authors own v10 `treatments`, layer source-package intent,
-  editorial authoring, and boundary intent; they do not hand-author
-  `compositionPlan`, source-package cost totals, resolved edit points,
+- Storyboard authors own v11 `motionDirection`, beat `performanceRole`,
+  `treatments`, layer source-package intent, editorial authoring, and boundary
+  intent; they do not hand-author `motionContract`, `compositionPlan`,
+  source-package cost totals, resolved edit points,
   responsive/transition plans, `directing`, fingerprints, risk ranking, or
   pose-sheet grids. `project:storyboard` deterministically compiles those
   derived fields and default transition recipes, then rejects drift.
@@ -281,7 +294,7 @@ Fix a wrong mask, crop, anchor, registration, or derivative without another huma
 Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion,
 extraction, layer/state-sheet processing, editorial/directing compilation,
 proof, attempt accounting, or report logic ad hoc. Only the current Creative
-Plan v4, project/storyboard schema v10, executable Style Profile schema v1,
-quality-report schema v6, asset-request schema v8, registered-family schema v2,
+Plan v4, project/storyboard schema v11, executable Style Profile schema v1,
+motion-contract schema v1, quality-report schema v7, asset-request schema v8, registered-family schema v2,
 and current style-proof contract are supported; older contracts are
 intentionally not migrated or executed.

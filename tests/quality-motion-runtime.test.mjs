@@ -295,7 +295,7 @@ test('v9 scene transitions use one seconds-based intent-routed opaque-boundary p
   assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v10 projects are rejected instead of migrated', async () => {
+test('pre-v11 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -309,14 +309,14 @@ test('pre-v10 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 10'),
+          code === 'schema-version' && message.includes('必须为 11'),
     ),
   );
 });
 
-test('v10 projects require an explicit bounded narration gain', async () => {
+test('v11 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 10,
+    schemaVersion: 11,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},

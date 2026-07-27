@@ -13,6 +13,7 @@ import {assertSelectedProvidersReady} from './provider-lib.mjs';
 import {assertCreativePlanReady} from './creative-plan-lib.mjs';
 import {assertStoryboardReady} from './storyboard-lib.mjs';
 import {assertStyleProofReady} from './style-proof-lib.mjs';
+import {recordMotionApproval} from './motion-approval-lib.mjs';
 
 const args = process.argv.slice(2);
 const positional = args.filter((arg) => !arg.startsWith('--'));
@@ -46,7 +47,11 @@ try {
   if (action === 'brief-ready') {
     const {project} = await loadProject(slug);
     assertCreativePlanReady(project.plan, {slug});
-    await assertStoryboardReady(slug, project.plan);
+    await assertStoryboardReady(
+      slug,
+      project.plan,
+      project.styleProfile,
+    );
   }
   if (action === 'approve-style-voice') {
     const styleProof = await assertStyleProofReady(slug);
@@ -54,6 +59,18 @@ try {
       console.log(`✓ 风格拓扑证明：${styleProof.composites.join(', ')}`);
       artifacts.styleProof = path.relative(ROOT, styleProof.report);
     }
+    const motionApproval = await recordMotionApproval({
+      slug,
+      humanNote: note,
+      styleProof,
+    });
+    artifacts.motionApproval = path.relative(
+      ROOT,
+      motionApproval.file,
+    );
+    console.log(
+      `✓ 动作语言批准：${motionApproval.record.motionApprovalFingerprint}`,
+    );
   }
   if (action === 'approve-preview') {
     await requirePassingArtifact(slug, 'preview.mp4');

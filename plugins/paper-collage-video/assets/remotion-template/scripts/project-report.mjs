@@ -456,6 +456,14 @@ try {
     },
     directing: {
       fingerprint: storyboard.directingSummary.fingerprint,
+      motionContract: {
+        summary: storyboard.motionContract.direction.summary,
+        approvalFingerprint:
+          storyboard.motionContract.approvalFingerprint,
+        executionFingerprint: storyboard.motionContract.fingerprint,
+        requiredCompositeChecks:
+          storyboard.motionContract.requiredCompositeChecks,
+      },
       productionProfile: storyboard.directingSummary.profile,
       styleProofPlan: storyboard.directingSummary.styleProofPlan,
       poseSheetPlans: storyboard.directingSummary.poseSheetPlans,

@@ -127,7 +127,9 @@ The storyboard is not another human gate. It is part of the existing combined co
 
 - Give the whole film one explicit arc and one shared visual/motion language.
 - Give each planned scene a narrative role, single message, blueprint, estimated duration, and at least three ordered beats.
-- Read `motion-directing.md`. Add one or more v10 `treatments` to every beat.
+- Read `motion-contract-v1.md` and `motion-directing.md`. Author one v11
+  `motionDirection`, assign every beat a `performanceRole`, and add one or more
+  `treatments` to every beat.
   Author the visible change, motion or visibility mechanism, composition
   relationship, optional graphic mechanism, risk, importance, necessity, proof
   binding, and rationale. For relative rear/subject/front motion, also read
@@ -140,7 +142,7 @@ The storyboard is not another human gate. It is part of the existing combined co
 - Define at least three proof moments per scene: an establishing state, an action/peak state, and a `final` state at or after `0.82`. Every proof needs a stable id, visible relationship assertions, and a `stateAssertions` array. Cover every planned sequence state at least once so its schedule can be verified deterministically.
 - Declare exactly one top-level `sceneTransitions[]` record for every adjacent pair. Author narrative `intent` and `rationale`, normally letting the compiler choose the registered animated recipe. Use `intent=impact` plus an impact-cut treatment when abruptness is semantic. For ordinary intents, use a `rhythmic` cut only with a `beatId` in the outgoing final 20% or incoming first 20%. Every animated boundary must be opaque and covered by both the outgoing tail and incoming narration lead.
 - Keep proof moments outside scene-boundary intervals so every sampled frame clearly proves the intended composition.
-- In schema v10, every beat and treatment declares `proofTimeId` as an approved
+- In schema v11, every beat and treatment declares `proofTimeId` as an approved
   proof id or `null`; treatment proof must match its beat. If a beat names an
   `audioCue`, it must bind an event-level proof and production must attach a
   real sound asset to at least one matching event using that same proof id.

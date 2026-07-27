@@ -952,7 +952,7 @@ export type ProjectScene = {
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 10;
+  schemaVersion: 11;
   slug: string;
   title: string;
   styleProfile: null | {
@@ -986,6 +986,77 @@ export type PaperCollageProject = {
       requiredCompositeChecks: string[];
       reviewFocus: string[];
     };
+  };
+  motionContract: null | {
+    schemaVersion: 1;
+    direction: {
+      schemaVersion: 1;
+      summary: string;
+      pacing: 'gentle' | 'playful' | 'measured';
+      performance: {
+        grammar: Array<
+          | 'establish'
+          | 'anticipate'
+          | 'action'
+          | 'follow-through'
+          | 'settle'
+          | 'hold'
+          | 'transition'
+        >;
+        anticipation: 'none' | 'selective' | 'required-for-hero';
+        followThrough: 'none' | 'selective' | 'required-for-hero';
+        poseStrategy: 'continuous-led' | 'pose-to-pose' | 'mixed';
+        minimumFinalHoldRatio: number;
+      };
+      camera: {strategy: 'locked' | 'motivated' | 'expressive'};
+      transitions: {
+        strategy: 'story-led' | 'rhythmic-accented' | 'chapter-led';
+      };
+      ambient: {strategy: 'minimal' | 'selective' | 'persistent'};
+      styleDeviationRationale: string | null;
+    };
+    styleProfileBinding: {
+      id:
+        | 'childrens-picture-book-paper'
+        | 'hand-drawn-cutout-explainer'
+        | 'archival-collage';
+      profileFingerprint: string;
+      pacing: 'gentle' | 'playful' | 'measured';
+    };
+    scenes: Array<{
+      sceneId: string;
+      motionPolicy: 'standard' | 'locked-static';
+      phrases: Array<{
+        role:
+          | 'establish'
+          | 'anticipate'
+          | 'action'
+          | 'follow-through'
+          | 'settle'
+          | 'hold'
+          | 'transition';
+        beatId: string;
+        at: number;
+        proofTimeId: string;
+      }>;
+      heroActionBeatIds: string[];
+      stateSequenceTreatmentIds: string[];
+      continuousTreatmentIds: string[];
+      cameraTreatmentIds: string[];
+      ambientTreatmentIds: string[];
+      finalHoldRatio: number;
+      exception: null | {kind: 'locked-static'; rationale: string};
+    }>;
+    transitions: Array<{
+      id: string;
+      intent: string;
+      type: string;
+      motivation: string;
+    }>;
+    editorialFingerprint: string;
+    requiredCompositeChecks: string[];
+    approvalFingerprint: string;
+    fingerprint: string;
   };
   plan: {
     schemaVersion: 4;

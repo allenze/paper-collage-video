@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "projectSlug": "starter-demo",
   "generatedAt": "2026-01-01T00:00:00.000Z",
-  "fingerprint": "20241cbbec626f10c1ffa440b15a4b4e89a9347b5cee74cb055ed2c0d8e594e4",
+  "fingerprint": "c461dfb3436796101f5b59e420458d25afa82f15954f1665416f293fac70f1c2",
   "basis": {
     "projectSlug": "starter-demo",
-    "visualFingerprint": "cc9527aba4b4514ce1c58f6822430b897ec1813667b663579c35009f31bc7973",
+    "visualFingerprint": "7927e24041a85690efef48eeac7f86c13a5b90004704fec5eeae73e213050cde",
     "audioFingerprint": "fad8b06dd1caee36083a6324faccdb29c7429f309a3e64c8eceaa0c14c51c27c",
-    "storyboardFingerprint": "6b7fded67a112b16cd46ce8e040692c54016eae2bf3238316172f23b1ec46053",
+    "storyboardFingerprint": "e02501e467d91c43f4a2b8a932da3f5e0ccd26298331903ecbe9fc53e9649042",
     "validationFingerprint": "9a77d137ff713a39f0dba7ea95114faf0667946932ce13c1b9ebae5e93f9097f",
-    "qualityFingerprint": "ce66b06a44eb7a27ba9c23040975f47ef40d1e63312bbd76f35ef1b85792e583",
-    "subtitleFingerprint": "93e7d68d7a620f8277f9d91184f3611c1317eba5deeb97d615b9225e8d82d99f",
+    "qualityFingerprint": "d926a59f28bd94dd261363a4c73b14323ad7a721912a01a1e8eadd33dcf9cf31",
+    "subtitleFingerprint": "b5391bb35d34d9249e74d017676a239ff35c27bd45fde9ee4225920125882ab4",
     "subtitleContract": {
       "schemaVersion": 1,
       "contract": "subtitle-surface-v1",
       "passed": true,
-      "fingerprint": "93e7d68d7a620f8277f9d91184f3611c1317eba5deeb97d615b9225e8d82d99f",
+      "fingerprint": "b5391bb35d34d9249e74d017676a239ff35c27bd45fde9ee4225920125882ab4",
       "summary": {
         "totalScenes": 1,
         "requiredScenes": 1,
@@ -36,7 +36,7 @@
       },
       "font": {
         "file": null,
-        "family": null,
+        "family": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
         "source": "runtime-fallback",
         "exists": true
       },
@@ -118,7 +118,7 @@
           "id": "subtitle-font-source",
           "passed": true,
           "expected": "runtime fallback stack",
-          "actual": "runtime fallback stack"
+          "actual": "STKaiti, KaiTi, \"Noto Serif SC\", serif"
         }
       ]
     }

@@ -10,6 +10,10 @@ import {
   summarizeLayerSourcePackages,
   validateLayerCompositionIntent,
 } from './layer-source-plan-lib.mjs';
+import {
+  compileMotionContract,
+  validateCompiledMotionContract,
+} from './motion-contract-lib.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -225,7 +229,10 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   return coverage;
 };
 
-export const compileStyleProofPlan = (scenes) => {
+export const compileStyleProofPlan = (
+  scenes,
+  {motionContractFingerprint} = {},
+) => {
   const candidates = scenes.flatMap((scene) =>
     scene.beats.flatMap((beat) => beat.treatments.map((treatment) => ({
       sceneId: scene.id,
@@ -246,7 +253,12 @@ export const compileStyleProofPlan = (scenes) => {
       requiredCoverage: [],
       targets: [],
       sourceFamilyKeys: [],
-      fingerprint: hashCompositionValue({requiredCoverage: [], targets: []}),
+      motionContractFingerprint,
+      fingerprint: hashCompositionValue({
+        requiredCoverage: [],
+        targets: [],
+        motionContractFingerprint,
+      }),
     };
   }
   const highestSemanticSeverity = Math.max(
@@ -320,6 +332,7 @@ export const compileStyleProofPlan = (scenes) => {
     requiredCoverage: [...requiredCoverage].sort(),
     targets,
     sourceFamilyKeys: [...selectedFamilies].sort(),
+    motionContractFingerprint,
   };
   return {...plan, fingerprint: hashCompositionValue(plan)};
 };
@@ -1026,10 +1039,21 @@ export const recalculateProfilePromiseForLockedStaticScenes = ({
   };
 };
 
-export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
+export const compileStoryboardDirecting = (
+  storyboard,
+  {plan, styleProfile} = {},
+) => {
   const issues = [];
   if (storyboard.directingSummary !== undefined) {
     addIssue(issues, 'storyboard-derived-summary', '输入不得手写 directingSummary；它由编译器生成。', 'directingSummary');
+  }
+  if (storyboard.motionContract !== undefined) {
+    addIssue(
+      issues,
+      'storyboard-derived-motion-contract',
+      '输入不得手写 motionContract；它由编译器生成。',
+      'motionContract',
+    );
   }
   const treatmentIds = new Set();
   for (const [sceneIndex, scene] of (storyboard.scenes ?? []).entries()) {
@@ -1127,6 +1151,27 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     error.issues = [{code: 'storyboard-compile', message: cause.message, location: 'scenes'}];
     throw error;
   }
+  let motionContract;
+  try {
+    motionContract = compileMotionContract({
+      direction: storyboard.motionDirection,
+      scenes,
+      sceneTransitions: storyboard.sceneTransitions ?? [],
+      editorial,
+      styleProfile,
+    });
+  } catch (cause) {
+    const error = new Error(cause.message);
+    error.issues =
+      cause.issues ?? [
+        {
+          code: 'motion-contract-compile',
+          message: cause.message,
+          location: 'motionDirection',
+        },
+      ];
+    throw error;
+  }
   const motionBudget = plan?.motionBudget ?? null;
   const demand = summarizeDirectingDemand(scenes, motionBudget);
   const budgetIssues = [];
@@ -1171,7 +1216,9 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     error.issues = budgetIssues;
     throw error;
   }
-  const styleProofPlan = compileStyleProofPlan(scenes);
+  const styleProofPlan = compileStyleProofPlan(scenes, {
+    motionContractFingerprint: motionContract.fingerprint,
+  });
   const generationBudget = summarizeLayerSourcePackages(scenes, {
     poseSheetCalls: demand.estimatedPoseSheetCalls,
     hardCeiling: plan?.assetBudget?.maxGeneratedImages ?? null,
@@ -1208,12 +1255,22 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     scenes: scenes.map(({id, directing, compositionPlan}) => ({id, directing, compositionPlan})),
     sceneTransitions: storyboard.sceneTransitions,
     editorialFingerprint: editorial.fingerprint,
+    motionContractFingerprint: motionContract.fingerprint,
     demand: {...directingSummary, budget: undefined, fingerprint: undefined},
   });
-  return {...storyboard, editorial, scenes, directingSummary};
+  return {
+    ...storyboard,
+    motionContract,
+    editorial,
+    scenes,
+    directingSummary,
+  };
 };
 
-export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
+export const validateCompiledDirecting = (
+  storyboard,
+  {plan, styleProfile} = {},
+) => {
   try {
     const authoring = {
       ...storyboard,
@@ -1225,9 +1282,27 @@ export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
           )
         : storyboard.editorial,
       scenes: (storyboard.scenes ?? []).map(({compositionPlan, directing, ...scene}) => scene),
+      motionContract: undefined,
       directingSummary: undefined,
     };
-    const compiled = compileStoryboardDirecting(authoring, {plan});
+    const effectiveStyleProfile =
+      styleProfile ??
+      (storyboard.motionContract?.styleProfileBinding
+        ? {
+            id: storyboard.motionContract.styleProfileBinding.id,
+            profileFingerprint:
+              storyboard.motionContract.styleProfileBinding
+                .profileFingerprint,
+            motion: {
+              pacing:
+                storyboard.motionContract.styleProfileBinding.pacing,
+            },
+          }
+        : null);
+    const compiled = compileStoryboardDirecting(authoring, {
+      plan,
+      styleProfile: effectiveStyleProfile,
+    });
     const issues = [];
     for (const [index, scene] of compiled.scenes.entries()) {
       const actual = storyboard.scenes[index];
@@ -1241,6 +1316,12 @@ export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
     if (JSON.stringify(storyboard.directingSummary) !== JSON.stringify(compiled.directingSummary)) {
       addIssue(issues, 'storyboard-directing-summary-drift', 'directingSummary 已过期。', 'directingSummary');
     }
+    issues.push(
+      ...validateCompiledMotionContract({
+        storyboard,
+        styleProfile: effectiveStyleProfile,
+      }),
+    );
     return issues;
   } catch (error) {
     return error.issues ?? [{code: 'storyboard-directing-invalid', message: error.message, location: 'scenes'}];

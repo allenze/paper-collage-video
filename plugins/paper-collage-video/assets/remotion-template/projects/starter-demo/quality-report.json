@@ -1,9 +1,31 @@
 {
   "$schema": "../../schemas/quality-report.schema.json",
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "projectSlug": "starter-demo",
   "updatedAt": "2026-01-01T00:00:00.000Z",
-  "styleProfile": null,
+  "styleProfile": {
+    "id": "childrens-picture-book-paper",
+    "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a",
+    "referenceFile": "public/style-catalog/childrens-picture-book-paper.png",
+    "referenceSha256": "2b9267a155929bcd742321027a9edbd17e2d2a31414e983e41a584d657a64d23",
+    "reviewFocus": [
+      "Rounded warm paper shapes match the selected reference card.",
+      "The frame remains inviting, uncluttered, and readable for children."
+    ]
+  },
+  "motionContract": {
+    "approvalFingerprint": "5ca35c840f4e76a4e114f2be5292f4da4eee3f275e7e50567fb672000cbe3441",
+    "executionFingerprint": "182fde495834b686439fc32109ed8fca95f1a65472fc3fa28a810b5cda45dc7c",
+    "summary": "先建立纸面空间，再让主体完成清晰动作，最后留出可读稳定段。",
+    "requiredCompositeChecks": [
+      "motion-grammar-consistent",
+      "pacing-cadence-consistent",
+      "camera-strategy-consistent",
+      "transition-strategy-consistent",
+      "ambient-strategy-consistent",
+      "sync-anchors-current"
+    ]
+  },
   "eventTimeline": [
     {
       "sceneId": "starter",
@@ -65,15 +87,19 @@
       "manifestRecordId": null,
       "manifestSha256": null,
       "semanticContractFingerprints": {},
-      "styleProfileBinding": null,
+      "styleProfileBinding": {
+        "id": "childrens-picture-book-paper",
+        "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a"
+      },
       "sha256": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
-      "fingerprint": "0b327a5f46e2ea88622eb974911a365323a4a964b261046f7bd05177c5208eb9",
+      "fingerprint": "b802451a334fbc0ad12ca44dfb6f11cbd1e0c0e7ad7adf600262b763ca42d57e",
       "requiredChecks": [
         "no-text",
         "no-watermark",
         "no-people",
         "safe-area-clear",
-        "style-consistent"
+        "style-consistent",
+        "style-profile-conformant"
       ],
       "technical": {
         "passed": true,
@@ -140,7 +166,8 @@
         "no-watermark": "passed",
         "no-people": "passed",
         "safe-area-clear": "passed",
-        "style-consistent": "passed"
+        "style-consistent": "passed",
+        "style-profile-conformant": "passed"
       },
       "reviewer": "bundled-fixture",
       "reviewedAt": "2026-01-01T00:00:00.000Z",
@@ -166,14 +193,18 @@
       "manifestRecordId": null,
       "manifestSha256": null,
       "semanticContractFingerprints": {},
-      "styleProfileBinding": null,
+      "styleProfileBinding": {
+        "id": "childrens-picture-book-paper",
+        "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a"
+      },
       "sha256": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
-      "fingerprint": "f211b97d2b464e811ae0a6ab1d5154b570d7965f7809a577528cb02b2d4e65f7",
+      "fingerprint": "5377802cf60f6137e52204564d9d331d4e53b262ae2805f2189fffe2aac2ddf0",
       "requiredChecks": [
         "subject-complete",
         "identity-consistent",
         "edge-clean",
-        "style-consistent"
+        "style-consistent",
+        "style-profile-conformant"
       ],
       "technical": {
         "passed": true,
@@ -244,7 +275,8 @@
         "subject-complete": "passed",
         "identity-consistent": "passed",
         "edge-clean": "passed",
-        "style-consistent": "passed"
+        "style-consistent": "passed",
+        "style-profile-conformant": "passed"
       },
       "reviewer": "bundled-fixture",
       "reviewedAt": "2026-01-01T00:00:00.000Z",
@@ -266,7 +298,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
-      "fingerprint": "c9efade283c96f42bcce058c0e0c58f0fe26e044221a00edbdcd05540bf4c727",
+      "fingerprint": "4322a78cd0c8535148289c534d3498459345abec004354f01a2ac540d44750d4",
       "proofTimeIds": [
         "proof-establish"
       ],
@@ -300,8 +332,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "c9efade283c96f42bcce058c0e0c58f0fe26e044221a00edbdcd05540bf4c727",
-            "actual": "c9efade283c96f42bcce058c0e0c58f0fe26e044221a00edbdcd05540bf4c727"
+            "expected": "4322a78cd0c8535148289c534d3498459345abec004354f01a2ac540d44750d4",
+            "actual": "4322a78cd0c8535148289c534d3498459345abec004354f01a2ac540d44750d4"
           },
           {
             "id": "proof-artifacts-present",
@@ -349,7 +381,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "fa68dd4364ec2771470f7fc185f31cb023bd33736f0066df4044339ddeaea941",
-      "fingerprint": "b7bb9f5445d349f2be4fd61e4e57cafedf668f34bf2dc594738bd39d362f0ee4",
+      "fingerprint": "cd1988a6bc57d84b3314494fb368e65de80f986b98eb66cc87c0f1fea8c0aa66",
       "proofTimeIds": [
         "proof-action"
       ],
@@ -383,8 +415,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "b7bb9f5445d349f2be4fd61e4e57cafedf668f34bf2dc594738bd39d362f0ee4",
-            "actual": "b7bb9f5445d349f2be4fd61e4e57cafedf668f34bf2dc594738bd39d362f0ee4"
+            "expected": "cd1988a6bc57d84b3314494fb368e65de80f986b98eb66cc87c0f1fea8c0aa66",
+            "actual": "cd1988a6bc57d84b3314494fb368e65de80f986b98eb66cc87c0f1fea8c0aa66"
           },
           {
             "id": "proof-artifacts-present",
@@ -432,7 +464,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "2fd24fa9491ccc0c2497848473aad57bcaf7b25b24fed12aba11410e8117968e",
-      "fingerprint": "ae39647dc7be0c2feb8daa3b74d0105d639c4f32ecb693c41472d9f2fc87af24",
+      "fingerprint": "92e68942df6d1e4b1ff85c4b677a7f5e3852624d4f6c0f7f71f65334e1a78b8f",
       "proofTimeIds": [
         "proof-final"
       ],
@@ -466,8 +498,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "ae39647dc7be0c2feb8daa3b74d0105d639c4f32ecb693c41472d9f2fc87af24",
-            "actual": "ae39647dc7be0c2feb8daa3b74d0105d639c4f32ecb693c41472d9f2fc87af24"
+            "expected": "92e68942df6d1e4b1ff85c4b677a7f5e3852624d4f6c0f7f71f65334e1a78b8f",
+            "actual": "92e68942df6d1e4b1ff85c4b677a7f5e3852624d4f6c0f7f71f65334e1a78b8f"
           },
           {
             "id": "proof-artifacts-present",
@@ -502,7 +534,232 @@
         }
       ],
       "status": "passed"
+    },
+    {
+      "compositeId": "style-profile:childrens-picture-book-paper",
+      "sceneId": "starter",
+      "pattern": "style-target",
+      "nodeId": "project-style",
+      "memberNodeIds": [
+        "starter:background",
+        "starter:traveler"
+      ],
+      "memberHashes": {
+        "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
+        "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
+      },
+      "compositionHash": "9c664477f2caa42b2365c4d7054e58f14efa8b0791306cbfd4d64c99eb0c91fd",
+      "fingerprint": "48e26fadd21d5488800952b542b2921ba941d0f8a43e72e53aa16b8439c1f2cc",
+      "proofTimeIds": [
+        "proof-establish",
+        "proof-action",
+        "proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-establish",
+          "absoluteFrame": 3,
+          "frameFingerprint": "bundled-proof-establish",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-action",
+          "absoluteFrame": 22,
+          "frameFingerprint": "bundled-proof-action",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-final",
+          "absoluteFrame": 32,
+          "frameFingerprint": "bundled-proof-final",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "reviewScope": "runtime-visible",
+      "requiredChecks": [
+        "style-profile-consistent"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "48e26fadd21d5488800952b542b2921ba941d0f8a43e72e53aa16b8439c1f2cc",
+            "actual": "48e26fadd21d5488800952b542b2921ba941d0f8a43e72e53aa16b8439c1f2cc"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          }
+        ]
+      },
+      "semanticChecks": {
+        "style-profile-consistent": "passed"
+      },
+      "reviewer": "bundled-fixture",
+      "reviewedAt": "2026-01-01T00:00:00.000Z",
+      "note": "Repository-owned technical fixture proof",
+      "evidenceFiles": [
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "motion-contract:whole-film",
+      "sceneId": "starter",
+      "pattern": "motion-contract",
+      "nodeId": "project-motion",
+      "memberNodeIds": [],
+      "memberHashes": {
+        "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
+        "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
+      },
+      "compositionHash": "5d49509e53bca73ce5e6e021bfd5f6963e497b332c87aa1351f218df4daaf690",
+      "fingerprint": "a3bec3792d71bd483dfa4a9fc594dcbf1a7666f2010aa34ba04437e5e4a4c6d1",
+      "proofTimeIds": [
+        "proof-establish",
+        "proof-action",
+        "proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-establish",
+          "absoluteFrame": 3,
+          "frameFingerprint": "bundled-proof-establish",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-action",
+          "absoluteFrame": 22,
+          "frameFingerprint": "bundled-proof-action",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-final",
+          "absoluteFrame": 32,
+          "frameFingerprint": "bundled-proof-final",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "reviewScope": "runtime-visible",
+      "requiredChecks": [
+        "motion-grammar-consistent",
+        "pacing-cadence-consistent",
+        "camera-strategy-consistent",
+        "transition-strategy-consistent",
+        "ambient-strategy-consistent",
+        "sync-anchors-current"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "a3bec3792d71bd483dfa4a9fc594dcbf1a7666f2010aa34ba04437e5e4a4c6d1",
+            "actual": "a3bec3792d71bd483dfa4a9fc594dcbf1a7666f2010aa34ba04437e5e4a4c6d1"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          }
+        ]
+      },
+      "semanticChecks": {
+        "motion-grammar-consistent": "passed",
+        "pacing-cadence-consistent": "passed",
+        "camera-strategy-consistent": "passed",
+        "transition-strategy-consistent": "passed",
+        "ambient-strategy-consistent": "passed",
+        "sync-anchors-current": "passed"
+      },
+      "reviewer": "bundled-fixture",
+      "reviewedAt": "2026-01-01T00:00:00.000Z",
+      "note": "Repository-owned technical fixture proof",
+      "evidenceFiles": [
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        }
+      ],
+      "status": "passed"
     }
   ],
-  "reviewSurfaceFingerprint": "e635c71e427a46347e7ed206455d7983302d300aa5ea333df64a3077826dcebf"
+  "reviewSurfaceFingerprint": "561ee36ab27f2b22e40f07609647bfde040eb2c17c8f28a4fc0cf2ce8e86aeaa"
 }

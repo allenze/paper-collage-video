@@ -3,6 +3,10 @@ import {
   applyResponsiveDirectingPlan,
   stableEditorialHash,
 } from '../src/editorialPrimitives.mjs';
+import {
+  createMotionDirectionFixture,
+  FIXTURE_STYLE_PROFILE,
+} from './motion-contract-fixture.mjs';
 
 export const PHASE2_PROOF_SLUG = 'vox-phase2-proof';
 export const PHASE2_PROOF_FPS = 30;
@@ -503,12 +507,14 @@ const storyboardBeat = ({
   sceneIndex,
   id,
   at,
+  performanceRole,
   purpose,
   proofTimeId,
   targetId,
 }) => ({
   id,
   at,
+  performanceRole,
   purpose,
   visual: `Deterministic editorial state ${id}.`,
   audioCue: null,
@@ -531,9 +537,9 @@ const storyboardBeat = ({
 const storyboardScene = (sceneIndex) => {
   const id = `phase2-scene-${sceneIndex}`;
   const beats = [
-    storyboardBeat({sceneIndex, id: `s${sceneIndex}-open-beat`, at: 0.08, purpose: 'establish', proofTimeId: `s${sceneIndex}-establish`, targetId: `title-${sceneIndex}`}),
-    storyboardBeat({sceneIndex, id: `s${sceneIndex}-action-beat`, at: 0.52, purpose: 'explain', proofTimeId: `s${sceneIndex}-action`, targetId: sceneIndex === 1 ? 'annotation-card' : 'data-switch'}),
-    storyboardBeat({sceneIndex, id: `s${sceneIndex}-final-beat`, at: 0.9, purpose: 'resolve', proofTimeId: `s${sceneIndex}-final`, targetId: `match-${sceneIndex === 1 ? 'source' : 'destination'}`}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-open-beat`, at: 0.08, performanceRole: 'establish', purpose: 'establish', proofTimeId: `s${sceneIndex}-establish`, targetId: `title-${sceneIndex}`}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-action-beat`, at: 0.52, performanceRole: 'action', purpose: 'explain', proofTimeId: `s${sceneIndex}-action`, targetId: sceneIndex === 1 ? 'annotation-card' : 'data-switch'}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-final-beat`, at: 0.9, performanceRole: 'settle', purpose: 'resolve', proofTimeId: `s${sceneIndex}-final`, targetId: `match-${sceneIndex === 1 ? 'source' : 'destination'}`}),
   ];
   if (sceneIndex === 1) {
     beats[1].treatments.push({
@@ -912,7 +918,7 @@ export const createPhase2EditorialAuthoring = ({media}) => {
 
 export const createPhase2StoryboardAuthoring = ({media}) => ({
   $schema: '../../schemas/storyboard-authoring.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 11,
   slug: PHASE2_PROOF_SLUG,
   status: 'ready',
   arc: 'Actual local audio becomes deterministic edit points, which direct reusable typography, annotation, data, responsive, and transition primitives.',
@@ -922,12 +928,12 @@ export const createPhase2StoryboardAuthoring = ({media}) => ({
       'Keep text, data, annotation routes, and match anchors inside each compiled responsive plan.',
       'Use SVG and component primitives rather than baked editorial overlays.',
     ],
-    motionLanguage: [
-      'Reveal words, lines, counters, data states, and switches only from compiled edit points.',
-      'Use a true hard anchor cut at the actual-audio boundary.',
-    ],
     layerStrategy: 'Paper field, editorial typography, semantic targets, SVG data layer, and vector annotation overlay.',
   },
+  motionDirection: createMotionDirectionFixture({
+    summary:
+      'Establish the editorial surface, execute every authored audio-synchronized action, then settle on an inspectable final state.',
+  }),
   editorial: createPhase2EditorialAuthoring({media}),
   scenes: [storyboardScene(1), storyboardScene(2)],
   sceneTransitions: [{
@@ -984,7 +990,10 @@ export const createPhase2Plan = () => ({
 
 export const compilePhase2Storyboard = ({media}) => {
   const plan = createPhase2Plan();
-  return compileStoryboardDirecting(createPhase2StoryboardAuthoring({media}), {plan});
+  return compileStoryboardDirecting(createPhase2StoryboardAuthoring({media}), {
+    plan,
+    styleProfile: FIXTURE_STYLE_PROFILE,
+  });
 };
 
 const projectScene = ({sceneIndex, media}) => {
@@ -1072,7 +1081,7 @@ export const createPhase2Project = ({media, profileId}) => {
   if (!profile) throw new Error(`未知 Phase 2 proof profile：${profileId}`);
   const project = {
     $schema: '../../schemas/project.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 11,
     slug: PHASE2_PROOF_SLUG,
     title: `VOX Phase 2 Editorial System · ${profileId}`,
     intake: {
@@ -1089,6 +1098,7 @@ export const createPhase2Project = ({media, profileId}) => {
       updatedAt: PHASE2_PROOF_UPDATED_AT,
     },
     styleProfile: null,
+    motionContract: storyboard.motionContract,
     plan: createPhase2Plan(),
     quality: {minimumAssetScale: 1},
     video: {width: profile.width, height: profile.height, fps: PHASE2_PROOF_FPS},

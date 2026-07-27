@@ -9,15 +9,20 @@ import {
   directingRevisionAuthoring,
   directingRevisionPlan,
   directingRevisionProduction,
+  directingRevisionStyleProfile,
 } from '../fixtures/directing-revision-fixture.mjs';
 
 const loadFixture = async () => {
   const storyboard = compileStoryboardDirecting(structuredClone(directingRevisionAuthoring), {
     plan: directingRevisionPlan,
+    styleProfile: directingRevisionStyleProfile,
   });
   return {
     storyboard,
-    project: {plan: structuredClone(directingRevisionPlan)},
+    project: {
+      plan: structuredClone(directingRevisionPlan),
+      styleProfile: directingRevisionStyleProfile,
+    },
     production: structuredClone(directingRevisionProduction),
   };
 };
@@ -30,6 +35,7 @@ test('preview directing revision preserves approvals and invalidates derived art
     currentStoryboard: storyboard,
     suppliedStoryboard: supplied,
     plan: project.plan,
+    styleProfile: project.styleProfile,
     production,
     reportPath: 'projects/directing-revision-fixture/directing-revision.json',
     at: '2026-07-23T01:00:00.000Z',
@@ -56,6 +62,7 @@ test('style-review directing revision preserves the approved concept before styl
     currentStoryboard: storyboard,
     suppliedStoryboard: supplied,
     plan: project.plan,
+    styleProfile: project.styleProfile,
     production: styleReview,
     reportPath: 'projects/directing-revision-fixture/directing-revision.json',
     source: 'style-review',
@@ -74,6 +81,7 @@ test('preview directing revision rejects protected concept changes and no-op inp
     currentStoryboard: storyboard,
     suppliedStoryboard: conceptChange,
     plan: project.plan,
+    styleProfile: project.styleProfile,
     production,
     reportPath: 'projects/example/directing-revision.json',
   }), /不得改变已批准/);
@@ -81,6 +89,7 @@ test('preview directing revision rejects protected concept changes and no-op inp
     currentStoryboard: storyboard,
     suppliedStoryboard: structuredClone(storyboard),
     plan: project.plan,
+    styleProfile: project.styleProfile,
     production,
     reportPath: 'projects/example/directing-revision.json',
   }), /没有产生任何实际变化/);
@@ -95,6 +104,7 @@ test('preview directing revision requires the recorded human return gate', async
     currentStoryboard: storyboard,
     suppliedStoryboard: supplied,
     plan: project.plan,
+    styleProfile: project.styleProfile,
     production,
     reportPath: 'projects/example/directing-revision.json',
   }), /只能响应已记录/);
@@ -125,7 +135,7 @@ test('human-authorized semantic revision records changed meaning and recalculate
   };
   const current = compileStoryboardDirecting(
     structuredClone(directingRevisionAuthoring),
-    {plan},
+    {plan, styleProfile: project.styleProfile},
   );
   const supplied = structuredClone(current);
   supplied.scenes[0].message = '主体安静停留，让观众阅读画面中的结论。';
@@ -155,6 +165,7 @@ test('human-authorized semantic revision records changed meaning and recalculate
     currentStoryboard: current,
     suppliedStoryboard: supplied,
     plan,
+    styleProfile: project.styleProfile,
     production,
     authorization,
     reportPath: 'projects/directing-revision-fixture/semantic-revision.json',
@@ -202,6 +213,7 @@ test('semantic revision cannot change an unapproved scene or masquerade as a dir
       currentStoryboard: storyboard,
       suppliedStoryboard: supplied,
       plan: project.plan,
+      styleProfile: project.styleProfile,
       production,
       authorization,
       reportPath: 'projects/example/semantic-revision.json',

@@ -22,9 +22,9 @@ try {
     path.join(ROOT, 'scripts', 'prepare-looping-world-proof.mjs'),
   ]);
   await runInherited(resolvePythonCommand({root: ROOT}), [
-    path.join(ROOT, 'scripts', 'validate_v10_schemas.py'),
+    path.join(ROOT, 'scripts', 'validate_v11_schemas.py'),
   ]);
 } catch (error) {
-  console.error(`schema:v10 failed: ${error.message}`);
+  console.error(`schema:v11 failed: ${error.message}`);
   process.exitCode = 1;
 }

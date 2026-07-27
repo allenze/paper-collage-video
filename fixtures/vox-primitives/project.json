@@ -1,6 +1,7 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 11,
+  "motionContract": null,
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
   "intake": {

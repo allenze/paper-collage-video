@@ -101,11 +101,11 @@ try:
         "rejected-output-recovery.schema.json",
     )
 except (FileNotFoundError, KeyError, ValueError) as error:
-    print(f"v10 schema validation failed:\n{error}", file=sys.stderr)
+    print(f"v11 schema validation failed:\n{error}", file=sys.stderr)
     raise SystemExit(1)
 
 print(
-    "✓ v10 authoring, compiled storyboard, three project contracts, "
+    "✓ v11 authoring, compiled storyboard, three project contracts, "
     "asset manifests, looping-strip derivations, registered-family derivation, "
     "and rejected-output recovery are schema-valid"
 )

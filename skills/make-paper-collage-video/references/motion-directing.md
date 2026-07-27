@@ -2,6 +2,23 @@
 
 Read this while deciding how a story beat should move. The goal is not to maximize animation. The goal is to choose the smallest truthful mechanism that makes the approved meaning visible and reviewable.
 
+## Bind Every Beat to the Whole-Film Grammar
+
+Storyboard v11 owns one structured `motionDirection` before individual
+treatments are selected. Declare whole-film pacing, ordered performance grammar,
+anticipation/follow-through policy, pose strategy, minimum final hold, camera
+strategy, transition strategy, and ambient strategy. If pacing differs from the
+selected executable Style Profile, explain why in
+`styleDeviationRationale`.
+
+Assign every beat one `performanceRole` from `establish`, `anticipate`,
+`action`, `follow-through`, `settle`, `hold`, or `transition`, in the global
+grammar order. Every role binds a proof moment; `settle` binds the final proof
+and preserves the declared final hold. `project:storyboard` compiles these
+choices into `motionContract`; never hand-author that contract or restore
+descriptive `style.motionLanguage` prose. Read `motion-contract-v1.md` for the
+approval and whole-film quality rules.
+
 ## Start From the Visible Change
 
 Do not begin with a renderer preset. For each beat, name what visibly changes:
@@ -102,7 +119,8 @@ registered member's full-canvas placement or top-left registration.
 
 ## Author Intent, Compile Execution
 
-Storyboard v10 input owns `beats[].treatments[]`, any layer source-package
+Storyboard v11 input owns `motionDirection`, `beats[].performanceRole`,
+`beats[].treatments[]`, any layer source-package
 intent, plus the v9 editorial authoring intent. It does not own
 `compositionPlan`, source-package cost totals, resolved edit points,
 responsive/transition plans, `directing`, sheet layouts, style-proof planning,

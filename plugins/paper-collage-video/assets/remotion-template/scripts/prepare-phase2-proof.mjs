@@ -39,6 +39,7 @@ import {
   writeJson,
 } from './phase2-proof-lib.mjs';
 import {prepareRegisteredFamilyProof} from './asset-hardening-proof-lib.mjs';
+import {FIXTURE_STYLE_PROFILE} from '../fixtures/motion-contract-fixture.mjs';
 
 const inputsDirectory = path.join(PHASE2_PROOF_DIR, 'inputs');
 const reportsDirectory = path.join(PHASE2_PROOF_DIR, 'reports');
@@ -253,6 +254,7 @@ authoringRevision.editorial.sceneDirecting[1].typographyProfile =
 authoringRevision.updatedAt = '2026-07-23T00:00:01.000Z';
 const revisedStoryboard = compileStoryboardDirecting(authoringRevision, {
   plan: createPhase2Plan(),
+  styleProfile: FIXTURE_STYLE_PROFILE,
 });
 const conceptBefore = storyboardConceptFingerprint(storyboard);
 const conceptAfter = storyboardConceptFingerprint(revisedStoryboard);

@@ -81,6 +81,12 @@ export const ASSET_QUALITY_CHECKS = [
 
 export const COMPOSITE_QUALITY_CHECKS = [
   'style-profile-consistent',
+  'motion-grammar-consistent',
+  'pacing-cadence-consistent',
+  'camera-strategy-consistent',
+  'transition-strategy-consistent',
+  'ambient-strategy-consistent',
+  'sync-anchors-current',
   'support-contact',
   'inside-or-on-readable',
   'front-occlusion',
@@ -1109,6 +1115,63 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       styleOnly: true,
     });
   }
+  if (project.motionContract && (project.scenes ?? []).length > 0) {
+    const memberHashes = await hashReferencedFiles(
+      (project.scenes ?? []).flatMap((scene) =>
+        collectRuntimeVisibleCompositionSources(scene.composition),
+      ),
+    );
+    const proofShots = project.motionContract.scenes.map((coverage) => ({
+      sceneId: coverage.sceneId,
+      nodeId: 'project-motion',
+      proofTimeIds: [
+        ...new Set(
+          coverage.phrases.map(({proofTimeId}) => proofTimeId),
+        ),
+      ],
+    }));
+    targets.push({
+      compositeId: 'motion-contract:whole-film',
+      sceneId: project.motionContract.scenes[0].sceneId,
+      pattern: 'motion-contract',
+      nodeId: 'project-motion',
+      memberNodeIds: [],
+      memberHashes,
+      compositionHash: hashCompositionValue({
+        direction: project.motionContract.direction,
+        scenes: project.motionContract.scenes,
+        transitions: project.motionContract.transitions,
+        editorialFingerprint:
+          project.motionContract.editorialFingerprint,
+      }),
+      fingerprint: hashCompositionValue({
+        runtimeSurfaceFingerprint,
+        motionContract: project.motionContract,
+        scenes: project.scenes.map(
+          ({id, motion, camera, composition, events}) => ({
+            id,
+            motion,
+            camera,
+            composition,
+            events,
+          }),
+        ),
+        sceneTransitions: project.sceneTransitions,
+        editorialFingerprint: project.editorial?.fingerprint ?? null,
+        memberHashes,
+      }),
+      proofTimeIds: [
+        ...new Set(
+          proofShots.flatMap(({proofTimeIds}) => proofTimeIds),
+        ),
+      ],
+      proofShots,
+      requiredChecks:
+        project.motionContract.requiredCompositeChecks,
+      reviewScope: 'runtime-visible',
+      styleOnly: true,
+    });
+  }
   return targets;
 };
 
@@ -1945,7 +2008,7 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const timeline = deriveTimeline(project);
   const report = {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 6,
+    schemaVersion: 7,
     projectSlug: slug,
     updatedAt: new Date().toISOString(),
     styleProfile: project.styleProfile
@@ -1960,6 +2023,16 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
             resolvePublicFile(project.styleProfile.referenceImage),
           ),
           reviewFocus: project.styleProfile.quality.reviewFocus,
+        }
+      : null,
+    motionContract: project.motionContract
+      ? {
+          approvalFingerprint:
+            project.motionContract.approvalFingerprint,
+          executionFingerprint: project.motionContract.fingerprint,
+          summary: project.motionContract.direction.summary,
+          requiredCompositeChecks:
+            project.motionContract.requiredCompositeChecks,
         }
       : null,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),

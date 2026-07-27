@@ -419,10 +419,17 @@ try {
     ...stateSequences.map(({node, sceneId}) => ({sceneId, id: node.id, pattern: 'state-sequence', registrationId: node.registration.id, sourceMasterAssetId: node.registration.sourceMasterAssetId})),
   ];
   await writeJson(reportFile, {
-    schemaVersion: 6,
+    schemaVersion: 7,
     slug,
     generatedAt: new Date().toISOString(),
     planFingerprint: storyboard.directingSummary.styleProofPlan.fingerprint,
+    motionContractFingerprint: storyboard.motionContract.fingerprint,
+    motionApprovalFingerprint:
+      storyboard.motionContract.approvalFingerprint,
+    motionLanguageCard: path.relative(
+      ROOT,
+      paths.motionLanguageCardFile,
+    ),
     directingTargets,
     runtimeBuildFingerprint,
     outputs,
@@ -435,7 +442,7 @@ try {
     assetEvidence,
     proofFrameCount: panels.length,
   });
-  console.log(`✓ v6 多维风险风格证明：${outputs.map(({file}) => file).join(', ')}`);
+  console.log(`✓ v7 动作契约绑定的多维风险风格证明：${outputs.map(({file}) => file).join(', ')}`);
   console.log(`✓ 组合证明联系表：${path.relative(ROOT, contactSheet)}`);
   console.log(`✓ 运动报告：${path.relative(ROOT, reportFile)}`);
 } catch (error) {

@@ -21,6 +21,8 @@ import {
   assertVoxSampleProofPassed,
   buildVoxSampleProofReport,
 } from './vox-sample-proof-lib.mjs';
+import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
+import {FIXTURE_STYLE_PROFILE} from '../fixtures/motion-contract-fixture.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -114,7 +116,16 @@ const [contract, project, storyboard, media, runtimeBuild] = await Promise.all([
   probeMedia(preview),
   createRuntimeBuildManifest({root: ROOT}),
 ]);
-const compiledStoryboard = compileStoryboardDirecting(storyboard);
+const compiledStoryboard = compileStoryboardDirecting({
+  ...storyboard,
+  editorial: createEditorialFixture({
+    sceneIds: storyboard.scenes.map(({id}) => id),
+    fps: project.video.fps,
+  }),
+}, {
+  plan: project.plan,
+  styleProfile: FIXTURE_STYLE_PROFILE,
+});
 const timeline = deriveTimeline(project);
 const durationSeconds = Number(media.format?.duration ?? contract.expected.durationSeconds);
 const proofSamples = deriveContactSheetSamples({

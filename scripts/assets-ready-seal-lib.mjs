@@ -31,10 +31,13 @@ const stableQuality = (report) => ({
   $schema: report.$schema,
   schemaVersion: report.schemaVersion,
   projectSlug: report.projectSlug,
+  styleProfile: report.styleProfile,
+  motionContract: report.motionContract,
   eventTimeline: report.eventTimeline,
   assetHistory: report.assetHistory,
   assets: report.assets,
   composites: report.composites,
+  reviewSurfaceFingerprint: report.reviewSurfaceFingerprint,
 });
 
 const stableStoryboard = ({updatedAt: _updatedAt, ...storyboard}) => storyboard;

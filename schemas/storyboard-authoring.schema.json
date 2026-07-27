@@ -1,26 +1,28 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard-authoring.schema.json",
-  "title": "Paper Collage Storyboard Authoring v10",
+  "title": "Paper Collage Storyboard Authoring v11",
   "description": "Author treatments plus editorial timing and responsive intent. compositionPlan, directing, resolved edit points, fingerprints, and budget demand are compiler-owned.",
   "type": "object",
-  "required": ["schemaVersion", "status", "arc", "style", "scenes", "sceneTransitions"],
+  "required": ["schemaVersion", "status", "arc", "style", "motionDirection", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 10},
+    "schemaVersion": {"const": 11},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"enum": ["pending", "ready"]},
     "arc": {"type": "string"},
     "style": {
       "type": "object",
-      "required": ["visualThesis", "compositionRules", "motionLanguage", "layerStrategy"],
+      "required": ["visualThesis", "compositionRules", "layerStrategy"],
       "properties": {
         "visualThesis": {"type": "string"},
         "compositionRules": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "motionLanguage": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "layerStrategy": {"type": "string"}
       },
       "additionalProperties": false
+    },
+    "motionDirection": {
+      "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/authoring"
     },
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialAuthoring"},
     "scenes": {

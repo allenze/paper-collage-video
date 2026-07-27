@@ -37,11 +37,14 @@ export const storyboardFileFor = (slug) => {
   return path.join(ROOT, 'projects', slug, 'storyboard.json');
 };
 
-export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
+export const validateStoryboard = (
+  storyboard,
+  {slug, plan, styleProfile} = {},
+) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 10) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 10。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 11) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 11。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -68,7 +71,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
     for (const key of ['visualThesis', 'layerStrategy']) {
       if (!nonEmpty(style[key])) add(`storyboard-style-${key}`, `style.${key} 不能为空。`, `style.${key}`);
     }
-    for (const key of ['compositionRules', 'motionLanguage']) {
+    for (const key of ['compositionRules']) {
       if (!Array.isArray(style[key]) || style[key].length === 0 || style[key].some((item) => !nonEmpty(item))) {
         add(`storyboard-style-${key}`, `style.${key} 必须包含至少一条明确规则。`, `style.${key}`);
       }
@@ -300,14 +303,20 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       'scenes',
     );
   }
-  issues.push(...validateCompiledDirecting(storyboard, {plan}));
+  issues.push(
+    ...validateCompiledDirecting(storyboard, {plan, styleProfile}),
+  );
   return issues;
 };
 
 export const loadStoryboard = async (slug) =>
   JSON.parse(await fs.readFile(storyboardFileFor(slug), 'utf8'));
 
-export const assertStoryboardReady = async (slug, plan) => {
+export const assertStoryboardReady = async (
+  slug,
+  plan,
+  styleProfile = undefined,
+) => {
   let storyboard;
   try {
     storyboard = await loadStoryboard(slug);
@@ -315,7 +324,11 @@ export const assertStoryboardReady = async (slug, plan) => {
     if (error.code === 'ENOENT') throw new Error('缺少 storyboard.json；请先运行 project:storyboard。');
     throw error;
   }
-  const issues = validateStoryboard(storyboard, {slug, plan});
+  const issues = validateStoryboard(storyboard, {
+    slug,
+    plan,
+    styleProfile,
+  });
   if (storyboard.status !== 'ready' || issues.length > 0) {
     const detail = issues.map(({location, message}) => `${location}: ${message}`).join('；');
     throw new Error(`故事板尚未就绪；请先运行 project:storyboard。${detail ? ` ${detail}` : ''}`);
@@ -346,6 +359,14 @@ export const summarizeStoryboard = (storyboard) => ({
   directing: storyboard?.status === 'ready'
       ? {
         fingerprint: storyboard.directingSummary?.fingerprint ?? null,
+        motionContract: storyboard.motionContract
+          ? {
+              summary: storyboard.motionContract.direction.summary,
+              approvalFingerprint:
+                storyboard.motionContract.approvalFingerprint,
+              executionFingerprint: storyboard.motionContract.fingerprint,
+            }
+          : null,
         styleProofPlan: storyboard.directingSummary?.styleProofPlan ?? null,
         estimatedPoseSheetCalls: storyboard.directingSummary?.estimatedPoseSheetCalls ?? 0,
         avoidedIsolatedStateCalls: storyboard.directingSummary?.avoidedIsolatedStateCalls ?? 0,

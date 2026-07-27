@@ -53,6 +53,8 @@ const ARTIFACT_KEYS = [
   'storyboard',
   'prompts',
   'review',
+  'motionLanguageCard',
+  'motionApproval',
   'validationReport',
   'assetsReadySeal',
   'preview',
@@ -79,7 +81,7 @@ const nextActionByStage = {
     '先完成画幅/视觉风格/视差 intake；再比较三档故事与制作方案，并一次确认档位、预算上限和 provider',
   brief: '完善 brief.md，运行 project:plan 并锁定 storyboard，再记录 brief-ready',
   'concept-review': '向人展示文案、分镜和素材清单；确认后记录 approve-concept',
-  'style-review': '展示风格样张、虚构音色及所需拓扑证据；确认且证明通过后记录 approve-style-voice',
+  'style-review': '展示风格样张、全片动作语言卡、虚构音色及所需拓扑证据；确认且证明通过后记录 approve-style-voice',
   'asset-production': '生产素材与旁白、同步时长并通过校验；然后记录 assets-ready',
   preview: '运行 project:preview',
   'human-review': '等待人审预览；确认后记录 approve-preview，或记录 request-preview-revision',
@@ -110,8 +112,8 @@ const stageControlByStage = {
   'style-review': {
     mode: 'wait-human',
     gate: 'styleAndVoice',
-    requiredDecision: '请明确批准故事专属风格样张、虚构音色和 3–5 秒运动/拓扑证明，或给出修改意见。',
-    expectedArtifacts: ['storySpecificStyleSample', 'voiceAudition', 'motionProof3To5Seconds', 'topologyProofWhenRequired'],
+    requiredDecision: '请明确批准故事专属风格样张、全片动作语言、虚构音色和 3–5 秒运动/拓扑证明，或给出修改意见。',
+    expectedArtifacts: ['storySpecificStyleSample', 'motionLanguageCard', 'voiceAudition', 'motionProof3To5Seconds', 'topologyProofWhenRequired'],
   },
   'asset-production': {
     mode: 'auto-continue',
@@ -592,7 +594,7 @@ const REVIEW_START = '<!-- production-state:start -->';
 const REVIEW_END = '<!-- production-state:end -->';
 const approvalLabels = {
   concept: '文案、分镜与事实',
-  styleAndVoice: '风格样张与虚构音色',
+  styleAndVoice: '风格样张、全片动作语言与虚构音色',
   preview: '预览片',
   publish: '可选外部发布记录',
 };
@@ -694,6 +696,7 @@ export const transitionProduction = (current, action, options = {}) => {
       assertStage(state, ['concept-review', 'style-review'], action);
       setApproval(state, 'concept', 'changes-requested', at, note);
       resetApproval(state, 'styleAndVoice');
+      state.artifacts.motionApproval = null;
       state.stage = 'concept-review';
       break;
     case 'approve-style-voice':
@@ -705,6 +708,7 @@ export const transitionProduction = (current, action, options = {}) => {
     case 'request-style-voice-revision':
       assertStage(state, ['style-review'], action);
       setApproval(state, 'styleAndVoice', 'changes-requested', at, note);
+      state.artifacts.motionApproval = null;
       break;
     case 'assets-ready':
       assertStage(state, ['asset-production'], action);
@@ -796,6 +800,23 @@ export const recordAssetsReadySeal = async (slug, artifacts) => {
     action: 'assets-ready-rechecked',
     stage: state.stage,
     note: artifacts.assetsReadySeal ?? '',
+  });
+  await writeJson(paths.productionFile, state);
+  await syncReviewBestEffort(slug, state);
+  return state;
+};
+
+export const recordMotionLanguageCard = async (slug, artifact) => {
+  const {paths, state: current} = await loadProduction(slug);
+  const state = clone(current);
+  state.artifacts.motionLanguageCard = artifact;
+  const at = new Date().toISOString();
+  state.updatedAt = at;
+  state.history.push({
+    at,
+    action: 'motion-language-compiled',
+    stage: state.stage,
+    note: artifact,
   });
   await writeJson(paths.productionFile, state);
   await syncReviewBestEffort(slug, state);

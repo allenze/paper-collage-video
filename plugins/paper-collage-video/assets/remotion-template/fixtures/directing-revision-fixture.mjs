@@ -1,3 +1,8 @@
+import {
+  createMotionDirectionFixture,
+  FIXTURE_STYLE_PROFILE,
+} from './motion-contract-fixture.mjs';
+
 export const directingRevisionPlan = {
   schemaVersion: 4,
   slug: 'directing-revision-fixture',
@@ -10,7 +15,7 @@ export const directingRevisionPlan = {
 
 export const directingRevisionAuthoring = {
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 11,
   slug: 'directing-revision-fixture',
   status: 'ready',
   arc: '一张纸面从建立空间到主体出现并稳定落版。',
@@ -18,8 +23,10 @@ export const directingRevisionAuthoring = {
     visualThesis: '克制的纸片分层。',
     layerStrategy: '背景与主体分层。',
     compositionRules: ['主体保持在安全区内。'],
-    motionLanguage: ['只在叙事节拍发生可见变化。'],
   },
+  motionDirection: createMotionDirectionFixture({
+    summary: '先建立纸面空间，让主体完成清晰入场，再稳定落版。',
+  }),
   scenes: [{
     id: 'scene-01',
     title: '纸面出现',
@@ -29,7 +36,7 @@ export const directingRevisionAuthoring = {
     estimatedDurationSeconds: 6,
     beats: [
       {
-        id: 'establish', at: 0.05, purpose: '建立纸面', visual: '背景稳定出现', audioCue: null,
+        id: 'establish', at: 0.05, performanceRole: 'establish', purpose: '建立纸面', visual: '背景稳定出现', audioCue: null,
         proofTimeId: 'proof-establish',
         treatments: [{
           id: 'hold-background', targetId: 'background', importance: 'supporting', necessity: 'required',
@@ -38,7 +45,7 @@ export const directingRevisionAuthoring = {
         }],
       },
       {
-        id: 'reveal', at: 0.45, purpose: '显示主体', visual: '人物纸片进入画面', audioCue: null,
+        id: 'reveal', at: 0.45, performanceRole: 'action', purpose: '显示主体', visual: '人物纸片进入画面', audioCue: null,
         proofTimeId: 'proof-action',
         treatments: [{
           id: 'show-subject', targetId: 'subject', importance: 'hero', necessity: 'required',
@@ -49,7 +56,7 @@ export const directingRevisionAuthoring = {
         }],
       },
       {
-        id: 'final', at: 0.85, purpose: '稳定落版', visual: '主体保持清楚', audioCue: null,
+        id: 'final', at: 0.85, performanceRole: 'settle', purpose: '稳定落版', visual: '主体保持清楚', audioCue: null,
         proofTimeId: 'proof-final',
         treatments: [{
           id: 'hold-subject', targetId: 'subject', importance: 'supporting', necessity: 'required',
@@ -71,6 +78,8 @@ export const directingRevisionAuthoring = {
   sceneTransitions: [],
   updatedAt: '2026-07-23T00:00:00.000Z',
 };
+
+export const directingRevisionStyleProfile = FIXTURE_STYLE_PROFILE;
 
 export const directingRevisionProduction = {
   $schema: '../../schemas/production.schema.json',

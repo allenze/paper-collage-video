@@ -71,12 +71,19 @@ export const assertStyleProofReady = async (slug) => {
   const reportFile = styleProofReportPath(slug);
   if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
   const report = await readJson(reportFile);
-  if (report.schemaVersion !== 6 || report.scope !== 'style' || !Array.isArray(report.composites)) {
+  if (report.schemaVersion !== 7 || report.scope !== 'style' || !Array.isArray(report.composites)) {
     throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run style:proof。');
   }
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   if (
     report.planFingerprint !== storyboard.directingSummary.styleProofPlan.fingerprint ||
+    report.motionContractFingerprint !==
+      storyboard.motionContract.fingerprint ||
+    report.motionApprovalFingerprint !==
+      storyboard.motionContract.approvalFingerprint ||
+    storyboard.directingSummary.styleProofPlan
+      .motionContractFingerprint !==
+      storyboard.motionContract.fingerprint ||
     JSON.stringify(report.directingTargets) !== JSON.stringify(directingTargets) ||
     report.runtimeBuildFingerprint !== runtimeBuildFingerprint
   ) {
@@ -249,6 +256,9 @@ export const assertStyleProofReady = async (slug) => {
     ready: true,
     report: reportFile,
     planFingerprint: storyboard.directingSummary.styleProofPlan.fingerprint,
+    motionContractFingerprint: storyboard.motionContract.fingerprint,
+    motionApprovalFingerprint:
+      storyboard.motionContract.approvalFingerprint,
     targets: directingTargets,
     composites: provenTargets.map(({compositeId}) => compositeId),
   };

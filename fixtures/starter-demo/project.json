@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "slug": "starter-demo",
   "title": "Paper Collage Workspace",
   "intake": {
@@ -17,6 +17,7 @@
     "updatedAt": "2026-01-01T00:00:00.000Z"
   },
   "styleProfile": null,
+  "motionContract": null,
   "plan": {
     "schemaVersion": 4,
     "slug": "starter-demo",

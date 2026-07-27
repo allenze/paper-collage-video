@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v10",
+  "title": "Paper Collage Project v11",
   "type": "object",
-  "required": ["schemaVersion", "slug", "title", "intake", "styleProfile", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
+  "required": ["schemaVersion", "slug", "title", "intake", "styleProfile", "motionContract", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 10},
+    "schemaVersion": {"const": 11},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "intake": {"$ref": "#/$defs/intake"},
@@ -15,6 +15,14 @@
         {"type": "null"},
         {
           "$ref": "https://local.paper-collage.dev/style-profile.schema.json#/$defs/snapshot"
+        }
+      ]
+    },
+    "motionContract": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/compiled"
         }
       ]
     },
@@ -656,6 +664,14 @@
         }
       },
       "then": {"properties": {"styleProfile": {"type": "object"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "scenes": {"minItems": 1}
+        }
+      },
+      "then": {"properties": {"motionContract": {"type": "object"}}}
     }
   ],
   "additionalProperties": false

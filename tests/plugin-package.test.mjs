@@ -160,8 +160,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/verify-phase2-proof.mjs',
   );
   assert.equal(
-    packageJson.scripts['schema:v10'],
-    'node scripts/schema-v10.mjs',
+    packageJson.scripts['schema:v11'],
+    'node scripts/schema-v11.mjs',
   );
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
@@ -198,7 +198,7 @@ test('packaged runtime is lightweight and independent from production projects',
       'report.json',
     ),
   );
-  assert.equal(starterProject.schemaVersion, 10);
+  assert.equal(starterProject.schemaVersion, 11);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
   assert.equal(starterProject.scenes[0].events.length, 3);
@@ -210,11 +210,11 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.deepEqual(starterProject.sceneTransitions, []);
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
   assert.equal(starterManifest.schemaVersion, 4);
-  assert.equal(starterQuality.schemaVersion, 6);
+  assert.equal(starterQuality.schemaVersion, 7);
   assert.equal(starterQuality.updatedAt, '2026-01-01T00:00:00.000Z');
   assert.match(starterQuality.reviewSurfaceFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(starterQuality.eventTimeline.length, 3);
-  assert.equal(starterQuality.composites.length, 3);
+  assert.equal(starterQuality.composites.length, 5);
   assert.ok(starterQuality.composites.every(({status}) => status === 'passed'));
   assert.equal(starterQuality.assets.length, 2);
   assert.ok(starterQuality.assets.every(({status}) => status === 'passed'));
@@ -292,6 +292,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/derive-registered-family.mjs',
     'scripts/registered-family-lib.mjs',
     'scripts/motion-treatment-lib.mjs',
+    'scripts/motion-contract-lib.mjs',
+    'scripts/motion-approval-lib.mjs',
     'scripts/project-composition-proof.mjs',
     'scripts/project-render-status.mjs',
     'scripts/phase2-proof-lib.mjs',
@@ -306,8 +308,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/storyboard-lib.mjs',
     'scripts/world-trajectory-lib.mjs',
     'scripts/render-phase2-proof.mjs',
-    'scripts/schema-v10.mjs',
-    'scripts/validate_v10_schemas.py',
+    'scripts/schema-v11.mjs',
+    'scripts/validate_v11_schemas.py',
     'scripts/verify-phase2-proof.mjs',
     'scripts/verify-vox-sample.mjs',
     'scripts/prove-alpha-bands.mjs',
@@ -333,6 +335,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/planning-scenarios.schema.json',
     'schemas/style-catalog.schema.json',
     'schemas/style-profile.schema.json',
+    'schemas/motion-contract.schema.json',
     'schemas/editorial.schema.json',
     'schemas/semantic-contracts.schema.json',
     'schemas/generation-attempt.schema.json',
@@ -356,7 +359,9 @@ test('packaged runtime is lightweight and independent from production projects',
     'templates/project/quality-report.json',
     'providers.json',
     'fixtures/editorial-fixture.mjs',
+    'fixtures/motion-contract-fixture.mjs',
     'fixtures/phase2-proof-fixture.mjs',
+    'tests/motion-contract.test.mjs',
     'public/fixtures/vox-phase2-proof/narration-1.wav',
     'public/fixtures/vox-phase2-proof/narration-1.timing.json',
     'public/style-catalog/catalog.json',
@@ -416,8 +421,8 @@ test('packaged starter proof keeps the complete quality gate ready', async () =>
     write: false,
   });
   assert.equal(prepared.ready, true);
-  assert.equal(prepared.total, 5);
-  assert.equal(prepared.passed, 5);
+  assert.equal(prepared.total, 7);
+  assert.equal(prepared.passed, 7);
   const validation = spawnSync(
     process.execPath,
     ['scripts/project-validate.mjs', 'starter-demo'],

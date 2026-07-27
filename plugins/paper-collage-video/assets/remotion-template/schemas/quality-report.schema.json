@@ -3,10 +3,10 @@
   "$id": "https://local.paper-collage.dev/quality-report.schema.json",
   "title": "Paper Collage Asset and Composite Quality Report",
   "type": "object",
-  "required": ["schemaVersion", "projectSlug", "updatedAt", "styleProfile", "reviewSurfaceFingerprint", "eventTimeline", "assetHistory", "assets", "composites"],
+  "required": ["schemaVersion", "projectSlug", "updatedAt", "styleProfile", "motionContract", "reviewSurfaceFingerprint", "eventTimeline", "assetHistory", "assets", "composites"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 6},
+    "schemaVersion": {"const": 7},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "updatedAt": {"type": "string", "format": "date-time"},
     "styleProfile": {
@@ -35,6 +35,38 @@
             "reviewFocus": {
               "type": "array",
               "minItems": 1,
+              "items": {"type": "string", "minLength": 1}
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "motionContract": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": [
+            "approvalFingerprint",
+            "executionFingerprint",
+            "summary",
+            "requiredCompositeChecks"
+          ],
+          "properties": {
+            "approvalFingerprint": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "executionFingerprint": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "summary": {"type": "string", "minLength": 1},
+            "requiredCompositeChecks": {
+              "type": "array",
+              "minItems": 6,
+              "uniqueItems": true,
               "items": {"type": "string", "minLength": 1}
             }
           },
@@ -108,7 +140,7 @@
         "properties": {
           "compositeId": {"type": "string", "minLength": 1},
           "sceneId": {"type": "string", "minLength": 1},
-          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "state-sequence", "event", "semantic-contract", "parallax-rig", "motif-field", "typography", "annotation", "data-graphic", "editorial-transition", "responsive-directing", "style-target"]},
+          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "state-sequence", "event", "semantic-contract", "parallax-rig", "motif-field", "typography", "annotation", "data-graphic", "editorial-transition", "responsive-directing", "style-target", "motion-contract"]},
           "nodeId": {"type": "string", "minLength": 1},
           "memberNodeIds": {"type": "array", "items": {"type": "string"}},
           "memberHashes": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},

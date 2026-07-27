@@ -121,6 +121,7 @@ export const createVisualFingerprint = async (project, mode) => {
     title: project.title,
     video: project.video,
     styleProfile: project.styleProfile,
+    motionContract: project.motionContract,
     theme: project.theme,
     scenes: (project.scenes ?? []).map(visualScene),
     sceneTransitions: project.sceneTransitions,
@@ -153,6 +154,7 @@ export const createSceneProofFingerprint = async ({
   return hashCompositionValue({
     video: project.video,
     styleProfile: project.styleProfile,
+    motionContract: project.motionContract,
     theme: project.theme,
     scene:
       surface === 'composition-proof'

@@ -1,12 +1,13 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v10 composition/v9 editorial
+Read this before style sampling, bulk images, v11 composition/motion-contract/v9 editorial
 authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
-`quality-report.json` v6 contains the current executable `styleProfile`
-reference/fingerprint/review focus, `eventTimeline`, current `assets`,
+`quality-report.json` v7 contains the current executable `styleProfile`
+reference/fingerprint/review focus, current `motionContract` summary and both
+fingerprints, `eventTimeline`, current `assets`,
 `composites`, non-current `assetHistory`, per-entry `reviewScope`, and one
 `reviewSurfaceFingerprint` over the exact review targets, technical results, and
 evidence hashes. A visible consumer uses `runtime-visible`; an active provider or
@@ -89,8 +90,9 @@ npm run style:proof -- <slug> --duration=4
 npm run project:quality -- <slug> prepare
 ```
 
-The schema-v6 style report uses `scope=style`, binds the complete
-`styleProofPlan`, and emits a structured composite for every selected directing
+The schema-v7 style report uses `scope=style`, binds the complete
+`styleProofPlan`, the motion execution fingerprint, and the attributable
+motion approval fingerprint, then emits a structured composite for every selected directing
 target, including `free` targets. Its current composite can satisfy the matching
 quality target directly; a separate full-project composition proof is not
 required merely to approve style. Inspect
@@ -122,7 +124,7 @@ assets and the representative composite with those paths.
 }
 ```
 
-After final local audio, actual timing data, and real v10 composition/v9
+After final local audio, actual timing data, and real v11 composition/v9
 editorial groups/state sequences exist, run (the proof command synchronizes
 measured narration duration first and reuses only project-, asset-, and
 runtime-fingerprint-current frames/targets):
@@ -164,6 +166,15 @@ npm run project:quality -- <slug> record-batch --input=<reviews.json> --quiet
 
 Never pass a semantic check merely to unblock production. Changing a member, mask, group transform, boundary, anchor, keyframe, event, scene transition, or proof time changes the composite fingerprint and invalidates that review.
 Replacing or editing a recorded evidence file also invalidates its review. At the style gate, each member review must reference that proof bundle's alpha mask, checkerboard, tight crop, and motion-stress sheet; the composite review must reference its full/crop/debug proof frames and member motion-stress sheets. An unrelated screenshot cannot satisfy the gate.
+
+Quality also creates exactly one `motion-contract:whole-film` target whenever a
+compiled motion contract exists. Review establish/action/settle phrase coverage,
+pacing cadence, camera strategy, transition strategy, ambient strategy, and
+event/proof synchronization across all scenes. The target fingerprint binds the
+exact contract, runtime surface, scene motion/camera/composition/events,
+transitions, editorial fingerprint, and participating asset hashes. A passing
+3–5 second style sample is necessary for the style gate but cannot substitute
+for this whole-film motion review.
 
 Composition-proof fingerprints use the `composition-proof` runtime surface
 rather than the complete package identity. That surface excludes subtitle-only
@@ -217,8 +228,9 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v10
-composition/v9 editorial validation, current-proof enforcement, and both
+`project:assets-ready` owns motion-approval validation, narration
+synchronization, subtitle derivation, v11 composition/motion-contract/v9
+editorial validation, current-proof enforcement, and all asset/composite/motion
 quality gates. Provider or forced-alignment timing wins; actual final-audio
 edit-point evidence is authoritative for editorial bindings. Review
 reading-speed warnings. Every narration source must have non-empty transcript

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   STORY_BLUEPRINTS,
-  compileStoryboardDirecting,
+  compileStoryboardDirecting as compileStoryboardDirectingBase,
   summarizeStoryboard,
   validateStoryboard,
 } from '../scripts/storyboard-lib.mjs';
@@ -13,6 +13,16 @@ import {
   stateSequenceMatchesStoryboardPlan,
 } from '../scripts/project-lib.mjs';
 import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
+import {
+  createMotionDirectionFixture,
+  FIXTURE_STYLE_PROFILE,
+} from '../fixtures/motion-contract-fixture.mjs';
+
+const compileStoryboardDirecting = (storyboard, options = {}) =>
+  compileStoryboardDirectingBase(storyboard, {
+    ...options,
+    styleProfile: FIXTURE_STYLE_PROFILE,
+  });
 
 const plan = (profile = 'balanced') => buildCreativePlan({
   slug: 'rhythm-test',
@@ -38,16 +48,16 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
 });
 
 const authoredStoryboard = () => ({
-  schemaVersion: 10,
+  schemaVersion: 11,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
   style: {
     visualThesis: 'Paper depth makes causality visible.',
     compositionRules: ['Keep the focal subject readable.'],
-    motionLanguage: ['Establish, trigger, settle.'],
     layerStrategy: 'Separate environment, subject, and foreground paper.',
   },
+  motionDirection: createMotionDirectionFixture(),
   scenes: [
     {
       id: 'scene-01',
@@ -58,11 +68,11 @@ const authoredStoryboard = () => ({
       estimatedDurationSeconds: 6,
       beats: [
         {
-          id: 'establish', at: 0, purpose: 'place', visual: 'Empty paper world', audioCue: null, proofTimeId: null,
-          treatments: [staticTreatment({id: 'hold-stage', targetId: 'stage'})],
+          id: 'establish', at: 0, performanceRole: 'establish', purpose: 'place', visual: 'Empty paper world', audioCue: null, proofTimeId: 'proof-establish',
+          treatments: [staticTreatment({id: 'hold-stage', targetId: 'stage', proofTimeId: 'proof-establish'})],
         },
         {
-          id: 'action', at: 0.48, purpose: 'act', visual: 'Subject lands on stage', audioCue: 'paper lift', proofTimeId: 'proof-action',
+          id: 'action', at: 0.48, performanceRole: 'action', purpose: 'act', visual: 'Subject lands on stage', audioCue: 'paper lift', proofTimeId: 'proof-action',
           treatments: [{
             id: 'land-on-stage',
             targetId: 'subject',
@@ -81,8 +91,8 @@ const authoredStoryboard = () => ({
           }],
         },
         {
-          id: 'settle', at: 0.9, purpose: 'resolve', visual: 'Composition locks', audioCue: null, proofTimeId: null,
-          treatments: [staticTreatment({id: 'hold-final'})],
+          id: 'settle', at: 0.9, performanceRole: 'settle', purpose: 'resolve', visual: 'Composition locks', audioCue: null, proofTimeId: 'proof-final',
+          treatments: [staticTreatment({id: 'hold-final', proofTimeId: 'proof-final'})],
         },
       ],
       proofTimes: [
@@ -116,7 +126,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v10 compiles treatments into composition plans, risk selection, source packages, and cost evidence', () => {
+test('v11 compiles treatments into motion/composition plans, risk selection, source packages, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);

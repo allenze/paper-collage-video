@@ -34,6 +34,7 @@ import {
   resolveRenderConcurrency,
 } from '../scripts/project-lib.mjs';
 import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
+import {createMotionDirectionFixture} from '../fixtures/motion-contract-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STYLE_REQUEST = {
@@ -131,15 +132,15 @@ test('manual image imports record provenance without a generation attempt', asyn
 });
 
 const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
-  schemaVersion: 10,
+  schemaVersion: 11,
   slug,
   arc: 'A concise progression from setup through action to resolution.',
   style: {
     visualThesis: 'Layered paper depth carries the story.',
     compositionRules: ['Keep the subject clear of subtitle space.'],
-    motionLanguage: ['Establish, act, then settle.'],
     layerStrategy: 'Background establishes place; cutouts carry action.',
   },
+  motionDirection: createMotionDirectionFixture(),
   scenes: Array.from({length: sceneCount}, (_, index) => ({
     id: `scene-${String(index + 1).padStart(2, '0')}`,
     title: `Scene ${index + 1}`,
@@ -148,9 +149,9 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
     blueprint: index === sceneCount - 1 ? 'quiet-lockup' : 'layered-reveal',
     estimatedDurationSeconds: durationSeconds / sceneCount,
     beats: [
-      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', audioCue: null, proofTimeId: null, treatments: [{id: `s${index + 1}-establish-hold`, targetId: 'stage', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: null, rationale: 'Hold a readable opening composition.'}]},
-      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', audioCue: null, proofTimeId: `s${index + 1}-proof-action`, treatments: [{id: `s${index + 1}-action-hold`, targetId: 'subject', importance: 'hero', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-action`, rationale: 'Keep the action target readable in this integration fixture.'}]},
-      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', audioCue: null, proofTimeId: `s${index + 1}-proof-final`, treatments: [{id: `s${index + 1}-settle-hold`, targetId: 'subject', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-final`, rationale: 'Settle the final composition.'}]},
+      {id: `s${index + 1}-establish`, at: 0, performanceRole: 'establish', purpose: 'establish', visual: 'Reveal the paper stage', audioCue: null, proofTimeId: `s${index + 1}-proof-establish`, treatments: [{id: `s${index + 1}-establish-hold`, targetId: 'stage', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-establish`, rationale: 'Hold a readable opening composition.'}]},
+      {id: `s${index + 1}-action`, at: 0.5, performanceRole: 'action', purpose: 'develop', visual: 'Move the main cutout', audioCue: null, proofTimeId: `s${index + 1}-proof-action`, treatments: [{id: `s${index + 1}-action-hold`, targetId: 'subject', importance: 'hero', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-action`, rationale: 'Keep the action target readable in this integration fixture.'}]},
+      {id: `s${index + 1}-settle`, at: 0.9, performanceRole: 'settle', purpose: 'resolve', visual: 'Lock the composition', audioCue: null, proofTimeId: `s${index + 1}-proof-final`, treatments: [{id: `s${index + 1}-settle-hold`, targetId: 'subject', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-final`, rationale: 'Settle the final composition.'}]},
     ],
     proofTimes: [
       {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable'], stateAssertions: []},
@@ -635,7 +636,7 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 10);
+    assert.equal(project.schemaVersion, 11);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
@@ -648,7 +649,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 10);
+    assert.equal(storyboardTemplate.schemaVersion, 11);
     assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
@@ -692,6 +693,17 @@ test('new projects require a locked storyboard before concept approval', async (
     );
     assert.notEqual(blockedAdvance.status, 0);
     assert.match(blockedAdvance.stderr, /尚未获得用户确认/);
+
+    const intakeResult = spawnSync(
+      process.execPath,
+      [
+        path.join(ROOT, 'scripts', 'project-intake.mjs'),
+        slug,
+        '--selection={"aspectRatio":"16:9","visualStylePreset":"childrens-picture-book-paper","parallaxPreference":"auto","note":"Workflow fixture intake"}',
+      ],
+      {cwd: ROOT, encoding: 'utf8'},
+    );
+    assert.equal(intakeResult.status, 0, intakeResult.stderr);
 
     const select = (...selectionArgs) =>
       spawnSync(
@@ -809,7 +821,7 @@ test('new projects require a locked storyboard before concept approval', async (
     const compiledStoryboard = JSON.parse(
       await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
     );
-    assert.equal(compiledStoryboard.schemaVersion, 10);
+    assert.equal(compiledStoryboard.schemaVersion, 11);
     assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'paper-slide'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.motivation === 'semantic-default'));
@@ -878,6 +890,16 @@ test('concept and all providers can be confirmed in one workflow command', async
       {cwd: ROOT, encoding: 'utf8'},
     );
     assert.equal(created.status, 0, created.stderr);
+    const intake = spawnSync(
+      process.execPath,
+      [
+        path.join(ROOT, 'scripts', 'project-intake.mjs'),
+        slug,
+        '--selection={"aspectRatio":"16:9","visualStylePreset":"childrens-picture-book-paper","parallaxPreference":"auto","note":"Fixture intake"}',
+      ],
+      {cwd: ROOT, encoding: 'utf8'},
+    );
+    assert.equal(intake.status, 0, intake.stderr);
     const planned = spawnSync(
       process.execPath,
       [

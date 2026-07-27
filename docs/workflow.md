@@ -73,11 +73,11 @@ intake 确认后，Codex 只用宿主模型生成一个共同故事骨架和三�
 肢体、手持物、接触关系、机构状态、真实跑步或睡醒发生了变化。这些必须使用
 状态家族或耦合组合契约。
 
-用户选择一张卡即完成这一次组合批准，不再追加例行确认。系统随后自动物化计划、为每个节拍判断可见变化，并用 `project:storyboard` 锁定 schema-v10 `treatments`、统一 edit points、三画幅导演计划与相邻场景边界。命令确定性编译 `compositionPlan`、`sourcePackagePlans`、多维风格证明计划、姿态母版网格、provider/local/avoided 调用账目和指纹。`project:confirm-concept` 会核对 storyboard 的姿态家族、状态清单和注册源包是否与已批准卡片完全一致；只有一致时才复用刚才的选择记录 `scenarioDecision`、`budgetDecision`、`sourcePackageDecision` 和 provider。若发生实质漂移，回到同一方案门展示更新后的精确卡，而不是悄悄继续。在 cap 记录前不得调用图片 provider。
+用户选择一张卡即完成这一次组合批准，不再追加例行确认。系统随后自动物化计划、为整片编排结构化 `motionDirection`、为每个节拍分配 `performanceRole` 并判断可见变化，再用 `project:storyboard` 锁定 schema-v11 `treatments`、统一 edit points、三画幅导演计划与相邻场景边界。命令确定性编译 `motionContract`、`compositionPlan`、`sourcePackagePlans`、多维风格证明计划、姿态母版网格、provider/local/avoided 调用账目和指纹。`project:confirm-concept` 会核对 storyboard 的姿态家族、状态清单和注册源包是否与已批准卡片完全一致；只有一致时才复用刚才的选择记录 `scenarioDecision`、`budgetDecision`、`sourcePackageDecision` 和 provider。若发生实质漂移，回到同一方案门展示更新后的精确卡，而不是悄悄继续。在 cap 记录前不得调用图片 provider。
 
 ## 3. 风格与虚构音色确认
 
-只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。需要透明运动层的 registered 2×2 sheet 使用逐格 surface：reference/rear 保持不透明，subject/front 在宿主模型原生 alpha 不可靠时使用已声明且不与主体冲突的纯色色键。provider-native 原图原样登记，分隔线裁除、色键、缩放和 key metadata 由正式 registered-family 派生器完成并计为三个本地 derivative。`style:proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v10 组合 proof，绑定完整目标清单和计划指纹。schema-v6 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明，但不会增加第四个人工等待节点。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
+只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。需要透明运动层的 registered 2×2 sheet 使用逐格 surface：reference/rear 保持不透明，subject/front 在宿主模型原生 alpha 不可靠时使用已声明且不与主体冲突的纯色色键。provider-native 原图原样登记，分隔线裁除、色键、缩放和 key metadata 由正式 registered-family 派生器完成并计为三个本地 derivative。`style:proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v11 组合 proof，绑定完整目标清单、计划指纹和动作契约双指纹。schema-v7 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。现有 style/voice gate 同时展示 `motion-language-card.json`，并把人的决定归因写入 `motion-approval.json`，不增加第四个人工等待节点。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
 
 ## 4. 批量生产与质量门
 
@@ -93,7 +93,7 @@ intake 确认后，Codex 只用宿主模型生成一个共同故事骨架和三�
 npm run project:assets-ready -- <slug>
 ```
 
-该命令依次同步真实旁白时长与 timing、生成/导入字幕时间、执行音频-only LUFS/真峰预检、核对故事板蓝图/v10 组合与源包/v9 editorial/状态序列/关键帧/edit points/高级切换/三画幅导演计划、核验组合证明指纹、执行资产与组合双质量门并推进到 `preview`。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 渲染半尺寸预览、技术报告、证明时刻联系表和转场联系表；报告列出转场意图/类型、匹配连续性、硬切比例和边界采样。视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流并重新混音/封装，任何视觉指纹变化都强制完整渲染。
+该命令依次核对当前动作语言批准、同步真实旁白时长与 timing、生成/导入字幕时间、执行音频-only LUFS/真峰预检、核对故事板蓝图/v11 组合与动作契约/源包/v9 editorial/状态序列/关键帧/edit points/高级切换/三画幅导演计划、核验组合证明指纹、执行资产、组合和整片动作质量门并推进到 `preview`。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 渲染半尺寸预览、技术报告、证明时刻联系表和转场联系表；报告列出转场意图/类型、匹配连续性、硬切比例和边界采样。视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流并重新混音/封装，任何视觉指纹变化都强制完整渲染。
 
 渲染并发默认按可用 CPU 自动决定并封顶为 8。若完整 Chrome 在多页并发时无响应，可用 `PAPER_COLLAGE_RENDER_CONCURRENCY=1 npm run project:preview -- <slug>`（最终渲染同理）走正式的单路重试路径；该设置只控制同时打开的渲染页数，不改变帧率、画质或成片内容。
 
@@ -125,7 +125,7 @@ npm run project:resume -- <slug>
 - `project.json.intake` / `project.json.styleProfile`：画幅、内置视觉风格与视差偏好，以及冻结后的生成指令、动效偏好、渲染主题、质量门禁、参考图和风格指纹；
 - `planning-scenarios.json`：共同故事骨架、三档详细方案、预计调用、建议 cap、hard ceiling 和质量承诺；
 - `production.json`：阶段、审批、粗粒度批次、产物、事件历史；
-- `storyboard.json`：已批准的 v10 节拍 treatments、source package、edit points 与三画幅/高级切换导演计划，以及编译生成的动作/调用预算、风险排名和证明指纹；
+- `storyboard.json`：已批准的 v11 全片动作方向、节拍角色/treatments、source package、edit points 与三画幅/高级切换导演计划，以及编译生成的动作契约、调用预算、风险排名和证明指纹；
 - `project.json.plan`：Creative Plan v4 scenario 指纹、story scope、profile ceiling、质量下限和人批图片 attempt 上限；
 - `requests/*.json` / `assets-manifest.json`：schema-v8 逐素材输入、可执行风格绑定、layer package/组合绑定与注册源家族；
 - `quality-report.json`：逐文件和组合关系的技术/语义质量与指纹；
