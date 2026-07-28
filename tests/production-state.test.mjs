@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
+import {fileURLToPath} from 'node:url';
 import {
   assessHandoff,
   formatProduction,
@@ -17,6 +20,8 @@ import {
   transitionWorkItem,
 } from '../scripts/production-state.mjs';
 import {assertAssetsReadySealCurrent} from '../scripts/assets-ready-seal-lib.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const approval = (status = 'pending', note = '') => ({
   status,
@@ -368,6 +373,19 @@ test('preview approval and both render modes reject unfinished work items', () =
       }),
     /render-final 不能在工作项未完成时继续/,
   );
+});
+
+test('render entrypoint checks the production gate before sync and audio work', () => {
+  const source = fs.readFileSync(
+    path.join(ROOT, 'scripts', 'project-render.mjs'),
+    'utf8',
+  );
+  const gate = source.indexOf('await assertRenderAllowed(slug, mode);');
+  const sync = source.indexOf("await runInherited(process.execPath, ['scripts/project-sync.mjs', slug]);");
+  const audio = source.indexOf("'scripts/project-audio-preflight.mjs'");
+  assert.ok(gate >= 0);
+  assert.ok(sync > gate);
+  assert.ok(audio > gate);
 });
 
 test('a tool-only image result remains an automatic production checkpoint', () => {

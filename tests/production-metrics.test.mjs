@@ -17,6 +17,26 @@ import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+test('quality help bypasses project metrics and does not require a slug', () => {
+  const result = spawnSync(
+    'npm',
+    ['run', 'project:quality', '--', '--help'],
+    {cwd: ROOT, encoding: 'utf8'},
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /用法：project:quality/);
+});
+
+test('style proof help bypasses project metrics and does not require a slug', () => {
+  const result = spawnSync(
+    'npm',
+    ['run', 'project:style-proof', '--', '--help'],
+    {cwd: ROOT, encoding: 'utf8'},
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /用法：project:style-proof/);
+});
+
 const productionState = ({slug, createdAt, updatedAt}) => ({
   $schema: '../../schemas/production.schema.json',
   schemaVersion: 1,
@@ -262,7 +282,7 @@ test('quality record-batch emits output and creates a bound incremental scaffold
     assert.equal(scaffoldResult.status, 0, scaffoldResult.stderr);
     assert.match(scaffoldResult.stdout, /质量审核脚手架/);
     const scaffold = JSON.parse(await fs.readFile(scaffoldFile, 'utf8'));
-    assert.equal(scaffold.schemaVersion, 2);
+    assert.equal(scaffold.schemaVersion, 3);
     assert.equal(scaffold.reviews.length, 2);
     for (const review of scaffold.reviews.slice(0, 1)) {
       review.passedChecks = review.pendingChecks;
@@ -292,7 +312,7 @@ test('quality record-batch emits output and creates a bound incremental scaffold
       'quality-review-scaffold.pending.json',
     );
     const pendingScaffold = JSON.parse(await fs.readFile(pendingFile, 'utf8'));
-    assert.equal(pendingScaffold.schemaVersion, 2);
+    assert.equal(pendingScaffold.schemaVersion, 3);
     assert.equal(pendingScaffold.reviews.length, 1);
     assert.match(
       pendingScaffold.sourceReport.fingerprint,

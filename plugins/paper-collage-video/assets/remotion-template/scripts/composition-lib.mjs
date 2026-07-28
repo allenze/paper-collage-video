@@ -97,10 +97,10 @@ const maximumAuthoredMotion = (motion = {}) => {
   };
   return {
     x:
-      Math.max(0, ...keyframes.map(({x = 0}) => Math.abs(x))) +
+      Math.max(0, ...keyframes.map(({offsetX = 0}) => Math.abs(offsetX))) +
       idleMaximum.x,
     y:
-      Math.max(0, ...keyframes.map(({y = 0}) => Math.abs(y))) +
+      Math.max(0, ...keyframes.map(({offsetY = 0}) => Math.abs(offsetY))) +
       idleMaximum.y,
     scale:
       Math.max(
@@ -234,7 +234,7 @@ export const validateMotionKeyframes = (keyframes, location, add) => {
       add('error', 'motion-keyframe-at', '关键帧 at 必须位于 0..1 且严格递增。', `${keyframeLocation}.at`);
     }
     previousAt = keyframe.at;
-    for (const property of ['x', 'y', 'scale', 'rotation', 'opacity']) {
+    for (const property of ['offsetX', 'offsetY', 'scale', 'rotation', 'opacity']) {
       if (keyframe[property] !== undefined) {
         authoredValues += 1;
         if (!finite(keyframe[property])) add('error', 'motion-keyframe-value', `${property} 必须是有限数字。`, `${keyframeLocation}.${property}`);
@@ -416,8 +416,8 @@ export const validateCompositionStructure = ({
         }
       }
       const hasLocalTravel = (node.motion?.keyframes ?? []).some(
-        ({x = 0, y = 0, scale = 1, rotation = 0}) =>
-          x !== 0 || y !== 0 || scale !== 1 || rotation !== 0,
+        ({offsetX = 0, offsetY = 0, scale = 1, rotation = 0}) =>
+          offsetX !== 0 || offsetY !== 0 || scale !== 1 || rotation !== 0,
       );
       if (hasLocalTravel || (node.motion?.idle && node.motion.idle.preset !== 'still')) {
         add('error', 'composition-world-strip-duplicate-motion', 'world-strip 的世界位移由父级 loopingEnvironment 独占；节点不得重复关键帧或 idle 位移。', `${nodeLocation}.motion`);
@@ -809,8 +809,8 @@ export const validateCompositionStructure = ({
         const registrationId = child.kind === 'asset' ? child.registrationId : child.registration?.id;
         if (registrationId !== node.registration?.id) add('error', 'composition-registration-member', `耦合成员 ${child.id} 必须共享 registrationId。`, `${nodeLocation}.children`);
         const groupHasCarrierMotion = (node.motion?.keyframes ?? []).some((keyframe) =>
-          (keyframe.x ?? 0) !== 0 ||
-          (keyframe.y ?? 0) !== 0 ||
+          (keyframe.offsetX ?? 0) !== 0 ||
+          (keyframe.offsetY ?? 0) !== 0 ||
           (keyframe.scale ?? 1) !== 1 ||
           (keyframe.rotation ?? 0) !== 0,
         );
@@ -820,8 +820,8 @@ export const validateCompositionStructure = ({
       }
       for (const proof of proofTimes) {
         if (node.support?.detachProofTimeIds?.includes(proof.id)) continue;
-        const subjectX = node.support?.contactAnchor?.x + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'x');
-        const subjectY = node.support?.contactAnchor?.y + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'y');
+        const subjectX = node.support?.contactAnchor?.x + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'offsetX');
+        const subjectY = node.support?.contactAnchor?.y + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'offsetY');
         if (!pointInPolygon([subjectX, subjectY], node.support?.contactZone)) add('error', 'composition-support-contact', `证明时刻 ${proof.id} 的主体支撑点离开 contactZone。`, `${nodeLocation}.support.contactZone`);
       }
     }

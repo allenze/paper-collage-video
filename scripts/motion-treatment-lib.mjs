@@ -346,6 +346,17 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   for (const key of ['id', 'targetId', 'changeClass', 'semanticRisk', 'rationale']) {
     if (!nonEmpty(treatment[key])) addIssue(issues, `treatment-${key}`, `${key} 不能为空。`, `${location}.${key}`);
   }
+  if (
+    /^scene-\d+-camera$/.test(treatment.targetId) &&
+    treatment.targetId !== 'scene-camera'
+  ) {
+    addIssue(
+      issues,
+      'treatment-camera-target-alias',
+      'camera treatment 的唯一目标 id 是 scene-camera；不得写入带场景号的别名。',
+      `${location}.targetId`,
+    );
+  }
   if (!TREATMENT_IMPORTANCE.includes(treatment.importance)) {
     addIssue(issues, 'treatment-importance', 'importance 必须是 hero、supporting 或 ambient。', `${location}.importance`);
   }
@@ -1333,7 +1344,7 @@ const hasVisibleNodeMotion = (node) => {
   if (node?.motion?.idle && node.motion.idle.preset !== 'still' && node.motion.idle.intensity > 0) return true;
   const frames = node?.motion?.keyframes ?? [];
   if (frames.length < 2) return false;
-  return ['x', 'y', 'scale', 'rotation', 'opacity'].some((property) => {
+  return ['offsetX', 'offsetY', 'scale', 'rotation', 'opacity'].some((property) => {
     const values = frames.map((frame) => frame[property]).filter((value) => value !== undefined);
     return values.length > 0 && new Set(values).size > 1;
   });
@@ -1347,8 +1358,8 @@ const traverseSpan = (node) => {
       maximum = Math.max(
         maximum,
         Math.hypot(
-          (right.x ?? 0) - (left.x ?? 0),
-          (right.y ?? 0) - (left.y ?? 0),
+          (right.offsetX ?? 0) - (left.offsetX ?? 0),
+          (right.offsetY ?? 0) - (left.offsetY ?? 0),
         ),
       );
     }

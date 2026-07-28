@@ -106,8 +106,10 @@ layer package afterward, and storyboard call-count drift invalidates the budget
 approval. A scene has
 `composition.nodes`; nodes are recursive `asset`, `state-sequence`,
 `typography`, `shape`, `annotation`, `data-graphic`, `editorial-switch`,
-`motif-field`, `world-strip`, or `group` records. All transforms and keyframe deltas are
-normalized to the immediate parent. Older projects are not parsed or migrated;
+`motif-field`, `world-strip`, or `group` records. Transforms are normalized to
+the immediate parent. Node keyframes use additive normalized
+`offsetX`/`offsetY`; `transform.x`/`transform.y` remain absolute placement and
+camera keyframe `x`/`y` remain pixels. Older projects are not parsed or migrated;
 regenerate their equivalent output from the latest contract when needed. There
 is no legacy loader, dual schema, deprecated field, compatibility adapter, or
 version-conditioned renderer branch.
@@ -202,7 +204,7 @@ are insufficient to claim a continuous world. Each route traveler declares an
 inclusive `fromProofTimeId`/`throughProofTimeId` safe-band window. It is in the
 walkable band throughout that window, and may then be proven to leave frame
 without falsely failing the route constraint. Use `monotonic-travel` when a
-chase must never reverse: it samples every authored x keyframe between its
+chase must never reverse: it samples every authored `offsetX` keyframe between its
 proofs, permits a final zero-motion hold, and rejects any backward segment.
 
 Root `spatialContracts[]` is the executable spatial-truth layer shared by the
@@ -311,7 +313,7 @@ plus before/at/after frames.
 - A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue, optional terminal `activeUntil` lock, or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; when `activeUntil` is present the completed phase remains locked thereafter, otherwise the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence; a terminally locked travelling world must provide both its ordinary world-motion evidence and `world-lock-clean`. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside scene-boundary intervals.
 - A final state assertion must resolve to one fully opaque state, remain outside any state crossfade for at least that transition duration, and preserve the asserted state through the scene end.
-- Every node keyframe path starts at `0`, ends at `1`, and authors at least one value.
+- Every node keyframe path starts at `0`, ends at `1`, and authors at least one of `offsetX`, `offsetY`, `scale`, `rotation`, or `opacity`; legacy node-keyframe `x`/`y` is invalid rather than ambiguously interpreted.
 - `scene.events` is the only visual/sound event source. Every storyboard beat has one or more ordered events; event drift is at most `0.035` normalized units.
 - A visibility event targets an existing composition node and persists after its window. A first `show` requires `visibility.initial=hidden`; a first `hide` requires an initially visible node. Supported transitions are `cut`, `fade-rise`, and `fade-scale`.
 - Emphasis events are transient and use the bounded actions from `schemas/composition.schema.json`, including `drop-impact` and `carve`. They do not control persistent visibility.
@@ -340,7 +342,7 @@ accepted calibration decision. It then writes `assets-ready-seal.json`. Low-leve
 seal; any project, source media, storyboard, quality, subtitle, or runtime change
 invalidates it and routes back through the canonical command.
 
-Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `style:proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
+Fix a wrong mask, crop, anchor, registration, or derivative without another human decision when the approved meaning and budget remain unchanged. Regenerate `project:style-proof` or `project:composition-proof` after the fix; member hashes invalidate prior evidence automatically. Return to concept only when the relationship meaning changes. Return to provider/budget approval only for a provider switch or budget increase. Never hide a contract failure with arbitrary z-index, pixel nudges, or a coarse polygon matte.
 
 Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion,
 extraction, layer/state-sheet processing, editorial/directing compilation,

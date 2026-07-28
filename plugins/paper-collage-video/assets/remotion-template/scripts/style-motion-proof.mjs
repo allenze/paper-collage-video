@@ -44,6 +44,9 @@ const slug = args.find((argument) => !argument.startsWith('--'));
 const valueFor = (name) => args.find((argument) => argument.startsWith(`${name}=`))?.slice(name.length + 1);
 const durationSeconds = Number(valueFor('--duration') ?? 5);
 const STYLE_PROOF_RENDER_SCALE = 0.5;
+const printUsage = () => {
+  console.log('用法：project:style-proof -- <slug> [--duration=<3..5>]');
+};
 
 const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
   <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
@@ -106,6 +109,10 @@ const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
 };
 
 try {
+  if (args.includes('--help') || args.includes('-h')) {
+    printUsage();
+    process.exit(0);
+  }
   assertSlug(slug);
   if (!Number.isFinite(durationSeconds) || durationSeconds < 3 || durationSeconds > 5) throw new Error('--duration 必须位于 3..5 秒。');
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
@@ -446,6 +453,6 @@ try {
   console.log(`✓ 组合证明联系表：${path.relative(ROOT, contactSheet)}`);
   console.log(`✓ 运动报告：${path.relative(ROOT, reportFile)}`);
 } catch (error) {
-  console.error(`style:proof failed: ${error.message}`);
+  console.error(`project:style-proof failed: ${error.message}`);
   process.exitCode = 1;
 }

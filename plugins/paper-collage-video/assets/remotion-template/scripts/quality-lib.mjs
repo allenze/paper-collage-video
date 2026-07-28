@@ -47,6 +47,7 @@ import {
 import {
   derivationRegionsFromBinding,
   inspectAlphaBands,
+  inspectAlphaTopology,
 } from './alpha-band-lib.mjs';
 import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
 import {inspectStateAnchorRegistration} from './state-sheet-lib.mjs';
@@ -627,17 +628,29 @@ const inspectTechnicalQuality = async ({asset, project}) => {
     }
   }
   if (metadata.hasAlpha === true) {
+    const derivationRegions = derivationRegionsFromBinding(
+      asset.registeredFamilyBinding,
+    );
     const inspection = await inspectAlphaBands({
       file,
-      derivationRegions: derivationRegionsFromBinding(
-        asset.registeredFamilyBinding,
-      ),
+      derivationRegions,
     });
     checks.push({
       id: 'rectangular-alpha-band-free',
       passed: inspection.passed,
       expected: 'no error-severity low-alpha rectangular band',
       actual: inspection,
+    });
+    const topology = await inspectAlphaTopology({
+      file,
+      derivationRegions,
+    });
+    checks.push({
+      id: 'alpha-topology-clean',
+      passed: topology.passed,
+      expected:
+        'no detached rectangular alpha fragment or hard rectangular derivation boundary',
+      actual: topology,
     });
   }
   if (asset.semanticBinding?.riskClass === 'diagram-critical' && path.extname(file).toLowerCase() === '.svg') {
@@ -2264,11 +2277,21 @@ export const recordQualityReviews = async ({
         if (await evidenceFilesAreCurrent([evidence])) evidenceFiles.push(evidence);
       }
     } else {
-      for (const evidenceFile of review.evidenceFiles) {
-        if (typeof evidenceFile !== 'string' || evidenceFile.trim().length === 0) throw new Error(`${reviewId} 的 evidenceFiles 必须是非空路径。`);
+      for (const evidence of review.evidenceFiles) {
+        const evidenceFile =
+          typeof evidence === 'string' ? evidence : evidence?.file;
+        if (typeof evidenceFile !== 'string' || evidenceFile.trim().length === 0) throw new Error(`${reviewId} 的 evidenceFiles 必须包含非空路径和 SHA-256。`);
         const absoluteFile = assertWorkspaceFile(evidenceFile.trim());
         if (!(await fileExists(absoluteFile))) throw new Error(`${reviewId} 的质量证据不存在：${evidenceFile}`);
-        evidenceFiles.push({file: path.relative(ROOT, absoluteFile), sha256: await hashFile(absoluteFile)});
+        const sha256 = await hashFile(absoluteFile);
+        if (
+          typeof evidence === 'object' &&
+          evidence !== null &&
+          evidence.sha256 !== sha256
+        ) {
+          throw new Error(`${reviewId} 的质量证据已变化：${evidenceFile}。请重新生成 scaffold。`);
+        }
+        evidenceFiles.push({file: path.relative(ROOT, absoluteFile), sha256});
       }
     }
     if (passedChecks.some((check) => EVIDENCE_REQUIRED_CHECKS.has(check)) && evidenceFiles.length === 0) {
@@ -2327,7 +2350,34 @@ const assetEvidenceFiles = (entry) =>
   ]
     .filter(Boolean);
 
-export const createQualityReviewScaffold = ({
+const currentProofCompositeFor = (proofReports, composite) =>
+  proofReports
+    .flatMap((report) => report.composites ?? [])
+    .find(
+      ({compositeId, fingerprint}) =>
+        compositeId === composite.compositeId &&
+        fingerprint === composite.fingerprint,
+    );
+
+const evidenceRecordsFor = async (files) =>
+  (
+    await Promise.all(
+      [...new Set(files.filter(Boolean))].map(async (file) => {
+        try {
+          const absoluteFile = assertWorkspaceFile(file);
+          if (!(await fileExists(absoluteFile))) return null;
+          return {
+            file: path.relative(ROOT, absoluteFile),
+            sha256: await hashFile(absoluteFile),
+          };
+        } catch {
+          return null;
+        }
+      }),
+    )
+  ).filter(Boolean);
+
+export const createQualityReviewScaffold = async ({
   status,
   projectSlug,
   reviewer,
@@ -2336,8 +2386,12 @@ export const createQualityReviewScaffold = ({
   includePassed = false,
 }) => {
   const proofReports = [compositionProof, styleProof].filter(Boolean);
-  const proofComposites = proofReports.flatMap((report) => report.composites ?? []);
-  const proofAssets = proofReports.flatMap((report) => report.assetEvidence ?? []);
+  const currentProofReports = proofReports.filter((report) =>
+    (status.report.composites ?? []).some((composite) =>
+      currentProofCompositeFor([report], composite),
+    ),
+  );
+  const proofAssets = currentProofReports.flatMap((report) => report.assetEvidence ?? []);
   const evidenceForAsset = (asset) => {
     const files = [asset.file];
     if (
@@ -2363,17 +2417,18 @@ export const createQualityReviewScaffold = ({
       if (!(composite.memberNodeIds ?? []).some((nodeId) =>
         sourceBindings.some((binding) => binding.nodeId === nodeId),
       )) continue;
-      const proof = proofComposites.find(({compositeId}) =>
-        compositeId === composite.compositeId,
-      );
+      const proof = currentProofCompositeFor(currentProofReports, composite);
       files.push(...(proof?.proofFrames ?? []).flatMap(proofEvidenceFiles));
     }
     return [...new Set(files.filter(Boolean))];
   };
   const evidenceForComposite = (composite) => {
-    const proof = proofComposites.find(({compositeId}) =>
-      compositeId === composite.compositeId,
-    );
+    const proof = currentProofCompositeFor(currentProofReports, composite);
+    if (!proof) {
+      throw new Error(
+        `${composite.compositeId} 缺少与当前组合指纹一致的视觉证明；先重新运行 project:composition-proof 或 project:style-proof，不能复用旧帧。`,
+      );
+    }
     const files = (proof?.proofFrames ?? []).flatMap(proofEvidenceFiles);
     if (
       composite.requiredChecks?.includes('style-profile-consistent') &&
@@ -2395,9 +2450,40 @@ export const createQualityReviewScaffold = ({
   };
   const entries = [...status.report.assets, ...status.report.composites]
     .filter((entry) => includePassed || entry.status !== 'passed');
+  const reviews = [];
+  for (const entry of entries) {
+    const assetId = entry.assetId ?? null;
+    const compositeId = entry.compositeId ?? null;
+    const evidenceFiles = await evidenceRecordsFor(
+      assetId
+        ? [...new Set([...evidenceForAsset(entry), ...(entry.recoveryEvidenceFiles ?? [])])]
+        : evidenceForComposite(entry),
+    );
+    entry.evidenceFiles = evidenceFiles;
+    reviews.push({
+      ...(assetId ? {assetId} : {compositeId}),
+      reviewer,
+      requiredChecks: entry.requiredChecks,
+      pendingChecks: Object.entries(entry.semanticChecks)
+        .filter(([, checkStatus]) => checkStatus !== 'passed')
+        .map(([check]) => check),
+      passedChecks: [],
+      failedChecks: [],
+      evidenceFiles,
+      note: '',
+    });
+  }
+  refreshQualityReviewSurfaceFingerprint(status.report);
+  for (const review of reviews) {
+    const entry = entries.find(
+      (candidate) =>
+        qualityEntryId(candidate) === (review.assetId ?? review.compositeId),
+    );
+    review.targetFingerprint = qualityReviewTargetFingerprint(entry);
+  }
   return {
     $schema: '../../schemas/quality-review-scaffold.schema.json',
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectSlug,
     generatedAt: new Date().toISOString(),
     sourceReport: {
@@ -2409,25 +2495,7 @@ export const createQualityReviewScaffold = ({
     },
     instructions:
       'Inspect every evidence file. Move each pending check into passedChecks or failedChecks and write a concrete note; never pass a check only to unblock production.',
-    reviews: entries.map((entry) => {
-      const assetId = entry.assetId ?? null;
-      const compositeId = entry.compositeId ?? null;
-      return {
-        ...(assetId ? {assetId} : {compositeId}),
-        targetFingerprint: qualityReviewTargetFingerprint(entry),
-        reviewer,
-        requiredChecks: entry.requiredChecks,
-        pendingChecks: Object.entries(entry.semanticChecks)
-          .filter(([, checkStatus]) => checkStatus !== 'passed')
-          .map(([check]) => check),
-        passedChecks: [],
-        failedChecks: [],
-        evidenceFiles: assetId
-          ? [...new Set([...evidenceForAsset(entry), ...(entry.recoveryEvidenceFiles ?? [])])]
-          : evidenceForComposite(entry),
-        note: '',
-      };
-    }),
+    reviews,
   };
 };
 
@@ -2443,7 +2511,7 @@ export const buildQualityReviewScaffold = async ({
     (await fileExists(compositionFile)) ? readJson(compositionFile) : null,
     (await fileExists(styleFile)) ? readJson(styleFile) : null,
   ]);
-  const scaffold = createQualityReviewScaffold({
+  const scaffold = await createQualityReviewScaffold({
     status,
     projectSlug: slug,
     reviewer,
@@ -2451,28 +2519,7 @@ export const buildQualityReviewScaffold = async ({
     styleProof,
     includePassed,
   });
-  for (const review of scaffold.reviews) {
-    review.evidenceFiles = (
-      await Promise.all(review.evidenceFiles.map(async (file) => {
-        try {
-          return (await fileExists(assertWorkspaceFile(file))) ? file : null;
-        } catch {
-          return null;
-        }
-      }))
-    ).filter(Boolean);
-    const reviewId = review.assetId ?? review.compositeId;
-    const entry = [...status.report.assets, ...status.report.composites]
-      .find((candidate) => (candidate.assetId ?? candidate.compositeId) === reviewId);
-    if (entry) {
-      entry.evidenceFiles = await Promise.all(review.evidenceFiles.map(async (file) => ({
-        file,
-        sha256: await hashFile(assertWorkspaceFile(file)),
-      })));
-    }
-  }
   status.report.updatedAt = new Date().toISOString();
-  refreshQualityReviewSurfaceFingerprint(status.report);
   scaffold.sourceReport = {
     file: path.relative(ROOT, status.file),
     schemaVersion: status.report.schemaVersion,
@@ -2498,8 +2545,8 @@ export const assertQualityReviewScaffoldCurrent = async ({
   scaffold,
   status = null,
 }) => {
-  if (scaffold?.schemaVersion !== 2 || scaffold?.projectSlug !== slug) {
-    throw new Error(`质量审核 scaffold 必须是 ${slug} 的 schemaVersion 2 文件。`);
+  if (scaffold?.schemaVersion !== 3 || scaffold?.projectSlug !== slug) {
+    throw new Error(`质量审核 scaffold 必须是 ${slug} 的 schemaVersion 3 文件。`);
   }
   if (!scaffold?.sourceReport?.fingerprint) {
     throw new Error('质量审核 scaffold 缺少 sourceReport.fingerprint。');
@@ -2529,6 +2576,9 @@ export const assertQualityReviewScaffoldCurrent = async ({
         `${reviewId} 的审核目标已过期：记录 ${review.targetFingerprint ?? 'missing'}，当前 ${expected}。`,
       );
     }
+    if (!(await evidenceFilesAreCurrent(review.evidenceFiles))) {
+      throw new Error(`${reviewId} 的质量证据文件已缺失或内容变化；请重新生成 scaffold。`);
+    }
   }
   return prepared;
 };
@@ -2544,7 +2594,7 @@ const qualityReviewPanel = async ({review, index}) => {
   const imageEvidence = [];
   for (const evidence of review.evidenceFiles ?? []) {
     try {
-      const file = assertWorkspaceFile(evidence);
+      const file = assertWorkspaceFile(evidence.file);
       if (!(await fileExists(file))) continue;
       const metadata = await sharp(file).metadata();
       if (metadata.width && metadata.height) {

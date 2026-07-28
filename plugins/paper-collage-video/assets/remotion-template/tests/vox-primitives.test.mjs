@@ -31,7 +31,7 @@ import {
 import {FIXTURE_STYLE_PROFILE} from '../fixtures/motion-contract-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const still = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]};
+const still = {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]};
 const transform = {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0};
 
 const motifField = (overrides = {}) => ({

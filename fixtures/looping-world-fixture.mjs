@@ -277,7 +277,7 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
         performanceRole: 'establish',
         purpose: 'establish',
         visual: 'The paper car and four depth planes are readable.',
-        audioCue: null,
+        soundCue: null,
         proofTimeId: 'world-before',
         treatments: [staticTreatment({
           id: 'world-open-hold',
@@ -291,7 +291,7 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
         performanceRole: 'action',
         purpose: 'demonstrate',
         visual: 'The continuous paper world crosses a seam at depth-relative speeds.',
-        audioCue: null,
+        soundCue: null,
         proofTimeId: 'world-seam',
         treatments: [worldTravelTreatment()],
       },
@@ -301,7 +301,7 @@ export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
         performanceRole: 'settle',
         purpose: 'resolve',
         visual: 'The car remains readable after multiple wraps and a camera pull-back.',
-        audioCue: null,
+        soundCue: null,
         proofTimeId: 'world-after',
         treatments: [staticTreatment({
           id: 'world-resolve-hold',
@@ -421,11 +421,11 @@ const createWorldGroup = ({profile, stripAssets, carSrc, finishMarkerSrc}) => ({
       transform: transform(0.5, 0.77, 0.3, 0.24, 0.5, 1),
       motion: {
         keyframes: [
-          {at: 0, x: -0.035, y: 0, scale: 0.94, rotation: -1.5, ease: 'ease-in-out'},
-          {at: 0.22, x: 0.012, y: -0.018, scale: 1.04, rotation: 1.2, ease: 'ease-in-out'},
-          {at: 0.5, x: 0.04, y: 0.006, scale: 1.08, rotation: -0.8, ease: 'ease-in-out'},
-          {at: 0.74, x: -0.014, y: -0.014, scale: 0.98, rotation: 1.4, ease: 'ease-in-out'},
-          {at: 1, x: 0.025, y: 0, scale: 1.02, rotation: -0.6, ease: 'ease-in-out'},
+          {at: 0, offsetX: -0.035, offsetY: 0, scale: 0.94, rotation: -1.5, ease: 'ease-in-out'},
+          {at: 0.22, offsetX: 0.012, offsetY: -0.018, scale: 1.04, rotation: 1.2, ease: 'ease-in-out'},
+          {at: 0.5, offsetX: 0.04, offsetY: 0.006, scale: 1.08, rotation: -0.8, ease: 'ease-in-out'},
+          {at: 0.74, offsetX: -0.014, offsetY: -0.014, scale: 0.98, rotation: 1.4, ease: 'ease-in-out'},
+          {at: 1, offsetX: 0.025, offsetY: 0, scale: 1.02, rotation: -0.6, ease: 'ease-in-out'},
         ],
         idle: {preset: 'grind', intensity: 0.45, cycleSeconds: 0.72, phase: 0.2},
         pivot: {x: 0.5, y: 0.82},

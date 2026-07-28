@@ -372,7 +372,7 @@
           "performanceRole": "establish",
           "purpose": "建立空间",
           "visual": "纸面与背景出现",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "proof-establish",
           "treatments": [
             {
@@ -400,7 +400,7 @@
           "performanceRole": "action",
           "purpose": "交付主体",
           "visual": "人物纸片进入中心",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "proof-action",
           "treatments": [
             {
@@ -431,7 +431,7 @@
           "performanceRole": "settle",
           "purpose": "稳定结论",
           "visual": "人物与标题形成锁定构图",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "proof-final",
           "treatments": [
             {
@@ -513,7 +513,7 @@
         "loopingEnvironments": []
       },
       "directing": {
-        "fingerprint": "f16deb213fd66a3c42005d8c751136d661907079809cd0b763cd2a7889210ff3",
+        "fingerprint": "290d2ca1838adaa0bf47a580fd4a1d996809ef9f04f6f0c42baa19c761f9650d",
         "treatmentCount": 3,
         "riskScore": 13,
         "highestRiskTreatmentId": "show-traveler"
@@ -646,7 +646,7 @@
           "targetId": "traveler",
           "proofTimeId": "proof-action",
           "riskScore": 13,
-          "directingFingerprint": "f16deb213fd66a3c42005d8c751136d661907079809cd0b763cd2a7889210ff3",
+          "directingFingerprint": "290d2ca1838adaa0bf47a580fd4a1d996809ef9f04f6f0c42baa19c761f9650d",
           "sourceFamilyKey": "target:traveler",
           "coverage": [
             "baseline:representative"
@@ -657,8 +657,8 @@
         "target:traveler"
       ],
       "motionContractFingerprint": "182fde495834b686439fc32109ed8fca95f1a65472fc3fa28a810b5cda45dc7c",
-      "fingerprint": "db8d664563c03b65fa5f7968d4a479c0605e2eeb947da236f40ca15f79a5fd6d"
+      "fingerprint": "bad6d929a3611df86ce2d09f2c65d672227a1ba60b5637a2eece93523c70ff2c"
     },
-    "fingerprint": "03bb43a83b67b9516257b452bf4577a1b96abd55843cfba8c751c2e518d42107"
+    "fingerprint": "85b83b113c42b8c380baf57252adb9c2533dd521a0b5df98e8b1aca7fc7c8724"
   }
 }

@@ -6,7 +6,7 @@ import {
   validateWorldContracts,
 } from '../scripts/world-trajectory-lib.mjs';
 
-const still = () => ({keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]});
+const still = () => ({keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]});
 const transform = ({x, y, width, height = width}) => ({x, y, width, height, anchorX: 0, anchorY: 0});
 const surfaceRole = {
   far: 'backdrop',
@@ -26,7 +26,7 @@ const stateNode = (id, x) => ({
   transition: {type: 'cut', durationSeconds: 0},
   z: 2,
   transform: transform({x, y: 0.58, width: 0.12, height: 0.12}),
-  motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0.44}]},
+  motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0.44}]},
 });
 
 const scene = ({id, includeMarker = true}) => ({
@@ -52,7 +52,7 @@ const scene = ({id, includeMarker = true}) => ({
         loopingEnvironment: {}, children: ['far', 'mid', 'ground', 'near'].map(strip),
       },
       stateNode('hare', 0.1),
-      {...stateNode('turtle', 0.02), motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0.08}]}},
+      {...stateNode('turtle', 0.02), motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0.08}]}},
       {id: 'start-flag', kind: 'shape', shape: 'rectangle', style: {fill: '#cc0000', stroke: '#000000', strokeWidth: 1, radius: 0}, z: 3, transform: transform({x: 0.01, y: 0.55, width: 0.05, height: 0.12}), motion: still()},
     ],
   },
@@ -103,7 +103,7 @@ test('route travelers can leave after their declared safe-band proof window', ()
   scene.motion.proofTimes.push({id: 'exit', at: 0.95});
   scene.composition.world.route.travelers.find(({nodeId}) => nodeId === 'turtle').throughProofTimeId = 'run';
   scene.composition.nodes.find(({id}) => id === 'turtle').motion = {
-    keyframes: [{at: 0, x: 0}, {at: 0.5, x: 0.08}, {at: 0.95, x: 1.1}],
+    keyframes: [{at: 0, offsetX: 0}, {at: 0.5, offsetX: 0.08}, {at: 0.95, offsetX: 1.1}],
   };
   exiting.trajectoryContracts[0].assertions.push({id: 'turtle-exits', kind: 'offscreen-at', sceneId: 'scene-01', proofTimeId: 'exit', nodeId: 'turtle', side: 'right'});
   assert.deepEqual(validateWorldContracts(exiting), []);
@@ -114,7 +114,7 @@ test('trajectory contracts prove state, speed/order, direction and narrative seq
   const valid = project();
   assert.deepEqual(validateTrajectoryContracts(valid), []);
   const reverse = project();
-  reverse.scenes[0].composition.nodes.find(({id}) => id === 'hare').motion = {keyframes: [{at: 0, x: 0}, {at: 1, x: -0.2}]};
+  reverse.scenes[0].composition.nodes.find(({id}) => id === 'hare').motion = {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: -0.2}]};
   assert.ok(validateTrajectoryContracts(reverse).some(({code}) => code === 'trajectory-travel-distance'));
   const unordered = project();
   unordered.trajectoryContracts[0].sequence = ['hare-runs', 'hare-sleeps'];
@@ -126,7 +126,7 @@ test('trajectory contracts prove state, speed/order, direction and narrative seq
   });
   assert.deepEqual(validateTrajectoryContracts(monotonic).filter(({code}) => code.startsWith('trajectory-monotonic')), []);
   monotonic.scenes[0].composition.nodes.find(({id}) => id === 'hare').motion = {
-    keyframes: [{at: 0, x: 0}, {at: 0.4, x: 0.3}, {at: 0.7, x: 0.16}, {at: 1, x: 0.44}],
+    keyframes: [{at: 0, offsetX: 0}, {at: 0.4, offsetX: 0.3}, {at: 0.7, offsetX: 0.16}, {at: 1, offsetX: 0.44}],
   };
   assert.ok(validateTrajectoryContracts(monotonic).some(({code}) => code === 'trajectory-monotonic-backtrack'));
 });

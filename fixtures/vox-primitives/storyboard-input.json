@@ -40,7 +40,7 @@
           "performanceRole": "establish",
           "purpose": "establish",
           "visual": "The atlas opens as four paper planes.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "world-establish",
           "treatments": [{
             "id": "world-parallax",
@@ -62,7 +62,7 @@
           "performanceRole": "action",
           "purpose": "energize",
           "visual": "A bounded petal field drifts across the title.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "world-action",
           "treatments": [{
             "id": "world-petals",
@@ -94,7 +94,7 @@
           "performanceRole": "settle",
           "purpose": "accent",
           "visual": "The title locks before the edit.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "world-final",
           "treatments": [{
             "id": "world-title-hold",
@@ -131,7 +131,7 @@
           "performanceRole": "establish",
           "purpose": "reveal",
           "visual": "The second card lands immediately on the beat.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "cut-establish",
           "treatments": [{
             "id": "cut-parallax",
@@ -153,7 +153,7 @@
           "performanceRole": "action",
           "purpose": "punctuate",
           "visual": "A star field bursts around the message.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "cut-action",
           "treatments": [{
             "id": "cut-stars",
@@ -185,7 +185,7 @@
           "performanceRole": "settle",
           "purpose": "resolve",
           "visual": "The card settles into a final lockup.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "cut-final-proof",
           "treatments": [{
             "id": "cut-title-hold",

@@ -25,7 +25,7 @@ try {
   const report = await runAudioPreflight({project, output: mixFile});
   const reportFile = path.join(paths.distDirectory, 'audio-preflight.json');
   await writeJson(reportFile, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectSlug: slug,
     generatedAt: new Date().toISOString(),
     ...report,
@@ -33,16 +33,19 @@ try {
   if (json) {
     console.log(JSON.stringify({...report, report: path.relative(ROOT, reportFile)}, null, 2));
   } else {
-    console.log(
-      `${report.passed ? '✓' : '✗'} audio preflight: ${report.loudness.integratedLufs} LUFS / ${report.loudness.truePeakDbtp} dBTP`,
-    );
+    console.log(`${report.passed ? '✓' : '✗'} audio preflight: delivery-encoded AAC`);
+    for (const probe of report.probes) {
+      console.log(
+        `  ${probe.mode} ${probe.bitrate}: ${probe.loudness.integratedLufs} LUFS / ${probe.loudness.truePeakDbtp} dBTP ${probe.passed ? '✓' : '✗'}`,
+      );
+    }
     console.log(
       `  expected: ${report.mastering.targetLufs} ± ${report.mastering.toleranceLufs} LUFS / <= ${report.mastering.truePeakDbtp} dBTP`,
     );
     console.log(`  report: ${path.relative(ROOT, reportFile)}`);
     if (!report.passed) {
       console.log(
-        `  建议 audio.narration.volume: ${report.currentNarrationVolume} → ${report.recommendedNarrationVolume.toFixed(3)}（音频-only 估算；最终成片报告仍为权威）`,
+        `  建议 audio.narration.volume: ${report.currentNarrationVolume} → ${report.recommendedNarrationVolume.toFixed(3)}（基于交付编码样本估算）`,
       );
     }
   }

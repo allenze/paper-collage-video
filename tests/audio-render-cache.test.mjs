@@ -9,6 +9,9 @@ import {
   analyzeAudioLoudness,
   assessAudioPreflight,
   collectProjectAudioEvents,
+  deliveryAudioFileForMode,
+  muxAuthoritativeAudio,
+  runAudioPreflight,
 } from '../scripts/audio-preflight-lib.mjs';
 import {
   createAudioCalibrationSourceFingerprint,
@@ -142,12 +145,55 @@ test('render fingerprints separate visual changes from audio-only changes', asyn
     });
     assert.notEqual(strictPeakAnalysis.integratedLufs, null);
     assert.notEqual(strictPeakAnalysis.truePeakDbtp, null);
+
+    const mixFile = path.join(directory, 'audio-preflight.wav');
+    const preflight = await runAudioPreflight({project, output: mixFile});
+    assert.equal(preflight.analysisSurface, 'delivery-encoded-aac');
+    assert.equal(preflight.deliveryEquivalent, true);
+    assert.deepEqual(
+      preflight.probes.map(({mode, bitrate}) => ({mode, bitrate})),
+      [
+        {mode: 'preview', bitrate: '96k'},
+        {mode: 'render', bitrate: '192k'},
+      ],
+    );
+    assert.equal(
+      preflight.passed,
+      preflight.probes.every(({passed}) => passed),
+    );
+    const silentVideo = path.join(directory, 'silent.mp4');
+    const video = spawnSync('ffmpeg', [
+      '-v', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=64x64:r=30',
+      '-t', '1.3', '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+      '-y', silentVideo,
+    ], {encoding: 'utf8'});
+    assert.equal(video.status, 0, video.stderr);
+    const artifact = path.join(directory, 'artifact.mp4');
+    const previewAudio = deliveryAudioFileForMode(mixFile, 'preview');
+    await muxAuthoritativeAudio({
+      video: silentVideo,
+      audio: previewAudio,
+      output: artifact,
+    });
+    const artifactLoudness = await analyzeAudioLoudness({
+      file: artifact,
+      mastering: project.audio.mastering,
+    });
+    const previewProbe = preflight.probes.find(({mode}) => mode === 'preview');
+    assert.equal(
+      artifactLoudness.integratedLufs,
+      previewProbe.loudness.integratedLufs,
+    );
+    assert.equal(
+      artifactLoudness.truePeakDbtp,
+      previewProbe.loudness.truePeakDbtp,
+    );
   } finally {
     await fs.rm(directory, {recursive: true, force: true});
   }
 });
 
-test('audio preflight recommends bounded narration gain without replacing final validation', () => {
+test('delivery-encoded audio preflight keeps bounded gain recommendations', () => {
   const project = makeProject('audio-assessment');
   const low = assessAudioPreflight({
     project,

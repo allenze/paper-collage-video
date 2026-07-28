@@ -142,8 +142,8 @@ export const resolveTargetViewportSnapshot = async ({
   const alpha = await alphaBoundsForSource(source);
   if (!alpha) throw new Error(`worldMotionProof target ${nodeId} 来源不存在：${source}`);
   const authored = {
-    x: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'x', 0),
-    y: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'y', 0),
+    x: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'offsetX', 0),
+    y: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'offsetY', 0),
     scale: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'scale', 1),
   };
   const camera = cameraAt(scene, progress);

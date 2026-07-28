@@ -73,7 +73,7 @@
     "project:render": "node scripts/project-metrics-run.mjs --category=video-render --operation=final-render --script=scripts/project-render.mjs --slug-index=1 -- render",
     "project:render-status": "node scripts/project-render-status.mjs",
     "project:report": "node scripts/project-metrics-run.mjs --category=deterministic-check --operation=report --script=scripts/project-report.mjs --slug-index=0 --",
-    "style:proof": "node scripts/project-metrics-run.mjs --category=evidence-render --operation=style-proof --script=scripts/style-motion-proof.mjs --slug-index=0 --",
+    "project:style-proof": "node scripts/project-metrics-run.mjs --category=evidence-render --operation=style-proof --script=scripts/style-motion-proof.mjs --slug-index=0 --",
     "doctor": "node scripts/project-doctor.mjs",
     "plugin:sync": "node scripts/sync-plugin-package.mjs",
     "sample:vox": "remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264",

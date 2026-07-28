@@ -607,7 +607,7 @@ test('world-motion proof resolves a looping state sequence through its hold stat
       playback: {mode: 'loop', cycles: 2, activeFrom: 0.01, activeUntil: 0.3, holdStateId: 'sleep', activeStateIds: ['run-a']},
       transition: {type: 'cut', durationSeconds: 0}, z: 2, depth: 0,
       transform: {x: 0.2, y: 0.5, width: 0.2, height: 0.2, anchorX: 0, anchorY: 0},
-      motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+      motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
     };
     const scene = {
       camera: {preset: 'static'},

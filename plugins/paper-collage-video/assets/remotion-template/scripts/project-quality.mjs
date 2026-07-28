@@ -18,6 +18,12 @@ import {
 } from './production-metrics-lib.mjs';
 
 const args = process.argv.slice(2);
+const usage =
+  '用法：project:quality -- <slug> <prepare|status|scaffold|contact-sheet|record|record-batch> [--input=<reviews.json>] [--output=<path>] [--reviewer=<id>] [--quiet] [--json]；也兼容 <action> <slug>。';
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(usage);
+  process.exit(0);
+}
 const positionals = args.filter((arg) => !arg.startsWith('--'));
 const actions = [
   'prepare',
@@ -102,9 +108,7 @@ const inspectReviewArtifacts = async (projectSlug, status) => {
 
 try {
   if (!slug || !actions.includes(action)) {
-    throw new Error(
-      '用法：project:quality -- <slug> <prepare|status|scaffold|contact-sheet|record|record-batch> [--input=<reviews.json>] [--output=<path>] [--reviewer=<id>] [--quiet] [--json]；也兼容 <action> <slug>。',
-    );
+    throw new Error(usage);
   }
   let status;
   let incrementalScaffold = null;
@@ -181,7 +185,7 @@ try {
     const payload = JSON.parse(await fs.readFile(file, 'utf8'));
     if (Array.isArray(payload)) {
       throw new Error(
-        'record-batch 必须使用 project:quality scaffold 生成的 schemaVersion 2 对象，不能提交未绑定报告指纹的裸数组。',
+        'record-batch 必须使用 project:quality scaffold 生成的 schemaVersion 3 对象，不能提交未绑定报告指纹和证据哈希的裸数组。',
       );
     }
     await assertQualityReviewScaffoldCurrent({slug, scaffold: payload});

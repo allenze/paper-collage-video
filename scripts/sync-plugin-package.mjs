@@ -327,7 +327,7 @@ const workspacePackage = {
     'project:render': rootPackage.scripts['project:render'],
     'project:render-status': rootPackage.scripts['project:render-status'],
     'project:report': rootPackage.scripts['project:report'],
-    'style:proof': rootPackage.scripts['style:proof'],
+    'project:style-proof': rootPackage.scripts['project:style-proof'],
     doctor: 'node scripts/project-doctor.mjs',
     'sample:vox': rootPackage.scripts['sample:vox'],
     'sample:vox:verify': rootPackage.scripts['sample:vox:verify'],
@@ -551,9 +551,9 @@ const project = {
             motion: {
               idle: {preset: 'breathe', intensity: 0.5, cycleSeconds: 2.8},
               keyframes: [
-                {at: 0, x: -0.01, opacity: 0.72, ease: 'ease-out'},
-                {at: 0.5, x: 0.003, scale: 1.03, opacity: 1, ease: 'ease-in-out'},
-                {at: 1, x: 0, scale: 1, opacity: 1, ease: 'ease-out'},
+                {at: 0, offsetX: -0.01, opacity: 0.72, ease: 'ease-out'},
+                {at: 0.5, offsetX: 0.003, scale: 1.03, opacity: 1, ease: 'ease-in-out'},
+                {at: 1, offsetX: 0, scale: 1, opacity: 1, ease: 'ease-out'},
               ],
             },
           },
@@ -614,9 +614,9 @@ const storyboard = compileStoryboardDirecting({
       blueprint: 'layered-reveal',
       estimatedDurationSeconds: 1.2,
       beats: [
-        {id: 'establish', at: 0, performanceRole: 'establish', purpose: '建立空间', visual: '纸面与背景出现', audioCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
-        {id: 'subject-arrives', at: 0.5, performanceRole: 'action', purpose: '交付主体', visual: '人物纸片进入中心', audioCue: null, proofTimeId: 'proof-action', treatments: [{id: 'show-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'visibility-change', motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体从明确的隐藏状态持续出现，并在事件后保持可见。'}]},
-        {id: 'lockup', at: 0.9, performanceRole: 'settle', purpose: '稳定结论', visual: '人物与标题形成锁定构图', audioCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
+        {id: 'establish', at: 0, performanceRole: 'establish', purpose: '建立空间', visual: '纸面与背景出现', soundCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
+        {id: 'subject-arrives', at: 0.5, performanceRole: 'action', purpose: '交付主体', visual: '人物纸片进入中心', soundCue: null, proofTimeId: 'proof-action', treatments: [{id: 'show-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'visibility-change', motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体从明确的隐藏状态持续出现，并在事件后保持可见。'}]},
+        {id: 'lockup', at: 0.9, performanceRole: 'settle', purpose: '稳定结论', visual: '人物与标题形成锁定构图', soundCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
       ],
       proofTimes: [
         {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},

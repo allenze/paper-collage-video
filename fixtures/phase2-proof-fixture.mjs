@@ -145,7 +145,7 @@ const typography = ({
   depth: 0.5,
   transform: transform(x, y, width, height),
   motion: {
-    keyframes: [{at: 0, y: 0.01}, {at: 1, y: -0.005}],
+    keyframes: [{at: 0, offsetY: 0.01}, {at: 1, offsetY: -0.005}],
   },
 });
 
@@ -355,9 +355,9 @@ const registeredFamilyGroup = () => ({
   transform: transform(0.08, 0.32, 0.28, 0.34),
   motion: {
     keyframes: [
-      {at: 0, x: 0, y: 0, rotation: -0.4},
-      {at: 0.55, x: 0.008, y: -0.006, rotation: 0.5},
-      {at: 1, x: 0, y: 0, rotation: -0.2},
+      {at: 0, offsetX: 0, offsetY: 0, rotation: -0.4},
+      {at: 0.55, offsetX: 0.008, offsetY: -0.006, rotation: 0.5},
+      {at: 1, offsetX: 0, offsetY: 0, rotation: -0.2},
     ],
   },
   registration: PHASE2_REGISTERED_FAMILY.registration,
@@ -384,8 +384,8 @@ const registeredFamilyGroup = () => ({
     transform: transform(0, 0, 1, 1),
     motion: {
       keyframes: [
-        {at: 0, x: [-0.005, 0.003, 0.008][index]},
-        {at: 1, x: [0.005, -0.003, -0.008][index]},
+        {at: 0, offsetX: [-0.005, 0.003, 0.008][index]},
+        {at: 1, offsetX: [0.005, -0.003, -0.008][index]},
       ],
     },
   })),
@@ -517,7 +517,7 @@ const storyboardBeat = ({
   performanceRole,
   purpose,
   visual: `Deterministic editorial state ${id}.`,
-  audioCue: null,
+  soundCue: null,
   proofTimeId,
   treatments: [{
     id: `${id}-treatment`,

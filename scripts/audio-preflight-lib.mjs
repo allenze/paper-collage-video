@@ -32,6 +32,19 @@ const parseLoudness = (stderr) => {
 const clamp = (value, minimum, maximum) =>
   Math.max(minimum, Math.min(maximum, value));
 
+export const AUDIO_DELIVERY_PROFILES = Object.freeze([
+  {mode: 'preview', bitrate: '96k'},
+  {mode: 'render', bitrate: '192k'},
+]);
+
+export const deliveryAudioFileForMode = (mixOutput, mode) => {
+  const profile = AUDIO_DELIVERY_PROFILES.find((entry) => entry.mode === mode);
+  if (!profile) throw new Error(`未知音频交付模式：${mode}`);
+  const extension = path.extname(mixOutput);
+  const base = extension.length > 0 ? mixOutput.slice(0, -extension.length) : mixOutput;
+  return `${base}-${profile.mode}.m4a`;
+};
+
 export const collectProjectAudioEvents = (project) => {
   const timeline = deriveTimeline(project);
   const fps = project.video.fps;
@@ -164,14 +177,93 @@ export const assessAudioPreflight = ({project, loudness}) => {
   };
 };
 
+export const encodeAudioDeliveryProbe = async ({
+  input,
+  output,
+  bitrate,
+}) => {
+  await runCommand('ffmpeg', [
+    '-v',
+    'error',
+    '-i',
+    input,
+    '-vn',
+    '-c:a',
+    'aac',
+    '-b:a',
+    bitrate,
+    '-ar',
+    '48000',
+    '-ac',
+    '2',
+    '-movflags',
+    '+faststart',
+    '-y',
+    output,
+  ]);
+  return output;
+};
+
+export const muxAuthoritativeAudio = async ({
+  video,
+  audio,
+  output,
+}) => {
+  await runCommand('ffmpeg', [
+    '-v',
+    'error',
+    '-i',
+    video,
+    '-i',
+    audio,
+    '-map',
+    '0:v:0',
+    '-map',
+    '1:a:0',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'copy',
+    '-shortest',
+    '-movflags',
+    '+faststart',
+    '-y',
+    output,
+  ]);
+  return output;
+};
+
 export const runAudioPreflight = async ({project, output}) => {
   const mixed = await renderProjectAudioMix({project, output});
-  const loudness = await analyzeAudioLoudness({
-    file: mixed.output,
-    mastering: project.audio.mastering,
-  });
+  const probes = [];
+  for (const profile of AUDIO_DELIVERY_PROFILES) {
+    const probeFile = deliveryAudioFileForMode(mixed.output, profile.mode);
+    await encodeAudioDeliveryProbe({
+      input: mixed.output,
+      output: probeFile,
+      bitrate: profile.bitrate,
+    });
+    const loudness = await analyzeAudioLoudness({
+      file: probeFile,
+      mastering: project.audio.mastering,
+    });
+    probes.push({
+      mode: profile.mode,
+      bitrate: profile.bitrate,
+      file: path.relative(ROOT, probeFile),
+      ...assessAudioPreflight({project, loudness}),
+    });
+  }
+  const limitingProbe =
+    probes.find((probe) => !probe.passed) ??
+    probes.find((probe) => probe.mode === 'render') ??
+    probes[0];
   return {
-    ...assessAudioPreflight({project, loudness}),
+    ...limitingProbe,
+    passed: probes.every((probe) => probe.passed),
+    deliveryEquivalent: true,
+    analysisSurface: 'delivery-encoded-aac',
+    probes,
     mix: {
       file: path.relative(ROOT, mixed.output),
       durationSeconds: mixed.durationSeconds,

@@ -60,9 +60,24 @@ const motionStateAt = (node, progress) => {
     (left, right) => left.at - right.at,
   );
   const defaults = {x: 0, y: 0, scale: 1, rotation: 0};
+  const valueFor = (frame, property, fallback) =>
+    frame[
+      property === 'x'
+        ? 'offsetX'
+        : property === 'y'
+          ? 'offsetY'
+          : property
+    ] ?? fallback;
+  const stateFor = (frame) =>
+    Object.fromEntries(
+      Object.entries(defaults).map(([property, fallback]) => [
+        property,
+        valueFor(frame, property, fallback),
+      ]),
+    );
   if (frames.length === 0) return defaults;
-  if (progress <= frames[0].at) return {...defaults, ...frames[0]};
-  if (progress >= frames.at(-1).at) return {...defaults, ...frames.at(-1)};
+  if (progress <= frames[0].at) return stateFor(frames[0]);
+  if (progress >= frames.at(-1).at) return stateFor(frames.at(-1));
   const rightIndex = frames.findIndex(({at}) => at >= progress);
   const left = frames[rightIndex - 1];
   const right = frames[rightIndex];
@@ -73,8 +88,9 @@ const motionStateAt = (node, progress) => {
   return Object.fromEntries(
     Object.entries(defaults).map(([property, fallback]) => [
       property,
-      (left[property] ?? fallback) +
-        ((right[property] ?? fallback) - (left[property] ?? fallback)) *
+      valueFor(left, property, fallback) +
+        (valueFor(right, property, fallback) -
+          valueFor(left, property, fallback)) *
           amount,
     ]),
   );

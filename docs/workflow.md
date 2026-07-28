@@ -77,7 +77,7 @@ intake 确认后，Codex 只用宿主模型生成一个共同故事骨架和三�
 
 ## 3. 风格与虚构音色确认
 
-只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。需要透明运动层的 registered 2×2 sheet 使用逐格 surface：reference/rear 保持不透明，subject/front 在宿主模型原生 alpha 不可靠时使用已声明且不与主体冲突的纯色色键。provider-native 原图原样登记，分隔线裁除、色键、缩放和 key metadata 由正式 registered-family 派生器完成并计为三个本地 derivative。`style:proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v11 组合 proof，绑定完整目标清单、计划指纹和动作契约双指纹。schema-v7 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。现有 style/voice gate 同时展示 `motion-language-card.json`，并把人的决定归因写入 `motion-approval.json`，不增加第四个人工等待节点。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
+只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。需要透明运动层的 registered 2×2 sheet 使用逐格 surface：reference/rear 保持不透明，subject/front 在宿主模型原生 alpha 不可靠时使用已声明且不与主体冲突的纯色色键。provider-native 原图原样登记，分隔线裁除、色键、缩放和 key metadata 由正式 registered-family 派生器完成并计为三个本地 derivative。`project:style-proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v11 组合 proof，绑定完整目标清单、计划指纹和动作契约双指纹。schema-v7 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。现有 style/voice gate 同时展示 `motion-language-card.json`，并把人的决定归因写入 `motion-approval.json`，不增加第四个人工等待节点。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
 
 ## 4. 批量生产与质量门
 
@@ -93,7 +93,7 @@ intake 确认后，Codex 只用宿主模型生成一个共同故事骨架和三�
 npm run project:assets-ready -- <slug>
 ```
 
-该命令依次核对当前动作语言批准、同步真实旁白时长与 timing、生成/导入字幕时间、执行音频-only LUFS/真峰预检、核对故事板蓝图/v11 组合与动作契约/源包/v9 editorial/状态序列/关键帧/edit points/高级切换/三画幅导演计划、核验组合证明指纹、执行资产、组合和整片动作质量门并推进到 `preview`。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 渲染半尺寸预览、技术报告、证明时刻联系表和转场联系表；报告列出转场意图/类型、匹配连续性、硬切比例和边界采样。视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流并重新混音/封装，任何视觉指纹变化都强制完整渲染。
+该命令依次核对当前动作语言批准、同步真实旁白时长与 timing、生成/导入字幕时间、构建确定性时间线混音并实际编码/检测 96k 预览 AAC 与 192k 最终 AAC、核对故事板蓝图/v11 组合与动作契约/源包/v9 editorial/状态序列/关键帧/edit points/高级切换/三画幅导演计划、核验组合证明指纹、执行资产、组合和整片动作质量门并推进到 `preview`。节点关键帧位移统一使用相对父级的 `offsetX`/`offsetY`；`transform.x`/`transform.y` 是绝对布局，相机 `x`/`y` 是像素。质量 scaffold 的每条证明都绑定当前组合指纹与证据 SHA-256，旧帧不能混入新审查。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 首先检查 seal/未完成工作项，再执行其他预检与半尺寸渲染；新渲染和音频-only 刷新都会直接复用已检测的对应 AAC 码流。视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流，任何视觉指纹变化都强制完整帧渲染。
 
 渲染并发默认按可用 CPU 自动决定并封顶为 8。若完整 Chrome 在多页并发时无响应，可用 `PAPER_COLLAGE_RENDER_CONCURRENCY=1 npm run project:preview -- <slug>`（最终渲染同理）走正式的单路重试路径；该设置只控制同时打开的渲染页数，不改变帧率、画质或成片内容。
 

@@ -1361,7 +1361,7 @@ export const validateProject = async (project, options = {}) => {
     for (const [beatId, beat] of storyboardBeats) {
       const beatEvents = (scene.events ?? []).filter((event) => event.beatId === beatId);
       if (!eventBeatIds.has(beatId)) add('error', 'scene-event-coverage', `故事板节拍 ${beatId} 没有执行 event。`, `${sceneLocation}.events`);
-      if (beat.audioCue && !beatEvents.some(({sound}) => Boolean(sound))) add('error', 'scene-event-sound-required', `节拍要求声音 ${beat.audioCue}，至少一个对应 event 必须配置 sound。`, `${sceneLocation}.events`);
+      if (beat.soundCue && !beatEvents.some(({sound}) => Boolean(sound))) add('error', 'scene-event-sound-required', `节拍要求事件音效 ${beat.soundCue}，至少一个对应 event 必须配置 sound；旁白不使用 soundCue。`, `${sceneLocation}.events`);
     }
     const visibilityInitialStates = Object.fromEntries(
       [...nodesById].map(([id, node]) => [id, node.visibility?.initial ?? 'visible']),

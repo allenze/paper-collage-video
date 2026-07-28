@@ -233,7 +233,7 @@ at both repeat edges, three-ratio worst-phase coverage, signed
 camera-compensated world displacement, every declared subject's anchor
 behavior, and its requested near-layer occlusion relation. If a film has no such high-risk facet, the highest-ranked
 treatment becomes one `baseline:representative` target so the style gate never
-becomes empty. `style:proof` renders every selected target and binds the report
+becomes empty. `project:style-proof` renders every selected target and binds the report
 to the plan fingerprint. A depth stack is proven as one family through neutral
 reconstruction, reference comparison, exploded checkerboard, and both extremes
 of every responsive reveal envelope; isolated-member motion stress is not

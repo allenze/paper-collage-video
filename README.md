@@ -209,7 +209,7 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v11 组合生成覆盖语义、注册深度家族、耦合关系与状态序列并绑定动作契约双指纹的 schema-v7 多目标样式证明 |
+| `npm run project:style-proof -- <slug>` | 用真实 v11 组合生成覆盖语义、注册深度家族、耦合关系与状态序列并绑定动作契约双指纹的 schema-v7 多目标样式证明 |
 | `npm run sample:vox:verify` | 对 VOX 工程样片生成固定帧联系表，并校验媒体、边界、素材与 runtime 指纹 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
@@ -272,7 +272,7 @@ python3 scripts/remove_chroma_key.py --input KEY.png --out ALPHA.png --key-color
 - `theme`：纸张、字幕、描边和前景颜色。
 - `voice`：虚构音色或后续可选的克隆音色元数据。
 - `audio`：旁白、背景音乐和必填 LUFS/true-peak 交付规格。
-- `scenes`：故事板蓝图、带断言的证明时刻、递归 `composition` 树、本地 keyframe、旁白、逐节拍持久/短暂/声音事件和字幕。
+- `scenes`：故事板蓝图、带断言的证明时刻、递归 `composition` 树、本地 keyframe、旁白、逐节拍持久/短暂/声音事件和字幕。节点 keyframe 的位移字段为相对父级的 `offsetX`/`offsetY`；绝对布局仍使用 `transform.x`/`transform.y`，相机 keyframe 的 `x`/`y` 仍是像素。
 - `sceneTransitions`：每对相邻场景唯一的交接契约。`intent` 只声明 `continuity | location-change | time-passage | focus-reveal | chapter-reset | impact` 叙事意图，`treatment` 独立声明执行方式。普通意图默认路由到注册纸张转场，也可用绑定边界节拍的 `motivation=rhythmic` 硬切；`impact` 则使用 `motivation=impact` 硬切。
 - `camera.parallax` 与节点 `depth=-1..1`：由同一镜头运动确定性驱动背景/焦平面/前景差速，不接受没有实际镜头运动或没有景深层次的伪视差。
 - `motif-field`：用一个带固定 `seed`、安全区、数量上限、分布和内部运动的节点展开重复装饰素材，无需手写几十个图片节点。
@@ -306,7 +306,7 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 - 字幕范围、重叠、越界、单条长度和阅读速度。
 - 支撑主体在各证明时刻是否仍位于接触区，注册环境是否只声明一次语义区域。
 
-`project:quality` 同时检查单文件和跨文件组合；文件哈希变化使资产审查失效，成员、mask、变换、环境边界、事件、场景交接或证明变化使对应组合审查失效。`project:report` 继续检查成片编码、分辨率、帧率、音轨、响度/峰值，并纳入事件时间线、场景边界联系表和真实组合证明摘要。
+`project:quality` 同时检查单文件和跨文件组合；文件哈希变化使资产审查失效，成员、mask、变换、环境边界、事件、场景交接或证明变化使对应组合审查失效。schema-v3 scaffold 还逐文件绑定证明 SHA-256，并拒绝同 id 但不同组合指纹的旧证明。透明素材同时检查低 alpha 长条/矩形残留、远离主体的矩形碎片和与登记裁切边界吻合的硬矩形轮廓。音频预检实际编码并检测 96k/192k AAC，预览和最终成片复用同一条已检码流；`project:report` 继续检查完整容器、分辨率、帧率、音轨、响度/峰值，并纳入事件时间线、场景边界联系表和真实组合证明摘要。
 
 ## 历史项目
 

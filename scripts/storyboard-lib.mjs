@@ -235,8 +235,22 @@ export const validateStoryboard = (
       if (!Array.isArray(beat.treatments) || beat.treatments.length === 0) {
         add('storyboard-beat-treatments', '每个节拍至少需要一个导演 treatment。', `${beatLocation}.treatments`);
       }
-      if (beat.audioCue !== null && beat.audioCue !== undefined && !nonEmpty(beat.audioCue)) {
-        add('storyboard-beat-audio', 'audioCue 必须为非空字符串或 null。', `${beatLocation}.audioCue`);
+      if (Object.hasOwn(beat, 'audioCue')) {
+        add(
+          'storyboard-beat-audio-cue-legacy',
+          'audioCue 已移除：离散事件音效请使用 soundCue，旁白只属于 scene.narration。',
+          `${beatLocation}.audioCue`,
+        );
+      }
+      if (!Object.hasOwn(beat, 'soundCue')) {
+        add(
+          'storyboard-beat-sound-field',
+          'v11 节拍必须显式声明 soundCue（离散事件音效字符串或 null）。',
+          `${beatLocation}.soundCue`,
+        );
+      }
+      if (beat.soundCue !== null && beat.soundCue !== undefined && !nonEmpty(beat.soundCue)) {
+        add('storyboard-beat-sound', 'soundCue 必须为离散事件音效的非空字符串或 null；旁白只属于 scene.narration。', `${beatLocation}.soundCue`);
       }
       if (!Object.hasOwn(beat, 'proofTimeId')) {
         add('storyboard-beat-proof-field', 'v5 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
@@ -244,8 +258,8 @@ export const validateStoryboard = (
       if (beat.proofTimeId !== null && beat.proofTimeId !== undefined && !nonEmpty(beat.proofTimeId)) {
         add('storyboard-beat-proof-id', 'proofTimeId 必须为非空字符串或 null。', `${beatLocation}.proofTimeId`);
       }
-      if (beat.audioCue && !nonEmpty(beat.proofTimeId)) {
-        add('storyboard-audio-proof-required', '带 audioCue 的节拍必须绑定事件级 proofTimeId。', `${beatLocation}.proofTimeId`);
+      if (beat.soundCue && !nonEmpty(beat.proofTimeId)) {
+        add('storyboard-sound-proof-required', '带 soundCue 的节拍必须绑定事件级 proofTimeId。', `${beatLocation}.proofTimeId`);
       }
       if (nonEmpty(beat.proofTimeId)) {
         beatEvidenceBindings.push({proofTimeId: beat.proofTimeId, location: beatLocation});

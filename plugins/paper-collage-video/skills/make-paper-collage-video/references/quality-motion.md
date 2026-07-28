@@ -22,15 +22,23 @@ unless the execution tree still reaches that file. A passing file does not prove
 that a person is inside a boat or trees remain above water. Both current quality
 scopes must pass.
 
-Run `project:quality <slug> prepare` after files exist. Then generate a fillable review batch with `project:quality <slug> scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`. The scaffold lists required/pending checks and current evidence paths but never pre-populates `passedChecks`; inspect original-resolution assets in small same-type batches, make real decisions, and record the edited file. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
+Run `project:quality <slug> prepare` after files exist. Then generate a fillable review batch with `project:quality <slug> scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`. The scaffold lists required/pending checks and current evidence records as `{file, sha256}` but never pre-populates `passedChecks`; inspect original-resolution assets in small same-type batches, make real decisions, and record the edited file. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
 
-The schema-v2 scaffold binds both the complete report fingerprint and every target fingerprint. `record-batch` rejects the whole input atomically when either has changed, so an old scaffold cannot approve removed targets or miss new ones. Generate a current bound review surface with `project:quality <slug> contact-sheet --input=projects/<slug>/quality-review-scaffold.json`; its index records the report fingerprint, source evidence hashes, and generated page hashes. Never display an older unbound contact sheet as current.
+The schema-v3 scaffold binds the complete report fingerprint, every target fingerprint, and every evidence-file hash. A composite is eligible only when a proof report contains both its current id and current fingerprint; scaffold generation stops instead of attaching an older same-id proof. `record-batch` rejects the whole input atomically when a report, target, or evidence file has changed, so an old scaffold cannot approve removed targets, miss new ones, or present stale frames. Generate a current bound review surface with `project:quality <slug> contact-sheet --input=projects/<slug>/quality-review-scaffold.json`; its index records the report fingerprint, source evidence hashes, and generated page hashes. Never display an older unbound contact sheet as current.
 
 Generating a non-empty scaffold starts one quality-review metric session and persists the scaffold's current evidence paths and hashes in the report; a successful `record-batch` closes it. If reviews remain, the command writes `quality-review-scaffold.pending.json`, reports the exact remaining IDs, and starts the next review session. The edited batch normally submits reviewer, pass/fail checks, and note. Omit `evidenceFiles` to inherit the current fingerprint-bound set, or provide it explicitly only to override that set. Keep those operations adjacent to the actual inspection so the session remains useful. The window intentionally includes host vision/tool orchestration and must not be described as raw model inference latency.
 
 Registered members add topology-sensitive asset checks: `silhouette-fidelity`, `negative-space-clean`, and `background-leak-free`. A `supported-subject` composite also requires `motion-isolation-clean`. Passing any of those checks requires `evidenceFiles` from the current proof bundle. `key-edge-clean` only detects matte/color contamination; hard 0/255 alpha can pass that check while still deleting a limb or carrying background pixels.
 
 Every transparent foreground also receives `rectangular-alpha-band-free`. The detector scans horizontal and vertical runs whose alpha is 4–96, requires at least 24 pixels and 42% of the relevant axis, merges adjacent scan lines, and treats a band as thin at no more than 2.5% of the cross-axis. It correlates candidates within 1.2% of canvas edges, crop edges, or registered placement/rectangular clip edges; four compatible sides form an explicit rectangular-residue error. Broad soft transitions remain informational so ordinary paper shadows do not fail, while an unusually long uncorrelated straight band is a warning. Diagnostics name scale, orientation, exact coordinates, span, correlation, classification, and severity.
+
+Every alpha-bearing asset also receives `alpha-topology-clean`. A bounded
+connected-component pass rejects small, separated, rectangle-like fragments
+that can escape long-band detection. When registered placement or rectangle
+crop provenance exists, it also rejects a mostly filled component whose hard
+edges align with perpendicular derivation boundaries. This check is for
+detached residue and hard crop topology; irregular intentional silhouettes and
+soft shadows remain subject to the existing evidence-backed visual review.
 
 The same inspection runs once at original resolution and again after Lanczos
 scaling to the asset's actual proof/render dimensions. Proof bundles contain
@@ -86,7 +94,7 @@ across scenes, not just one isolated sample.
 For the style gate, run:
 
 ```bash
-npm run style:proof -- <slug> --duration=4
+npm run project:style-proof -- <slug> --duration=4
 npm run project:quality -- <slug> prepare
 ```
 
@@ -237,7 +245,7 @@ is intact; that remains evidence-backed semantic review.
 
 ## Motion, Visibility, and Event Authoring
 
-The scene camera, camera-coupled depth offset, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship. `looping-environment` keeps its viewport carrier fixed, folds camera/parallax into the internal strip phase and non-shrinking content scale, and repeats enough copies for gap-free coverage. `motif-field` then expands its fixed-seed instances inside node-local bounds, deterministically rejects protected zones, and proves a closed or invisible loop edge.
+The scene camera, camera-coupled depth offset, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes use explicit parent-normalized additive `offsetX`/`offsetY` deltas and cover normalized time `0..1`; absolute node placement remains `transform.x`/`transform.y`, while camera keyframes retain pixel `x`/`y`. Narration resync therefore preserves the spatial relationship. `looping-environment` keeps its viewport carrier fixed, folds camera/parallax into the internal strip phase and non-shrinking content scale, and repeats enough copies for gap-free coverage. `motif-field` then expands its fixed-seed instances inside node-local bounds, deterministically rejects protected zones, and proves a closed or invisible loop edge.
 
 Map every approved beat to one or more ordered events. Target the group when the entire registered assembly reacts, or a child for a genuinely local action. `scene.events` schedules both visuals and sound; do not create a second audio event list. A visibility event persists after its window and requires a truthful initial state; an emphasis event is transient. Bind critical events to authored proof ids.
 
@@ -265,6 +273,6 @@ that sheet as the human visual proof for legibility, occlusion, clipping, and
 font appearance; its existence is not OCR proof that the pixels spell the
 expected text.
 
-After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds an audio-only timeline mix, and measures LUFS/true peak. A passing mix needs no decision. A failing mix writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns preflight. Changed source audio or timing invalidates the decision. The final artifact report remains authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
+After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds the deterministic timeline mix, encodes it as the real 96k preview AAC and 192k final AAC surfaces, and measures LUFS/true peak on both. A passing pair needs no decision. A failing probe writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns both encoded probes. Changed source audio or timing invalidates the decision. Fresh renders and audio-only cache refreshes mux the exact measured mode-specific AAC stream with codec copy, so artifact audio no longer takes a second gain/codec path; the final artifact report confirms that equivalence and remains authoritative for the complete container.
 
 Reports also intersect detected silence with sampled low-motion ranges. Silence with meaningful animation and a static explanatory image with narration are valid; only their unapproved overlap fails. Read `timing-continuity.md` for thresholds and proof-backed quiet holds. Never add background music solely to hide a continuity failure.

@@ -357,20 +357,20 @@
               "keyframes": [
                 {
                   "at": 0,
-                  "x": -0.01,
+                  "offsetX": -0.01,
                   "opacity": 0.72,
                   "ease": "ease-out"
                 },
                 {
                   "at": 0.5,
-                  "x": 0.003,
+                  "offsetX": 0.003,
                   "scale": 1.03,
                   "opacity": 1,
                   "ease": "ease-in-out"
                 },
                 {
                   "at": 1,
-                  "x": 0,
+                  "offsetX": 0,
                   "scale": 1,
                   "opacity": 1,
                   "ease": "ease-out"

@@ -140,7 +140,7 @@ const writeFixture = async (slug) => {
     z: 0,
     registrationId: 'family',
     transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-    motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
   });
   const project = withCompiledEditorialFixture({
     slug,
@@ -167,7 +167,7 @@ const writeFixture = async (slug) => {
           z: 0,
           coordinateSpace: {width: 100, height: 100},
           transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-          motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+          motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
           registration: {id: 'family', sourceMasterAssetId: 'master', canvas: {width: 100, height: 100}, origin: 'top-left'},
           support: {
             subjectId: 'subject',

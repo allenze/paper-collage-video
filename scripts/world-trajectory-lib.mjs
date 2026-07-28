@@ -33,8 +33,8 @@ const motionValueAt = ({motion = {}, progress, property, fallback}) => {
 const rectForNode = ({node, parent, progress}) => {
   const transform = node.transform ?? {};
   const motion = {
-    x: motionValueAt({motion: node.motion, progress, property: 'x', fallback: 0}),
-    y: motionValueAt({motion: node.motion, progress, property: 'y', fallback: 0}),
+    x: motionValueAt({motion: node.motion, progress, property: 'offsetX', fallback: 0}),
+    y: motionValueAt({motion: node.motion, progress, property: 'offsetY', fallback: 0}),
     scale: motionValueAt({motion: node.motion, progress, property: 'scale', fallback: 1}),
   };
   const initialWidth = Number(transform.width ?? 1) * parent.width;

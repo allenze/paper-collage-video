@@ -143,9 +143,11 @@ The storyboard is not another human gate. It is part of the existing combined co
 - Declare exactly one top-level `sceneTransitions[]` record for every adjacent pair. Author narrative `intent` and `rationale`, normally letting the compiler choose the registered animated recipe. Use `intent=impact` plus an impact-cut treatment when abruptness is semantic. For ordinary intents, use a `rhythmic` cut only with a `beatId` in the outgoing final 20% or incoming first 20%. Every animated boundary must be opaque and covered by both the outgoing tail and incoming narration lead.
 - Keep proof moments outside scene-boundary intervals so every sampled frame clearly proves the intended composition.
 - In schema v11, every beat and treatment declares `proofTimeId` as an approved
-  proof id or `null`; treatment proof must match its beat. If a beat names an
-  `audioCue`, it must bind an event-level proof and production must attach a
-  real sound asset to at least one matching event using that same proof id.
+  proof id or `null`; treatment proof must match its beat. `soundCue` names only
+  a discrete event SFX, never narration. If a beat names one, it must bind an
+  event-level proof and production must attach a real sound asset to at least
+  one matching event using that same proof id. Narration remains exclusively in
+  `scene.narration`.
 
 The compiler protects required hero actions. If the selected profile cannot afford them, it rejects the storyboard instead of silently replacing a pose change with a cheap transform. Reduce enhancement motion first, raise the profile, or reduce story scope inside the existing concept decision.
 

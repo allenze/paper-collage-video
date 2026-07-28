@@ -126,16 +126,41 @@ test('request fingerprints ignore project-specific destinations but preserve gen
   assert.notEqual(registered, otherFamily);
 });
 
-test('quality scaffold exposes pending checks and current proof evidence without pre-approving them', () => {
+test('quality scaffold binds pending checks to current proof hashes without pre-approving them', async () => {
+  const slug = `scaffold-${process.pid}`;
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const distDirectory = path.join(ROOT, 'dist', slug);
+  const evidenceDirectory = path.join(distDirectory, 'evidence');
+  const relative = (file) => path.relative(ROOT, file);
+  const files = {
+    subject: path.join(publicDirectory, 'subject.png'),
+    reference: path.join(publicDirectory, 'reference.png'),
+    alpha: path.join(evidenceDirectory, 'alpha.png'),
+    checker: path.join(evidenceDirectory, 'checker.png'),
+    tight: path.join(evidenceDirectory, 'tight.png'),
+    stress: path.join(evidenceDirectory, 'stress.jpg'),
+    frame: path.join(distDirectory, 'frame.png'),
+    crop: path.join(distDirectory, 'crop.png'),
+    debug: path.join(distDirectory, 'debug.png'),
+  };
+  await fs.mkdir(publicDirectory, {recursive: true});
+  await fs.mkdir(evidenceDirectory, {recursive: true});
+  for (const file of Object.values(files)) {
+    await sharp({
+      create: {width: 8, height: 8, channels: 4, background: '#884422'},
+    })
+      .toFormat(path.extname(file) === '.jpg' ? 'jpeg' : 'png')
+      .toFile(file);
+  }
+  try {
   const status = {
     report: {
       styleProfile: {
-        referenceFile:
-          'public/style-catalog/hand-drawn-cutout-explainer.png',
+        referenceFile: relative(files.reference),
       },
       assets: [{
         assetId: 'subject',
-        file: 'public/projects/scaffold/subject.png',
+        file: relative(files.subject),
         sources: ['scene:scene-01:node:subject-node'],
         requiredChecks: ['subject-complete', 'silhouette-fidelity', 'style-profile-conformant'],
         semanticChecks: {'subject-complete': 'passed', 'silhouette-fidelity': 'pending', 'style-profile-conformant': 'pending'},
@@ -143,6 +168,7 @@ test('quality scaffold exposes pending checks and current proof evidence without
       }],
       composites: [{
         compositeId: 'group:scene-01:rig',
+        fingerprint: 'a'.repeat(64),
         memberNodeIds: ['subject-node'],
         requiredChecks: ['support-contact', 'style-profile-consistent'],
         semanticChecks: {'support-contact': 'pending', 'style-profile-consistent': 'pending'},
@@ -153,29 +179,45 @@ test('quality scaffold exposes pending checks and current proof evidence without
   const compositionProof = {
     assetEvidence: [{
       nodeId: 'subject-node',
-      source: 'projects/scaffold/subject.png',
-      alphaMask: 'dist/scaffold/evidence/alpha.png',
-      checkerboard: 'dist/scaffold/evidence/checker.png',
-      tightCrop: 'dist/scaffold/evidence/tight.png',
-      motionStress: 'dist/scaffold/evidence/stress.jpg',
+      source: `projects/${slug}/subject.png`,
+      alphaMask: relative(files.alpha),
+      checkerboard: relative(files.checker),
+      tightCrop: relative(files.tight),
+      motionStress: relative(files.stress),
     }],
     composites: [{
       compositeId: 'group:scene-01:rig',
+      fingerprint: 'a'.repeat(64),
       proofFrames: [{
-        fullFrame: 'dist/scaffold/frame.png',
-        crop: 'dist/scaffold/crop.png',
-        debugFrame: 'dist/scaffold/debug.png',
+        fullFrame: relative(files.frame),
+        crop: relative(files.crop),
+        debugFrame: relative(files.debug),
       }],
     }],
   };
-  const scaffold = createQualityReviewScaffold({
+  await assert.rejects(
+    () => createQualityReviewScaffold({
+      status: structuredClone(status),
+      projectSlug: slug,
+      reviewer: 'host-vision',
+      compositionProof: {
+        ...compositionProof,
+        composites: compositionProof.composites.map((composite) => ({
+          ...composite,
+          fingerprint: 'b'.repeat(64),
+        })),
+      },
+    }),
+    /缺少与当前组合指纹一致的视觉证明/,
+  );
+  const scaffold = await createQualityReviewScaffold({
     status,
-    projectSlug: 'scaffold',
+    projectSlug: slug,
     reviewer: 'host-vision',
     compositionProof,
   });
   assert.equal(scaffold.reviews.length, 2);
-  assert.equal(scaffold.schemaVersion, 2);
+  assert.equal(scaffold.schemaVersion, 3);
   assert.match(scaffold.sourceReport.fingerprint, /^[a-f0-9]{64}$/);
   assert.ok(
     scaffold.reviews.every(({targetFingerprint}) =>
@@ -187,18 +229,23 @@ test('quality scaffold exposes pending checks and current proof evidence without
     'style-profile-conformant',
   ]);
   assert.deepEqual(scaffold.reviews[0].passedChecks, []);
-  assert.ok(scaffold.reviews[0].evidenceFiles.includes('dist/scaffold/evidence/alpha.png'));
+  assert.ok(scaffold.reviews[0].evidenceFiles.some(({file}) => file === relative(files.alpha)));
   assert.ok(
-    scaffold.reviews[0].evidenceFiles.includes(
-      'public/style-catalog/hand-drawn-cutout-explainer.png',
+    scaffold.reviews[0].evidenceFiles.some(({file}) => file === relative(files.reference)),
+  );
+  assert.ok(scaffold.reviews[1].evidenceFiles.some(({file}) => file === relative(files.debug)));
+  assert.ok(
+    scaffold.reviews[1].evidenceFiles.some(({file}) => file === relative(files.reference)),
+  );
+  assert.ok(
+    scaffold.reviews.every(({evidenceFiles}) =>
+      evidenceFiles.every(({sha256}) => /^[a-f0-9]{64}$/.test(sha256)),
     ),
   );
-  assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
-  assert.ok(
-    scaffold.reviews[1].evidenceFiles.includes(
-      'public/style-catalog/hand-drawn-cutout-explainer.png',
-    ),
-  );
+  } finally {
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+    await fs.rm(distDirectory, {recursive: true, force: true});
+  }
 });
 
 test('executable style profiles create one fingerprinted whole-film quality target', async () => {
@@ -635,7 +682,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
                     src: `projects/${slug}/assets/characters/alpha/hero.png`,
                     z: 1,
                     transform: {x: 0.5, y: 1, width: 0.2, anchorX: 0.5, anchorY: 1},
-                    motion: {keyframes: [{at: 0, y: 0}, {at: 1, y: 0}]},
+                    motion: {keyframes: [{at: 0, offsetY: 0}, {at: 1, offsetY: 0}]},
                   },
                 ],
               },
@@ -705,7 +752,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
 
     const built = await buildQualityReviewScaffold({slug, reviewer: 'test-vision'});
     assert.ok(built.scaffold.reviews.every(({evidenceFiles}) => evidenceFiles.length > 0));
-    assert.equal(built.scaffold.schemaVersion, 2);
+    assert.equal(built.scaffold.schemaVersion, 3);
     assert.equal(
       built.scaffold.sourceReport.fingerprint,
       built.status.report.reviewSurfaceFingerprint,
@@ -858,7 +905,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     slot,
     registrationId: 'boat-family',
     transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-    motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
   });
   try {
     await fs.mkdir(publicDirectory, {recursive: true});
@@ -883,7 +930,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
             id: 'boat-rig', kind: 'group', pattern: 'supported-subject', z: 0,
             coordinateSpace: {width: 100, height: 100},
             transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-            motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+            motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
             registration: {id: 'boat-family', sourceMasterAssetId: 'boat-master', canvas: {width: 100, height: 100}, origin: 'top-left'},
             support: {
               subjectId: 'traveler', contactAnchor: {x: 0.5, y: 0.7},

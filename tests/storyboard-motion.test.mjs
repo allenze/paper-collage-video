@@ -68,11 +68,11 @@ const authoredStoryboard = () => ({
       estimatedDurationSeconds: 6,
       beats: [
         {
-          id: 'establish', at: 0, performanceRole: 'establish', purpose: 'place', visual: 'Empty paper world', audioCue: null, proofTimeId: 'proof-establish',
+          id: 'establish', at: 0, performanceRole: 'establish', purpose: 'place', visual: 'Empty paper world', soundCue: null, proofTimeId: 'proof-establish',
           treatments: [staticTreatment({id: 'hold-stage', targetId: 'stage', proofTimeId: 'proof-establish'})],
         },
         {
-          id: 'action', at: 0.48, performanceRole: 'action', purpose: 'act', visual: 'Subject lands on stage', audioCue: 'paper lift', proofTimeId: 'proof-action',
+          id: 'action', at: 0.48, performanceRole: 'action', purpose: 'act', visual: 'Subject lands on stage', soundCue: 'paper lift', proofTimeId: 'proof-action',
           treatments: [{
             id: 'land-on-stage',
             targetId: 'subject',
@@ -91,7 +91,7 @@ const authoredStoryboard = () => ({
           }],
         },
         {
-          id: 'settle', at: 0.9, performanceRole: 'settle', purpose: 'resolve', visual: 'Composition locks', audioCue: null, proofTimeId: 'proof-final',
+          id: 'settle', at: 0.9, performanceRole: 'settle', purpose: 'resolve', visual: 'Composition locks', soundCue: null, proofTimeId: 'proof-final',
           treatments: [staticTreatment({id: 'hold-final', proofTimeId: 'proof-final'})],
         },
       ],
@@ -372,8 +372,8 @@ test('traverse and bottom-pivot sway treatments require their runtime motion sig
           id: 'submarine',
           motion: {
             keyframes: [
-              {at: 0, x: -0.45, y: 0.28},
-              {at: 1, x: 0.45, y: -0.28},
+              {at: 0, offsetX: -0.45, offsetY: 0.28},
+              {at: 1, offsetX: 0.45, offsetY: -0.28},
             ],
           },
         },
@@ -392,8 +392,8 @@ test('traverse and bottom-pivot sway treatments require their runtime motion sig
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
   }), []);
-  runtimeScene.composition.nodes[0].motion.keyframes[1].x = -0.2;
-  runtimeScene.composition.nodes[0].motion.keyframes[1].y = 0.2;
+  runtimeScene.composition.nodes[0].motion.keyframes[1].offsetX = -0.2;
+  runtimeScene.composition.nodes[0].motion.keyframes[1].offsetY = 0.2;
   assert.ok(validateDirectingExecution({
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
@@ -527,14 +527,14 @@ test('question marks and circles route to editable graphics without pose-sheet c
     camera: {preset: 'static'},
     composition: {nodes: [{
       id: 'question-mark', kind: 'shape',
-      motion: {keyframes: [{at: 0, y: 0}, {at: 1, y: -0.04}]},
+      motion: {keyframes: [{at: 0, offsetY: 0}, {at: 1, offsetY: -0.04}]},
     }]},
   };
   assert.deepEqual(validateDirectingExecution({
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
   }), []);
-  runtimeScene.composition.nodes[0].motion.keyframes[1].y = 0;
+  runtimeScene.composition.nodes[0].motion.keyframes[1].offsetY = 0;
   assert.ok(validateDirectingExecution({
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
@@ -905,11 +905,27 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v9 storyboard audio beats require an approved event-level proof', () => {
+test('v11 storyboard sound beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
   storyboard.scenes[0].beats[1].proofTimeId = null;
   assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})
-    .some(({code}) => code === 'storyboard-audio-proof-required'));
+    .some(({code}) => code === 'storyboard-sound-proof-required'));
+});
+
+test('v11 rejects the legacy audioCue field and requires an explicit soundCue', () => {
+  const legacy = readyStoryboard();
+  legacy.scenes[0].beats[1].audioCue = legacy.scenes[0].beats[1].soundCue;
+  delete legacy.scenes[0].beats[1].soundCue;
+  const issues = validateStoryboard(legacy, {slug: 'rhythm-test', plan: plan()});
+  assert.ok(issues.some(({code}) => code === 'storyboard-beat-audio-cue-legacy'));
+  assert.ok(issues.some(({code}) => code === 'storyboard-beat-sound-field'));
+});
+
+test('camera treatments reject scene-number aliases', () => {
+  const storyboard = readyStoryboard();
+  storyboard.scenes[0].beats[0].treatments[0].targetId = 'scene-04-camera';
+  assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})
+    .some(({code}) => code === 'treatment-camera-target-alias'));
 });
 
 test('motion proof moments cannot be hidden inside scene boundary transitions', () => {

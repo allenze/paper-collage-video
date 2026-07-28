@@ -537,6 +537,31 @@ test('manual attempt closure requires truthful quota semantics', async () => {
       () => closeGenerationAttempt({slug, attemptId: reserved.event.attemptId, status: 'rejected', quotaConsumed: false}),
       /必须计入生成额度/,
     );
+    const closed = await closeGenerationAttempt({
+      slug,
+      attemptId: reserved.event.attemptId,
+      status: 'failed-before-generation',
+      quotaConsumed: false,
+      note: 'provider did not start',
+    });
+    assert.equal(closed.reused, false);
+    const retried = await closeGenerationAttempt({
+      slug,
+      attemptId: reserved.event.attemptId,
+      status: 'failed-before-generation',
+      quotaConsumed: false,
+    });
+    assert.equal(retried.reused, true);
+    assert.equal((await readGenerationAttemptEvents(slug)).events.length, 2);
+    await assert.rejects(
+      () => closeGenerationAttempt({
+        slug,
+        attemptId: reserved.event.attemptId,
+        status: 'abandoned',
+        quotaConsumed: false,
+      }),
+      /关闭参数不一致/,
+    );
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
   }

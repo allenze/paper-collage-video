@@ -25,7 +25,7 @@ const sceneConcept = (scene) => ({
     performanceRole: beat.performanceRole,
     purpose: beat.purpose,
     visual: beat.visual,
-    audioCue: beat.audioCue,
+    soundCue: beat.soundCue,
   })),
   proofs: (scene.proofTimes ?? []).map((proof) => ({
     id: proof.id,

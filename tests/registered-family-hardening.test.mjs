@@ -9,6 +9,7 @@ import {prepareRegisteredFamilyProof} from '../scripts/asset-hardening-proof-lib
 import {
   DEFAULT_ALPHA_BAND_THRESHOLDS,
   inspectAlphaBands,
+  inspectAlphaTopology,
 } from '../scripts/alpha-band-lib.mjs';
 import {
   REGISTERED_FAMILY_RECOVERY_POLICY,
@@ -728,4 +729,62 @@ test('alpha-band detector distinguishes natural contour/shadow from rectangular 
   } finally {
     await fs.rm(root, {recursive: true, force: true});
   }
+});
+
+test('alpha topology rejects detached fragments and hard derivation rectangles', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'alpha-topology-'));
+  try {
+    const cleanFile = path.join(root, 'clean.png');
+    const fragmentFile = path.join(root, 'fragment.png');
+    const cropFile = path.join(root, 'crop.png');
+    const cleanSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
+        <path d="M70 30 C30 80 45 170 140 175 C230 180 265 95 220 35 C175 5 105 5 70 30 Z" fill="#9b6542"/>
+      </svg>
+    `);
+    const fragmentSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
+        <path d="M70 30 C30 80 45 170 140 175 C230 180 265 95 220 35 C175 5 105 5 70 30 Z" fill="#9b6542"/>
+        <rect x="272" y="8" width="18" height="28" fill="#9b6542"/>
+      </svg>
+    `);
+    const cropSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
+        <rect x="60" y="40" width="180" height="120" fill="#9b6542"/>
+      </svg>
+    `);
+    await sharp(cleanSvg).png().toFile(cleanFile);
+    await sharp(fragmentSvg).png().toFile(fragmentFile);
+    await sharp(cropSvg).png().toFile(cropFile);
+    const clean = await inspectAlphaTopology({file: cleanFile});
+    const fragment = await inspectAlphaTopology({file: fragmentFile});
+    const crop = await inspectAlphaTopology({
+      file: cropFile,
+      derivationRegions: [{
+        id: 'fixture-clip',
+        kind: 'crop-boundary',
+        rect: {left: 60, top: 40, width: 180, height: 120},
+      }],
+    });
+    assert.equal(clean.passed, true);
+    assert.equal(fragment.passed, false);
+    assert.ok(fragment.failures.some(({diagnostic}) =>
+      diagnostic.classification === 'detached-rectangular-alpha-fragment'));
+    assert.equal(crop.passed, false);
+    assert.ok(crop.failures.some(({diagnostic}) =>
+      diagnostic.classification === 'hard-rectangular-derivation-boundary'));
+  } finally {
+    await fs.rm(root, {recursive: true, force: true});
+  }
+});
+
+test('registered-family fixture proof rejects misleading project arguments', () => {
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/prove-registered-family.mjs', 'not-a-project-proof'],
+    {cwd: path.resolve('.',), encoding: 'utf8'},
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /内置 fixture 证明/);
+  assert.match(result.stderr, /project:composition-proof/);
 });

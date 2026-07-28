@@ -69,10 +69,10 @@ export const assertStyleProofReady = async (slug) => {
   const targets = [...new Map(targetGroups.flat().map((target) => [target.compositeId, target])).values()];
 
   const reportFile = styleProofReportPath(slug);
-  if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
+  if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run project:style-proof。');
   const report = await readJson(reportFile);
   if (report.schemaVersion !== 7 || report.scope !== 'style' || !Array.isArray(report.composites)) {
-    throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run style:proof。');
+    throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run project:style-proof。');
   }
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   if (
@@ -87,7 +87,7 @@ export const assertStyleProofReady = async (slug) => {
     JSON.stringify(report.directingTargets) !== JSON.stringify(directingTargets) ||
     report.runtimeBuildFingerprint !== runtimeBuildFingerprint
   ) {
-    throw new Error('风格拓扑证明没有绑定当前多维风险覆盖计划；请重新运行 npm run style:proof。');
+    throw new Error('风格拓扑证明没有绑定当前多维风险覆盖计划；请重新运行 npm run project:style-proof。');
   }
   if (!Array.isArray(report.outputs) || report.outputs.length === 0) {
     throw new Error('风格拓扑证明缺少 outputs。');

@@ -15,8 +15,8 @@ export type MotionEase = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'ho
 
 export type MotionKeyframe = {
   at: number;
-  x?: number;
-  y?: number;
+  offsetX?: number;
+  offsetY?: number;
   scale?: number;
   rotation?: number;
   opacity?: number;

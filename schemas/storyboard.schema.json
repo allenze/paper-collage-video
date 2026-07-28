@@ -280,7 +280,7 @@
     },
     "beat": {
       "type": "object",
-      "required": ["id", "at", "performanceRole", "purpose", "visual", "audioCue", "proofTimeId", "treatments"],
+      "required": ["id", "at", "performanceRole", "purpose", "visual", "soundCue", "proofTimeId", "treatments"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
@@ -289,7 +289,10 @@
         },
         "purpose": {"type": "string", "minLength": 1},
         "visual": {"type": "string", "minLength": 1},
-        "audioCue": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "soundCue": {
+          "description": "A discrete event sound effect. Narration belongs to scene.narration and must not be duplicated here.",
+          "oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]
+        },
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
         "treatments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/treatment"}}
       },

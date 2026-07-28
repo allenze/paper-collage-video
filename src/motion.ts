@@ -37,9 +37,24 @@ export const resolveMotionState = (
 ): MotionState => {
   if (keyframes.length === 0) return defaults;
   const sorted = [...keyframes].sort((left, right) => left.at - right.at);
+  const valueFor = (
+    keyframe: MotionKeyframe,
+    property: keyof MotionState,
+  ) => {
+    if (property === 'x') return keyframe.offsetX ?? defaults.x;
+    if (property === 'y') return keyframe.offsetY ?? defaults.y;
+    return keyframe[property] ?? defaults[property];
+  };
+  const stateFor = (keyframe: MotionKeyframe): MotionState => ({
+    x: keyframe.offsetX ?? defaults.x,
+    y: keyframe.offsetY ?? defaults.y,
+    scale: keyframe.scale ?? defaults.scale,
+    rotation: keyframe.rotation ?? defaults.rotation,
+    opacity: keyframe.opacity ?? defaults.opacity,
+  });
   const current = clamp01(progress);
-  if (current <= sorted[0].at) return {...defaults, ...sorted[0]};
-  if (current >= sorted.at(-1)!.at) return {...defaults, ...sorted.at(-1)!};
+  if (current <= sorted[0].at) return stateFor(sorted[0]);
+  if (current >= sorted.at(-1)!.at) return stateFor(sorted.at(-1)!);
   const rightIndex = sorted.findIndex(({at}) => at >= current);
   const left = sorted[Math.max(0, rightIndex - 1)];
   const right = sorted[rightIndex];
@@ -47,8 +62,8 @@ export const resolveMotionState = (
   const amount = ease((current - left.at) / span, right.ease ?? 'ease-in-out');
   return Object.fromEntries(
     (Object.keys(defaults) as Array<keyof MotionState>).map((property) => {
-      const start = left[property] ?? defaults[property];
-      const end = right[property] ?? defaults[property];
+      const start = valueFor(left, property);
+      const end = valueFor(right, property);
       return [property, start + (end - start) * amount];
     }),
   ) as MotionState;

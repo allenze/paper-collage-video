@@ -17,8 +17,14 @@
       "required": ["at"],
       "properties": {
         "at": {"type": "number", "minimum": 0, "maximum": 1},
-        "x": {"type": "number"},
-        "y": {"type": "number"},
+        "offsetX": {
+          "type": "number",
+          "description": "Additive horizontal offset in parent-normalized coordinates; it is not an absolute canvas position."
+        },
+        "offsetY": {
+          "type": "number",
+          "description": "Additive vertical offset in parent-normalized coordinates; it is not an absolute canvas position."
+        },
         "scale": {"type": "number", "exclusiveMinimum": 0},
         "rotation": {"type": "number"},
         "opacity": {"type": "number", "minimum": 0, "maximum": 1},

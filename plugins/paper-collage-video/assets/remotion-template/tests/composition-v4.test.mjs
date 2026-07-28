@@ -14,7 +14,7 @@ import {resolveSequencePhase, resolveSequenceState} from '../scripts/state-seque
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const still = () => ({keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]});
+const still = () => ({keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]});
 const fullTransform = () => ({x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0});
 const withStateContract = (node) => node.kind !== 'state-sequence' ? node : ({
   ...node,
@@ -130,7 +130,7 @@ test('v5 supported subjects require contact, front occlusion and one carrier mot
   assert.ok(validate(detached).issues.some(({code}) => code === 'composition-support-contact'));
 
   const duplicated = supportedGroup();
-  duplicated.motion = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0.1}]};
+  duplicated.motion = {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0.1}]};
   duplicated.children[1].motion = structuredClone(duplicated.motion);
   assert.ok(validate(duplicated).issues.some(({code}) => code === 'composition-duplicated-carrier-motion'));
 });
@@ -187,7 +187,7 @@ test('v10 registered depth stacks require full-canvas ordered layers inside ever
 
   const overTravel = depthStackGroup();
   overTravel.children[1].motion = {
-    keyframes: [{at: 0, x: 0}, {at: 1, x: 0.035}],
+    keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0.035}],
   };
   assert.ok(
     validate(overTravel).issues.some(

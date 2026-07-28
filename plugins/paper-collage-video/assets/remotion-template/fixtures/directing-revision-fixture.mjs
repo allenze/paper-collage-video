@@ -36,7 +36,7 @@ export const directingRevisionAuthoring = {
     estimatedDurationSeconds: 6,
     beats: [
       {
-        id: 'establish', at: 0.05, performanceRole: 'establish', purpose: '建立纸面', visual: '背景稳定出现', audioCue: null,
+        id: 'establish', at: 0.05, performanceRole: 'establish', purpose: '建立纸面', visual: '背景稳定出现', soundCue: null,
         proofTimeId: 'proof-establish',
         treatments: [{
           id: 'hold-background', targetId: 'background', importance: 'supporting', necessity: 'required',
@@ -45,7 +45,7 @@ export const directingRevisionAuthoring = {
         }],
       },
       {
-        id: 'reveal', at: 0.45, performanceRole: 'action', purpose: '显示主体', visual: '人物纸片进入画面', audioCue: null,
+        id: 'reveal', at: 0.45, performanceRole: 'action', purpose: '显示主体', visual: '人物纸片进入画面', soundCue: null,
         proofTimeId: 'proof-action',
         treatments: [{
           id: 'show-subject', targetId: 'subject', importance: 'hero', necessity: 'required',
@@ -56,7 +56,7 @@ export const directingRevisionAuthoring = {
         }],
       },
       {
-        id: 'final', at: 0.85, performanceRole: 'settle', purpose: '稳定落版', visual: '主体保持清楚', audioCue: null,
+        id: 'final', at: 0.85, performanceRole: 'settle', purpose: '稳定落版', visual: '主体保持清楚', soundCue: null,
         proofTimeId: 'proof-final',
         treatments: [{
           id: 'hold-subject', targetId: 'subject', importance: 'supporting', necessity: 'required',

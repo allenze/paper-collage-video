@@ -247,7 +247,19 @@ export const closeGenerationAttempt = async ({
     const loaded = await readGenerationAttemptEvents(slug);
     const attempt = reduceGenerationAttempts(loaded.events).get(attemptId);
     if (!attempt) throw new Error(`生成尝试不存在：${attemptId}`);
-    if (attempt.status !== 'reserved') throw new Error(`生成尝试 ${attemptId} 已关闭为 ${attempt.status}。`);
+    if (attempt.status !== 'reserved') {
+      const sameClosure =
+        attempt.status === status &&
+        attempt.quotaConsumed === quotaConsumed &&
+        (attempt.output ?? null) === output &&
+        (attempt.outputSha256 ?? null) === outputSha256;
+      if (sameClosure) {
+        return {file: loaded.file, event: attempt, reused: true};
+      }
+      throw new Error(
+        `生成尝试 ${attemptId} 已关闭为 ${attempt.status}，且与本次关闭参数不一致。`,
+      );
+    }
     const event = {
       schemaVersion: 1,
       attemptId,
@@ -265,6 +277,6 @@ export const closeGenerationAttempt = async ({
       at: new Date().toISOString(),
     };
     await appendEvent(loaded.file, event);
-    return {file: loaded.file, event};
+    return {file: loaded.file, event, reused: false};
   });
 };

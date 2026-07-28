@@ -13,15 +13,15 @@
 | 优先级 | 风险簇 | 对应记录 | 处置 |
 |---|---|---|---|
 | P0 | 未完成工作项可被预览、审批和最终交付绕过 | F061 | 本批修复：只有当前 `assets-ready` seal 可以自动结清已验证的导演同步项；任何其他未完成项或 blocked 项阻断 assets-ready，预览审批和两种渲染都拒绝未完成工作项。 |
-| P0 | 接地、载体、遮挡、静止与因果连续性只验证结构，不能保证观众看到正确画面 | F044–F054、F056–F057 | 下一纵向修复：把 support surface、接触锚点、遮挡拓扑、同世界连续性、持续动作和 locked-static 不变量提升为 authoring/schema/runtime/proof/quality 一等合同。 |
-| P0 | 证明可能来自固定 fixture、旧图、错误时点或不能证明实际像素 | F010、F014、F022、F038、F040、F052、F054 | 与空间合同一起修：所有证明绑定当前项目、当前成员 SHA、当前执行树和声明时点；联系表不能代替接地、拓扑及连续性证明。 |
-| P0 | 音频预检表面与最终 Remotion 混音表面不一致，失败发现过晚 | F042–F043 | 建立与最终混音同构的廉价 preflight；正式渲染前验证 true peak、声道和实际增益图，渲染后报告只做一致性确认。 |
+| 已关闭 | 接地、载体、遮挡、静止与因果连续性只验证结构，不能保证观众看到正确画面 | F044–F054、F056–F057 的确定性部分 | `spatialContracts[]` 已把 support surface、接触锚点、遮挡拓扑、同世界连续性、持续步态和 locked-contact 不变量提升为 authoring/schema/runtime/proof/quality 一等合同；像素无法可靠判断的创作语义仍保留人工组合审核。 |
+| 已关闭 | 证明可能来自旧图，透明碎片/硬矩形派生边界可能漏检 | F038、F040、F054 的确定性部分 | schema-v3 scaffold 绑定当前 composite fingerprint 与每个证据 SHA；alpha topology 补充 detached fragment 和 derivation-bound hard rectangle 检测。F010 的 fixture 命令也拒绝项目参数并指向项目证明命令。 |
+| 已关闭 | 音频预检表面与最终 Remotion 混音表面不一致，失败发现过晚 | F042–F043 | 预检实际编码/检测 96k 与 192k AAC；新渲染和音频-only 刷新都 codec-copy 同一已检音轨。 |
 | P1 | 计划、provider、预算与概念审批合同存在漂移或回退路径缺失 | F001–F003、F006、F008 | 统一 source/package 编译路径和 provider 身份；将画布能力、调用数、上限/成本及回退方案纳入一次可审计确认。 |
 | P1 | 注册素材派生、分格、色键和重新登记的局部成功不能保证语义有效 | F009、F013、F015、F018–F019、F023–F024、F040、F045、F054 | provider 请求、处理器、family fingerprint、绑定和技术/视觉证明采用同一注册族合同；优先完整表内定向修复，不接受孤立替换格。 |
-| P1 | 导演和剪辑语义没有完整的一等 authoring 入口 | F005、F012、F016、F029–F036、F050–F051、F056–F057 | 统一 target、坐标语义、editorial 重编、状态持续区间、音频 cue 和 camera 别名；不再依赖手改执行 JSON。 |
-| P1 | 修订后的质量缓存、证明失效范围和命令时序不可靠 | F011、F021–F024、F038–F039、F041、F055 | 让指纹决定最小但完整的重证范围；前置 seal/音频/证明检查，避免完整渲染后才失败。 |
+| 部分关闭 | 导演和剪辑语义没有完整的一等 authoring 入口 | F005、F012、F016、F029–F036、F050–F051、F056–F057 | F034–F036 已关闭：离散音效改用 `soundCue` 且旁白只属于 `scene.narration`；镜头 treatment 只接受 `scene-camera`；节点位移改为 `offsetX/offsetY`，不再与绝对布局或 camera 坐标同名。其余保持独立条目。 |
+| 部分关闭 | 修订后的质量缓存、证明失效范围和命令时序不可靠 | F011、F021–F024、F038–F039、F041、F055 | F038/F055 已关闭：证明逐文件绑定哈希，render 在 sync/audio/quality 前先检查生产 seal/工作项；其余保持独立条目。 |
 | 已关闭 | 字幕字体、句界分段和字幕专用质量失效范围 | F058–F060 | 已由 `e3c64e4`、`5c77a0f` 及相应测试/packaged plugin 验证；后续只在复现时重开。 |
-| P2 | CLI 可发现性和重复操作提示 | F017、F025、F037 | 统一纯帮助、幂等提示和项目命令命名；不影响像素正确性时可后置。 |
+| 已关闭 | CLI 可发现性和重复操作提示 | F017、F025、F037 | 相同尝试关闭可幂等重试；`project:quality --help` 不创建 metrics/项目副作用；样式证明统一为 `project:style-proof`，移除不一致的旧别名。 |
 | 外部边界 | Codex Default UI、ChatCut/浏览器下载和大输出行为 | F004、F007、F026–F028 | 仓库内不伪造宿主能力；保留文本 fallback、落盘 provenance、错误边界和恢复说明。 |
 | Agent/项目边界 | 相对临时脚本路径、重复前景节点等手工操作错误 | F020、F047 | 不为一次性路径或节点堆叠增加兼容分支；canonical 命令和通用校验应尽早拒绝其错误结果。 |
 
@@ -61,17 +61,17 @@ packaged-plugin 同步及新安装缓存验证为准。
 tracked 文件引用该目录。5 个 SVG 与外部生产工作区中的权威副本 SHA-256
 完全一致。因此它们不应进入 reusable Skill、测试 fixture 或 Git 历史。
 
-当前处置是：
+最终处置是：
 
 1. 将 `.agent-tmp/` 加入 `.gitignore`，防止误提交；
-2. 在本轮摩擦提取和证据核对完成前保留本地目录；
-3. 审计完成后，经用户确认删除整个目录；可复用能力只通过正式 schema、
-   runtime、validator、proof、测试和文档进入仓库，不保留项目专用脚本。
+2. 审计完成并获得用户确认后，已删除整个目录；
+3. 可复用能力只通过正式 schema、runtime、validator、proof、测试和文档进入
+   仓库，不保留项目专用脚本。
 
-## 后续顺序
+## 本批后仍保留的边界
 
-F061 验证完成后，下一批优先处理 F044–F057 与
-F010/F038/F052 的交集：空间支持/遮挡/连续性合同及其真实像素证明。该批应
-一次贯通 authoring、schema、provider request、runtime、deterministic
-validation、visual proof、quality、tests、文档和 packaged plugin。随后处理
-F042–F043 的最终混音同构 preflight，再进入计划/预算和操作体验问题。
+本批只关闭有确定仓库根因和可执行验收面的条目。F045/F050 的剩余人工语义
+判断，以及 Default UI、ChatCut/浏览器下载等外部
+能力没有被伪装成修复。任何仅靠像素无法判断的“这块麦田在语义上不该出现”
+仍由绑定当前证明的组合审核负责；确定性的浮空、接地、连续性、透明残片和硬
+裁切则由现有合同/技术门直接阻断。

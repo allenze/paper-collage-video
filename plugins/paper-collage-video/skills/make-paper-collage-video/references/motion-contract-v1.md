@@ -50,7 +50,7 @@ intent, exception, or Style Profile change invalidates the approval.
 This contract does not add a fourth gate. `project:storyboard` writes
 `motion-language-card.json`. At the existing story-specific style and fictional
 voice gate, show that card beside the style sample, voice audition, and 3–5
-second proof. `style:proof` must bind both fingerprints. On explicit approval,
+second proof. `project:style-proof` must bind both fingerprints. On explicit approval,
 `approve-style-voice` writes `motion-approval.json` with the human note, Style
 Profile binding, both motion fingerprints, style-proof plan fingerprint, and
 style-proof artifact hash.

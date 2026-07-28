@@ -8,8 +8,8 @@ import {
 
 const still = {
   keyframes: [
-    {at: 0, x: 0, y: 0},
-    {at: 1, x: 0, y: 0},
+    {at: 0, offsetX: 0, offsetY: 0},
+    {at: 1, offsetX: 0, offsetY: 0},
   ],
 };
 

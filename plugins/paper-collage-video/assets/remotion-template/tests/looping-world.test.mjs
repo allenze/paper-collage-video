@@ -20,7 +20,7 @@ import {
 } from '../src/worldStrip.mjs';
 
 const hash = (value) => createHash('sha256').update(value).digest('hex');
-const still = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]};
+const still = {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]};
 const transform = (height = 1) => ({
   x: 0,
   y: 0,

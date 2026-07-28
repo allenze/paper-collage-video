@@ -138,7 +138,8 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.match(packageJson.scripts['project:audio-calibration'], /category=deterministic-check/);
   assert.match(packageJson.scripts['project:stitch-narration'], /stitch-narration/);
   assert.equal(packageJson.scripts['project:subtitles'], 'node scripts/project-subtitles.mjs');
-  assert.match(packageJson.scripts['style:proof'], /category=evidence-render/);
+  assert.match(packageJson.scripts['project:style-proof'], /category=evidence-render/);
+  assert.equal(packageJson.scripts['style:proof'], undefined);
   assert.equal(
     packageJson.scripts['sample:vox'],
     'remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264',

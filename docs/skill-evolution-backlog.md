@@ -5,6 +5,39 @@ paper-collage Skill or runtime gap. It is not a substitute for implementation:
 an item stays open until its contract, renderer, validation, proof, tests,
 documentation, and packaged-plugin copy are updated together.
 
+## 2026-07-28 — Delivery-equivalent audio and immutable review evidence
+
+- **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F010, F017, F025,
+  F034–F040, F042–F043, F054, and F055.
+- **Observed failure:** an audio-only WAV preflight could pass before AAC
+  encoding changed true peak; a current review scaffold could attach an older
+  same-id proof; small detached alpha residue and an opaque rectangular crop
+  could escape the low-alpha-band detector; node keyframe `x`/`y` was easy to
+  confuse with absolute placement or camera pixels; and render preflight could
+  spend sync/audio/quality work before reporting a stale production seal.
+- **Required capability:** encode and measure both delivery AAC profiles before
+  rendering and mux those exact streams; bind scaffold evidence by current
+  composite fingerprint and file SHA; add connected-component/derivation-edge
+  alpha topology checks; name local motion `offsetX`/`offsetY`; run the
+  production gate first. Project/fixture command identity, retryable attempt
+  closure, and help must also be truthful and side-effect free.
+- **Acceptance evidence:** audio tests compare preflight and muxed artifact
+  loudness exactly; scaffold schema-v3 rejects changed evidence; alpha fixtures
+  cover a natural silhouette, detached fragment, and hard registered
+  rectangle; composition, trajectory, spatial, VOX, state, and renderer tests
+  use the new offset contract; source-order coverage keeps render gating first;
+  CLI tests cover idempotent close, fixture-only proof rejection, and pure help.
+  Storyboard tests reject removed `audioCue`, require explicit event-only
+  `soundCue`, and reject numbered camera aliases; package tests expose only
+  `project:style-proof`.
+- **Status:** implemented and verified on 2026-07-28. The source suite passes
+  231/231; the packaged runtime suite passes 216/216 from a fresh workspace.
+  Source, packaged plugin, and installed cache share runtime fingerprint
+  `e73687f7fe02608ca5ebd53c94c1c4856621f5d959531dd93b5ef5a35d2c0cde`.
+  The fresh workspace also passes doctor, type checking, Schema v11, both
+  deterministic family proofs, delivery-equivalent 96k/192k AAC preflight, and
+  side-effect-free CLI help.
+
 ## 2026-07-28 — Executable spatial truth, gait, and causal continuity
 
 - **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F044–F057.

@@ -139,7 +139,7 @@
             "z": 3,
             "depth": 0.55,
             "transform": {"x": 0.17, "y": 0.38, "width": 0.58, "height": 0.32, "anchorX": 0, "anchorY": 0},
-            "motion": {"keyframes": [{"at": 0, "x": -0.015}, {"at": 1, "x": 0.01}]}
+            "motion": {"keyframes": [{"at": 0, "offsetX": -0.015}, {"at": 1, "offsetX": 0.01}]}
           },
           {
             "id": "world-foreground",

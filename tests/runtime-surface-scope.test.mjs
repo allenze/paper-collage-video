@@ -217,7 +217,7 @@ test('derivation-only registered family passes deterministic checks without huma
       anchorX: 0,
       anchorY: 0,
     },
-    motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
   });
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
@@ -341,7 +341,7 @@ test('derivation-only registered family passes deterministic checks without huma
               anchorX: 0,
               anchorY: 0,
             },
-            motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+            motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
             registration: {
               id: 'technical-family',
               sourceMasterAssetId: 'technical-master',
