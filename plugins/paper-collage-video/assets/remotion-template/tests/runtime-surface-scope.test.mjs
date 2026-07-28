@@ -11,6 +11,7 @@ import {
   validateCompositionStructure,
 } from '../scripts/composition-lib.mjs';
 import {
+  collectCompositeQualityTargets,
   prepareQualityReport,
 } from '../scripts/quality-lib.mjs';
 import {
@@ -137,6 +138,54 @@ test('composition proof input and fingerprints exclude subtitle-only data', asyn
   });
   assert.equal(afterComposition, beforeComposition);
   assert.notEqual(afterFinal, beforeFinal);
+});
+
+test('composite quality fingerprints ignore subtitle transcript formatting but retain timing', async () => {
+  const project = {
+    slug: 'subtitle-quality-fingerprint-fixture',
+    video: {width: 1920, height: 1080, fps: 30},
+    theme: {texture: null, fontFile: null},
+    sceneTransitions: [],
+    scenes: [{
+      id: 'scene',
+      narration: {
+        startSeconds: 0,
+        durationSeconds: 2,
+        text: '第一句 第二句',
+      },
+      tailSeconds: 0.2,
+      camera: {
+        parallax: {enabled: true, strength: 0.2, focalDepth: 0},
+      },
+      motion: {proofTimes: []},
+      events: [],
+      composition: {
+        coordinateSpace: {width: 1920, height: 1080},
+        nodes: [],
+      },
+      subtitles: [{fromSeconds: 0, toSeconds: 2, text: '第一句 第二句'}],
+    }],
+  };
+  const manifest = {assets: []};
+  const [before] = await collectCompositeQualityTargets(project, {manifest});
+  const formattingChange = structuredClone(project);
+  formattingChange.scenes[0].narration.text = '第一句  第二句';
+  formattingChange.scenes[0].subtitles = [
+    {fromSeconds: 0, toSeconds: 1, text: '第一句'},
+    {fromSeconds: 1.1, toSeconds: 2, text: '第二句'},
+  ];
+  const [afterFormatting] = await collectCompositeQualityTargets(
+    formattingChange,
+    {manifest},
+  );
+  assert.equal(afterFormatting.fingerprint, before.fingerprint);
+
+  const timingChange = structuredClone(formattingChange);
+  timingChange.scenes[0].narration.durationSeconds = 2.5;
+  const [afterTiming] = await collectCompositeQualityTargets(timingChange, {
+    manifest,
+  });
+  assert.notEqual(afterTiming.fingerprint, before.fingerprint);
 });
 
 test('derivation-only registered family passes deterministic checks without human review items', async () => {

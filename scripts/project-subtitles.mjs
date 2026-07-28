@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {
   cuesFromTiming,
+  defaultSubtitleMaximumCharacters,
   deriveSubtitleCues,
 } from './subtitle-lib.mjs';
 import {
@@ -20,8 +21,10 @@ try {
     throw new Error('用法：project:subtitles -- <slug> [--max-chars=<count>] [--gap-seconds=<seconds>]');
   }
   const {paths, project} = await loadProject(slug);
-  const portrait = project.video.width / project.video.height < 1;
-  const maximumCharacters = Number(valueFor('--max-chars') ?? (portrait ? 18 : 28));
+  const maximumCharacters = Number(
+    valueFor('--max-chars') ??
+      defaultSubtitleMaximumCharacters(project.video),
+  );
   const gapSeconds = Number(valueFor('--gap-seconds') ?? 2 / project.video.fps);
   if (!Number.isInteger(maximumCharacters) || maximumCharacters < 4) {
     throw new Error('--max-chars 必须是至少 4 的整数。');

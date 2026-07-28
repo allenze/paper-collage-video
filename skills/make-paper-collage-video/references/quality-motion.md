@@ -183,6 +183,10 @@ project input with subtitles removed. A subtitle-only change therefore
 invalidates final visual/subtitle evidence while preserving current asset and
 composition reviews. Changes to composition, proof, quality, schema, or shared
 renderer inputs still invalidate the affected proof targets.
+Composite quality timing fingerprints include narration start/duration and
+scene tails, but not narration transcript text or derived subtitle cues.
+Whitespace-only phrasing and cue repartition therefore preserve visual reviews;
+changing narration timing still invalidates them.
 
 Subtitle review is bound to the encoded output, not only the React/CSS intent.
 Inspect `subtitle-contact-sheet.jpg` for every narrated scene at the real
@@ -191,6 +195,10 @@ subject clearance, and the absence of unintended ink bleed. The final report's
 `subtitle-typography-surface` check must list the resolved per-scene font
 family, weight, and edge treatment. A passing composition proof cannot satisfy
 this subtitle check because composition-proof intentionally hides subtitles.
+The report's `subtitle-segmentation-surface` must also list cue count, longest
+non-space cue length, and whether authored phrase spacing is present. Inspect
+the encoded sheet to confirm that spaces read as semantic pauses and that cue
+changes do not leave an orphaned one- or two-character tail.
 
 ## Pattern-Specific Review
 

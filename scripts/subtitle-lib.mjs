@@ -11,19 +11,86 @@ const punctuationPause = (text) => {
   return 0;
 };
 
+const visibleCharacters = (text) =>
+  [...String(text ?? '').replace(/\s/gu, '')];
+
+const splitBalancedCharacters = (text, maximumCharacters) => {
+  const characters = [...text];
+  const chunkCount = Math.ceil(characters.length / maximumCharacters);
+  const baseSize = Math.floor(characters.length / chunkCount);
+  const largerChunks = characters.length % chunkCount;
+  const output = [];
+  let cursor = 0;
+  for (let index = 0; index < chunkCount; index += 1) {
+    const size = baseSize + (index < largerChunks ? 1 : 0);
+    output.push(characters.slice(cursor, cursor + size).join(''));
+    cursor += size;
+  }
+  return output;
+};
+
+const splitAtPhraseBoundaries = (segment, maximumCharacters) => {
+  const phrases = segment.split(/\s+/u).filter(Boolean);
+  if (phrases.length <= 1) {
+    return splitBalancedCharacters(segment, maximumCharacters);
+  }
+  const output = [];
+  let index = 0;
+  while (index < phrases.length) {
+    const currentPhrase = phrases[index];
+    if (visibleCharacters(currentPhrase).length > maximumCharacters) {
+      output.push(...splitBalancedCharacters(currentPhrase, maximumCharacters));
+      index += 1;
+      continue;
+    }
+    const remainingCharacters = phrases
+      .slice(index)
+      .reduce(
+        (total, phrase) => total + visibleCharacters(phrase).length,
+        0,
+      );
+    const remainingChunks = Math.ceil(
+      remainingCharacters / maximumCharacters,
+    );
+    const targetCharacters = Math.ceil(
+      remainingCharacters / remainingChunks,
+    );
+    const chunk = [];
+    let chunkCharacters = 0;
+    while (index < phrases.length) {
+      const phrase = phrases[index];
+      const phraseCharacters = visibleCharacters(phrase).length;
+      const candidateCharacters = chunkCharacters + phraseCharacters;
+      if (chunk.length > 0 && candidateCharacters > maximumCharacters) break;
+      if (
+        chunk.length > 0 &&
+        chunkCharacters >= targetCharacters &&
+        Math.abs(chunkCharacters - targetCharacters) <=
+          Math.abs(candidateCharacters - targetCharacters)
+      ) {
+        break;
+      }
+      chunk.push(phrase);
+      chunkCharacters = candidateCharacters;
+      index += 1;
+    }
+    output.push(chunk.join(' '));
+  }
+  return output;
+};
+
 const splitLongSegment = (segment, maximumCharacters) => {
-  if ([...segment].length <= maximumCharacters) return [segment];
-  const pieces = segment
+  const normalized = segment.replace(/\s+/gu, ' ').trim();
+  if (visibleCharacters(normalized).length <= maximumCharacters) {
+    return [normalized];
+  }
+  const pieces = normalized
     .split(/(?<=[，、；：,;:])/u)
-    .map((piece) => piece.trim())
+    .map((piece) => piece.replace(/\s+/gu, ' ').trim())
     .filter(Boolean);
   const output = [];
-  for (const piece of pieces.length > 1 ? pieces : [segment]) {
-    const characters = [...piece];
-    while (characters.length > maximumCharacters) {
-      output.push(characters.splice(0, maximumCharacters).join(''));
-    }
-    if (characters.length) output.push(characters.join(''));
+  for (const piece of pieces.length > 1 ? pieces : [normalized]) {
+    output.push(...splitAtPhraseBoundaries(piece, maximumCharacters));
   }
   return output;
 };
@@ -47,12 +114,17 @@ export const segmentSubtitleText = (text, maximumCharacters) =>
   attachLeadingClosers(
     attachLeadingClosers(
       String(text ?? '')
+        .replace(/\s+/gu, ' ')
+        .trim()
         .split(/(?<=[。！？!?])/u)
         .map((segment) => segment.trim())
         .filter(Boolean),
     )
       .flatMap((segment) => splitLongSegment(segment, maximumCharacters)),
   );
+
+export const defaultSubtitleMaximumCharacters = ({width, height}) =>
+  width / height < 1 ? 16 : 18;
 
 export const deriveSubtitleCues = ({
   text,
@@ -87,9 +159,11 @@ export const deriveSubtitleCues = ({
         );
   const totalGapFrames = effectiveGapFrames * Math.max(0, segments.length - 1);
   const availableFrames = Math.max(1, narrationFrames - totalGapFrames);
-  const weights = segments.map(
-    (segment) => Math.max(1, [...segment.replace(/\s/g, '')].length + punctuationPause(segment)),
-  );
+  const weights = segments.map((segment) =>
+    Math.max(
+      1,
+      visibleCharacters(segment).length + punctuationPause(segment),
+    ));
   const totalWeight = weights.reduce((total, weight) => total + weight, 0);
   let cursor = startFrame;
   let allocated = 0;

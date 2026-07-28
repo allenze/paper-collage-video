@@ -18,7 +18,11 @@ import {
 } from '../scripts/quality-lib.mjs';
 import {deriveTimeline, validateProject} from '../scripts/project-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
-import {deriveSubtitleCues, segmentSubtitleText} from '../scripts/subtitle-lib.mjs';
+import {
+  defaultSubtitleMaximumCharacters,
+  deriveSubtitleCues,
+  segmentSubtitleText,
+} from '../scripts/subtitle-lib.mjs';
 import {createSubtitleContract} from '../scripts/subtitle-contract-lib.mjs';
 import {
   resolveSubtitleFadeFrames,
@@ -409,6 +413,39 @@ test('subtitle segmentation keeps Chinese closing punctuation with its sentence'
   assert.ok(segments.every((segment) => !/^[”’」』）》】〕〉》]/u.test(segment)));
 });
 
+test('subtitle segmentation preserves phrase spaces and balances punctuation-free text', () => {
+  const text =
+    '古时候有个农夫 每天早早下田 挥着锄头 一心一意地照料庄稼';
+  const segments = segmentSubtitleText(text, 16);
+  assert.deepEqual(segments, [
+    '古时候有个农夫 每天早早下田',
+    '挥着锄头 一心一意地照料庄稼',
+  ]);
+  assert.equal(
+    segments.join(' ').replace(/\s+/gu, ' '),
+    text.replace(/\s+/gu, ' '),
+  );
+  assert.ok(
+    segments.every(
+      (segment) => [...segment.replace(/\s/gu, '')].length <= 16,
+    ),
+  );
+
+  const balanced = segmentSubtitleText('甲'.repeat(30), 28);
+  assert.deepEqual(
+    balanced.map((segment) => [...segment].length),
+    [15, 15],
+  );
+  assert.equal(
+    defaultSubtitleMaximumCharacters({width: 1920, height: 1080}),
+    18,
+  );
+  assert.equal(
+    defaultSubtitleMaximumCharacters({width: 1080, height: 1920}),
+    16,
+  );
+});
+
 test('subtitle fades stay monotonic for short cues and layout honors portrait safe area', () => {
   const fades = Array.from({length: 12}, (_, index) =>
     resolveSubtitleFadeFrames({from: 0, to: index + 1}),
@@ -480,6 +517,19 @@ test('subtitle delivery contract checks transcript, timing, safe area, and font 
   assert.equal(contract.passed, true);
   assert.equal(contract.summary.requiredScenes, 1);
   assert.ok(contract.checks.every(({passed}) => passed));
+  assert.deepEqual(
+    contract.checks.find(({id}) => id === 'subtitle-segmentation-surface')
+      .actual,
+    [
+      {
+        sceneId: 'race',
+        maximumCharactersPerCue: 16,
+        longestCueCharacters: 7,
+        cueCount: 1,
+        phraseSpacingPresent: false,
+      },
+    ],
+  );
 
   const broken = await createSubtitleContract({
     ...project,

@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "projectSlug": "starter-demo",
   "generatedAt": "2026-01-01T00:00:00.000Z",
-  "fingerprint": "3c43c9d5c538c8a29a23b525f52ea9e24dff74841966561f649561fc2f924f4d",
+  "fingerprint": "b675c243419f828510764dc33f2242b94f4c8b492505d5b567fd97bcb76c9e8d",
   "basis": {
     "projectSlug": "starter-demo",
-    "visualFingerprint": "d45b38c67ea14f7c0ffe15f5712bbebe5e8db7d615738e8a9e3907168f63dc11",
+    "visualFingerprint": "ed0f52c8108ebbbae795eb69bf93cf1c6e8e91a010d9135b0fb37bcfd4c0e4d2",
     "audioFingerprint": "fad8b06dd1caee36083a6324faccdb29c7429f309a3e64c8eceaa0c14c51c27c",
     "storyboardFingerprint": "e02501e467d91c43f4a2b8a932da3f5e0ccd26298331903ecbe9fc53e9649042",
     "validationFingerprint": "9a77d137ff713a39f0dba7ea95114faf0667946932ce13c1b9ebae5e93f9097f",
-    "qualityFingerprint": "7ad3630fc45ae9d9d9202469a6d1200529fe56349caf26dfe2045045e887fa1e",
-    "subtitleFingerprint": "c755e5f3d41db10fac892e9f920d4a9d26a05d03f0f4f5394c153a925529330b",
+    "qualityFingerprint": "e02e12f705c1ad44c24b4a72de9a36f4ae8c49782af27502e12c97066210a6ac",
+    "subtitleFingerprint": "6b196c02d311c1ac0f7d728263db0259cd1724adade7cc1a61d7ee09cddff52c",
     "subtitleContract": {
       "schemaVersion": 1,
       "contract": "subtitle-surface-v1",
       "passed": true,
-      "fingerprint": "c755e5f3d41db10fac892e9f920d4a9d26a05d03f0f4f5394c153a925529330b",
+      "fingerprint": "6b196c02d311c1ac0f7d728263db0259cd1724adade7cc1a61d7ee09cddff52c",
       "summary": {
         "totalScenes": 1,
         "requiredScenes": 1,
@@ -76,6 +76,13 @@
             "fontWeight": 700,
             "edgeTreatment": "soft-shadow",
             "textShadow": "0 3px 2px rgba(28,15,10,.9), 0 0 14px rgba(28,15,10,.78)"
+          },
+          "segmentation": {
+            "maximumCharactersPerCue": 18,
+            "longestCueCharacters": 6,
+            "cueCount": 1,
+            "phraseSpacingPresent": false,
+            "passed": true
           },
           "cues": [
             {
@@ -154,6 +161,20 @@
               "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
               "fontWeight": 700,
               "edgeTreatment": "soft-shadow"
+            }
+          ]
+        },
+        {
+          "id": "subtitle-segmentation-surface",
+          "passed": true,
+          "expected": "every encoded cue uses at most 18 non-space characters",
+          "actual": [
+            {
+              "sceneId": "starter",
+              "maximumCharactersPerCue": 18,
+              "longestCueCharacters": 6,
+              "cueCount": 1,
+              "phraseSpacingPresent": false
             }
           ]
         }

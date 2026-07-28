@@ -662,6 +662,15 @@ const hashReferencedFiles = async (sources) => {
 
 const findNode = (scene, id) => flattenCompositionNodes(scene.composition?.nodes).find(({node}) => node.id === id)?.node ?? null;
 
+const compositionTimingForScene = ({scene, sceneTransitions}) => ({
+  narration: {
+    startSeconds: scene.narration?.startSeconds,
+    durationSeconds: scene.narration?.durationSeconds,
+  },
+  tailSeconds: scene.tailSeconds,
+  sceneTransitions,
+});
+
 export const collectCompositeQualityTargets = async (project, {manifest = null} = {}) => {
   const runtimeSurfaceFingerprint =
     await createRuntimeSurfaceFingerprint('composition-proof');
@@ -689,7 +698,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         camera: scene.camera,
         depthMap,
         proofTimes,
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        timing: compositionTimingForScene({scene, sceneTransitions}),
         memberHashes,
       });
       targets.push({
@@ -717,7 +726,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         sceneId: scene.id,
         node,
         proofTimes,
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        timing: compositionTimingForScene({scene, sceneTransitions}),
         camera: scene.camera,
         affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === node.id),
         memberHashes,
@@ -791,7 +800,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         sceneId: scene.id,
         node,
         proofTimes,
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        timing: compositionTimingForScene({scene, sceneTransitions}),
         camera: scene.camera,
         affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === node.id),
         memberHashes,
@@ -851,7 +860,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
               sceneId: scene.id,
               group,
               proofTimes: scene.motion?.proofTimes ?? [],
-              timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+              timing: compositionTimingForScene({scene, sceneTransitions}),
               camera: scene.camera,
               affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === group.id),
               memberHashes,
@@ -893,7 +902,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         : collectRuntimeVisibleCompositionSources(scene.composition);
       const memberHashes = await hashReferencedFiles(targetSources);
       const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === event.proofTimeId) ?? null;
-      const fingerprint = hashCompositionValue({runtimeSurfaceFingerprint, sceneId: scene.id, event, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions}, camera: scene.camera, memberHashes});
+      const fingerprint = hashCompositionValue({runtimeSurfaceFingerprint, sceneId: scene.id, event, proof, targetNode, timing: compositionTimingForScene({scene, sceneTransitions}), camera: scene.camera, memberHashes});
       targets.push({
         compositeId: `event:${scene.id}:${event.id}`,
         sceneId: scene.id,

@@ -3,6 +3,7 @@ import {
   fileExists,
   resolvePublicFile,
 } from './project-lib.mjs';
+import {defaultSubtitleMaximumCharacters} from './subtitle-lib.mjs';
 import {
   normalizeSubtitleSafeArea,
   resolveSubtitleFadeFrames,
@@ -78,6 +79,8 @@ export const createSubtitleContract = async (project) => {
     project.video.width / 1920,
     project.video.height / 1080,
   );
+  const maximumCharactersPerCue =
+    defaultSubtitleMaximumCharacters(project.video);
   const scenes = (project.scenes ?? []).map((scene) => {
     const required =
       Boolean(scene.narration?.src) &&
@@ -96,6 +99,10 @@ export const createSubtitleContract = async (project) => {
     const cueText = compactText(cues.map(({text}) => text).join(''));
     const narrationText = compactText(scene.narration?.text);
     const narrationTextPresent = narrationText.length > 0;
+    const cueCharacterCounts = cues.map(
+      ({text}) => [...String(text ?? '').replace(/\s/gu, '')].length,
+    );
+    const longestCueCharacters = Math.max(0, ...cueCharacterCounts);
     const rangesValid = cues.every(
       ({from, to}) =>
         to > from &&
@@ -135,6 +142,13 @@ export const createSubtitleContract = async (project) => {
         passed: coveragePassed,
       },
       typography,
+      segmentation: {
+        maximumCharactersPerCue,
+        longestCueCharacters,
+        cueCount: cues.length,
+        phraseSpacingPresent: cues.some(({text}) => /\s/u.test(text)),
+        passed: longestCueCharacters <= maximumCharactersPerCue,
+      },
       cues,
       passed,
     };
@@ -203,6 +217,18 @@ export const createSubtitleContract = async (project) => {
         fontFamily: typography.fontFamily,
         fontWeight: typography.fontWeight,
         edgeTreatment: typography.edgeTreatment,
+      })),
+    },
+    {
+      id: 'subtitle-segmentation-surface',
+      passed: requiredScenes.every(({segmentation}) => segmentation.passed),
+      expected: `every encoded cue uses at most ${maximumCharactersPerCue} non-space characters`,
+      actual: requiredScenes.map(({sceneId, segmentation}) => ({
+        sceneId,
+        maximumCharactersPerCue: segmentation.maximumCharactersPerCue,
+        longestCueCharacters: segmentation.longestCueCharacters,
+        cueCount: segmentation.cueCount,
+        phraseSpacingPresent: segmentation.phraseSpacingPresent,
       })),
     },
   ];
