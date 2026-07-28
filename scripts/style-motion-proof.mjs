@@ -8,7 +8,10 @@ import {
   padEvidenceBounds,
   safeEvidenceId,
 } from './asset-evidence-lib.mjs';
-import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
+import {
+  buildLayerStackProof,
+  referenceCellRectForRegisteredSheet,
+} from './layer-stack-proof-lib.mjs';
 import {collectStyleProofTargets} from './quality-lib.mjs';
 import {
   styleFingerprintForTarget,
@@ -351,11 +354,18 @@ try {
       const referenceRecord = recordsByAssetId.get(
         target.group.registration.sourceMasterAssetId,
       );
+      const referenceFile = referenceRecord?.file
+        ? path.resolve(ROOT, referenceRecord.file)
+        : null;
       const built = await buildLayerStackProof({
         group: target.group,
         memberFiles,
-        referenceFile: referenceRecord?.file
-          ? path.resolve(ROOT, referenceRecord.file)
+        referenceFile,
+        referenceRect: referenceFile
+          ? await referenceCellRectForRegisteredSheet({
+              record: referenceRecord,
+              file: referenceFile,
+            })
           : null,
         directory: evidenceDirectory,
         evidenceId: `${target.sceneId}-${target.nodeId}-layer-stack`,

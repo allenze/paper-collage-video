@@ -44,7 +44,10 @@ import {
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {summarizeProductionContracts} from './world-trajectory-lib.mjs';
-import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
+import {
+  buildLayerStackProof,
+  referenceCellRectForRegisteredSheet,
+} from './layer-stack-proof-lib.mjs';
 import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
 import {
   buildLoopingWorldProof,
@@ -631,11 +634,18 @@ try {
       const referenceRecord = recordsByAssetId.get(
         target.group.registration.sourceMasterAssetId,
       );
+      const referenceFile = referenceRecord?.file
+        ? path.resolve(ROOT, referenceRecord.file)
+        : null;
       const built = await buildLayerStackProof({
         group: target.group,
         memberFiles,
-        referenceFile: referenceRecord?.file
-          ? path.resolve(ROOT, referenceRecord.file)
+        referenceFile,
+        referenceRect: referenceFile
+          ? await referenceCellRectForRegisteredSheet({
+              record: referenceRecord,
+              file: referenceFile,
+            })
           : null,
         directory: evidenceDirectory,
         evidenceId: `${target.sceneId}-${target.nodeId}-layer-stack`,

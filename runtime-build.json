@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.18.0-dev.1",
-  "fingerprint": "e73687f7fe02608ca5ebd53c94c1c4856621f5d959531dd93b5ef5a35d2c0cde",
+  "fingerprint": "165a6edd1e75844ae5875ac7af135e03fe09e5c05d6f38243b5f028c1aae5278",
   "surfaces": {
-    "composition-proof": "171fa7f2f923d0ada946900247f5d2203e0043f6f7d3dfe617b5dbe71e854d1c"
+    "composition-proof": "59d7b1be37c5f04a03d49d21626da9c7004c27b08dcceaad32af0f5a6a3e54d6"
   },
   "files": {
     "package.json": "81379793eec972947eaed12f5cb77627e7473849f1ef834651670b4f15ba418e",
@@ -55,7 +55,7 @@
     "scripts/editorial-system-lib.mjs": "61da256cb6047ae2cf30e45c742b3e2849f8d5b197b1c78e5c0d5b5d0970d10e",
     "scripts/generation-attempt-lib.mjs": "b878fc8e7e825b852fd83f86541f92b34a0cefcb37075eaa4830146ff4f499ab",
     "scripts/layer-source-plan-lib.mjs": "bec7b4f98758520088e7464e0ea62feb6da2a3381d65318b09e0d9bccb17c98f",
-    "scripts/layer-stack-proof-lib.mjs": "5a01c078096f064823c2465d2594402bd0514d4027887bdaf1d36155d004ae48",
+    "scripts/layer-stack-proof-lib.mjs": "0e02bc7033959e566247eb2082131630f329e1d4a6244ce1882b5402b3a1212d",
     "scripts/looping-strip-lib.mjs": "8a3b44c576dfc9f52c2c3129df31dcc366c9b506421ae2c92e43b19c66423254",
     "scripts/motion-approval-lib.mjs": "51b628c6f0a41921215aedbb0b965996f81ab99acfee80d67bc7a07b4f39ef19",
     "scripts/motion-contract-lib.mjs": "b5a9bafc705ce921381245450e7ee362b3eb92e997fffb37aeebbba56412b69a",
@@ -64,7 +64,7 @@
     "scripts/provider-attempt.mjs": "ff0271376c16225ac77c1dd51613aae5d8cd658e7eeaf941dc6772590c2996c3",
     "scripts/provider-lib.mjs": "ec4c39cf2487ed46ad0d1ed53aef6ecf066c84b00ca4c8cac1629b37e4ec2266",
     "scripts/provider-recover-rejected-source.mjs": "a86ce780edc080a85374deb6163b8bb2437ee39502b08ae6f5cb7121a23089f7",
-    "scripts/project-composition-proof.mjs": "88031095d15c7c378d57e1a79a5408c8d1fc8252bdd420a20aef3324b4a24f77",
+    "scripts/project-composition-proof.mjs": "763deb96b735c42bfd8d9428c65d459de22c919543620fd1c4c7625e251a8334",
     "scripts/project-budget.mjs": "301acd18e38221900c8af44c218784985ca9961e0f978d6d4e95acb7d55183e6",
     "scripts/project-advance.mjs": "15f0ba68b9339dbf7c657e20d37c02d10a9ae700c8f826da68db84a9cc61bc7a",
     "scripts/project-assets-ready.mjs": "0aaf68487d61c2e78ea0e0375c3e86a06d509d80fb6b320ec578073a38f3ecff",
@@ -101,7 +101,7 @@
     "scripts/remove_chroma_key.py": "a8260a226b51a1311dcc1221365a56e04e66343e2b170096a837cd641a9a53df",
     "scripts/state-sequence-lib.mjs": "50c803c9976b3a3789635cd8017dc1e108f885f7f35d714cbe898c37fa2037ff",
     "scripts/spatial-contract-lib.mjs": "9f7bcad0b12b61822a943c5ac7321a2f16e3f65b69954651fd5cad91f8cd23f1",
-    "scripts/style-motion-proof.mjs": "214b395ae204813123fb9c89221923d706497479b6e576735299d4c6512fc4d9",
+    "scripts/style-motion-proof.mjs": "f33609f21bdd0a4f23b9d445b3d1df4a24a94a39059b60edf8942d47a744cc29",
     "scripts/project-scene-preview.mjs": "970c60489e3c80ea57b2d9033f729d6f82473d5ae1bee229565d3d839ff355b0",
     "scripts/project-stitch-narration.mjs": "021b71701482841a6f62ea4129c17693b34fe7fdc9d68257395601a80bbd3e9f",
     "scripts/style-proof-lib.mjs": "acadd0a4255988fd8f4e695096cd85208961b99476f2d3b63cffaba8acd1b176",
@@ -112,7 +112,7 @@
     "scripts/render-looping-world-proof.mjs": "537860f8eabffdb79a8e4e5ae544cc7c385a7502cd6f7b7ece5a5bcdd6685ec2",
     "scripts/schema-v11.mjs": "0af5d7c409961b89d279b662bf34ec23a148d5ce23e9dfcb3f14d42d9d45ef5b",
     "scripts/validate_v11_schemas.py": "bed8b6517f76eed28353f869687fa0dcd73e9c1afa9e2da1878abfb452f3cf07",
-    "scripts/verify-phase2-proof.mjs": "be5bb853a826042f24ad2409580e9c2cb8f794f9e10fab82690a16b8c945b6cc",
+    "scripts/verify-phase2-proof.mjs": "18f228f92d44acfdfb7164bdb529d47bcb34cd82dda05a78d483e40fe8b72d11",
     "scripts/verify-looping-world-proof.mjs": "d488877470cac90c66f9edfa589ae56b77572f77d6336de98a7e07ccd238b8e3",
     "scripts/verify-vox-sample.mjs": "93ac192fb88a140c244149257f7b3fb5cd4ec9eca7d838551540863a73e86523",
     "scripts/prove-alpha-bands.mjs": "ff8da37b4fc9eeb61276da816f66bcac64fb6d8cbb43f5e35f7ac390f0c859b7",

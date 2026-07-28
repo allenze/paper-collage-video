@@ -34,6 +34,56 @@ const dataUrlFor = async (file) =>
 const safeText = (value) =>
   String(value).replace(/[<>&"]/g, '');
 
+export const referenceCellRectForRegisteredSheet = async ({
+  record,
+  file,
+}) => {
+  const binding =
+    record?.layerPackageBinding ??
+    record?.request?.layerPackageBinding ??
+    null;
+  if (
+    binding?.packageRole !== 'registered-sheet' ||
+    !binding?.sheetLayout
+  ) {
+    return null;
+  }
+  const {columns, rows, cells} = binding.sheetLayout;
+  const referenceCell = cells?.find(
+    ({packageRole}) => packageRole === 'reference',
+  );
+  if (
+    !referenceCell ||
+    !Number.isInteger(columns) ||
+    columns < 1 ||
+    !Number.isInteger(rows) ||
+    rows < 1
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId ?? 'unknown'} 缺少可提取的 reference 格位`,
+    );
+  }
+  const metadata = await sharp(file).metadata();
+  if (
+    !Number.isInteger(metadata.width) ||
+    !Number.isInteger(metadata.height) ||
+    metadata.width % columns !== 0 ||
+    metadata.height % rows !== 0
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId ?? 'unknown'} 的原生画布无法按 ${columns}x${rows} 提取 reference 格位`,
+    );
+  }
+  const width = metadata.width / columns;
+  const height = metadata.height / rows;
+  return {
+    left: referenceCell.column * width,
+    top: referenceCell.row * height,
+    width,
+    height,
+  };
+};
+
 const layerSvg = async ({
   members,
   width,
@@ -237,6 +287,7 @@ export const buildLayerStackProof = async ({
   group,
   memberFiles,
   referenceFile,
+  referenceRect = null,
   directory,
   evidenceId,
 }) => {
@@ -281,6 +332,22 @@ export const buildLayerStackProof = async ({
     `${safeId}-reference-comparison.png`,
   );
   const reference = referenceFile ?? neutralFile;
+  const referenceMetadata = await sharp(reference).metadata();
+  let referenceInput = reference;
+  if (referenceRect) {
+    referenceInput = await sharp(reference)
+      .extract(referenceRect)
+      .resize(canvas.width, canvas.height, {fit: 'fill'})
+      .png()
+      .toBuffer();
+  } else if (
+    referenceMetadata.width !== canvas.width ||
+    referenceMetadata.height !== canvas.height
+  ) {
+    throw new Error(
+      `registered-depth-stack ${group.id} 的 reference ${referenceMetadata.width}x${referenceMetadata.height} 与注册画布 ${canvas.width}x${canvas.height} 不一致，且未声明 referenceRect`,
+    );
+  }
   await sharp({
     create: {
       width: canvas.width * 2,
@@ -290,7 +357,7 @@ export const buildLayerStackProof = async ({
     },
   })
     .composite([
-      {input: reference, left: 0, top: 0},
+      {input: referenceInput, left: 0, top: 0},
       {input: neutralFile, left: canvas.width, top: 0},
     ])
     .png()
