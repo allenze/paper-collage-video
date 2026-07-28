@@ -2,20 +2,20 @@
   "schemaVersion": 1,
   "projectSlug": "starter-demo",
   "generatedAt": "2026-01-01T00:00:00.000Z",
-  "fingerprint": "c461dfb3436796101f5b59e420458d25afa82f15954f1665416f293fac70f1c2",
+  "fingerprint": "3c43c9d5c538c8a29a23b525f52ea9e24dff74841966561f649561fc2f924f4d",
   "basis": {
     "projectSlug": "starter-demo",
-    "visualFingerprint": "7927e24041a85690efef48eeac7f86c13a5b90004704fec5eeae73e213050cde",
+    "visualFingerprint": "d45b38c67ea14f7c0ffe15f5712bbebe5e8db7d615738e8a9e3907168f63dc11",
     "audioFingerprint": "fad8b06dd1caee36083a6324faccdb29c7429f309a3e64c8eceaa0c14c51c27c",
     "storyboardFingerprint": "e02501e467d91c43f4a2b8a932da3f5e0ccd26298331903ecbe9fc53e9649042",
     "validationFingerprint": "9a77d137ff713a39f0dba7ea95114faf0667946932ce13c1b9ebae5e93f9097f",
-    "qualityFingerprint": "d926a59f28bd94dd261363a4c73b14323ad7a721912a01a1e8eadd33dcf9cf31",
-    "subtitleFingerprint": "b5391bb35d34d9249e74d017676a239ff35c27bd45fde9ee4225920125882ab4",
+    "qualityFingerprint": "7ad3630fc45ae9d9d9202469a6d1200529fe56349caf26dfe2045045e887fa1e",
+    "subtitleFingerprint": "c755e5f3d41db10fac892e9f920d4a9d26a05d03f0f4f5394c153a925529330b",
     "subtitleContract": {
       "schemaVersion": 1,
       "contract": "subtitle-surface-v1",
       "passed": true,
-      "fingerprint": "b5391bb35d34d9249e74d017676a239ff35c27bd45fde9ee4225920125882ab4",
+      "fingerprint": "c755e5f3d41db10fac892e9f920d4a9d26a05d03f0f4f5394c153a925529330b",
       "summary": {
         "totalScenes": 1,
         "requiredScenes": 1,
@@ -38,7 +38,19 @@
         "file": null,
         "family": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
         "source": "runtime-fallback",
-        "exists": true
+        "exists": true,
+        "sceneTypography": [
+          {
+            "sceneId": "starter",
+            "typography": {
+              "contract": "subtitle-typography-v1",
+              "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
+              "fontWeight": 700,
+              "edgeTreatment": "soft-shadow",
+              "textShadow": "0 3px 2px rgba(28,15,10,.9), 0 0 14px rgba(28,15,10,.78)"
+            }
+          }
+        ]
       },
       "scenes": [
         {
@@ -57,6 +69,13 @@
             "narrationFrames": 30,
             "ratio": 1,
             "passed": true
+          },
+          "typography": {
+            "contract": "subtitle-typography-v1",
+            "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
+            "fontWeight": 700,
+            "edgeTreatment": "soft-shadow",
+            "textShadow": "0 3px 2px rgba(28,15,10,.9), 0 0 14px rgba(28,15,10,.78)"
           },
           "cues": [
             {
@@ -118,7 +137,25 @@
           "id": "subtitle-font-source",
           "passed": true,
           "expected": "runtime fallback stack",
-          "actual": "STKaiti, KaiTi, \"Noto Serif SC\", serif"
+          "actual": {
+            "fontFile": null,
+            "families": [
+              "STKaiti, KaiTi, \"Noto Serif SC\", serif"
+            ]
+          }
+        },
+        {
+          "id": "subtitle-typography-surface",
+          "passed": true,
+          "expected": "subtitle-typography-v1 resolved for every narrated scene",
+          "actual": [
+            {
+              "sceneId": "starter",
+              "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
+              "fontWeight": 700,
+              "edgeTreatment": "soft-shadow"
+            }
+          ]
         }
       ]
     }

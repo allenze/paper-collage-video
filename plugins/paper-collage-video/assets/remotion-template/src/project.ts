@@ -927,6 +927,9 @@ export type SceneAppearance = {
     color?: string;
     background?: string;
     maxWidth?: number;
+    fontFamily?: string;
+    fontWeight?: number;
+    edgeTreatment?: 'soft-shadow' | 'crisp-outline' | 'none';
   };
 };
 

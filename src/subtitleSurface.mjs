@@ -8,6 +8,44 @@ const DEFAULT_SAFE_AREA = {
 const finiteOr = (value, fallback) =>
   Number.isFinite(value) ? Number(value) : fallback;
 
+const DEFAULT_FONT_STACK = 'STKaiti, KaiTi, "Noto Serif SC", serif';
+
+export const resolveSubtitleTypography = ({
+  appearance,
+  theme,
+  scale = 1,
+}) => {
+  const edgeTreatment = appearance?.edgeTreatment ?? 'soft-shadow';
+  const fontFamily = appearance?.fontFamily?.trim() || (
+    theme?.fontFile
+      ? 'PaperCollageProjectFont, serif'
+      : (theme?.fontFamily ?? DEFAULT_FONT_STACK)
+  );
+  const fontWeight = Number.isInteger(appearance?.fontWeight)
+    ? appearance.fontWeight
+    : 700;
+  const outline = Math.max(0.5, scale);
+  const textShadow = edgeTreatment === 'none'
+    ? 'none'
+    : edgeTreatment === 'crisp-outline'
+      ? [
+          `${outline}px 0 0 rgba(28,15,10,.82)`,
+          `${-outline}px 0 0 rgba(28,15,10,.82)`,
+          `0 ${outline}px 0 rgba(28,15,10,.82)`,
+          `0 ${-outline}px 0 rgba(28,15,10,.82)`,
+        ].join(', ')
+      : appearance?.variant === 'plain'
+        ? '0 2px 8px rgba(0,0,0,.72)'
+        : '0 3px 2px rgba(28,15,10,.9), 0 0 14px rgba(28,15,10,.78)';
+  return {
+    contract: 'subtitle-typography-v1',
+    fontFamily,
+    fontWeight,
+    edgeTreatment,
+    textShadow,
+  };
+};
+
 export const normalizeSubtitleSafeArea = (safeArea) => {
   const resolved = {
     x: finiteOr(safeArea?.x, DEFAULT_SAFE_AREA.x),

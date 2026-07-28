@@ -129,6 +129,15 @@ cutout edge/shadow treatment applied to character/prop raster surfaces.
 beneath every scene-specific background and uses it as the dip cover, so even a
 translucent scene treatment cannot expose pixels from the outgoing scene.
 
+Subtitle typography is a scene surface, not a reason to mutate the frozen Style
+Profile theme. `scene.appearance.subtitles` may independently declare a
+non-empty `fontFamily`, integer `fontWeight` in `400..800`, and
+`edgeTreatment=soft-shadow|crisp-outline|none`. Omitted fields preserve the
+theme-backed legacy appearance. Use a screen-oriented Chinese font stack and
+`crisp-outline` or `none` when small encoded previews make decorative serif
+details or blurred shadows unreadable. The subtitle contract fingerprints and
+reports the resolved typography for every narrated scene.
+
 `state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, an `anchorPolicy`, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Every state declares facing, normalized anchors, and an identity-reference asset id plus SHA-256. The state-sheet processor verifies the current identity asset, rejects anchor drift, and writes fingerprinted per-state anchor overlays before registering derived cells. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
 One `poseFamilyId` denotes one registered provider state sheet even when a continuous scene uses multiple temporal node instances of that family (for example, a sleeping identity and its later chase). `directingSummary.poseSheetPlans.targetIds` must expose every reuse target, while provider demand, state-sheet calls, and the state-capacity ceiling count the shared family only once. This preserves truthful provider cost evidence without forcing a project-specific animation workaround.

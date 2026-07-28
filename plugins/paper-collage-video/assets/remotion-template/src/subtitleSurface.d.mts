@@ -28,3 +28,23 @@ export function resolveSubtitleLayout(options: {
   bottomPixels: number;
   maxWidth: number;
 };
+
+export function resolveSubtitleTypography(options: {
+  appearance?: {
+    variant?: 'boxed' | 'plain' | 'hidden';
+    fontFamily?: string;
+    fontWeight?: number;
+    edgeTreatment?: 'soft-shadow' | 'crisp-outline' | 'none';
+  } | null;
+  theme?: {
+    fontFile?: string;
+    fontFamily?: string;
+  } | null;
+  scale?: number;
+}): {
+  contract: 'subtitle-typography-v1';
+  fontFamily: string;
+  fontWeight: number;
+  edgeTreatment: 'soft-shadow' | 'crisp-outline' | 'none';
+  textShadow: string;
+};

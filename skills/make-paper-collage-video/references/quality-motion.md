@@ -184,6 +184,14 @@ invalidates final visual/subtitle evidence while preserving current asset and
 composition reviews. Changes to composition, proof, quality, schema, or shared
 renderer inputs still invalidate the affected proof targets.
 
+Subtitle review is bound to the encoded output, not only the React/CSS intent.
+Inspect `subtitle-contact-sheet.jpg` for every narrated scene at the real
+preview resolution. Confirm the requested punctuation policy, glyph clarity,
+subject clearance, and the absence of unintended ink bleed. The final report's
+`subtitle-typography-surface` check must list the resolved per-scene font
+family, weight, and edge treatment. A passing composition proof cannot satisfy
+this subtitle check because composition-proof intentionally hides subtitles.
+
 ## Pattern-Specific Review
 
 - `supported-subject`: support contact, readable inside/on relation, shared carrier motion, identity continuity, and clean subject isolation under relative motion. The default `between-supports` layering also requires visible front occlusion; an explicitly authored `subject-front` relationship instead requires the complete subject to remain clearly above all support members.

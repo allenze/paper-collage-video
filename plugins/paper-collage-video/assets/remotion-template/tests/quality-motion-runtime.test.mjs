@@ -23,6 +23,7 @@ import {createSubtitleContract} from '../scripts/subtitle-contract-lib.mjs';
 import {
   resolveSubtitleFadeFrames,
   resolveSubtitleLayout,
+  resolveSubtitleTypography,
 } from '../src/subtitleSurface.mjs';
 import {
   compileEditorialFixture,
@@ -426,6 +427,25 @@ test('subtitle fades stay monotonic for short cues and layout honors portrait sa
   assert.ok(layout.bottomPixels > 96);
   assert.ok(layout.leftPercent >= 8);
   assert.ok(layout.rightPercent >= 8);
+});
+
+test('subtitle typography can use a screen font and crisp non-blurred edge independently of the theme', () => {
+  const typography = resolveSubtitleTypography({
+    appearance: {
+      variant: 'boxed',
+      fontFamily: '"PingFang SC", sans-serif',
+      fontWeight: 600,
+      edgeTreatment: 'crisp-outline',
+    },
+    theme: {fontFamily: 'STKaiti, serif'},
+    scale: 0.5,
+  });
+  assert.equal(typography.contract, 'subtitle-typography-v1');
+  assert.equal(typography.fontFamily, '"PingFang SC", sans-serif');
+  assert.equal(typography.fontWeight, 600);
+  assert.equal(typography.edgeTreatment, 'crisp-outline');
+  assert.doesNotMatch(typography.textShadow, /14px/u);
+  assert.doesNotMatch(typography.textShadow, /blur/u);
 });
 
 test('subtitle delivery contract checks transcript, timing, safe area, and font source', async () => {

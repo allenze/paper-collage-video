@@ -566,7 +566,10 @@
             "variant": {"enum": ["boxed", "plain", "hidden"]},
             "color": {"type": "string"},
             "background": {"type": "string"},
-            "maxWidth": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+            "maxWidth": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "fontFamily": {"type": "string", "minLength": 1},
+            "fontWeight": {"type": "integer", "minimum": 400, "maximum": 800},
+            "edgeTreatment": {"enum": ["soft-shadow", "crisp-outline", "none"]}
           },
           "additionalProperties": false
         }

@@ -7,6 +7,7 @@ import {
   normalizeSubtitleSafeArea,
   resolveSubtitleFadeFrames,
   resolveSubtitleLayout,
+  resolveSubtitleTypography,
 } from '../src/subtitleSurface.mjs';
 
 const compactText = (value) => String(value ?? '').replace(/\s/gu, '');
@@ -73,6 +74,10 @@ export const createSubtitleContract = async (project) => {
   const fontFileExists = fontFile
     ? await fileExists(resolvePublicFile(fontFile))
     : true;
+  const renderScale = Math.min(
+    project.video.width / 1920,
+    project.video.height / 1080,
+  );
   const scenes = (project.scenes ?? []).map((scene) => {
     const required =
       Boolean(scene.narration?.src) &&
@@ -83,6 +88,11 @@ export const createSubtitleContract = async (project) => {
     const narrationTo =
       narrationFrom + Math.max(1, Math.ceil(scene.narration.durationSeconds * fps));
     const visible = scene.appearance?.subtitles?.variant !== 'hidden';
+    const typography = resolveSubtitleTypography({
+      appearance: scene.appearance?.subtitles,
+      theme: project.theme,
+      scale: renderScale,
+    });
     const cueText = compactText(cues.map(({text}) => text).join(''));
     const narrationText = compactText(scene.narration?.text);
     const narrationTextPresent = narrationText.length > 0;
@@ -124,6 +134,7 @@ export const createSubtitleContract = async (project) => {
         ...coverage,
         passed: coveragePassed,
       },
+      typography,
       cues,
       passed,
     };
@@ -174,7 +185,25 @@ export const createSubtitleContract = async (project) => {
       id: 'subtitle-font-source',
       passed: fontFileExists,
       expected: fontFile ? 'declared font file exists' : 'runtime fallback stack',
-      actual: fontFile ?? project.theme?.fontFamily ?? 'runtime fallback stack',
+      actual: {
+        fontFile,
+        families: [
+          ...new Set(requiredScenes.map(({typography}) => typography.fontFamily)),
+        ],
+      },
+    },
+    {
+      id: 'subtitle-typography-surface',
+      passed: requiredScenes.every(
+        ({typography}) => typography.contract === 'subtitle-typography-v1',
+      ),
+      expected: 'subtitle-typography-v1 resolved for every narrated scene',
+      actual: requiredScenes.map(({sceneId, typography}) => ({
+        sceneId,
+        fontFamily: typography.fontFamily,
+        fontWeight: typography.fontWeight,
+        edgeTreatment: typography.edgeTreatment,
+      })),
     },
   ];
   const fingerprint = hashCompositionValue({
@@ -186,6 +215,10 @@ export const createSubtitleContract = async (project) => {
       file: fontFile,
       family: project.theme?.fontFamily ?? null,
       fileExists: fontFileExists,
+      sceneTypography: scenes.map(({sceneId, typography}) => ({
+        sceneId,
+        typography,
+      })),
     },
     scenes,
   });
@@ -207,6 +240,10 @@ export const createSubtitleContract = async (project) => {
       family: project.theme?.fontFamily ?? null,
       source: fontFile ? 'project-file' : 'runtime-fallback',
       exists: fontFileExists,
+      sceneTypography: scenes.map(({sceneId, typography}) => ({
+        sceneId,
+        typography,
+      })),
     },
     scenes,
     checks,

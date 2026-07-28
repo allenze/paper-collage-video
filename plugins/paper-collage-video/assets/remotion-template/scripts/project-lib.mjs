@@ -901,7 +901,39 @@ export const validateProject = async (project, options = {}) => {
       typeof scene.appearance.chapter.visible !== 'boolean' ||
       (scene.appearance.chapter.variant !== undefined && !['plain', 'paper-tab'].includes(scene.appearance.chapter.variant))
     )) add('error', 'scene-appearance-chapter', 'appearance.chapter 无效。', `${sceneLocation}.appearance.chapter`);
-    if (scene.appearance?.subtitles && !['boxed', 'plain', 'hidden'].includes(scene.appearance.subtitles.variant)) add('error', 'scene-appearance-subtitles', 'appearance.subtitles.variant 无效。', `${sceneLocation}.appearance.subtitles.variant`);
+    if (scene.appearance?.subtitles) {
+      const subtitleAppearance = scene.appearance.subtitles;
+      if (!['boxed', 'plain', 'hidden'].includes(subtitleAppearance.variant)) {
+        add('error', 'scene-appearance-subtitles', 'appearance.subtitles.variant 无效。', `${sceneLocation}.appearance.subtitles.variant`);
+      }
+      if (
+        subtitleAppearance.fontFamily !== undefined &&
+        (
+          typeof subtitleAppearance.fontFamily !== 'string' ||
+          subtitleAppearance.fontFamily.trim().length === 0
+        )
+      ) {
+        add('error', 'scene-appearance-subtitle-font-family', 'appearance.subtitles.fontFamily 必须是非空字体栈。', `${sceneLocation}.appearance.subtitles.fontFamily`);
+      }
+      if (
+        subtitleAppearance.fontWeight !== undefined &&
+        (
+          !Number.isInteger(subtitleAppearance.fontWeight) ||
+          subtitleAppearance.fontWeight < 400 ||
+          subtitleAppearance.fontWeight > 800
+        )
+      ) {
+        add('error', 'scene-appearance-subtitle-font-weight', 'appearance.subtitles.fontWeight 必须是 400..800 的整数。', `${sceneLocation}.appearance.subtitles.fontWeight`);
+      }
+      if (
+        subtitleAppearance.edgeTreatment !== undefined &&
+        !['soft-shadow', 'crisp-outline', 'none'].includes(
+          subtitleAppearance.edgeTreatment,
+        )
+      ) {
+        add('error', 'scene-appearance-subtitle-edge-treatment', 'appearance.subtitles.edgeTreatment 无效。', `${sceneLocation}.appearance.subtitles.edgeTreatment`);
+      }
+    }
 
     const narrationLocation = `${sceneLocation}.narration`;
     if (!Number.isFinite(scene.narration?.startSeconds) || scene.narration.startSeconds < 0) {
