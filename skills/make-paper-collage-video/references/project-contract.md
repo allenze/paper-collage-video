@@ -40,6 +40,15 @@ The combined confirmation is the normal path. Composition proof is machine evide
 
 After `request-preview-revision`, a directing-only change uses `project:revise-preview-directing`. It preserves approved concept/style semantics, recompiles the edited authoring fields against the existing motion budget, records `directing-revision.json`, invalidates old render/proof artifacts, and creates execution-sync work items. Concept, factual, provider, or production-profile changes still require their owning approval path.
 
+Those execution-sync work items are delivery gates, not advisory history.
+`project:assets-ready` may atomically complete pending/in-progress
+`directing-revision-*` items only after the current seal proves that the
+storyboard and project execution tree are synchronized and all dependent
+validation surfaces pass. It rejects every unrelated unfinished item and every
+blocked item. `approve-preview`, preview rendering, and final rendering reject
+any remaining unresolved work item, so a stale checkpoint cannot coexist with
+an approved or delivered film.
+
 When the human explicitly authorizes scene-scoped semantic changes, use
 `project:revise-preview-semantic --authorization=<file>`. The authorization
 names the exact scenes and evidence. The command preserves the approved

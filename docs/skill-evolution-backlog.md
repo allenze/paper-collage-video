@@ -5,6 +5,28 @@ paper-collage Skill or runtime gap. It is not a substitute for implementation:
 an item stays open until its contract, renderer, validation, proof, tests,
 documentation, and packaged-plugin copy are updated together.
 
+## 2026-07-28 — Work-item closure must gate preview and final delivery
+
+- **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F061.
+- **Observed failure:** a preview-directing revision created a pending
+  `directing-revision-scene-02` work item. A later current preview, preview
+  approval, and final render all succeeded while resume continued to report
+  that item as unfinished.
+- **Required capability:** the canonical assets-ready seal must be the only
+  automatic completion authority for pending/in-progress directing-revision
+  sync items. Unrelated unfinished work and every blocked item must stop
+  assets-ready; preview approval, preview rendering, and final rendering must
+  reject any unresolved item.
+- **Acceptance evidence:** production-state tests prove automatic
+  directing-revision settlement only at assets-ready, rejection of unrelated
+  and blocked work, and rejection at preview approval/final render. Resume no
+  longer exposes a stale directing item after the canonical seal. Skill,
+  project-contract, execution-control, source, and packaged plugin agree.
+- **Status:** implemented and verified on 2026-07-28. Targeted state-machine
+  tests pass, the full suite passes 215/215, source/package/installed-cache
+  runtime identities agree, and a fresh installed-cache workspace passes
+  doctor plus the packaged production-state tests.
+
 ## 2026-07-24 — Cue-gated looping-world travel
 
 - **Origin:** `projects/gui-tu-sai-pao` / 《龟兔赛跑》 preview revision.

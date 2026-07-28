@@ -102,6 +102,12 @@ At `asset-production`:
    ```
 
    It synchronizes narration, caps padding tails when duration was inferred, derives subtitles, runs an audio-only LUFS/true-peak preflight with a bounded gain recommendation, validates schema-v11 project/storyboard plus the approved motion contract, v9 editorial/state schedules/events/scene-boundary continuity, rejects stale proof and motion-approval fingerprints, enforces asset, composite, and whole-film motion quality, validates subtitle transcript/timing/safe-area/font contracts, writes a fingerprinted `assets-ready-seal.json`, and advances to preview. Direct `project:advance ... assets-ready` is not a substitute: it only accepts that current seal. In `preview` or `human-review`, the same command is an idempotent recheck and does not advance again. Explicit duration deficits block here; add real content or revise the approved target instead of padding. This stage cannot claim rendered audiovisual coverage because no artifact exists yet. Do not run separate sync/subtitles/validate commands first.
+   A current seal also atomically marks pending/in-progress `directing-revision-*`
+   work items completed because the storyboard/project execution sync has now
+   passed the canonical validation surface. Any unrelated unfinished item or a
+   blocked directing revision stops assets-ready. Preview approval and both
+   render modes reject every unresolved work item rather than silently
+   bypassing it.
 12. Run `project:preview`. Its preflight rejects a stale assets-ready seal. Its post-render report is the first authoritative silence/low-motion union check and extracts one encoded subtitle frame per narrated scene. The renderer reuses an unchanged artifact, or reuses the existing video stream and performs audio-only remuxing when only audio inputs/gain changed; any visual fingerprint change forces a full render. Repair failures and continue autonomously until it reaches `human-review`.
 
 Normal production commands update `projects/<slug>/production-metrics.json`. Treat AI-review and provider-attempt durations as end-to-end session windows, not provider-only inference time; do not infer token usage. Run `project:metrics -- <slug>` once when comparing completed projects or diagnosing a slowdown, rather than polling it during production.

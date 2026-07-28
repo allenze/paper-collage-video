@@ -18,6 +18,15 @@ Do not pair `project:resume` with full status or `project:handoff-check`. Use `p
 
 At `asset-production`, resume sets `nextCommand` to null while `workItems.remaining` is non-empty; continue the first remaining batch. Once the list is empty it returns the exact `project:assets-ready` command.
 
+A directing revision deliberately creates one `directing-revision-<sceneId>`
+work item per changed scene. Do not hand-mark those items complete merely to
+unblock delivery. The canonical `project:assets-ready` command completes a
+pending/in-progress directing-revision item only after the current
+storyboard/project execution tree, proof, quality, audio, subtitles, and seal
+all pass. An unrelated pending/in-progress item or any blocked item stops that
+transition. `approve-preview`, preview rendering, and final rendering reject
+every unresolved work item.
+
 A recoverable tool error is not a handoff. A genuine blocker may end an automatic stage only after recording the failed work batch and reporting one specific human/external action.
 
 ## Coarse Recoverable Batches

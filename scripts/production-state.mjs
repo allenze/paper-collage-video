@@ -154,6 +154,62 @@ const normalizeWorkItems = (state) => {
   return state.workItems;
 };
 
+const unresolvedWorkItems = (state) =>
+  (state.workItems ?? []).filter(({status}) => status !== 'completed');
+
+const isDirectingRevisionWorkItem = ({id}) =>
+  id.startsWith('directing-revision-');
+
+const formatUnresolvedWorkItems = (items) =>
+  items.map(({id, status}) => `${id}(${status})`).join(', ');
+
+const renderActionFor = (mode) =>
+  mode === 'preview' ? 'render-preview' : 'render-final';
+
+const assertNoUnresolvedWorkItems = (
+  state,
+  action,
+  {allowValidatedDirectingRevision = false} = {},
+) => {
+  const unresolved = unresolvedWorkItems(state);
+  const blocking = allowValidatedDirectingRevision
+    ? unresolved.filter(
+        (item) =>
+          !isDirectingRevisionWorkItem(item) || item.status === 'blocked',
+      )
+    : unresolved;
+  if (blocking.length === 0) return;
+  throw new Error(
+    `${action} 不能在工作项未完成时继续：${formatUnresolvedWorkItems(blocking)}。` +
+      '请先用 project:checkpoint 完成或解除这些工作项；导演修订同步项由当前 project:assets-ready seal 验证后自动结清。',
+  );
+};
+
+const settleValidatedDirectingRevisionWorkItems = (state, at) => {
+  assertNoUnresolvedWorkItems(state, 'assets-ready', {
+    allowValidatedDirectingRevision: true,
+  });
+  for (const item of normalizeWorkItems(state)) {
+    if (
+      item.status === 'completed' ||
+      !isDirectingRevisionWorkItem(item)
+    ) {
+      continue;
+    }
+    item.status = 'completed';
+    item.updatedAt = at;
+    item.artifact = state.artifacts.project;
+    item.note =
+      'satisfied-by-assets-ready · 当前 seal 已验证 storyboard 与 project 执行树同步。';
+    state.history.push({
+      at,
+      action: 'work-item-completed',
+      stage: state.stage,
+      note: `${item.id} · ${item.note}`,
+    });
+  }
+};
+
 export const summarizeWorkItems = (state) => {
   const workItems = Array.isArray(state?.workItems) ? state.workItems : [];
   const counts = Object.fromEntries(
@@ -714,12 +770,14 @@ export const transitionProduction = (current, action, options = {}) => {
       assertStage(state, ['asset-production'], action);
       assertApproved(state, 'concept', action);
       assertApproved(state, 'styleAndVoice', action);
+      settleValidatedDirectingRevisionWorkItems(state, at);
       state.stage = 'preview';
       break;
     case 'approve-preview':
       assertStage(state, ['human-review'], action);
       assertApproved(state, 'concept', action);
       assertApproved(state, 'styleAndVoice', action);
+      assertNoUnresolvedWorkItems(state, action);
       if (!state.artifacts.preview) {
         throw new Error('approve-preview 需要已经成功记录 preview.mp4。');
       }
@@ -794,6 +852,7 @@ export const recordAssetsReadySeal = async (slug, artifacts) => {
   const state = clone(current);
   Object.assign(state.artifacts, artifacts);
   const at = new Date().toISOString();
+  settleValidatedDirectingRevisionWorkItems(state, at);
   state.updatedAt = at;
   state.history.push({
     at,
@@ -825,6 +884,7 @@ export const recordMotionLanguageCard = async (slug, artifact) => {
 
 export const assertRenderAllowed = async (slug, mode) => {
   const {state} = await loadProduction(slug);
+  assertNoUnresolvedWorkItems(state, renderActionFor(mode));
   assertApproved(state, 'concept', `render-${mode}`);
   assertApproved(state, 'styleAndVoice', `render-${mode}`);
   const stageRank = PRODUCTION_STAGES.indexOf(state.stage);
@@ -849,6 +909,7 @@ export const transitionRender = (current, mode, artifacts, options = {}) => {
     throw new Error(`未知渲染模式：${mode}`);
   }
   const state = clone(current);
+  assertNoUnresolvedWorkItems(state, renderActionFor(mode));
   const at = options.at ?? new Date().toISOString();
   Object.assign(state.artifacts, artifacts);
   if (mode === 'preview' && state.stage === 'preview') {

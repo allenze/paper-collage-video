@@ -172,6 +172,71 @@ test('assets-ready advances once and becomes an idempotent preview recheck', () 
   assert.throws(() => resolveAssetsReadyMode('style-review'), /只能在/);
 });
 
+test('assets-ready settles validated directing revisions and blocks other unfinished work', () => {
+  const current = makeState('asset-production');
+  current.workItems = [
+    {
+      id: 'directing-revision-scene-02',
+      label: '同步导演重编镜头 scene-02',
+      status: 'pending',
+      updatedAt: current.updatedAt,
+      artifact: 'projects/test-film/directing-revision.json',
+      note: '按新 storyboard 同步 project.json 执行树并重新验证。',
+    },
+  ];
+  const ready = transitionProduction(current, 'assets-ready', {
+    artifacts: {
+      validationReport: 'dist/test-film/validation-report.json',
+      assetsReadySeal: 'dist/test-film/assets-ready-seal.json',
+    },
+    at: '2026-07-23T02:00:00.000Z',
+  });
+  assert.equal(ready.stage, 'preview');
+  assert.equal(ready.workItems[0].status, 'completed');
+  assert.equal(ready.workItems[0].artifact, 'projects/test-film/project.json');
+  assert.match(ready.workItems[0].note, /satisfied-by-assets-ready/);
+  assert.equal(
+    ready.history.some(
+      ({action, note}) =>
+        action === 'work-item-completed' &&
+        note.includes('directing-revision-scene-02'),
+    ),
+    true,
+  );
+
+  const unrelated = makeState('asset-production');
+  unrelated.workItems = [
+    {
+      id: 'narration-01',
+      label: '第一幕旁白',
+      status: 'pending',
+      updatedAt: unrelated.updatedAt,
+      artifact: null,
+      note: '',
+    },
+  ];
+  assert.throws(
+    () => transitionProduction(unrelated, 'assets-ready'),
+    /narration-01\(pending\)/,
+  );
+
+  const blockedRevision = makeState('asset-production');
+  blockedRevision.workItems = [
+    {
+      id: 'directing-revision-scene-02',
+      label: '同步导演重编镜头 scene-02',
+      status: 'blocked',
+      updatedAt: blockedRevision.updatedAt,
+      artifact: 'projects/test-film/directing-revision.json',
+      note: '执行树无法通过验证。',
+    },
+  ];
+  assert.throws(
+    () => transitionProduction(blockedRevision, 'assets-ready'),
+    /directing-revision-scene-02\(blocked\)/,
+  );
+});
+
 test('assets-ready seal is recorded and invalidated with preview revisions', () => {
   const ready = transitionProduction(makeState('asset-production'), 'assets-ready', {
     artifacts: {
@@ -260,6 +325,49 @@ test('a successful final render completes local delivery without publication app
   });
   assert.equal(publishRecorded.stage, 'complete');
   assert.equal(publishRecorded.approvals.publish.status, 'approved');
+});
+
+test('preview approval and both render modes reject unfinished work items', () => {
+  const review = makeState('human-review');
+  review.artifacts.preview = 'dist/test-film/preview.mp4';
+  review.workItems = [
+    {
+      id: 'directing-revision-scene-02',
+      label: '同步导演重编镜头 scene-02',
+      status: 'pending',
+      updatedAt: review.updatedAt,
+      artifact: 'projects/test-film/directing-revision.json',
+      note: '按新 storyboard 同步 project.json 执行树并重新验证。',
+    },
+  ];
+  assert.throws(
+    () =>
+      transitionProduction(review, 'approve-preview', {
+        note: '预览通过',
+      }),
+    /directing-revision-scene-02\(pending\)/,
+  );
+
+  const preview = makeState('preview');
+  preview.workItems = structuredClone(review.workItems);
+  assert.throws(
+    () =>
+      transitionRender(preview, 'preview', {
+        preview: 'dist/test-film/preview.mp4',
+      }),
+    /render-preview 不能在工作项未完成时继续/,
+  );
+
+  const final = makeState('final-render');
+  final.approvals.preview = approval('approved', '预览通过');
+  final.workItems = structuredClone(review.workItems);
+  assert.throws(
+    () =>
+      transitionRender(final, 'render', {
+        final: 'dist/test-film/final.mp4',
+      }),
+    /render-final 不能在工作项未完成时继续/,
+  );
 });
 
 test('a tool-only image result remains an automatic production checkpoint', () => {

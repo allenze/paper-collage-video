@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.18.0-dev.1",
-  "fingerprint": "726804584fa3f30a12ecdd2ecbb0f09dd0030886d73038d9423731ec7e376c41",
+  "fingerprint": "08934fd42e3e8e4b9cc3198b0d40ca57803ac92319a73a1572e7151b071d4a65",
   "surfaces": {
-    "composition-proof": "237c51371347a6e613de4b7de5f7795c184d29b3c88362333cf4e59c96d0438a"
+    "composition-proof": "e0e4147f79c1a06e7f70eaee69f157645586870734134ff57c7f85361117df3a"
   },
   "files": {
     "package.json": "81379793eec972947eaed12f5cb77627e7473849f1ef834651670b4f15ba418e",
@@ -83,7 +83,7 @@
     "scripts/world-trajectory-lib.mjs": "5e454905386799a371770f301a9c12295de6bebc144f28c3d705e13e54efbfe7",
     "scripts/prepare-phase2-proof.mjs": "bbf4bcc48f7f908c86cc4e9c75d9323ae08167e016265d8f69c9ff126876afc5",
     "scripts/prepare-looping-world-proof.mjs": "2256c1c2d35cfcf35090f6963e49f0c13104ba5e190db51fe2751c5433ca58db",
-    "scripts/production-state.mjs": "b226a0eeed872a2c08932bbbbfde8ba9e7c1e995cd370c661aae3cd644fafaa9",
+    "scripts/production-state.mjs": "ff792430785dcc8140ec509ecf4a136664ce78fb579f58bede48035099c07d57",
     "scripts/process-state-sheet.mjs": "dd00ff6609671038eb5bb5aba22c6e9cac4e6accbb95675bfb49452dc4249484",
     "scripts/derive-registered-family.mjs": "254cb76b0b4c2ee80f6e5e15e6c2e2bdb7732d0b95f1f179064a14b4d18ee579",
     "scripts/derive-looping-strip.mjs": "9608bc9b8e370102849fa842562aa68cc3b5bbac5f3b0c3157b4c9f22e607996",
