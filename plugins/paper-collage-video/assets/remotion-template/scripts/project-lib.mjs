@@ -53,6 +53,7 @@ import {
 } from './alpha-band-lib.mjs';
 import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
 import {validateProductionContracts} from './world-trajectory-lib.mjs';
+import {validateSpatialContracts} from './spatial-contract-lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -654,6 +655,14 @@ export const validateProject = async (project, options = {}) => {
     }
     if (JSON.stringify(project.sceneTransitions ?? []) !== JSON.stringify(storyboard.sceneTransitions ?? [])) {
       add('error', 'scene-transitions-drift', 'project.sceneTransitions 必须与已批准故事板完全一致。', 'sceneTransitions');
+    }
+    if (JSON.stringify(project.spatialContracts ?? []) !== JSON.stringify(storyboard.spatialContracts ?? [])) {
+      add(
+        'error',
+        'spatial-contracts-drift',
+        'project.spatialContracts 必须与已批准故事板完全一致。',
+        'spatialContracts',
+      );
     }
     for (const issue of validateMotionContractExecution({
       project,
@@ -1530,6 +1539,9 @@ export const validateProject = async (project, options = {}) => {
   }
 
   for (const issue of validateProductionContracts(project)) {
+    add(issue.level, issue.code, issue.message, issue.location);
+  }
+  for (const issue of await validateSpatialContracts(project)) {
     add(issue.level, issue.code, issue.message, issue.location);
   }
 

@@ -110,6 +110,17 @@ For a closing hold, declare paired `activeUntil` and `holdStateId`. Use at least
 two alternating registered gait states for a sustained run; a single pose with
 a moving background is not running motion.
 
+Bind hero spatial truth separately in root `spatialContracts[]`. Use
+`grounding` for foot/seat contact, optional foreground paint order, and optional
+subtitle clearance; use `locked-contact` when the relative subject/support
+vector must remain invariant. Use `continuity` for adjacent causal scenes that
+must preserve world, recurring family, framing, camera, and both scenes'
+grounding. Use `gait` for an action window that must achieve a minimum
+registered-state cadence and continue through its final proof. These contracts
+measure the assembled runtime tree; moving a subject upward, assigning a large
+descendant z-index inside the wrong stacking context, or letting
+`activeUntil` freeze early cannot satisfy them.
+
 Use continuous preset `traverse` for a subject whose world-relative path must be
 materially larger than camera drift; runtime validation requires a normalized
 path span of at least `0.45`. Use preset `sway` with

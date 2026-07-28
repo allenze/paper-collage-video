@@ -141,6 +141,13 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'world-anchors-correct',
   'multi-subject-occlusion-correct',
   'signed-world-direction-correct',
+  'contact-anchor-current',
+  'support-surface-contact',
+  'spatial-paint-order-correct',
+  'relative-contact-stable',
+  'subtitle-clearance',
+  'causal-continuity',
+  'gait-cadence-clean',
 ];
 
 export const QUALITY_CHECKS = [
@@ -184,6 +191,31 @@ const COMPOSITE_PROFILES = {
   'data-graphic': ['data-mapping-valid', 'data-reveal-bound', 'proof-time-bound'],
   'editorial-transition': ['editorial-transition-continuity', 'proof-time-bound'],
   'responsive-directing': ['responsive-directing-bounded', 'final-composition-readable'],
+  'spatial-grounding': [
+    'contact-anchor-current',
+    'support-surface-contact',
+    'final-composition-readable',
+  ],
+  'spatial-continuity': [
+    'causal-continuity',
+    'final-composition-readable',
+  ],
+  'spatial-gait': ['gait-cadence-clean', 'final-composition-readable'],
+};
+
+const requiredChecksForSpatialContract = (contract) => {
+  if (contract.kind === 'continuity') {
+    return COMPOSITE_PROFILES['spatial-continuity'];
+  }
+  if (contract.kind === 'gait') {
+    return COMPOSITE_PROFILES['spatial-gait'];
+  }
+  return [
+    ...COMPOSITE_PROFILES['spatial-grounding'],
+    ...(contract.frontOcclusion ? ['spatial-paint-order-correct'] : []),
+    ...(contract.mode === 'locked-contact' ? ['relative-contact-stable'] : []),
+    ...(contract.subtitleClearance ? ['subtitle-clearance'] : []),
+  ];
 };
 
 const requiredChecksForGroup = (group) => {
@@ -918,6 +950,105 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         event,
       });
     }
+  }
+  const sceneById = new Map(
+    (project.scenes ?? []).map((scene) => [scene.id, scene]),
+  );
+  for (const contract of project.spatialContracts ?? []) {
+    const proofShots = contract.kind === 'grounding'
+      ? [{
+          sceneId: contract.sceneId,
+          nodeId: contract.subjectNodeId,
+          proofTimeIds: contract.proofTimeIds,
+        }]
+      : contract.kind === 'gait'
+        ? [{
+            sceneId: contract.sceneId,
+            nodeId: contract.nodeId,
+            proofTimeIds: [
+              contract.fromProofTimeId,
+              contract.throughProofTimeId,
+            ],
+          }]
+        : [
+            {
+              sceneId: contract.from.sceneId,
+              nodeId: contract.nodePairs[0].fromNodeId,
+              proofTimeIds: [contract.from.proofTimeId],
+            },
+            {
+              sceneId: contract.to.sceneId,
+              nodeId: contract.nodePairs[0].toNodeId,
+              proofTimeIds: [contract.to.proofTimeId],
+            },
+          ];
+    const references = contract.kind === 'grounding'
+      ? [{
+          sceneId: contract.sceneId,
+          nodeIds: [
+            contract.subjectNodeId,
+            contract.supportNodeId,
+            contract.frontOcclusion?.nodeId,
+          ].filter(Boolean),
+        }]
+      : contract.kind === 'gait'
+        ? [{sceneId: contract.sceneId, nodeIds: [contract.nodeId]}]
+        : [
+            {
+              sceneId: contract.from.sceneId,
+              nodeIds: contract.nodePairs.map(({fromNodeId}) => fromNodeId),
+            },
+            {
+              sceneId: contract.to.sceneId,
+              nodeIds: contract.nodePairs.map(({toNodeId}) => toNodeId),
+            },
+          ];
+    const nodes = references.flatMap(({sceneId, nodeIds}) => {
+      const scene = sceneById.get(sceneId);
+      return nodeIds.flatMap((nodeId) => {
+        const node = scene ? findNode(scene, nodeId) : null;
+        return node ? [{sceneId, node}] : [];
+      });
+    });
+    const memberHashes = await hashReferencedFiles(
+      nodes.flatMap(({node}) => visualSourcesForNode(node)),
+    );
+    const sceneEvidence = proofShots.map((shot) => {
+      const scene = sceneById.get(shot.sceneId);
+      return {
+        sceneId: shot.sceneId,
+        nodeId: shot.nodeId,
+        proofs: (scene?.motion?.proofTimes ?? []).filter(({id}) =>
+          shot.proofTimeIds.includes(id),
+        ),
+        camera: scene?.camera ?? null,
+        events: scene?.events ?? [],
+      };
+    });
+    targets.push({
+      compositeId: `spatial-contract:${contract.id}`,
+      sceneId: proofShots[0].sceneId,
+      pattern: 'spatial-contract',
+      nodeId: proofShots[0].nodeId,
+      memberNodeIds: [
+        ...new Set(nodes.map(({sceneId, node}) => `${sceneId}:${node.id}`)),
+      ],
+      memberHashes,
+      compositionHash: hashCompositionValue(contract),
+      fingerprint: hashCompositionValue({
+        runtimeSurfaceFingerprint,
+        contract,
+        sceneEvidence,
+        memberHashes,
+      }),
+      proofTimeIds: [
+        ...new Set(proofShots.flatMap(({proofTimeIds}) => proofTimeIds)),
+      ],
+      proofShots,
+      requiredChecks: requiredChecksForSpatialContract(contract),
+      reviewScope: 'runtime-visible',
+      spatialContract: contract,
+    });
   }
   for (const transition of project.editorial?.transitionPlans ?? []) {
     targets.push({
@@ -1729,6 +1860,31 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
         })),
       },
     );
+  }
+  if (target.pattern === 'spatial-contract') {
+    const spatialProof = proofEntry?.spatialProof;
+    checks.push({
+      id: 'spatial-contract-proof',
+      passed:
+        spatialProof?.contractId === target.spatialContract.id &&
+        spatialProof?.kind === target.spatialContract.kind &&
+        spatialProof?.passed === true,
+      expected: {
+        contractId: target.spatialContract.id,
+        kind: target.spatialContract.kind,
+        passed: true,
+      },
+      actual: spatialProof
+        ? {
+            contractId: spatialProof.contractId,
+            kind: spatialProof.kind,
+            passed: spatialProof.passed,
+            failedChecks: spatialProof.checks
+              ?.filter(({passed}) => !passed)
+              .map(({id}) => id) ?? [],
+          }
+        : null,
+    });
   }
   if (target.pattern === 'parallax-rig') {
     const depthLevels = new Set(target.depthMap.map(({depth}) => depth));

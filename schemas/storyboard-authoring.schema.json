@@ -25,6 +25,12 @@
       "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/authoring"
     },
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialAuthoring"},
+    "spatialContracts": {
+      "type": "array",
+      "items": {
+        "$ref": "https://local.paper-collage.dev/spatial-contract.schema.json#/$defs/contract"
+      }
+    },
     "scenes": {
       "type": "array",
       "minItems": 0,

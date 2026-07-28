@@ -61,6 +61,7 @@ try {
     ...project,
     motionContract: storyboard.motionContract,
     editorial: storyboard.editorial,
+    spatialContracts: storyboard.spatialContracts ?? [],
   });
   await recordMotionLanguageCard(
     slug,

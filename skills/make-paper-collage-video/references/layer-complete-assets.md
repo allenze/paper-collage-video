@@ -37,6 +37,23 @@ bottom: its source alpha must prove full horizontal span and real visible
 support at both repeat edges. Near strips must prove a visible foreground band
 that can actually overlap the declared subjects.
 
+Layer completeness does not by itself prove that a visible subject is standing
+or sitting on the layer. For every hero contact, add a root
+`spatialContracts[]` grounding record that binds the subject's normalized or
+registered state anchor to an explicit polyline on the actual support consumer.
+The contract samples the complete ancestor transform chain, camera/parallax,
+keyframes, idle motion, emphasis, and world anchoring. Use `locked-contact` for
+a seated or held tableau; it rejects relative drift even when each sampled
+anchor remains inside a broad contact zone.
+
+Paint order follows browser stacking contexts, not the largest descendant
+`z`. A `support-front` inside a lower top-level group cannot cover a subject in
+a higher sibling group. When foreground overlap is narratively required, bind
+the exact visible foreground node and relation in the grounding contract and
+structure the runtime consumers so their first divergent stacking ancestors
+have the correct order. Do not duplicate the foreground asset at low opacity or
+raise the subject out of contact to fake clearance.
+
 ## Compile the Source Package Before Provider Approval
 
 For every layer-aware treatment, author:

@@ -51,6 +51,12 @@
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialProject"},
     "worlds": {"type": "array", "items": {"$ref": "#/$defs/worldContract"}},
     "trajectoryContracts": {"type": "array", "items": {"$ref": "#/$defs/trajectoryContract"}},
+    "spatialContracts": {
+      "type": "array",
+      "items": {
+        "$ref": "https://local.paper-collage.dev/spatial-contract.schema.json#/$defs/contract"
+      }
+    },
     "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}},
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}}
   },

@@ -152,6 +152,14 @@ rear/subject/front motion additionally requires complete layer roles and
 responsive reveal envelopes. Do not invent synonymous check names because the
 quality recorder rejects unknown enums.
 
+Spatial truth is orthogonal to semantic topology. Use root
+`spatialContracts[]` to prove a current contact anchor against a support
+surface, real foreground paint order, subtitle clearance, sustained gait
+cadence, or causal continuity across adjacent scenes. A silhouette can pass a
+topology contract while floating above the ground; a correct world asset can
+still appear as a discontinuous replacement in the next scene. Semantic and
+spatial targets fingerprint and review those different claims independently.
+
 ## Evidence Rules
 
 - Run `project:composition-proof` after real assets and timings are assembled. It clears stale proof output and renders every semantic evidence target.

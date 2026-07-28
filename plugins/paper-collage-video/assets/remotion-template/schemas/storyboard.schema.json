@@ -18,6 +18,12 @@
       "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/compiled"
     },
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialCompiled"},
+    "spatialContracts": {
+      "type": "array",
+      "items": {
+        "$ref": "https://local.paper-collage.dev/spatial-contract.schema.json#/$defs/contract"
+      }
+    },
     "scenes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/compiledScene"}},
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}},
     "directingSummary": {"$ref": "#/$defs/directingSummary"},

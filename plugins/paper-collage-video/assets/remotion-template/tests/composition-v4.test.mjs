@@ -145,6 +145,27 @@ test('v5 registered environments enforce a shared canvas, boundary and exclusive
   assert.ok(validate(duplicated).issues.some(({code}) => code === 'composition-semantic-duplicate'));
 });
 
+test('visible assets cannot be duplicated at the same transform and clip', () => {
+  const first = asset({id: 'foreground-a', role: 'environment'});
+  const second = {
+    ...asset({id: 'foreground-b', role: 'environment'}),
+    src: first.src,
+  };
+  const result = validateCompositionStructure({
+    composition: {
+      coordinateSpace: {width: 100, height: 100},
+      nodes: [first, second],
+    },
+    video: {width: 100, height: 100},
+    proofTimes: [],
+  });
+  assert.ok(
+    result.issues.some(
+      ({code}) => code === 'composition-duplicate-visible-asset',
+    ),
+  );
+});
+
 test('v10 registered depth stacks require full-canvas ordered layers inside every reveal envelope', () => {
   assert.deepEqual(validate(depthStackGroup()).issues, []);
 

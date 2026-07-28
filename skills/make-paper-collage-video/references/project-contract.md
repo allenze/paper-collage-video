@@ -205,6 +205,32 @@ without falsely failing the route constraint. Use `monotonic-travel` when a
 chase must never reverse: it samples every authored x keyframe between its
 proofs, permits a final zero-motion hold, and rejects any backward segment.
 
+Root `spatialContracts[]` is the executable spatial-truth layer shared by the
+Storyboard and Project. It has three kinds:
+
+- `grounding` binds one scene, subject, support, at least two proof ids, a
+  normalized or registered state anchor, an explicit support polyline, gap and
+  penetration tolerances, an authored screen-space vertical support band, and
+  relative-drift tolerance. Optional
+  `frontOcclusion` binds the real cross-group paint relation and alpha overlap;
+  optional `subtitleClearance` binds alpha-tight visible bounds to the active
+  responsive profile's `role=subtitle` exclusion zone.
+- `continuity` binds adjacent outgoing/incoming proof moments, typed world,
+  subject, prop, or support node pairs, visual-family/framing tolerances, camera
+  tolerances, and grounding contracts from both scenes. Use it for collision to
+  pickup, action to aftermath, or any causal cut where a new field, stump,
+  character scale, or resting location would be a false discontinuity.
+- `gait` binds a state-sequence, proof window, at least two registered gait
+  states, a minimum state-change rate, and whether cycling must continue through
+  the window end. It rejects a pose that freezes before the shot ends even if
+  the background continues moving.
+
+`project:storyboard` copies the array into `project.json`; project validation
+rejects drift. The directing fingerprint, composition-proof target, runtime
+surface fingerprint, and quality review all include the contract. These are
+validation/proof contracts over ordinary composition nodes, not a
+project-specific renderer branch.
+
 A continuous `traverse` target must span at least `0.45` in normalized parent
 space. A continuous `sway` target must use the `sway` idle primitive and a
 bottom-biased motion pivot; the pivot is independent of registration placement.

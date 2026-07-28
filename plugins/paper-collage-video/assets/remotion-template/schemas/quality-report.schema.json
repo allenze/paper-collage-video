@@ -140,7 +140,7 @@
         "properties": {
           "compositeId": {"type": "string", "minLength": 1},
           "sceneId": {"type": "string", "minLength": 1},
-          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "state-sequence", "event", "semantic-contract", "parallax-rig", "motif-field", "typography", "annotation", "data-graphic", "editorial-transition", "responsive-directing", "style-target", "motion-contract"]},
+          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "state-sequence", "event", "semantic-contract", "spatial-contract", "parallax-rig", "motif-field", "typography", "annotation", "data-graphic", "editorial-transition", "responsive-directing", "style-target", "motion-contract"]},
           "nodeId": {"type": "string", "minLength": 1},
           "memberNodeIds": {"type": "array", "items": {"type": "string"}},
           "memberHashes": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},

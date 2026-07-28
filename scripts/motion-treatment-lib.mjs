@@ -1254,6 +1254,7 @@ export const compileStoryboardDirecting = (
   directingSummary.fingerprint = hashCompositionValue({
     scenes: scenes.map(({id, directing, compositionPlan}) => ({id, directing, compositionPlan})),
     sceneTransitions: storyboard.sceneTransitions,
+    spatialContracts: storyboard.spatialContracts ?? [],
     editorialFingerprint: editorial.fingerprint,
     motionContractFingerprint: motionContract.fingerprint,
     demand: {...directingSummary, budget: undefined, fingerprint: undefined},

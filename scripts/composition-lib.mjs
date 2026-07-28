@@ -1243,6 +1243,27 @@ export const validateCompositionStructure = ({
       }
     }
   }
+  const visibleAssetUses = new Map();
+  for (const {node, parent, renderParticipation} of flat) {
+    if (node.kind !== 'asset' || renderParticipation !== 'visible') continue;
+    const key = stableStringify({
+      source: node.src,
+      parentId: parent?.id ?? 'scene-root',
+      transform: node.transform,
+      clip: node.clip ?? null,
+    });
+    const previous = visibleAssetUses.get(key);
+    if (previous) {
+      add(
+        'error',
+        'composition-duplicate-visible-asset',
+        `可见资产 ${node.src} 在同一父坐标中以完全相同的 transform/clip 重复使用（${previous.id}、${node.id}）；这会造成半透明漂移或重影。重复装饰请使用 motif-field，前景只保留一个权威消费者。`,
+        `${location}.nodes#${node.id}`,
+      );
+    } else {
+      visibleAssetUses.set(key, node);
+    }
+  }
   const motifInstanceCount = motifFields.reduce(
     (total, {node}) =>
       total + (Number.isInteger(node.count) && node.count > 0 ? node.count : 0),

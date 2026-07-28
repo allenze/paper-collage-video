@@ -9,6 +9,7 @@ import {
 } from './motion-treatment-lib.mjs';
 import {validateSceneTransitionSequence} from '../src/sceneTimeline.mjs';
 import {validateCompiledEditorial} from './editorial-system-lib.mjs';
+import {validateStoryboardSpatialContracts} from './spatial-contract-lib.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -95,6 +96,9 @@ export const validateStoryboard = (
     sceneTransitions: storyboard.sceneTransitions,
   })) {
     add(`storyboard-${issue.code}`, issue.message, issue.location);
+  }
+  for (const issue of validateStoryboardSpatialContracts(storyboard)) {
+    add(issue.code, issue.message, issue.location);
   }
   const sceneIds = new Set();
   let estimatedDuration = 0;

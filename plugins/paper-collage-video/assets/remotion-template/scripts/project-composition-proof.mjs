@@ -50,6 +50,11 @@ import {
   buildLoopingWorldProof,
   buildTraverseWorldMotionProofs,
 } from './world-motion-proof-lib.mjs';
+import {
+  buildSpatialContractProof,
+  spatialContractDebugOverlay,
+  summarizeSpatialContracts,
+} from './spatial-contract-lib.mjs';
 
 const args = process.argv.slice(2);
 const [slug] = args.filter((argument) => !argument.startsWith('--'));
@@ -529,11 +534,31 @@ try {
       (
         target.pattern !== 'looping-environment' ||
         cached.loopingWorldProof?.passed === true
+      ) &&
+      (
+        target.pattern !== 'spatial-contract' ||
+        cached.spatialProof?.passed === true
       );
     if (reusableComposite) {
       composites.push(cached);
       reusedComposites += 1;
       continue;
+    }
+    let spatialProof = null;
+    if (target.pattern === 'spatial-contract') {
+      spatialProof = await buildSpatialContractProof(
+        project,
+        target.spatialContract,
+      );
+      if (!spatialProof.passed) {
+        const failed = spatialProof.checks
+          .filter(({passed}) => !passed)
+          .map(({id}) => id)
+          .join(', ');
+        throw new Error(
+          `spatial contract ${target.spatialContract.id} 未通过：${failed}。`,
+        );
+      }
     }
     const proofFrames = [];
     for (const shot of proofShots) {
@@ -564,12 +589,20 @@ try {
         await sharp(renderedProof.file).extract(bounds).png().toFile(cropFile);
         await sharp(renderedProof.file)
           .composite([{
-            input: debugOverlay({
-              width: renderedProof.width,
-              height: renderedProof.height,
-              bounds,
-              label: `${target.compositeId} · ${shot.sceneId} · ${proofTimeId}`,
-            }),
+            input: target.pattern === 'spatial-contract'
+              ? spatialContractDebugOverlay({
+                  proof: spatialProof,
+                  sceneId: shot.sceneId,
+                  proofTimeId,
+                  width: renderedProof.width,
+                  height: renderedProof.height,
+                })
+              : debugOverlay({
+                  width: renderedProof.width,
+                  height: renderedProof.height,
+                  bounds,
+                  label: `${target.compositeId} · ${shot.sceneId} · ${proofTimeId}`,
+                }),
           }])
           .png()
           .toFile(debugFile);
@@ -664,6 +697,7 @@ try {
       proofFrames,
       layerStackProof,
       loopingWorldProof,
+      spatialProof,
     });
     generatedComposites += 1;
   }
@@ -698,6 +732,7 @@ try {
     composites,
     worldMotionProofs: traverseWorldMotionProofs,
     productionContracts: summarizeProductionContracts(project),
+    spatialContracts: summarizeSpatialContracts(project),
     assetEvidence,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     cache: {

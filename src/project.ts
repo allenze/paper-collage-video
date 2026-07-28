@@ -953,6 +953,59 @@ export type ProjectScene = {
   events: ProjectEvent[];
 };
 
+export type SpatialContract =
+  | {
+      id: string;
+      kind: 'grounding';
+      sceneId: string;
+      subjectNodeId: string;
+      supportNodeId: string;
+      proofTimeIds: string[];
+      subjectAnchor:
+        | {mode: 'normalized'; x: number; y: number}
+        | {mode: 'state-anchor'; name: string};
+      supportSurface: {points: Array<{x: number; y: number}>};
+      supportScreenBand: {minY: number; maxY: number};
+      mode: 'contact' | 'locked-contact';
+      maxGap: number;
+      maxPenetration: number;
+      maxRelativeDrift: number;
+      frontOcclusion?: {
+        nodeId: string;
+        relation: 'in-front-of-subject' | 'behind-subject';
+        minimumAlphaOverlap?: number;
+      };
+      subtitleClearance?: {minimumGap: number};
+    }
+  | {
+      id: string;
+      kind: 'continuity';
+      from: {sceneId: string; proofTimeId: string};
+      to: {sceneId: string; proofTimeId: string};
+      nodePairs: Array<{
+        role: 'world' | 'subject' | 'prop' | 'support';
+        fromNodeId: string;
+        toNodeId: string;
+        requireSameFamily: boolean;
+        maxPositionDelta: number;
+        maxScaleDelta: number;
+      }>;
+      groundingContractIds: string[];
+      maxCameraPositionDelta: number;
+      maxCameraZoomDelta: number;
+    }
+  | {
+      id: string;
+      kind: 'gait';
+      sceneId: string;
+      nodeId: string;
+      fromProofTimeId: string;
+      throughProofTimeId: string;
+      stateIds: string[];
+      minimumChangesPerSecond: number;
+      continueThroughWindowEnd: boolean;
+    };
+
 export type PaperCollageProject = {
   $schema?: string;
   schemaVersion: 11;
@@ -1129,6 +1182,7 @@ export type PaperCollageProject = {
       | {id: string; kind: 'offscreen-at'; sceneId: string; proofTimeId: string; nodeId: string; side: 'left' | 'right'}
     >;
   }>;
+  spatialContracts?: SpatialContract[];
   scenes: ProjectScene[];
   sceneTransitions: SceneBoundaryTransition[];
 };

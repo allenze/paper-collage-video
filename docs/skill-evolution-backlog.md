@@ -5,6 +5,41 @@ paper-collage Skill or runtime gap. It is not a substitute for implementation:
 an item stays open until its contract, renderer, validation, proof, tests,
 documentation, and packaged-plugin copy are updated together.
 
+## 2026-07-28 — Executable spatial truth, gait, and causal continuity
+
+- **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F044–F057.
+- **Observed failure:** composition could satisfy a coarse visual review while
+  the farmer or rabbit floated above the ground, a support/field strip occupied
+  the sky, an internal foreground could not actually paint over a top-level
+  subject, a seated subject drifted, the rabbit's gait froze before the scene
+  ended, or the stump/world/grounding changed across one cause-and-effect cut.
+  Moving the heroes upward to avoid subtitles merely traded occlusion for
+  floating, and duplicate semi-transparent foreground nodes could create an
+  unexplained drifting wheat layer.
+- **Required capability:** authoring must declare reusable `spatialContracts[]`
+  rather than rely on visually plausible coordinates. A grounding contract
+  binds a subject anchor to an authored support polyline and legal screen band,
+  optional true front occlusion, subtitle clearance, and locked relative
+  contact. A continuity contract binds adjacent scene world/subject/prop/support
+  pairs, camera tolerances, and grounding evidence. A gait contract measures
+  actual state changes through the entire action window. Composition validation
+  must also reject an exact duplicate visible asset instance.
+- **Acceptance evidence:** schema, storyboard authoring, project compilation,
+  runtime proof, debug overlays, quality targets, motion fingerprints, type
+  definitions, tests, documentation, and packaged plugin all carry the same
+  contract. Deterministic tests reject floating contact, support geometry in a
+  declared sky band, false foreground stacking, locked-contact drift, subtitle
+  collision, adjacent-scene world/framing/grounding drift, early gait freeze,
+  and duplicate visible assets.
+- **Status:** implemented and verified on 2026-07-28. The full suite passes
+  224/224; source, packaged plugin, and installed cache share runtime fingerprint
+  `59ebf378fa7e2819e26c63a96a8c6ae0bd07078eb9ceec4cc66045857113d6a3`.
+  A workspace bootstrapped from that cache passes doctor, type checking, Schema
+  v11, and 19 focused spatial/composition tests. This catches executable
+  geometry and topology errors; interpreting an opaque illustration as a
+  semantically impossible floating wheat field remains a required human
+  composite review rather than an invented pixel-semantic detector.
+
 ## 2026-07-28 — Work-item closure must gate preview and final delivery
 
 - **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F061.
