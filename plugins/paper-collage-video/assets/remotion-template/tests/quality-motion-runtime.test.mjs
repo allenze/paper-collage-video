@@ -22,6 +22,7 @@ import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {
   defaultSubtitleMaximumCharacters,
   deriveSubtitleCues,
+  ensureVisibleNarrationSubtitles,
   segmentSubtitleText,
 } from '../scripts/subtitle-lib.mjs';
 import {createSubtitleContract} from '../scripts/subtitle-contract-lib.mjs';
@@ -614,6 +615,23 @@ test('subtitle typography can use a screen font and crisp non-blurred edge indep
   assert.equal(typography.edgeTreatment, 'crisp-outline');
   assert.doesNotMatch(typography.textShadow, /14px/u);
   assert.doesNotMatch(typography.textShadow, /blur/u);
+});
+
+test('subtitle derivation restores visible crisp subtitles for narrated scenes', () => {
+  const scene = {
+    narration: {
+      src: 'projects/example/narration.mp3',
+      durationSeconds: 2,
+    },
+    subtitles: [{fromSeconds: 0, toSeconds: 2, text: '清晰字幕'}],
+    appearance: {subtitles: {variant: 'hidden'}},
+  };
+  assert.equal(ensureVisibleNarrationSubtitles(scene), true);
+  assert.deepEqual(scene.appearance.subtitles, {
+    variant: 'boxed',
+    edgeTreatment: 'crisp-outline',
+  });
+  assert.equal(ensureVisibleNarrationSubtitles(scene), false);
 });
 
 test('subtitle delivery contract checks transcript, timing, safe area, and font source', async () => {

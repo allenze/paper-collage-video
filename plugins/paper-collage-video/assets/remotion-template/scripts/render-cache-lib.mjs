@@ -16,10 +16,7 @@ import {
   resolvePublicFile,
   writeJson,
 } from './project-lib.mjs';
-import {
-  createRuntimeBuildFingerprint,
-  createRuntimeSurfaceFingerprint,
-} from './runtime-build-lib.mjs';
+import {createRuntimeSurfaceFingerprint} from './runtime-build-lib.mjs';
 
 export const hashFileStream = async (file) =>
   new Promise((resolve, reject) => {
@@ -103,7 +100,8 @@ export const createCompositionProofProject = (project) => ({
 });
 
 export const createVisualFingerprint = async (project, mode) => {
-  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
+  const runtimeBuildFingerprint =
+    await createRuntimeSurfaceFingerprint('final-visual');
   const sources = [project.theme.texture, project.theme.fontFile];
   for (const scene of project.scenes ?? []) {
     sources.push(
@@ -137,10 +135,7 @@ export const createSceneProofFingerprint = async ({
   absoluteFrame,
   surface = 'final-visual',
 }) => {
-  const runtimeFingerprint =
-    surface === 'composition-proof'
-      ? await createRuntimeSurfaceFingerprint('composition-proof')
-      : await createRuntimeBuildFingerprint();
+  const runtimeFingerprint = await createRuntimeSurfaceFingerprint(surface);
   const sources = [project.theme.texture, project.theme.fontFile];
   sources.push(
     ...collectRuntimeVisibleCompositionSources(scene.composition),
@@ -176,6 +171,8 @@ export const createAudioFingerprint = async (project) => {
     durationInFrames: timeline.durationInFrames,
     events,
     sourceHashes,
+    runtimeFingerprint:
+      await createRuntimeSurfaceFingerprint('audio-delivery'),
   });
 };
 

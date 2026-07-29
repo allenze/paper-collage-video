@@ -30,7 +30,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sha256File = async (file) =>
   createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
-test('composition-proof runtime surface excludes subtitle-only implementation changes', async () => {
+test('composition-proof runtime surface excludes subtitle and audio-delivery changes', async () => {
   assert.ok(
     !RUNTIME_SURFACE_INPUTS['composition-proof'].includes(
       'src/SubtitleOverlay.tsx',
@@ -39,6 +39,35 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
   assert.ok(
     RUNTIME_SURFACE_INPUTS['composition-proof'].includes(
       'src/ReplicaChapterScene.tsx',
+    ),
+  );
+  for (const audioDeliveryFile of [
+    'schemas/audio-calibration.schema.json',
+    'scripts/audio-calibration-lib.mjs',
+    'scripts/audio-preflight-lib.mjs',
+    'scripts/assets-ready-seal-lib.mjs',
+    'scripts/project-assets-ready.mjs',
+    'scripts/project-audio-calibration.mjs',
+    'scripts/project-audio-preflight.mjs',
+    'scripts/project-report.mjs',
+  ]) {
+    assert.ok(
+      !RUNTIME_SURFACE_INPUTS['composition-proof'].includes(audioDeliveryFile),
+      `${audioDeliveryFile} must not invalidate visual composition proof`,
+    );
+    assert.ok(
+      !RUNTIME_SURFACE_INPUTS['final-visual'].includes(audioDeliveryFile),
+      `${audioDeliveryFile} must not invalidate final visual frames`,
+    );
+  }
+  assert.ok(
+    RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'scripts/audio-preflight-lib.mjs',
+    ),
+  );
+  assert.ok(
+    !RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'src/SubtitleOverlay.tsx',
     ),
   );
   const directory = await fs.mkdtemp(
@@ -55,6 +84,10 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
       'composition-proof',
       {root: directory},
     );
+    const beforeFinalVisual = await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    );
     await fs.appendFile(
       path.join(directory, 'src/SubtitleOverlay.tsx'),
       '\n// subtitle-only fixture change\n',
@@ -67,8 +100,47 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
       'composition-proof',
       {root: directory},
     );
+    const afterSubtitleFinalVisual = await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    );
     assert.notEqual(afterSubtitleBuild.fingerprint, beforeBuild.fingerprint);
     assert.equal(afterSubtitleSurface, beforeSurface);
+    assert.notEqual(afterSubtitleFinalVisual, beforeFinalVisual);
+
+    for (const audioDeliveryFile of [
+      'schemas/audio-calibration.schema.json',
+      'scripts/audio-preflight-lib.mjs',
+    ]) {
+      const beforeAudioDelivery = await createRuntimeSurfaceFingerprint(
+        'audio-delivery',
+        {root: directory},
+      );
+      await fs.appendFile(
+        path.join(directory, audioDeliveryFile),
+        '\n ',
+        'utf8',
+      );
+      const afterAudioBuild = await createRuntimeBuildManifest({
+        root: directory,
+      });
+      const afterAudioSurface = await createRuntimeSurfaceFingerprint(
+        'composition-proof',
+        {root: directory},
+      );
+      const afterAudioFinalVisual = await createRuntimeSurfaceFingerprint(
+        'final-visual',
+        {root: directory},
+      );
+      const afterAudioDelivery = await createRuntimeSurfaceFingerprint(
+        'audio-delivery',
+        {root: directory},
+      );
+      assert.notEqual(afterAudioBuild.fingerprint, beforeBuild.fingerprint);
+      assert.equal(afterAudioSurface, beforeSurface);
+      assert.equal(afterAudioFinalVisual, afterSubtitleFinalVisual);
+      assert.notEqual(afterAudioDelivery, beforeAudioDelivery);
+    }
 
     await fs.appendFile(
       path.join(directory, 'src/ReplicaChapterScene.tsx'),
@@ -79,7 +151,12 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
       'composition-proof',
       {root: directory},
     );
+    const afterCompositionFinalVisual = await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    );
     assert.notEqual(afterCompositionSurface, beforeSurface);
+    assert.notEqual(afterCompositionFinalVisual, afterSubtitleFinalVisual);
   } finally {
     await fs.rm(directory, {recursive: true, force: true});
   }
@@ -186,6 +263,56 @@ test('composite quality fingerprints ignore subtitle transcript formatting but r
     manifest,
   });
   assert.notEqual(afterTiming.fingerprint, before.fingerprint);
+});
+
+test('whole-film style composition fingerprints exclude subtitle presentation', async () => {
+  const project = {
+    slug: 'subtitle-style-fingerprint-fixture',
+    video: {width: 1920, height: 1080, fps: 30},
+    theme: {texture: null, fontFile: null},
+    styleProfile: {
+      id: 'fixture-style',
+      quality: {requiredCompositeChecks: ['style-profile-consistent']},
+    },
+    sceneTransitions: [],
+    scenes: [{
+      id: 'scene',
+      appearance: {
+        background: '#ffffff',
+        subtitles: {variant: 'hidden'},
+      },
+      narration: {startSeconds: 0, durationSeconds: 2, text: '字幕'},
+      tailSeconds: 0.2,
+      camera: {preset: 'still', intensity: 0},
+      motion: {proofTimes: []},
+      events: [],
+      composition: {
+        coordinateSpace: {width: 1920, height: 1080},
+        nodes: [],
+      },
+      subtitles: [{fromSeconds: 0, toSeconds: 2, text: '字幕'}],
+    }],
+  };
+  const manifest = {assets: []};
+  const before = (await collectCompositeQualityTargets(project, {manifest}))
+    .find(({compositeId}) => compositeId === 'style-profile:fixture-style');
+  const subtitleChange = structuredClone(project);
+  subtitleChange.scenes[0].appearance.subtitles = {
+    variant: 'boxed',
+    edgeTreatment: 'crisp-outline',
+  };
+  const afterSubtitle = (
+    await collectCompositeQualityTargets(subtitleChange, {manifest})
+  ).find(({compositeId}) => compositeId === 'style-profile:fixture-style');
+  assert.equal(afterSubtitle.fingerprint, before.fingerprint);
+  assert.equal(afterSubtitle.compositionHash, before.compositionHash);
+
+  const compositionChange = structuredClone(subtitleChange);
+  compositionChange.scenes[0].appearance.background = '#eeeeee';
+  const afterComposition = (
+    await collectCompositeQualityTargets(compositionChange, {manifest})
+  ).find(({compositeId}) => compositeId === 'style-profile:fixture-style');
+  assert.notEqual(afterComposition.fingerprint, before.fingerprint);
 });
 
 test('derivation-only registered family passes deterministic checks without human review items', async () => {

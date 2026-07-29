@@ -126,6 +126,30 @@ export const segmentSubtitleText = (text, maximumCharacters) =>
 export const defaultSubtitleMaximumCharacters = ({width, height}) =>
   width / height < 1 ? 16 : 18;
 
+export const ensureVisibleNarrationSubtitles = (scene) => {
+  const narrated =
+    Boolean(scene.narration?.src) &&
+    Number(scene.narration?.durationSeconds) > 0;
+  if (
+    !narrated ||
+    !Array.isArray(scene.subtitles) ||
+    scene.subtitles.length === 0 ||
+    scene.appearance?.subtitles?.variant !== 'hidden'
+  ) {
+    return false;
+  }
+  scene.appearance = {
+    ...(scene.appearance ?? {}),
+    subtitles: {
+      ...(scene.appearance?.subtitles ?? {}),
+      variant: 'boxed',
+      edgeTreatment:
+        scene.appearance?.subtitles?.edgeTreatment ?? 'crisp-outline',
+    },
+  };
+  return true;
+};
+
 export const deriveSubtitleCues = ({
   text,
   startSeconds,

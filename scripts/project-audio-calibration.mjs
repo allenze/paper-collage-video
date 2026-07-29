@@ -1,35 +1,23 @@
 #!/usr/bin/env node
-import {
-  acceptAudioCalibration,
-  ensureAudioCalibrationReady,
-} from './audio-calibration-lib.mjs';
+import {ensureAudioCalibrationReady} from './audio-calibration-lib.mjs';
 import {loadProject} from './project-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((argument) => !argument.startsWith('--'));
 const action = args.find((argument, index) =>
-  index > args.indexOf(slug) && !argument.startsWith('--')) ?? 'propose';
-const valueFor = (name) =>
-  args.find((value) => value.startsWith(`${name}=`))?.slice(name.length + 1);
+  index > args.indexOf(slug) && !argument.startsWith('--')) ?? 'run';
 
 try {
   if (!slug) {
     throw new Error(
-      '用法：project:audio-calibration -- <slug> <propose|accept> [--fingerprint=<sha256>] [--note=<确认>]',
+      '用法：project:audio-calibration -- <slug> run',
     );
   }
+  if (action !== 'run') {
+    throw new Error(`未知 action：${action}；音频母带是自动技术流程，仅支持 run`);
+  }
   const {project} = await loadProject(slug);
-  const result = action === 'accept'
-    ? await acceptAudioCalibration({
-        project,
-        fingerprint: valueFor('--fingerprint'),
-        note: valueFor('--note'),
-      })
-    : action === 'propose'
-      ? await ensureAudioCalibrationReady({project})
-      : (() => {
-          throw new Error(`未知 action：${action}`);
-        })();
+  const result = await ensureAudioCalibrationReady({project});
   const calibration = result.calibration;
   if (args.includes('--json')) {
     console.log(JSON.stringify({
@@ -51,10 +39,13 @@ try {
     console.log(
       `  preflight: ${result.report.loudness.integratedLufs} LUFS / ${result.report.loudness.truePeakDbtp} dBTP`,
     );
-    if (!result.ready) {
+    if (result.report.masteringProcessing?.applied) {
       console.log(
-        `  接受草案：npm run project:audio-calibration -- ${slug} accept --fingerprint=${calibration.sourceFingerprint} --note="<人的明确确认>"`,
+        `  mastering: ${result.report.masteringProcessing.method} / ${result.report.masteringProcessing.attempts.length} attempt(s)`,
       );
+    }
+    if (!result.ready) {
+      console.log('  自动母带未能满足交付契约；请检查音源或处理链，不要请求用户批准技术参数。');
       console.log('  最终成片 report 的实测响度仍是权威结果。');
     }
   }

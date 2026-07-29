@@ -156,6 +156,12 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'travel-monotonic-clean',
 ];
 
+const compositionAppearance = (appearance) => {
+  if (!appearance) return appearance;
+  const {subtitles: _subtitles, ...rest} = appearance;
+  return rest;
+};
+
 export const QUALITY_CHECKS = [
   ...ASSET_QUALITY_CHECKS,
   ...COMPOSITE_QUALITY_CHECKS,
@@ -1321,7 +1327,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         theme: project.theme,
         scenes: project.scenes.map(({id, appearance, composition}) => ({
           id,
-          appearance,
+          appearance: compositionAppearance(appearance),
           composition,
         })),
       }),
@@ -1332,7 +1338,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         scenes: project.scenes.map(
           ({id, appearance, composition, camera}) => ({
             id,
-            appearance,
+            appearance: compositionAppearance(appearance),
             composition,
             camera,
           }),

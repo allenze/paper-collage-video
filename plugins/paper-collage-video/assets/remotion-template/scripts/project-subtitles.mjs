@@ -3,6 +3,7 @@ import {
   cuesFromTiming,
   defaultSubtitleMaximumCharacters,
   deriveSubtitleCues,
+  ensureVisibleNarrationSubtitles,
 } from './subtitle-lib.mjs';
 import {
   loadProject,
@@ -33,6 +34,7 @@ try {
     throw new Error('--gap-seconds 必须是非负秒数。');
   }
 
+  let restoredVisibility = 0;
   for (const scene of project.scenes ?? []) {
     if (scene.narration.timingSrc) {
       const timing = await readJson(resolvePublicFile(scene.narration.timingSrc));
@@ -53,9 +55,15 @@ try {
         gapSeconds,
       });
     }
+    if (ensureVisibleNarrationSubtitles(scene)) restoredVisibility += 1;
   }
   await writeJson(paths.projectFile, project);
   console.log(`✓ 已为 ${project.scenes.length} 个镜头同步字幕时间`);
+  if (restoredVisibility > 0) {
+    console.log(
+      `✓ 已把 ${restoredVisibility} 个有旁白镜头从隐藏字幕恢复为 boxed + crisp-outline`,
+    );
+  }
 } catch (error) {
   console.error(`project:subtitles failed: ${error.message}`);
   process.exitCode = 1;

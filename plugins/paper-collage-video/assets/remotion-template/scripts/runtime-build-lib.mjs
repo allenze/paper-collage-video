@@ -141,19 +141,50 @@ export const RUNTIME_BUILD_INPUTS = [
   'src/visibilityLifecycle.mjs',
 ];
 
+const AUDIO_DELIVERY_ONLY_INPUTS = [
+  'schemas/audio-calibration.schema.json',
+  'scripts/assets-ready-seal-lib.mjs',
+  'scripts/audio-calibration-lib.mjs',
+  'scripts/audio-preflight-lib.mjs',
+  'scripts/project-assets-ready.mjs',
+  'scripts/project-audio-calibration.mjs',
+  'scripts/project-audio-preflight.mjs',
+  'scripts/project-report.mjs',
+];
+
+const SUBTITLE_PRESENTATION_INPUTS = [
+  'scripts/project-subtitles.mjs',
+  'scripts/subtitle-contract-lib.mjs',
+  'scripts/subtitle-lib.mjs',
+  'src/SubtitleOverlay.tsx',
+  'src/subtitleSurface.mjs',
+  'src/subtitleSurface.d.mts',
+];
+
+const AUDIO_DELIVERY_RUNTIME_INPUTS = new Set([
+  'package.json',
+  'schemas/audio-calibration.schema.json',
+  'schemas/project.schema.json',
+  'scripts/audio-calibration-lib.mjs',
+  'scripts/audio-preflight-lib.mjs',
+  'scripts/project-lib.mjs',
+  'scripts/project-render.mjs',
+  'scripts/render-cache-lib.mjs',
+  'scripts/runtime-build-lib.mjs',
+  'src/sceneTimeline.mjs',
+]);
+
 export const RUNTIME_SURFACE_INPUTS = {
+  'final-visual': RUNTIME_BUILD_INPUTS.filter(
+    (relative) => !AUDIO_DELIVERY_ONLY_INPUTS.includes(relative),
+  ),
   'composition-proof': RUNTIME_BUILD_INPUTS.filter((relative) => ![
-    'scripts/audio-calibration-lib.mjs',
-    'scripts/audio-preflight-lib.mjs',
-    'scripts/project-audio-calibration.mjs',
-    'scripts/project-report.mjs',
-    'scripts/project-subtitles.mjs',
-    'scripts/subtitle-contract-lib.mjs',
-    'scripts/subtitle-lib.mjs',
-    'src/SubtitleOverlay.tsx',
-    'src/subtitleSurface.mjs',
-    'src/subtitleSurface.d.mts',
+    ...AUDIO_DELIVERY_ONLY_INPUTS,
+    ...SUBTITLE_PRESENTATION_INPUTS,
   ].includes(relative)),
+  'audio-delivery': RUNTIME_BUILD_INPUTS.filter(
+    (relative) => AUDIO_DELIVERY_RUNTIME_INPUTS.has(relative),
+  ),
 };
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');

@@ -15,6 +15,13 @@ The first intake never authorizes provider spend. The combined second decision m
 
 Do not create a fourth default gate after final render. Local final delivery completes the creation task.
 
+Loudness normalization, dynamic control, true-peak limiting, codec headroom,
+and other delivery mastering parameters are not creative approvals. Resolve
+them automatically against the declared mastering contract and expose the
+measured result in the report. Even an extreme source does not justify asking
+the user to approve gain or compression; repair it technically or report a
+genuine processing failure.
+
 If preview feedback intentionally changes narration meaning, scene semantics, or
 which scenes must be still, do not disguise it as a directing-only revision.
 Record a schema-v1 semantic revision authorization containing the source

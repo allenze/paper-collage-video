@@ -150,6 +150,15 @@ test('render fingerprints separate visual changes from audio-only changes', asyn
     const preflight = await runAudioPreflight({project, output: mixFile});
     assert.equal(preflight.analysisSurface, 'delivery-encoded-aac');
     assert.equal(preflight.deliveryEquivalent, true);
+    assert.equal(preflight.passed, true);
+    assert.equal(typeof preflight.masteringProcessing.applied, 'boolean');
+    if (preflight.masteringProcessing.applied) {
+      assert.equal(
+        preflight.masteringProcessing.method,
+        'two-pass-loudnorm',
+      );
+      assert.ok(preflight.masteringProcessing.attempts.length >= 1);
+    }
     assert.deepEqual(
       preflight.probes.map(({mode, bitrate}) => ({mode, bitrate})),
       [
@@ -157,9 +166,24 @@ test('render fingerprints separate visual changes from audio-only changes', asyn
         {mode: 'render', bitrate: '192k'},
       ],
     );
+    assert.equal(preflight.probes.every(({passed}) => passed), true);
+    const quietProject = structuredClone(project);
+    quietProject.audio.narration.volume = 0.02;
+    const quietMixFile = path.join(directory, 'audio-preflight-quiet.wav');
+    const automaticallyMastered = await runAudioPreflight({
+      project: quietProject,
+      output: quietMixFile,
+    });
+    assert.equal(automaticallyMastered.passed, true);
+    assert.equal(automaticallyMastered.masteringProcessing.applied, true);
     assert.equal(
-      preflight.passed,
-      preflight.probes.every(({passed}) => passed),
+      automaticallyMastered.masteringProcessing.method,
+      'two-pass-loudnorm',
+    );
+    assert.ok(automaticallyMastered.masteringProcessing.attempts.length >= 1);
+    assert.equal(
+      automaticallyMastered.probes.every(({passed}) => passed),
+      true,
     );
     const silentVideo = path.join(directory, 'silent.mp4');
     const video = spawnSync('ffmpeg', [
@@ -211,23 +235,26 @@ test('delivery-encoded audio preflight keeps bounded gain recommendations', () =
   assert.equal(passing.passed, true);
 });
 
-test('accepted audio calibration requires a source fingerprint, applied gain, and human note', () => {
+test('technical audio mastering record never encodes a human approval state', () => {
   const calibration = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectSlug: 'audio-assessment',
-    status: 'accepted',
+    status: 'ready',
     sourceFingerprint: 'a'.repeat(64),
     currentNarrationVolume: 1,
     recommendedNarrationVolume: 2,
-    acceptedNarrationVolume: 2,
-    acceptanceNote: 'Approved after narration sync.',
+    processingNote: 'Automatically mastered to the delivery contract.',
   };
   assert.equal(
     validateAudioCalibration(calibration, 'audio-assessment'),
     calibration,
   );
   assert.throws(
-    () => validateAudioCalibration({...calibration, acceptanceNote: ''}, 'audio-assessment'),
-    /确认说明/,
+    () => validateAudioCalibration({...calibration, processingNote: ''}, 'audio-assessment'),
+    /processingNote/,
+  );
+  assert.throws(
+    () => validateAudioCalibration({...calibration, status: 'accepted'}, 'audio-assessment'),
+    /ready 或 failed/,
   );
 });
