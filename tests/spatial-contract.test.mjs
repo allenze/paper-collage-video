@@ -218,6 +218,45 @@ test('grounding contract rejects a visually floating subject', async () => {
   );
 });
 
+test('spatial proof evaluates the same responsive placement as the renderer', async () => {
+  const ground = asset({id: 'ground', z: 0});
+  const runner = gaitNode({});
+  const project = baseProject([
+    scene({id: 'scene-1', nodes: [ground, runner]}),
+  ]);
+  assert.equal(
+    (await inspectSpatialContract(project, grounding())).passed,
+    true,
+  );
+  project.editorial.responsivePlans = [{
+    profileId: '1:1',
+    width: 1000,
+    height: 1000,
+    parallaxScale: 1,
+    scenes: [{
+      sceneId: 'scene-1',
+      placements: [{
+        targetId: 'runner',
+        transform: {
+          x: 0.3,
+          y: 0.2,
+          width: 0.2,
+          height: 0.3,
+          anchorX: 0,
+          anchorY: 0,
+        },
+      }],
+    }],
+  }];
+  const responsive = await inspectSpatialContract(project, grounding());
+  assert.equal(responsive.passed, false);
+  assert.ok(
+    responsive.checks.some(
+      ({id, passed}) => id.startsWith('support-contact:') && !passed,
+    ),
+  );
+});
+
 test('grounding contract rejects a support surface placed in the authored sky band', async () => {
   const ground = asset({id: 'ground'});
   const runner = gaitNode({y: 0.1});

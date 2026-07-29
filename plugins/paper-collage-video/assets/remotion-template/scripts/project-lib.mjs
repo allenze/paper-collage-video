@@ -51,7 +51,7 @@ import {
   derivationRegionsFromBinding,
   inspectAlphaBands,
 } from './alpha-band-lib.mjs';
-import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
+import {assertRegisteredFamilyGroupMembers} from './registered-family-lib.mjs';
 import {validateProductionContracts} from './world-trajectory-lib.mjs';
 import {validateSpatialContracts} from './spatial-contract-lib.mjs';
 
@@ -1151,39 +1151,25 @@ export const validateProject = async (project, options = {}) => {
           ),
       )) {
         const groupLocation = `${sceneLocation}.composition.nodes#${group.id}`;
-        const assetNodes = (group.children ?? []).filter(
-          ({kind}) => kind === 'asset',
-        );
-        const records = assetNodes
-          .map(({src}) => manifestRecordForSource(src))
-          .filter(Boolean);
-        const result = assertRegisteredFamilyRecords({
-          records,
-          registration: group.registration,
-          pattern: group.pattern,
-          sourcePackageId:
-            group.pattern === 'registered-depth-stack'
-              ? group.layerStack?.sourcePackageId
-              : null,
+        const members = (group.children ?? [])
+          .filter(({kind}) => ['asset', 'state-sequence'].includes(kind))
+          .map((node) => ({
+            node,
+            records:
+              node.kind === 'state-sequence'
+                ? node.states.map(({src}) => manifestRecordForSource(src))
+                : [manifestRecordForSource(node.src)],
+          }));
+        const result = assertRegisteredFamilyGroupMembers({
+          group,
+          members,
+          allRecords: activeManifestAssets(manifest),
         });
-        const rolesMatchNodes = records.every((record) => {
-          const binding = record.registeredFamilyBinding;
-          return assetNodes.some(
-            (node) =>
-              node.id === binding?.nodeId &&
-              node.slot === binding?.slot &&
-              binding.role === binding.slot &&
-              node.registrationId === group.registration.id,
-          );
-        });
-        if (!result.passed || !rolesMatchNodes) {
+        if (!result.passed) {
           add(
             'error',
             'composition-registered-family',
-            `${group.pattern} 必须消费三成员、层完整、共享注册画布族：${[
-              ...result.errors,
-              ...(!rolesMatchNodes ? ['成员 role/slot/nodeId/registrationId 绑定不一致'] : []),
-            ].join('；')}`,
+            `${group.pattern} 必须消费三成员、层完整、共享注册画布族：${result.errors.join('；')}`,
             groupLocation,
           );
         }

@@ -1221,3 +1221,119 @@ export const assertRegisteredFamilyRecords = ({
   if (fingerprints.size !== 1) errors.push('registered family 成员 fingerprint 不一致');
   return {passed: errors.length === 0, errors};
 };
+
+export const assertRegisteredFamilyGroupMembers = ({
+  group,
+  members,
+  allRecords = [],
+}) => {
+  const errors = [];
+  const activeMembers = (members ?? []).filter(
+    ({node}) => ['asset', 'state-sequence'].includes(node?.kind),
+  );
+  const bySlot = new Map();
+  for (const member of activeMembers) {
+    if (!REGISTERED_FAMILY_ROLES.includes(member.node?.slot)) {
+      errors.push(`${member.node?.id ?? 'missing'} 缺少合法 registered family slot`);
+      continue;
+    }
+    if (bySlot.has(member.node.slot)) {
+      errors.push(`registered family active slot 重复：${member.node.slot}`);
+      continue;
+    }
+    bySlot.set(member.node.slot, member);
+  }
+  for (const role of REGISTERED_FAMILY_ROLES) {
+    if (!bySlot.has(role)) errors.push(`registered family 缺少 active ${role}`);
+  }
+  if (activeMembers.length !== REGISTERED_FAMILY_ROLES.length) {
+    errors.push('registered family 必须恰好包含三个 active 视觉成员');
+  }
+
+  const records = activeMembers.flatMap(({records: memberRecords}) =>
+    memberRecords ?? [],
+  );
+  const sourcePackageIds = new Set();
+  const sourceStrategies = new Set();
+  const familyIds = new Set();
+  for (const {node, records: memberRecords = []} of activeMembers) {
+    const expectedSources =
+      node.kind === 'state-sequence'
+        ? node.states?.length ?? 0
+        : 1;
+    if (memberRecords.length !== expectedSources || memberRecords.some((record) => !record)) {
+      errors.push(`${node.id} 的 registered family 来源记录不完整`);
+      continue;
+    }
+    for (const record of memberRecords) {
+      const binding = record.registeredFamilyBinding;
+      if (
+        !binding ||
+        record.adapter !== 'registered-family-member' ||
+        record.lifecycle?.status !== 'active' ||
+        binding.role !== node.slot ||
+        binding.slot !== node.slot ||
+        binding.registrationId !== group.registration?.id ||
+        binding.sourceMasterAssetId !==
+          group.registration?.sourceMasterAssetId ||
+        binding.canvas?.width !== group.registration?.canvas?.width ||
+        binding.canvas?.height !== group.registration?.canvas?.height ||
+        binding.origin !== 'top-left' ||
+        binding.pattern !== group.pattern ||
+        binding.motionCapability !== 'bounded-relative'
+      ) {
+        errors.push(`${record?.assetId ?? node.id} 没有保持 active 状态成员注册契约`);
+        continue;
+      }
+      if (node.kind === 'asset' && binding.nodeId !== node.id) {
+        errors.push(`${record.assetId} nodeId 与 active 成员 ${node.id} 不一致`);
+      }
+      sourcePackageIds.add(binding.sourcePackageId);
+      sourceStrategies.add(binding.sourceStrategy);
+      familyIds.add(binding.familyId);
+    }
+  }
+
+  const expectedSourcePackageId =
+    group.pattern === 'registered-depth-stack'
+      ? group.layerStack?.sourcePackageId
+      : null;
+  if (sourcePackageIds.size !== 1) {
+    errors.push('registered family 状态变体 sourcePackageId 不一致');
+  } else if (
+    expectedSourcePackageId &&
+    !sourcePackageIds.has(expectedSourcePackageId)
+  ) {
+    errors.push('registered family 状态变体 sourcePackageId 与景深组不一致');
+  }
+  if (sourceStrategies.size !== 1) {
+    errors.push('registered family 状态变体 sourceStrategy 不一致');
+  }
+
+  const contextRecords = allRecords.length > 0 ? allRecords : records;
+  for (const familyId of familyIds) {
+    const familyRecords = contextRecords.filter(
+      (record) =>
+        record?.lifecycle?.status === 'active' &&
+        record?.registeredFamilyBinding?.familyId === familyId,
+    );
+    const result = assertRegisteredFamilyRecords({
+      records: familyRecords,
+      registration: group.registration,
+      familyId,
+      pattern: group.pattern,
+      sourcePackageId: expectedSourcePackageId,
+    });
+    if (!result.passed) {
+      errors.push(
+        `registered family 状态来源 ${familyId} 上下文不完整：${result.errors.join('；')}`,
+      );
+    }
+  }
+  return {
+    passed: errors.length === 0,
+    errors,
+    familyIds: [...familyIds].sort(),
+    stateful: activeMembers.some(({node}) => node.kind === 'state-sequence'),
+  };
+};

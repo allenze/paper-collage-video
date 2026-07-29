@@ -14,6 +14,7 @@ import {
 } from './layer-stack-proof-lib.mjs';
 import {collectStyleProofTargets} from './quality-lib.mjs';
 import {
+  buildStyleTargetPatternProof,
   styleFingerprintForTarget,
   styleProofReportPath,
 } from './style-proof-lib.mjs';
@@ -25,6 +26,7 @@ import {
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {buildLoopingWorldProof} from './world-motion-proof-lib.mjs';
+import {spatialContractDebugOverlay} from './spatial-contract-lib.mjs';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -318,6 +320,10 @@ try {
   }
   const composites = [];
   for (const target of targets) {
+    const {spatialProof} = await buildStyleTargetPatternProof({
+      project,
+      target,
+    });
     const proofFrames = [];
     const shots = target.proofShots ?? [{sceneId: target.sceneId, nodeId: target.nodeId, proofTimeIds: target.proofTimeIds}];
     for (const shot of shots) {
@@ -331,7 +337,22 @@ try {
         const debugFile = path.join(debugDirectory, `${id}.png`);
         await sharp(fullFrame).extract(bounds).png().toFile(cropFile);
         await sharp(fullFrame)
-          .composite([{input: debugOverlay({width: project.video.width, height: project.video.height, bounds, label: `${target.compositeId} · ${proofTimeId}`})}])
+          .composite([{
+            input: target.pattern === 'spatial-contract'
+              ? spatialContractDebugOverlay({
+                  proof: spatialProof,
+                  sceneId: shot.sceneId,
+                  proofTimeId,
+                  width: project.video.width,
+                  height: project.video.height,
+                })
+              : debugOverlay({
+                  width: project.video.width,
+                  height: project.video.height,
+                  bounds,
+                  label: `${target.compositeId} · ${proofTimeId}`,
+                }),
+          }])
           .png()
           .toFile(debugFile);
         proofFrames.push({
@@ -428,6 +449,7 @@ try {
       proofFrames,
       layerStackProof,
       loopingWorldProof,
+      spatialProof,
     });
   }
 

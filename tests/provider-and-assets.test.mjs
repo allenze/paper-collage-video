@@ -16,6 +16,7 @@ import {
   expandCommandTemplate,
   loadAssetRequest,
   recordAssetProvenance,
+  refreshActiveCompositionFamilyFingerprints,
   resolveConfirmedProvider,
   runProviderCommand,
   validateAssetRequest,
@@ -68,6 +69,53 @@ test('asset lifecycle preserves audit records and enforces one active record', (
   assert.equal(manifest.assets[0].lifecycle.status, 'active');
   manifest.assets.push(record('2'.repeat(64), 'active'));
   assert.throws(() => assertAssetManifest(manifest, 'lifecycle-fixture'), /多个 active/);
+});
+
+test('provider recording preserves authoritative registered-family fingerprints', () => {
+  const registeredFingerprint = 'f'.repeat(64);
+  const compositionBinding = {
+    pattern: 'registered-depth-stack',
+    registrationId: 'stone-stack',
+    sourceMasterAssetId: 'stone-sheet',
+    canvas: {width: 960, height: 540},
+  };
+  const active = (assetId, extra = {}) => ({
+    assetId,
+    sha256: assetId.padEnd(64, '0').slice(0, 64),
+    requestFingerprint: assetId.padStart(64, '1').slice(0, 64),
+    compositionBinding,
+    stateBinding: null,
+    familyFingerprint: null,
+    lifecycle: {
+      status: 'active',
+      changedAt: '2026-01-01T00:00:00.000Z',
+      reason: 'fixture',
+      supersededBy: null,
+    },
+    ...extra,
+  });
+  const manifest = {
+    assets: [
+      active('stone-sheet'),
+      active('stone-rear', {
+        registeredFamilyBinding: {
+          familyFingerprint: registeredFingerprint,
+        },
+        familyFingerprint: registeredFingerprint,
+      }),
+    ],
+  };
+  refreshActiveCompositionFamilyFingerprints(manifest);
+  assert.equal(
+    manifest.assets.find(({assetId}) => assetId === 'stone-rear')
+      .familyFingerprint,
+    registeredFingerprint,
+  );
+  assert.match(
+    manifest.assets.find(({assetId}) => assetId === 'stone-sheet')
+      .familyFingerprint,
+    /^[a-f0-9]{64}$/,
+  );
 });
 
 test('manual image imports record provenance without a generation attempt', async () => {

@@ -9,6 +9,7 @@ import {
   resolveWorldStripSpeedFactor,
 } from '../src/worldStrip.mjs';
 import {resolveSequenceState} from './state-sequence-lib.mjs';
+import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -1364,15 +1365,25 @@ export const inspectSpatialContract = async (
   contract,
   options = {},
 ) => {
+  const hasActiveResponsivePlan = (
+    project.editorial?.responsivePlans ?? []
+  ).some(
+    ({profileId}) => profileId === project.editorial?.activeProfile,
+  );
+  const executableProject = hasActiveResponsivePlan
+    ? applyResponsiveDirectingPlan(project)
+    : project;
   if (contract.kind === 'grounding') {
-    return inspectGrounding(project, contract, options);
+    return inspectGrounding(executableProject, contract, options);
   }
   if (contract.kind === 'continuity') {
-    return inspectContinuity(project, contract);
+    return inspectContinuity(executableProject, contract);
   }
-  if (contract.kind === 'gait') return inspectGait(project, contract);
+  if (contract.kind === 'gait') {
+    return inspectGait(executableProject, contract);
+  }
   if (contract.kind === 'travel-facing') {
-    return inspectTravelFacing(project, contract);
+    return inspectTravelFacing(executableProject, contract);
   }
   return {
     passed: false,

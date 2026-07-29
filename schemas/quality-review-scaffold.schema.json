@@ -7,6 +7,7 @@
     "$schema",
     "schemaVersion",
     "projectSlug",
+    "reviewScope",
     "generatedAt",
     "sourceReport",
     "instructions",
@@ -19,6 +20,7 @@
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
     },
+    "reviewScope": {"enum": ["all", "style"]},
     "generatedAt": {"type": "string", "format": "date-time"},
     "sourceReport": {"$ref": "#/$defs/sourceReport"},
     "instructions": {"type": "string", "minLength": 1},

@@ -15,6 +15,7 @@ import {
   createQualityReviewScaffold,
   prepareQualityReport,
   recordQualityReviews,
+  requiresTransparentAssetSurface,
 } from '../scripts/quality-lib.mjs';
 import {deriveTimeline, validateProject} from '../scripts/project-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
@@ -126,6 +127,43 @@ test('request fingerprints ignore project-specific destinations but preserve gen
   assert.notEqual(registered, otherFamily);
 });
 
+test('opaque registered source sheets do not pretend to require runtime alpha', () => {
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'prop',
+      reviewScope: 'source-asset',
+      outputSurface: {mode: 'layer-sheet'},
+    }),
+    false,
+  );
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'character',
+      reviewScope: 'source-asset',
+      outputSurface: {mode: 'chroma-key'},
+    }),
+    false,
+  );
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'character',
+      reviewScope: 'runtime-visible',
+      outputSurface: null,
+    }),
+    true,
+  );
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'prop',
+      reviewScope: 'derivation-only',
+      registeredFamilyBinding: {
+        derivation: {sourceSurface: {mode: 'chroma-key'}},
+      },
+    }),
+    true,
+  );
+});
+
 test('quality scaffold binds pending checks to current proof hashes without pre-approving them', async () => {
   const slug = `scaffold-${process.pid}`;
   const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
@@ -142,6 +180,7 @@ test('quality scaffold binds pending checks to current proof hashes without pre-
     frame: path.join(distDirectory, 'frame.png'),
     crop: path.join(distDirectory, 'crop.png'),
     debug: path.join(distDirectory, 'debug.png'),
+    layerProof: path.join(distDirectory, 'layer-proof.png'),
   };
   await fs.mkdir(publicDirectory, {recursive: true});
   await fs.mkdir(evidenceDirectory, {recursive: true});
@@ -193,6 +232,11 @@ test('quality scaffold binds pending checks to current proof hashes without pre-
         crop: relative(files.crop),
         debugFrame: relative(files.debug),
       }],
+      layerStackProof: {
+        artifacts: {
+          neutralReconstruction: relative(files.layerProof),
+        },
+      },
     }],
   };
   await assert.rejects(
@@ -235,11 +279,51 @@ test('quality scaffold binds pending checks to current proof hashes without pre-
   );
   assert.ok(scaffold.reviews[1].evidenceFiles.some(({file}) => file === relative(files.debug)));
   assert.ok(
+    scaffold.reviews[1].evidenceFiles.some(
+      ({file}) => file === relative(files.layerProof),
+    ),
+  );
+  assert.ok(
     scaffold.reviews[1].evidenceFiles.some(({file}) => file === relative(files.reference)),
   );
   assert.ok(
     scaffold.reviews.every(({evidenceFiles}) =>
       evidenceFiles.every(({sha256}) => /^[a-f0-9]{64}$/.test(sha256)),
+    ),
+  );
+
+  const styleScopedStatus = structuredClone(status);
+  styleScopedStatus.report.composites.push({
+    compositeId: 'group:scene-02:future-rig',
+    fingerprint: 'c'.repeat(64),
+    memberNodeIds: [],
+    requiredChecks: ['final-composition-readable'],
+    semanticChecks: {'final-composition-readable': 'pending'},
+    status: 'needs-revision',
+  });
+  const styleScoped = await createQualityReviewScaffold({
+    status: styleScopedStatus,
+    projectSlug: slug,
+    reviewer: 'host-vision',
+    compositionProof: {
+      composites: [{
+        compositeId: 'group:scene-02:future-rig',
+        fingerprint: 'c'.repeat(64),
+        proofFrames: [],
+      }],
+    },
+    styleProof: compositionProof,
+    reviewScope: 'style',
+  });
+  assert.equal(styleScoped.reviewScope, 'style');
+  assert.ok(
+    styleScoped.reviews.some(
+      ({compositeId}) => compositeId === 'group:scene-01:rig',
+    ),
+  );
+  assert.ok(
+    !styleScoped.reviews.some(
+      ({compositeId}) => compositeId === 'group:scene-02:future-rig',
     ),
   );
   } finally {

@@ -1588,6 +1588,57 @@ export const verifyOutputFile = async (file, request = null) => {
   return {stat, metadata, keyPlaneObservation};
 };
 
+const compositionFamilyKey = (asset) => {
+  const binding = asset.compositionBinding;
+  if (!binding) return null;
+  return [
+    binding.pattern,
+    binding.registrationId ?? asset.assetId,
+    binding.sourceMasterAssetId ?? asset.assetId,
+    binding.canvas?.width,
+    binding.canvas?.height,
+  ].join(':');
+};
+
+export const refreshActiveCompositionFamilyFingerprints = (
+  manifest,
+  {familyKey = compositionFamilyKey} = {},
+) => {
+  const activeAssets = manifest.assets.filter(
+    ({lifecycle}) => lifecycle.status === 'active',
+  );
+  const familyKeys = new Set(activeAssets.map(familyKey).filter(Boolean));
+  for (const key of familyKeys) {
+    const members = activeAssets
+      .filter((asset) => familyKey(asset) === key)
+      .sort((left, right) => left.assetId.localeCompare(right.assetId));
+    const familyFingerprint = createHash('sha256')
+      .update(JSON.stringify(stableValue({
+        key,
+        members: members.map(({
+          assetId,
+          sha256: memberSha256,
+          requestFingerprint,
+          compositionBinding,
+          stateBinding,
+        }) => ({
+          assetId,
+          sha256: memberSha256,
+          requestFingerprint,
+          compositionBinding,
+          stateBinding,
+        })),
+      })))
+      .digest('hex');
+    for (const member of members) {
+      member.familyFingerprint =
+        member.registeredFamilyBinding?.familyFingerprint ??
+        familyFingerprint;
+    }
+  }
+  return manifest;
+};
+
 export const recordAssetProvenance = async ({
   request,
   output,
@@ -1733,31 +1784,7 @@ export const recordAssetProvenance = async ({
       };
     }
     manifest.assets.push(record);
-    const familyKey = (asset) => {
-      const binding = asset.compositionBinding;
-      if (!binding) return null;
-      return [
-        binding.pattern,
-        binding.registrationId ?? asset.assetId,
-        binding.sourceMasterAssetId ?? asset.assetId,
-        binding.canvas?.width,
-        binding.canvas?.height,
-      ].join(':');
-    };
-    const activeAssets = manifest.assets.filter(({lifecycle}) => lifecycle.status === 'active');
-    const familyKeys = new Set(activeAssets.map(familyKey).filter(Boolean));
-    for (const key of familyKeys) {
-      const members = activeAssets
-        .filter((asset) => familyKey(asset) === key)
-        .sort((left, right) => left.assetId.localeCompare(right.assetId));
-      const familyFingerprint = createHash('sha256')
-        .update(JSON.stringify(stableValue({
-          key,
-          members: members.map(({assetId, sha256: memberSha256, requestFingerprint, compositionBinding, stateBinding}) => ({assetId, sha256: memberSha256, requestFingerprint, compositionBinding, stateBinding})),
-        })))
-        .digest('hex');
-      for (const member of members) member.familyFingerprint = familyFingerprint;
-    }
+    refreshActiveCompositionFamilyFingerprints(manifest);
     await writeJson(manifestFile, manifest);
   } catch (error) {
     if (trackedAttempt && !recoverClosedAttempt) {

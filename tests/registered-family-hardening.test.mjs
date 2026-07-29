@@ -14,11 +14,16 @@ import {
 import {
   REGISTERED_FAMILY_RECOVERY_POLICY,
   applyRegisteredFamilyToProject,
+  assertRegisteredFamilyGroupMembers,
   assertRegisteredFamilyRecords,
   deriveRegisteredFamily,
   sha256File,
   validateRegisteredFamilySpec,
 } from '../scripts/registered-family-lib.mjs';
+import {
+  expectedRegisteredFamilyAlphaEvidenceCount,
+  stateSequenceRegistrationStatus,
+} from '../scripts/quality-lib.mjs';
 
 const writeImageRecord = async ({
   root,
@@ -675,6 +680,155 @@ test('registered-family CLI writes manifest provenance and a proof report withou
     await fs.rm(publicDirectory, {recursive: true, force: true});
     await fs.rm(distDirectory, {recursive: true, force: true});
   }
+});
+
+test('registered family group accepts a state-sequence subject only when every state keeps complete family context', async () => {
+  const fixture = await makeFamilyFixture();
+  try {
+    const first = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: fixture.spec,
+      manifest: structuredClone(fixture.manifest),
+      now: '2026-07-23T01:00:00.000Z',
+    });
+    const variantFingerprint = 'a'.repeat(64);
+    const variant = first.records.map((record) => {
+      const cloned = structuredClone(record);
+      cloned.assetId = `variant-${record.assetId}`;
+      cloned.familyFingerprint = variantFingerprint;
+      cloned.registeredFamilyBinding.familyId = 'fixture-family-variant';
+      cloned.registeredFamilyBinding.familyFingerprint = variantFingerprint;
+      cloned.registeredFamilyBinding.nodeId =
+        `variant-${record.registeredFamilyBinding.nodeId}`;
+      return cloned;
+    });
+    const recordForRole = (records, role) =>
+      records.find(
+        ({registeredFamilyBinding}) =>
+          registeredFamilyBinding.role === role,
+      );
+    const rear = recordForRole(first.records, 'support-rear');
+    const front = recordForRole(first.records, 'support-front');
+    const subject = recordForRole(first.records, 'subject');
+    const variantSubject = recordForRole(variant, 'subject');
+    const group = {
+      id: 'rig',
+      kind: 'group',
+      pattern: 'supported-subject',
+      registration: fixture.registration,
+      children: [
+        {
+          id: rear.registeredFamilyBinding.nodeId,
+          kind: 'asset',
+          slot: 'support-rear',
+        },
+        {
+          id: 'water-levels',
+          kind: 'state-sequence',
+          slot: 'subject',
+          states: [{src: 'low.png'}, {src: 'high.png'}],
+        },
+        {
+          id: front.registeredFamilyBinding.nodeId,
+          kind: 'asset',
+          slot: 'support-front',
+        },
+      ],
+    };
+    const members = [
+      {node: group.children[0], records: [rear]},
+      {
+        node: group.children[1],
+        records: [subject, variantSubject],
+      },
+      {node: group.children[2], records: [front]},
+    ];
+    const complete = assertRegisteredFamilyGroupMembers({
+      group,
+      members,
+      allRecords: [...first.records, ...variant],
+    });
+    assert.equal(complete.passed, true, complete.errors.join('\n'));
+    assert.equal(complete.stateful, true);
+    assert.deepEqual(
+      complete.familyIds,
+      ['fixture-family', 'fixture-family-variant'],
+    );
+
+    const incomplete = assertRegisteredFamilyGroupMembers({
+      group,
+      members,
+      allRecords: [
+        ...first.records,
+        ...variant.filter(
+          ({registeredFamilyBinding}) =>
+            registeredFamilyBinding.role !== 'support-rear',
+        ),
+      ],
+    });
+    assert.equal(incomplete.passed, false);
+    assert.match(incomplete.errors.join('\n'), /上下文不完整/);
+  } finally {
+    await fs.rm(fixture.root, {recursive: true, force: true});
+  }
+});
+
+test('quality accepts registered-family state sequences and counts every visual state for alpha evidence', () => {
+  const sequence = {
+    id: 'water-levels',
+    kind: 'state-sequence',
+    slot: 'subject',
+    poseFamilyId: 'water-levels',
+    registration: {
+      id: 'jar-registration',
+      sourceMasterAssetId: 'jar-master',
+      canvas: {width: 1920, height: 1080},
+      origin: 'top-left',
+    },
+    states: ['low', 'mid', 'high'].map((id) => ({
+      id,
+      facing: 'neutral',
+      anchors: {base: {x: 0.5, y: 0.85}},
+      identityReferenceAssetId: 'jar-master',
+      identityReferenceSha256: 'a'.repeat(64),
+    })),
+  };
+  const stateRecords = sequence.states.map(({id}) => ({
+    assetId: `jar-${id}`,
+    registeredFamilyBinding: {
+      familyId: `jar-family-${id}`,
+      registrationId: 'jar-registration',
+      sourceMasterAssetId: 'jar-master',
+      slot: 'subject',
+      canvas: {width: 1920, height: 1080},
+      origin: 'top-left',
+    },
+  }));
+  const status = stateSequenceRegistrationStatus({
+    sequence,
+    stateRecords,
+    registeredFamily: {passed: true},
+  });
+  assert.equal(status.passed, true);
+  assert.equal(status.mode, 'registered-family');
+  assert.equal(status.poseStateRegistrationsBound, false);
+  assert.equal(status.registeredFamilyStatesBound, true);
+
+  assert.equal(
+    expectedRegisteredFamilyAlphaEvidenceCount({
+      group: {children: [{}, {}, {}]},
+      familyRecords: [{}, {}, {}, {}, {}],
+    }),
+    5,
+  );
+  assert.equal(
+    stateSequenceRegistrationStatus({
+      sequence,
+      stateRecords,
+      registeredFamily: {passed: false},
+    }).passed,
+    false,
+  );
 });
 
 const writeAlphaFixture = async ({file, residue = false, extreme = false}) => {

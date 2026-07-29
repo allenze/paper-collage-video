@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  changedEditorialSceneIds,
   prepareDirectingRevision,
   prepareSemanticRevision,
+  storyboardConceptFingerprint,
 } from '../scripts/directing-revision-lib.mjs';
 import {compileStoryboardDirecting} from '../scripts/storyboard-lib.mjs';
 import {
@@ -27,6 +29,46 @@ const loadFixture = async () => {
   };
 };
 
+test('editorial attribution limits responsive placement changes to affected scenes', () => {
+  const before = {
+    timebase: {fps: 30, rounding: 'nearest'},
+    responsiveProfiles: [{id: '16:9', width: 1920, height: 1080}],
+    activeProfile: '16:9',
+    sceneDirecting: [
+      {sceneId: 'scene-01', placements: [{nodeId: 'crow', x: 0.2}]},
+      {sceneId: 'scene-02', placements: [{nodeId: 'jar', x: 0.6}]},
+    ],
+    responsivePlans: [{
+      profileId: '16:9',
+      scenes: [
+        {sceneId: 'scene-01', placements: [{nodeId: 'crow', x: 0.2}]},
+        {sceneId: 'scene-02', placements: [{nodeId: 'jar', x: 0.6}]},
+      ],
+    }],
+  };
+  const after = structuredClone(before);
+  after.sceneDirecting[1].placements[0].x = 0.62;
+  after.responsivePlans[0].scenes[1].placements[0].x = 0.62;
+  assert.deepEqual(
+    changedEditorialSceneIds({
+      before,
+      after,
+      sceneIds: ['scene-01', 'scene-02'],
+    }),
+    ['scene-02'],
+  );
+
+  after.activeProfile = '9:16';
+  assert.deepEqual(
+    changedEditorialSceneIds({
+      before,
+      after,
+      sceneIds: ['scene-01', 'scene-02'],
+    }),
+    ['scene-01', 'scene-02'],
+  );
+});
+
 test('preview directing revision preserves approvals and invalidates derived artifacts', async () => {
   const {storyboard, project, production} = await loadFixture();
   const supplied = structuredClone(storyboard);
@@ -49,6 +91,44 @@ test('preview directing revision preserves approvals and invalidates derived art
   assert.equal(result.production.artifacts.final, null);
   assert.equal(result.production.artifacts.directingRevision, 'projects/directing-revision-fixture/directing-revision.json');
   assert.equal(result.production.workItems.some(({id}) => id === 'directing-revision-scene-01'), true);
+});
+
+test('preview directing revision records spatial-contract corrections as directing changes', async () => {
+  const {storyboard, project, production} = await loadFixture();
+  const supplied = structuredClone(storyboard);
+  supplied.spatialContracts = [
+    {
+      id: 'subject-grounding',
+      kind: 'grounding',
+      sceneId: 'scene-01',
+      subjectNodeId: 'subject',
+      supportNodeId: 'background',
+      proofTimeIds: ['proof-action', 'proof-final'],
+      subjectAnchor: {mode: 'normalized', x: 0.5, y: 0.9},
+      supportSurface: {
+        points: [{x: 0.2, y: 0.8}, {x: 0.8, y: 0.8}],
+      },
+      supportScreenBand: {minY: 0.75, maxY: 0.85},
+      mode: 'contact',
+      maxGap: 0.03,
+      maxPenetration: 0.03,
+      maxRelativeDrift: 0.05,
+    },
+  ];
+  const result = prepareDirectingRevision({
+    currentStoryboard: storyboard,
+    suppliedStoryboard: supplied,
+    plan: project.plan,
+    styleProfile: project.styleProfile,
+    production,
+    reportPath: 'projects/directing-revision-fixture/directing-revision.json',
+    at: '2026-07-23T01:00:00.000Z',
+  });
+  assert.equal(result.report.spatialContractsChanged, true);
+  assert.deepEqual(result.report.changedSpatialContractIds, ['subject-grounding']);
+  assert.deepEqual(result.report.changedSceneIds, ['scene-01']);
+  assert.equal(result.storyboard.spatialContracts.length, 1);
+  assert.equal(result.report.protectedConceptFingerprint, storyboardConceptFingerprint(storyboard));
 });
 
 test('style-review directing revision preserves the approved concept before style approval exists', async () => {

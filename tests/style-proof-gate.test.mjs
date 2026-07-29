@@ -6,6 +6,8 @@ import test from 'node:test';
 import sharp from 'sharp';
 import {
   assertStyleProofReady,
+  assertStyleTargetPatternProof,
+  buildStyleTargetPatternProof,
   selectTargetAssetEvidence,
   selectTargetQualityAssetGroups,
   styleFingerprintForTarget,
@@ -33,6 +35,44 @@ test('evidence padding converts fractional layout bounds into an enclosing integ
       32,
     ),
     {left: 306, top: 274, width: 641, height: 641},
+  );
+});
+
+test('style spatial targets require an executable matching spatial proof', async () => {
+  const target = {
+    pattern: 'spatial-contract',
+    spatialContract: {
+      id: 'crow-flies-right',
+      kind: 'travel-facing',
+    },
+  };
+  assert.throws(
+    () => assertStyleTargetPatternProof({
+      target,
+      proof: {
+        compositeId: 'spatial-contract:crow-flies-right',
+        spatialProof: null,
+      },
+    }),
+    /缺少通过且匹配当前契约的空间样式证明/,
+  );
+  assert.doesNotThrow(() => assertStyleTargetPatternProof({
+    target,
+    proof: {
+      compositeId: 'spatial-contract:crow-flies-right',
+      spatialProof: {
+        contractId: 'crow-flies-right',
+        kind: 'travel-facing',
+        passed: true,
+      },
+    },
+  }));
+  assert.deepEqual(
+    await buildStyleTargetPatternProof({
+      project: {},
+      target: {pattern: 'parallax-rig'},
+    }),
+    {spatialProof: null},
   );
 });
 const manifestFixture = (projectSlug, assets) => ({

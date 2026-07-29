@@ -12,6 +12,7 @@ import {
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {selectStyleProofTargets} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {buildSpatialContractProof} from './spatial-contract-lib.mjs';
 
 const REQUIRED_ASSET_EVIDENCE = [
   'alphaMask',
@@ -26,6 +27,37 @@ const REQUIRED_FRAME_EVIDENCE = ['fullFrame', 'crop', 'debugFrame'];
 export const styleProofReportPath = (slug) => path.join(ROOT, 'dist', slug, 'style-motion-proof.json');
 
 export const styleFingerprintForTarget = (target) => target.fingerprint;
+
+export const buildStyleTargetPatternProof = async ({project, target}) => {
+  if (target.pattern !== 'spatial-contract') return {spatialProof: null};
+  const spatialProof = await buildSpatialContractProof(
+    project,
+    target.spatialContract,
+  );
+  if (!spatialProof.passed) {
+    const failed = spatialProof.checks
+      .filter(({passed}) => !passed)
+      .map(({id}) => id)
+      .join(', ');
+    throw new Error(
+      `spatial contract ${target.spatialContract.id} 的 style proof 未通过：${failed}。`,
+    );
+  }
+  return {spatialProof};
+};
+
+export const assertStyleTargetPatternProof = ({target, proof}) => {
+  if (target.pattern !== 'spatial-contract') return;
+  if (
+    proof.spatialProof?.contractId !== target.spatialContract.id ||
+    proof.spatialProof?.kind !== target.spatialContract.kind ||
+    proof.spatialProof?.passed !== true
+  ) {
+    throw new Error(
+      `${proof.compositeId} 缺少通过且匹配当前契约的空间样式证明。`,
+    );
+  }
+};
 
 const assertEvidenceFile = async (file, label) => {
   if (typeof file !== 'string' || file.length === 0) throw new Error(`风格拓扑证明缺少 ${label}。`);
@@ -105,6 +137,7 @@ export const assertStyleProofReady = async (slug) => {
     if (proof.fingerprint !== styleFingerprintForTarget(target)) {
       throw new Error(`${proof.compositeId} 的风格拓扑证明已过期；请重新生成。`);
     }
+    assertStyleTargetPatternProof({target, proof});
     const frames = proof.proofFrames ?? [];
     for (const proofTimeId of target.proofTimeIds) {
       const frame = frames.find((candidate) => candidate.proofTimeId === proofTimeId);

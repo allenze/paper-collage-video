@@ -86,6 +86,70 @@ const styleProofTarget = (storyboard) => {
   return plan ? {fingerprint: plan.fingerprint, targets: plan.targets} : null;
 };
 
+const editorialSceneScope = (editorial, sceneId) => {
+  const cues = (editorial?.cues ?? []).filter((cue) => cue.sceneId === sceneId);
+  const cueIds = new Set(cues.map(({id}) => id));
+  const transitions = (editorial?.transitions ?? []).filter(
+    (transition) =>
+      transition.sceneId === sceneId ||
+      transition.fromSceneId === sceneId ||
+      transition.toSceneId === sceneId,
+  );
+  return {
+    cues,
+    editPoints: (editorial?.editPoints ?? []).filter((point) =>
+      point.cueIds?.some((id) => cueIds.has(id)),
+    ),
+    bindings: (editorial?.bindings ?? []).filter(
+      (binding) => binding.sceneId === sceneId,
+    ),
+    sceneDirecting: (editorial?.sceneDirecting ?? []).find(
+      (directing) => directing.sceneId === sceneId,
+    ) ?? null,
+    resolvedEditPoints: (editorial?.resolvedEditPoints ?? []).filter(
+      (point) => point.sceneId === sceneId,
+    ),
+    responsivePlans: (editorial?.responsivePlans ?? []).map((profile) => ({
+      profileId: profile.profileId,
+      scene: profile.scenes?.find((scene) => scene.sceneId === sceneId) ?? null,
+    })),
+    transitionPlans: (editorial?.transitionPlans ?? []).filter(
+      (transition) =>
+        transition.sceneId === sceneId ||
+        transition.fromSceneId === sceneId ||
+        transition.toSceneId === sceneId,
+    ),
+    transitions,
+  };
+};
+
+const editorialGlobalScope = (editorial) => ({
+  timebase: editorial?.timebase ?? null,
+  wordTimingPolicy: editorial?.wordTimingPolicy ?? null,
+  media: editorial?.media ?? [],
+  responsiveProfiles: editorial?.responsiveProfiles ?? [],
+  activeProfile: editorial?.activeProfile ?? null,
+});
+
+export const changedEditorialSceneIds = ({
+  before,
+  after,
+  sceneIds,
+}) => {
+  const ids = [...sceneIds];
+  if (
+    hashCompositionValue(editorialGlobalScope(before)) !==
+    hashCompositionValue(editorialGlobalScope(after))
+  ) {
+    return ids.sort();
+  }
+  return ids.filter(
+    (sceneId) =>
+      hashCompositionValue(editorialSceneScope(before, sceneId)) !==
+      hashCompositionValue(editorialSceneScope(after, sceneId)),
+  ).sort();
+};
+
 const authorizationFingerprint = (authorization) =>
   hashCompositionValue({
     schemaVersion: authorization.schemaVersion,
@@ -190,6 +254,38 @@ export const prepareDirectingRevision = ({
     hashCompositionValue(candidate.sceneTransitions);
   const editorialChanged =
     currentStoryboard.editorial?.fingerprint !== candidate.editorial?.fingerprint;
+  const editorialSceneIds = editorialChanged
+    ? changedEditorialSceneIds({
+        before: currentStoryboard.editorial,
+        after: candidate.editorial,
+        sceneIds: candidate.scenes.map(({id}) => id),
+      })
+    : [];
+  const spatialContractsChanged =
+    hashCompositionValue(currentStoryboard.spatialContracts ?? []) !==
+    hashCompositionValue(candidate.spatialContracts ?? []);
+  const beforeSpatialContracts = new Map(
+    (currentStoryboard.spatialContracts ?? []).map((contract) => [
+      contract.id,
+      contract,
+    ]),
+  );
+  const afterSpatialContracts = new Map(
+    (candidate.spatialContracts ?? []).map((contract) => [
+      contract.id,
+      contract,
+    ]),
+  );
+  const changedSpatialContractIds = [
+    ...new Set([
+      ...beforeSpatialContracts.keys(),
+      ...afterSpatialContracts.keys(),
+    ]),
+  ].filter(
+    (id) =>
+      hashCompositionValue(beforeSpatialContracts.get(id) ?? null) !==
+      hashCompositionValue(afterSpatialContracts.get(id) ?? null),
+  ).sort();
   if (transitionsChanged) {
     for (const transition of candidate.sceneTransitions ?? []) {
       changedSceneIds.add(transition.fromSceneId);
@@ -197,7 +293,17 @@ export const prepareDirectingRevision = ({
     }
   }
   if (editorialChanged) {
-    for (const scene of candidate.scenes) changedSceneIds.add(scene.id);
+    for (const sceneId of editorialSceneIds) changedSceneIds.add(sceneId);
+  }
+  if (spatialContractsChanged) {
+    for (const contract of changedSpatialContractIds.flatMap((id) => [
+      beforeSpatialContracts.get(id),
+      afterSpatialContracts.get(id),
+    ]).filter(Boolean)) {
+      if (contract.sceneId) changedSceneIds.add(contract.sceneId);
+      if (contract.from?.sceneId) changedSceneIds.add(contract.from.sceneId);
+      if (contract.to?.sceneId) changedSceneIds.add(contract.to.sceneId);
+    }
   }
   if (changedSceneIds.size === 0) {
     throw new Error('导演重编没有产生任何实际变化。');
@@ -231,6 +337,9 @@ export const prepareDirectingRevision = ({
     changedScenes,
     transitionsChanged,
     editorialChanged,
+    changedEditorialSceneIds: editorialSceneIds,
+    spatialContractsChanged,
+    changedSpatialContractIds,
     editPointChanges: {
       before: currentStoryboard.editorial?.resolvedEditPoints ?? [],
       after: candidate.editorial?.resolvedEditPoints ?? [],

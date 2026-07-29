@@ -19,7 +19,7 @@ import {
 
 const args = process.argv.slice(2);
 const usage =
-  '用法：project:quality -- <slug> <prepare|status|scaffold|contact-sheet|record|record-batch> [--input=<reviews.json>] [--output=<path>] [--reviewer=<id>] [--quiet] [--json]；也兼容 <action> <slug>。';
+  '用法：project:quality -- <slug> <prepare|status|scaffold|contact-sheet|record|record-batch> [--scope=all|style] [--input=<reviews.json>] [--output=<path>] [--reviewer=<id>] [--quiet] [--json]；也兼容 <action> <slug>。';
 if (args.includes('--help') || args.includes('-h')) {
   console.log(usage);
   process.exit(0);
@@ -114,10 +114,12 @@ try {
   let incrementalScaffold = null;
   let contactSheets = null;
   if (action === 'scaffold') {
+    const reviewScope = valueFor('--scope') ?? 'all';
     const built = await buildQualityReviewScaffold({
       slug,
       reviewer: valueFor('--reviewer') ?? 'host-vision',
       includePassed: args.includes('--all'),
+      reviewScope,
     });
     status = built.status;
     const output = valueFor('--output') ?? `projects/${slug}/quality-review-scaffold.json`;
@@ -210,6 +212,7 @@ try {
         reviewer:
           reviews.find(({reviewer}) => reviewer?.trim())?.reviewer ??
           'host-vision',
+        reviewScope: payload.reviewScope ?? 'all',
       });
       const pendingFile = defaultPendingScaffoldFile(slug);
       await fs.writeFile(
