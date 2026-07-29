@@ -200,8 +200,30 @@ export const validateStoryboard = (
             if (stateIndex.get(playback.activeStateIds[index - 1]) >= stateIndex.get(playback.activeStateIds[index])) add('storyboard-sequence-active-order', 'activeStateIds 必须与 states 的顺序一致。', `${sequenceLocation}.playback.activeStateIds`);
           }
           const activeIds = new Set(playback.activeStateIds);
+          const exitStates = [];
           for (const state of sequence.states ?? []) {
-            if (!activeIds.has(state.id) && state.id !== playback.holdStateId && state.at >= playback.activeFrom) add('storyboard-sequence-prelude-state', `前置状态 ${state.id} 必须早于 activeFrom。`, `${sequenceLocation}.states`);
+            if (activeIds.has(state.id) || state.id === playback.holdStateId) continue;
+            if (state.at < playback.activeFrom) continue;
+            if (
+              playback.activeUntil !== undefined &&
+              state.at >= playback.activeUntil
+            ) {
+              exitStates.push(state);
+              continue;
+            }
+            add('storyboard-sequence-segment-state', `非活动状态 ${state.id} 必须早于 activeFrom，或在 activeUntil 后作为结束序列。`, `${sequenceLocation}.states`);
+          }
+          if (exitStates.length > 0) {
+            const hold = sequence.states.find(
+              ({id}) => id === playback.holdStateId,
+            );
+            if (
+              exitStates[0].at !== playback.activeUntil ||
+              !hold ||
+              hold.at < exitStates.at(-1).at
+            ) {
+              add('storyboard-sequence-exit-order', '结束序列必须从 activeUntil 开始，并以 holdStateId 作为最后状态。', `${sequenceLocation}.states`);
+            }
           }
         }
       }

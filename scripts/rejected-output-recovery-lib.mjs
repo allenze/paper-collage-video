@@ -58,6 +58,18 @@ const readLedger = async (file) => {
   return {events, sha256: await sha256File(file)};
 };
 
+const rectsOverlap = (left, right) =>
+  left.left < right.left + right.width &&
+  right.left < left.left + left.width &&
+  left.top < right.top + right.height &&
+  right.top < left.top + left.height;
+
+const observationKey = ({packageRole, stateId}) =>
+  packageRole === 'state' ? stateId : packageRole;
+
+const observationLabel = ({packageRole, stateId}) =>
+  packageRole === 'state' ? `state:${stateId ?? 'unknown'}` : packageRole;
+
 export const validateRejectedOutputRecoverySpec = (spec) => {
   const errors = [];
   if (spec?.schemaVersion !== 1) errors.push('schemaVersion 必须为 1');
@@ -80,14 +92,23 @@ export const validateRejectedOutputRecoverySpec = (spec) => {
     roles.size === 2 &&
     roles.has('subject') &&
     roles.has('support-front');
-  if (!isStandaloneImage && !isLayerSheet) {
-    errors.push('cells 必须是单个 image，或恰好包含 subject 与 support-front');
+  const isStateSheet =
+    cells.length >= 2 &&
+    cells.length <= 6 &&
+    roles.size === 1 &&
+    roles.has('state') &&
+    cells.every(({stateId}) => typeof stateId === 'string' && stateId.length > 0) &&
+    new Set(cells.map(({stateId}) => stateId)).size === cells.length;
+  if (!isStandaloneImage && !isLayerSheet && !isStateSheet) {
+    errors.push(
+      'cells 必须是单个 image、恰好包含 subject 与 support-front，或包含 2–6 个唯一 stateId 的完整状态表',
+    );
   }
   for (const cell of cells) {
     try {
       validateObservedKeyPlaneDeclaration(cell.keyPlane);
     } catch (error) {
-      errors.push(`${cell.packageRole ?? 'unknown'} ${error.message}`);
+      errors.push(`${observationLabel(cell) ?? 'unknown'} ${error.message}`);
     }
     if (
       !Number.isInteger(cell.sourceRect?.left) ||
@@ -99,7 +120,20 @@ export const validateRejectedOutputRecoverySpec = (spec) => {
       cell.sourceRect.width < 2 ||
       cell.sourceRect.height < 2
     ) {
-      errors.push(`${cell.packageRole ?? 'unknown'} sourceRect 无效`);
+      errors.push(`${observationLabel(cell) ?? 'unknown'} sourceRect 无效`);
+    }
+  }
+  for (let index = 0; index < cells.length; index += 1) {
+    for (let other = index + 1; other < cells.length; other += 1) {
+      if (
+        cells[index].sourceRect &&
+        cells[other].sourceRect &&
+        rectsOverlap(cells[index].sourceRect, cells[other].sourceRect)
+      ) {
+        errors.push(
+          `${observationLabel(cells[index])}/${observationLabel(cells[other])} sourceRect 不得重叠`,
+        );
+      }
     }
   }
   if (errors.length) {
@@ -184,9 +218,30 @@ export const inspectRejectedOutputRecovery = async ({
     throw new Error(`${spec.attemptId} 已存在 recovery-source 登记`);
   }
   const layoutCells = request.layerPackageBinding?.sheetLayout?.cells ?? [];
+  const stateSheet = request.stateSheetBinding ?? null;
+  const recoveryStateIds = spec.cells
+    .filter(({packageRole}) => packageRole === 'state')
+    .map(({stateId}) => stateId);
+  if (recoveryStateIds.length > 0) {
+    if (
+      request.compositionBinding?.pattern !== 'state-sequence' ||
+      !stateSheet ||
+      request.outputSurface?.mode !== 'chroma-key' ||
+      !request.outputSurface.keyColor
+    ) {
+      throw new Error('state recovery 必须对应历史 request 的 chroma-key stateSheetBinding');
+    }
+    const requestedStateIds = stateSheet.states?.map(({stateId}) => stateId) ?? [];
+    if (
+      requestedStateIds.length !== recoveryStateIds.length ||
+      requestedStateIds.some((stateId) => !recoveryStateIds.includes(stateId))
+    ) {
+      throw new Error('state recovery cells 必须覆盖历史 request 的完整状态族');
+    }
+  }
   const observations = [];
   for (const recoveryCell of spec.cells) {
-    const requestSurface = recoveryCell.packageRole === 'image'
+    const requestSurface = ['image', 'state'].includes(recoveryCell.packageRole)
       ? request.outputSurface
       : layoutCells.find(
         ({packageRole}) => packageRole === recoveryCell.packageRole,
@@ -196,8 +251,14 @@ export const inspectRejectedOutputRecovery = async ({
       !requestSurface.keyColor
     ) {
       throw new Error(
-        `${recoveryCell.packageRole} 必须对应历史 request 的 chroma-key 格`,
+        `${observationLabel(recoveryCell)} 必须对应历史 request 的 chroma-key 格`,
       );
+    }
+    if (
+      recoveryCell.sourceRect.left + recoveryCell.sourceRect.width > media.width ||
+      recoveryCell.sourceRect.top + recoveryCell.sourceRect.height > media.height
+    ) {
+      throw new Error(`${observationLabel(recoveryCell)} sourceRect 越过 provider 输出画布`);
     }
     if (
       recoveryCell.packageRole === 'image' &&
@@ -210,6 +271,36 @@ export const inspectRejectedOutputRecovery = async ({
     ) {
       throw new Error('standalone image recovery 必须观测完整 provider 输出画布');
     }
+    if (recoveryCell.packageRole === 'state') {
+      const state = stateSheet.states.find(
+        ({stateId}) => stateId === recoveryCell.stateId,
+      );
+      if (!state) {
+        throw new Error(`state recovery 包含未知状态：${recoveryCell.stateId}`);
+      }
+      const nominalLeft = Math.floor(
+        state.column * media.width / stateSheet.layout.columns,
+      );
+      const nominalRight = Math.floor(
+        (state.column + 1) * media.width / stateSheet.layout.columns,
+      );
+      const nominalTop = Math.floor(
+        state.row * media.height / stateSheet.layout.rows,
+      );
+      const nominalBottom = Math.floor(
+        (state.row + 1) * media.height / stateSheet.layout.rows,
+      );
+      if (
+        recoveryCell.sourceRect.left < nominalLeft ||
+        recoveryCell.sourceRect.top < nominalTop ||
+        recoveryCell.sourceRect.left + recoveryCell.sourceRect.width > nominalRight ||
+        recoveryCell.sourceRect.top + recoveryCell.sourceRect.height > nominalBottom
+      ) {
+        throw new Error(
+          `state:${recoveryCell.stateId} sourceRect 必须完全位于其名义状态格内`,
+        );
+      }
+    }
     const observation = await inspectObservedKeyPlaneFile({
       file: sourceFile,
       rect: recoveryCell.sourceRect,
@@ -217,6 +308,7 @@ export const inspectRejectedOutputRecovery = async ({
     });
     observations.push({
       packageRole: recoveryCell.packageRole,
+      ...(recoveryCell.stateId ? {stateId: recoveryCell.stateId} : {}),
       ...observation,
     });
   }
@@ -305,9 +397,9 @@ export const inspectRejectedOutputRecovery = async ({
       ledgerMutation: false,
       sourceSha256,
       observedKeyColors: Object.fromEntries(
-        observations.map(({packageRole, observedKeyColor}) => [
-          packageRole,
-          observedKeyColor,
+        observations.map((observation) => [
+          observationKey(observation),
+          observation.observedKeyColor,
         ]),
       ),
     },

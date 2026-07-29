@@ -255,3 +255,54 @@ documentation, and packaged-plugin copy are updated together.
   lifecycle records, so callers can query phase/artifact/error without
   re-enabling noisy per-frame logs; it deliberately reports exact percentage
   as unavailable when the underlying quiet CLI provides no authoritative value.
+
+## 2026-07-30 — Complete rejected state-sheet recovery without a new provider call
+
+- **Origin:** `wu-ya-he-shui-v2` horizontal-flight pose-family repair.
+- **Observed failure:** a complete 2x2 state sheet with safe explicit cells was
+  rejected by boundary color checks, but rejected-output recovery could not
+  represent a whole registered state family.
+- **Required capability:** recover one complete 2–6 state sheet with exact
+  state membership, non-overlapping in-cell source rectangles, per-cell
+  observed key colors, immutable ledger evidence, and normal state processing.
+- **Acceptance evidence:** schema/CLI/processor/provenance tests prove zero
+  provider calls, no ledger mutation, exact family membership, and active
+  registered state derivatives.
+- **Status:** implemented in the current update.
+
+## 2026-07-30 — Editable primitive world-motion proof
+
+- **Origin:** `wu-ya-he-shui-v2` carried-stone traverse.
+- **Observed failure:** an editable ellipse rendered correctly but composition
+  proof rejected it because only raster assets exposed an isolatable source.
+  After geometric isolation, a character-sized occupancy threshold still
+  rejected the intentionally small prop.
+- **Required capability:** isolate editable shapes from authored geometry,
+  preserve camera-compensated displacement and viewport visibility proof, and
+  apply a nonzero small-prop occupancy floor without weakening raster targets.
+- **Acceptance evidence:** deterministic tests cover geometric isolation and
+  the small-prop floor; a real composition report records `editable-shape`,
+  complete visibility, measurable travel, and a passing proof.
+- **Status:** implemented in the current update.
+
+## 2026-07-30 — Locomotion method must cover the visible travel window
+
+- **Origin:** `wu-ya-he-shui-v2` scene 04 initially translated a static
+  carry-stone pose from the ground to the bottle.
+- **Observed failure:** endpoint position and direction can be correct while a
+  bird, runner, walker, or swimmer visibly slides through space in a
+  non-locomotion pose.
+- **Required capability:** authoring guidance must bind visible travel to at
+  least two registered locomotion states over the travel window, reserve
+  contact poses for endpoints, and give independently editable carried props
+  their own visibility and world-motion proof.
+- **Acceptance evidence:** state cadence, travel-facing, endpoint grounding,
+  full motion-strip review, and independent prop motion all pass.
+- **Status:** implemented in the current update. Every explicit
+  `travel-facing` role now requires a matching `gait` cadence contract for the
+  same scene/node, and authoring/quality guidance treats gait as the generic
+  registered-state cadence proof for running, walking, flying, and swimming.
+  A loop may also exit through an ordered brake/landing/contact sequence
+  beginning at `activeUntil`, with `holdStateId` as the final state. Automatic
+  semantic classification of undeclared locomotion verbs remains a future
+  compiler enhancement.

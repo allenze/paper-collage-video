@@ -580,6 +580,17 @@ test('moving state-sequence directing requires travel-facing authoring and quali
     minimumTravel: 0.35,
     rationale: 'The crow faces the same direction as its visible flight path.',
   };
+  const gaitContract = {
+    id: 'crow-flight-cadence',
+    kind: 'gait',
+    sceneId: 'scene-1',
+    nodeId: 'runner',
+    fromProofTimeId: 'start',
+    throughProofTimeId: 'end',
+    stateIds: ['run-a', 'run-b'],
+    minimumChangesPerSecond: 2.4,
+    continueThroughWindowEnd: true,
+  };
   const storyboard = {
     scenes: [{
       id: 'scene-1',
@@ -601,9 +612,16 @@ test('moving state-sequence directing requires travel-facing authoring and quali
         }],
       },
     }],
-    spatialContracts: [contract],
+    spatialContracts: [contract, gaitContract],
   };
   assert.deepEqual(validateStoryboardSpatialContracts(storyboard), []);
+  const missingCadence = structuredClone(storyboard);
+  missingCadence.spatialContracts = [contract];
+  assert.ok(
+    validateStoryboardSpatialContracts(missingCadence).some(
+      ({code}) => code === 'storyboard-travel-facing-gait-required',
+    ),
+  );
   const missing = structuredClone(storyboard);
   missing.spatialContracts = [];
   assert.ok(

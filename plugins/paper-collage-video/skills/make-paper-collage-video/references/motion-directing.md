@@ -112,29 +112,35 @@ same `playback` mode on every related treatment, then declare the family-level
 `cycles`, `activeFrom`, and ordered `activeStateIds` on one of those treatments.
 The compiler carries the resolved playback plan into the runtime contract and
 rejects a composition whose registered state ids, timing, or playback drifts.
-For a closing hold, declare paired `activeUntil` and `holdStateId`. Use at least
-two alternating registered gait states for a sustained run; a single pose with
-a moving background is not running motion.
+For a closing hold, declare paired `activeUntil` and `holdStateId`. If the
+subject must visibly decelerate, land, or make contact before that hold, place
+ordered non-active exit states beginning exactly at `activeUntil`; the runtime
+plays them once and requires `holdStateId` to name the final exit state. Use at
+least two alternating registered locomotion states for sustained walking,
+running, flying, or swimming; a single pose with a moving background is not
+locomotion.
 
 Bind hero spatial truth separately in root `spatialContracts[]`. Use
 `grounding` for foot/seat contact, optional foreground paint order, and optional
 subtitle clearance; use `locked-contact` when the relative subject/support
 vector must remain invariant. Use `continuity` for adjacent causal scenes that
 must preserve world, recurring family, framing, camera, and both scenes'
-grounding. Use `gait` for an action window that must achieve a minimum
-registered-state cadence and continue through its final proof. These contracts
-measure the assembled runtime tree; moving a subject upward, assigning a large
-descendant z-index inside the wrong stacking context, or letting
-`activeUntil` freeze early cannot satisfy them.
+grounding. Use `gait` as the generic locomotion-cadence contract for an action
+window that must achieve a minimum registered-state cadence and continue
+through its final proof. These contracts measure the assembled runtime tree;
+moving a subject upward, assigning a large descendant z-index inside the wrong
+stacking context, or letting `activeUntil` freeze early cannot satisfy them.
 
 Use `travel-facing` whenever a state-sequence character moves horizontally
-through the directional `traverse` preset. Bind the ordered proof window, `left|right`
-travel direction, positive minimum travel, exact expected facing, and a
-human-readable rationale. Runtime proof samples the assembled pre-camera path,
-rejects backtracking, and checks every active registered state's facing. An
-intentional backward or sideways-looking performance remains possible only by
-declaring the differing expected facing and rationale explicitly. Do not
-classify an in-place `settle` as travel merely because it has local pose motion.
+through the directional `traverse` preset. Bind the ordered proof window,
+`left|right` travel direction, positive minimum travel, exact expected facing,
+and a human-readable rationale, plus a matching `gait` contract for the same
+scene and node. Runtime proof samples the assembled pre-camera path, rejects
+backtracking, checks every active registered state's facing, and rejects a
+moving character whose locomotion frames are not cycling. An intentional
+backward or sideways-looking performance remains possible only by declaring
+the differing expected facing and rationale explicitly. Do not classify an
+in-place `settle` as travel merely because it has local pose motion.
 
 Use continuous preset `traverse` for a subject whose world-relative path must be
 materially larger than camera drift; runtime validation requires a normalized

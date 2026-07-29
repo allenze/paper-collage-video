@@ -139,9 +139,31 @@ const finalizeStatePlayback = ({playback, states, key}) => {
       }
     }
     const active = new Set(resolved.activeStateIds);
+    const exitStates = [];
     for (const state of states) {
-      if (!active.has(state.id) && state.id !== resolved.holdStateId && state.at >= resolved.activeFrom) {
-        throw new Error(`状态家族 ${key} 的前置状态 ${state.id} 必须早于 activeFrom。`);
+      if (active.has(state.id) || state.id === resolved.holdStateId) continue;
+      if (state.at < resolved.activeFrom) continue;
+      if (
+        resolved.activeUntil !== undefined &&
+        state.at >= resolved.activeUntil
+      ) {
+        exitStates.push(state);
+        continue;
+      }
+      throw new Error(
+        `状态家族 ${key} 的非活动状态 ${state.id} 必须早于 activeFrom，或在 activeUntil 后作为结束序列。`,
+      );
+    }
+    if (exitStates.length > 0) {
+      const hold = states.find(({id}) => id === resolved.holdStateId);
+      if (
+        exitStates[0].at !== resolved.activeUntil ||
+        !hold ||
+        hold.at < exitStates.at(-1).at
+      ) {
+        throw new Error(
+          `状态家族 ${key} 的结束序列必须从 activeUntil 开始，并以 holdStateId 作为最后状态。`,
+        );
       }
     }
   }

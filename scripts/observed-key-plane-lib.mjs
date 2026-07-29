@@ -320,12 +320,14 @@ export const assertObservedKeyPlaneSet = ({
   observations,
   policy = DEFAULT_OBSERVED_KEY_PLANE_POLICY,
 }) => {
+  const labelFor = ({packageRole, stateId}) =>
+    packageRole === 'state' ? `state:${stateId ?? 'unknown'}` : packageRole;
   const failed = observations.filter(({passed}) => !passed);
   if (failed.length > 0) {
     throw new Error(
       failed
-        .map(({packageRole, reasons}) =>
-          `${packageRole}: ${reasons.join(', ')}`)
+        .map((observation) =>
+          `${labelFor(observation)}: ${observation.reasons.join(', ')}`)
         .join('；'),
     );
   }
@@ -337,7 +339,7 @@ export const assertObservedKeyPlaneSet = ({
       );
       if (distance > policy.maximumInterCellObservedDistance) {
         throw new Error(
-          `${observations[index].packageRole}/${observations[other].packageRole} ` +
+          `${labelFor(observations[index])}/${labelFor(observations[other])} ` +
           `观测色差 ${distance.toFixed(2)} 超过 ${policy.maximumInterCellObservedDistance}`,
         );
       }

@@ -506,8 +506,30 @@ export const validateCompositionStructure = ({
         for (const id of activeIds ?? []) if (!stateIndex.has(id)) add('error', 'composition-sequence-active-state', `活动状态 ${id} 不存在。`, `${nodeLocation}.playback.activeStateIds`);
         for (let index = 1; index < (activeIds?.length ?? 0); index += 1) if (stateIndex.get(activeIds[index - 1]) >= stateIndex.get(activeIds[index])) add('error', 'composition-sequence-active-state-order', 'activeStateIds 必须与 states 的顺序一致。', `${nodeLocation}.playback.activeStateIds`);
         const activeSet = new Set(activeIds);
+        const exitStates = [];
         for (const state of node.states) {
-          if (!activeSet.has(state.id) && state.id !== node.playback?.holdStateId && state.at >= (node.playback?.activeFrom ?? 1)) add('error', 'composition-sequence-prelude-state', `非活动状态 ${state.id} 必须在 activeFrom 前出现，或作为结束定格。`, `${nodeLocation}.states`);
+          if (activeSet.has(state.id) || state.id === node.playback?.holdStateId) continue;
+          if (state.at < (node.playback?.activeFrom ?? 1)) continue;
+          if (
+            node.playback?.activeUntil !== undefined &&
+            state.at >= node.playback.activeUntil
+          ) {
+            exitStates.push(state);
+            continue;
+          }
+          add('error', 'composition-sequence-segment-state', `非活动状态 ${state.id} 必须在 activeFrom 前出现，或在 activeUntil 后作为结束序列。`, `${nodeLocation}.states`);
+        }
+        if (exitStates.length > 0) {
+          const hold = node.states.find(
+            ({id}) => id === node.playback?.holdStateId,
+          );
+          if (
+            exitStates[0].at !== node.playback?.activeUntil ||
+            !hold ||
+            hold.at < exitStates.at(-1).at
+          ) {
+            add('error', 'composition-sequence-exit-order', '结束序列必须从 activeUntil 开始，并以 holdStateId 作为最后状态。', `${nodeLocation}.states`);
+          }
         }
       }
       if (!['cut', 'crossfade'].includes(node.transition?.type) || !(finite(node.transition?.durationSeconds) && node.transition.durationSeconds >= 0)) add('error', 'composition-sequence-transition', 'state-sequence transition 无效。', `${nodeLocation}.transition`);

@@ -31,6 +31,28 @@ const preludeStatesFor = (node) => {
   return states.filter(({id}) => !activeIds.has(id));
 };
 
+const exitStatesFor = (node) => {
+  if (node.playback.activeUntil === undefined) return [];
+  const hold = node.states.find(
+    ({id}) => id === node.playback.holdStateId,
+  );
+  if (!node.playback.activeStateIds) {
+    return hold
+      ? [{...hold, at: node.playback.activeUntil}]
+      : [];
+  }
+  const activeIds = new Set(node.playback.activeStateIds);
+  const authored = orderedStates(node).filter(
+    (state) =>
+      !activeIds.has(state.id) &&
+      state.at >= node.playback.activeUntil,
+  );
+  if (authored.length > 0) return authored;
+  return hold
+    ? [{...hold, at: node.playback.activeUntil}]
+    : [];
+};
+
 const resolveStateAt = ({states, phase}) => {
   let active = states[0] ?? null;
   for (const state of states) {
@@ -49,7 +71,10 @@ export const resolveSequenceState = ({node, progress}) => {
   const activeFrom = node.playback.activeFrom ?? 0;
   if (progress < activeFrom) return resolveStateAt({states: preludeStatesFor(node), phase: progress});
   if (node.playback.activeUntil !== undefined && progress >= node.playback.activeUntil) {
-    return node.states.find(({id}) => id === node.playback.holdStateId) ?? null;
+    return resolveStateAt({
+      states: exitStatesFor(node),
+      phase: progress,
+    });
   }
   const phase = resolveSequencePhase({...node.playback, progress});
   const states = normalizeActiveStates(activeStatesFor(node), Boolean(node.playback.activeStateIds));
@@ -64,8 +89,21 @@ export const resolveSequenceLayers = ({node, progress, durationSeconds}) => {
     return prelude ? [{...prelude, opacity: 1}] : [];
   }
   if (node.playback.activeUntil !== undefined && progress >= node.playback.activeUntil) {
-    const held = node.states.find(({id}) => id === node.playback.holdStateId);
-    return held ? [{...held, opacity: 1}] : [];
+    const exitStates = exitStatesFor(node);
+    const active = resolveStateAt({states: exitStates, phase: progress});
+    if (!active) return [];
+    if (node.transition.type === 'cut') return [{...active, opacity: 1}];
+    const activeIndex = exitStates.findIndex(({id}) => id === active.id);
+    if (activeIndex <= 0) return [{...active, opacity: 1}];
+    const fadeProgress = clamp01(
+      (progress - active.at) /
+        Math.max(node.transition.durationSeconds / durationSeconds, 1e-9),
+    );
+    if (fadeProgress >= 1) return [{...active, opacity: 1}];
+    return [
+      {...exitStates[activeIndex - 1], opacity: 1 - fadeProgress},
+      {...active, opacity: fadeProgress},
+    ];
   }
   const phase = resolveSequencePhase({...node.playback, progress});
   const states = normalizeActiveStates(activeStatesFor(node), Boolean(node.playback.activeStateIds));

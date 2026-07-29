@@ -302,6 +302,52 @@ test('v5 state sequences can loop during motion and hold a registered contact st
   assert.ok(validate(unknownHold, proofTimes).issues.some(({code}) => code === 'composition-sequence-hold-state'));
 });
 
+test('v5 state sequences can exit a locomotion loop through landing states before the final hold', () => {
+  const node = {
+    id: 'crow',
+    kind: 'state-sequence',
+    assetRole: 'character',
+    poseFamilyId: 'crow-flight',
+    registration: {id: 'crow-registration', sourceMasterAssetId: 'crow-sheet', canvas: {width: 100, height: 100}, origin: 'top-left'},
+    states: [
+      {id: 'glide', src: 'glide.png', at: 0},
+      {id: 'flap', src: 'flap.png', at: 0.26},
+      {id: 'brake', src: 'brake.png', at: 0.54},
+      {id: 'grounded', src: 'grounded.png', at: 0.62},
+    ],
+    playback: {
+      mode: 'loop',
+      cycles: 6,
+      activeFrom: 0.01,
+      activeUntil: 0.54,
+      holdStateId: 'grounded',
+      activeStateIds: ['glide', 'flap'],
+    },
+    transition: {type: 'cut', durationSeconds: 0},
+    z: 1,
+    transform: fullTransform(),
+    motion: still(),
+  };
+  assert.equal(resolveSequenceState({node, progress: 0.31}).id, 'glide');
+  assert.equal(resolveSequenceState({node, progress: 0.58}).id, 'brake');
+  assert.equal(resolveSequenceState({node, progress: 0.8}).id, 'grounded');
+  const proofTimes = [
+    {id: 'flap', at: 0.08, stateAssertions: [{nodeId: 'crow', stateId: 'flap'}]},
+    {id: 'glide', at: 0.31, stateAssertions: [{nodeId: 'crow', stateId: 'glide'}]},
+    {id: 'brake', at: 0.58, stateAssertions: [{nodeId: 'crow', stateId: 'brake'}]},
+    {id: 'grounded', at: 0.8, stateAssertions: [{nodeId: 'crow', stateId: 'grounded'}]},
+  ];
+  assert.deepEqual(validate(node, proofTimes).issues, []);
+
+  const gap = structuredClone(node);
+  gap.states.find(({id}) => id === 'brake').at = 0.56;
+  assert.ok(
+    validate(gap, proofTimes).issues.some(
+      ({code}) => code === 'composition-sequence-exit-order',
+    ),
+  );
+});
+
 test('state sequences can hold a prelude, then loop only an authored gait pair', () => {
   const node = {
     id: 'hare',

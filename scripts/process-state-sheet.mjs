@@ -33,6 +33,11 @@ const sha256 = async (file) => createHash('sha256').update(await fs.readFile(fil
 const explicitExtractionFor = ({spec, state}) =>
   spec.extraction?.cells.find(({stateId}) => stateId === state.id) ?? null;
 
+const stateObservationFor = ({source, stateId}) =>
+  source.providerObservation?.cells?.find(
+    (cell) => cell.packageRole === 'state' && cell.stateId === stateId,
+  ) ?? null;
+
 const assertExtractionFitsSource = ({cell, sourceMetadata}) => {
   const rect = cell.sourceRect;
   if (
@@ -120,8 +125,13 @@ try {
   const manifestFile = path.join(ROOT, 'projects', spec.projectSlug, 'assets-manifest.json');
   const manifest = assertAssetManifest(await readJson(manifestFile), spec.projectSlug);
   const source = manifest.assets.find(({assetId, lifecycle}) =>
-    assetId === spec.sourceAssetId && lifecycle?.status === 'active');
-  if (!source || path.resolve(ROOT, source.file) !== input) throw new Error('sourceAssetId 必须指向 provider 已登记的 sheet input');
+    assetId === spec.sourceAssetId &&
+    ['active', 'recovery-source'].includes(lifecycle?.status));
+  if (!source || path.resolve(ROOT, source.file) !== input) {
+    throw new Error(
+      'sourceAssetId 必须指向 provider 已登记的 active 或 recovery-source sheet input',
+    );
+  }
   const sourceBinding = source.stateSheetBinding ?? source.request?.stateSheetBinding;
   if (!sourceBinding || sourceBinding.poseFamilyId !== spec.poseFamilyId || sourceBinding.layout.columns !== spec.layout.columns || sourceBinding.layout.rows !== spec.layout.rows) throw new Error('state sheet spec 必须匹配 source asset 的 stateSheetBinding');
   const sourceStates = sourceBinding.states?.map(
@@ -153,11 +163,31 @@ try {
   }
   const recoveryPolicy = sourceBinding.recoveryPolicy;
   if (recoveryPolicy?.strategy !== 'preserve-sheet-context' || recoveryPolicy.localDeterministicFixFirst !== true || recoveryPolicy.isolatedCellGeneration !== 'forbidden' || recoveryPolicy.fallback !== 'full-sheet-regeneration') throw new Error('source state sheet 缺少 preserve-sheet-context 恢复策略');
+  if (source.lifecycle?.status === 'recovery-source') {
+    const observedStateIds = new Set(
+      (source.providerObservation?.cells ?? [])
+        .filter(
+          ({packageRole, stateId, passed, observedKeyColor}) =>
+            packageRole === 'state' &&
+            typeof stateId === 'string' &&
+            passed === true &&
+            /^#[0-9a-f]{6}$/i.test(observedKeyColor ?? ''),
+        )
+        .map(({stateId}) => stateId),
+    );
+    if (
+      source.providerObservation?.mode !== 'provider-native-observed' ||
+      source.providerObservation?.sourceAttempt?.status !== 'rejected' ||
+      spec.states.some(({id}) => !observedStateIds.has(id)) ||
+      observedStateIds.size !== spec.states.length
+    ) {
+      throw new Error(
+        'recovery-source state sheet 必须携带完整、通过且逐状态绑定的 observed key plane provenance',
+      );
+    }
+  }
   const sourceRecovery = source.stateSheetRecoveryBinding ?? source.request?.stateSheetRecoveryBinding ?? null;
   const sourceMetadata = await sharp(input).metadata();
-  const keyBackground = spec.extraction
-    ? await keyBackgroundFor({input, keyColor: spec.keying.keyColor})
-    : null;
 
   await fs.mkdir(outputDirectory, {recursive: true});
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'paper-collage-state-sheet-'));
@@ -166,13 +196,19 @@ try {
     if (spec.extraction) {
       for (const state of spec.states) {
         const cell = explicitExtractionFor({spec, state});
+        const observedState = stateObservationFor({
+          source,
+          stateId: state.id,
+        });
+        const keyColor =
+          observedState?.observedKeyColor ?? spec.keying.keyColor;
         assertExtractionFitsSource({cell, sourceMetadata});
         await writeExplicitRegisteredCell({
           input,
           destination: path.join(temporary, `${spec.poseFamilyId}-${state.id}-registered-key.png`),
           cell,
           canvas: spec.extraction.canvas,
-          keyBackground,
+          keyBackground: await keyBackgroundFor({input, keyColor}),
         });
       }
     } else {
@@ -186,12 +222,34 @@ try {
         ? path.join(temporary, `${spec.poseFamilyId}-${state.id}-registered-key.png`)
         : path.join(temporary, `${spec.poseFamilyId}-${index + 1}-registered-key.png`);
       const output = path.join(outputDirectory, stateOutputName({poseFamilyId: spec.poseFamilyId, stateId: state.id}));
+      const observedState = stateObservationFor({
+        source,
+        stateId: state.id,
+      });
+      const keyColor =
+        observedState?.observedKeyColor ?? spec.keying.keyColor;
       await run(python, [
         'scripts/remove_chroma_key.py', '--input', cell, '--out', output,
         '--transparent-threshold', '18', '--opaque-threshold', '95', '--edge-feather', '0.6',
-        '--key-color', spec.keying.keyColor, '--matte-erode', String(spec.keying.matteErode),
+        '--key-color', keyColor, '--matte-erode', String(spec.keying.matteErode),
         '--metadata', `${output}.key.json`, '--force',
       ]);
+      if (observedState) {
+        const metadataFile = `${output}.key.json`;
+        const keyingMetadata = await readJson(metadataFile);
+        await writeJson(metadataFile, {
+          ...keyingMetadata,
+          providerObservation: {
+            stateId: state.id,
+            requestedKeyColor: observedState.requestedKeyColor,
+            observedKeyColor: observedState.observedKeyColor,
+            policyFingerprint: observedState.policyFingerprint,
+            observationFingerprint:
+              source.providerObservation.observationFingerprint,
+            metrics: observedState.metrics,
+          },
+        });
+      }
       if (state.orientationTransform?.kind === 'horizontal-mirror') {
         const mirrored = path.join(
           temporary,
@@ -340,8 +398,20 @@ try {
     anchorPolicy: spec.anchorPolicy,
     anchorRegistrationProof,
     providerImageCalls,
-    generationMode: sourceRecovery?.mode ?? 'initial-family-sheet',
+    generationMode: sourceRecovery?.mode ??
+      (source.lifecycle?.status === 'recovery-source'
+        ? 'rejected-output-recovery'
+        : 'initial-family-sheet'),
+    sourceLifecycle: source.lifecycle?.status ?? null,
     recoverySourceSheetAssetId: sourceRecovery?.sourceSheetAssetId ?? null,
+    observedKeyColors: Object.fromEntries(
+      spec.states
+        .map((state) => [
+          state.id,
+          stateObservationFor({source, stateId: state.id})?.observedKeyColor,
+        ])
+        .filter(([, observedKeyColor]) => Boolean(observedKeyColor)),
+    ),
     repairedStateIds: sourceRecovery?.targetStateIds ?? [],
     preservedContextStateCount: sourceRecovery?.mode === 'masked-sheet-edit'
       ? derived.length - recoveryTargetCount

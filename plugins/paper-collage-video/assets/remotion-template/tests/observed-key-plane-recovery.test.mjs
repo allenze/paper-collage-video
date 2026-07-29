@@ -345,6 +345,211 @@ test('rejected output becomes an auditable recovery source without mutating its 
   );
 });
 
+test('rejected state sheet recovers from one complete set of non-overlapping observed state cells', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'state-sheet-recovery-'));
+  const slug = 'state-sheet-recovery';
+  const projectDirectory = path.join(root, 'projects', slug);
+  const sourceRelative =
+    `public/projects/${slug}/assets/crow-flight-sheet.png`;
+  const sourceFile = path.join(root, sourceRelative);
+  await fs.mkdir(path.dirname(sourceFile), {recursive: true});
+  const stateCell = async (shape) =>
+    sharp({
+      create: {
+        width: 100,
+        height: 100,
+        channels: 3,
+        background: '#f602e8',
+      },
+    })
+      .composite([{input: Buffer.from(shape)}])
+      .png()
+      .toBuffer();
+  const [glide, flap, brake, grounded] = await Promise.all([
+    stateCell('<svg width="100" height="100"><path d="M18 52 Q50 20 82 52 Q50 42 18 52Z" fill="#20252d"/></svg>'),
+    stateCell('<svg width="100" height="100"><path d="M22 74 L50 20 L78 74 Q50 50 22 74Z" fill="#20252d"/></svg>'),
+    stateCell('<svg width="100" height="100"><path d="M22 36 Q50 72 78 36 L66 76 H34Z" fill="#20252d"/></svg>'),
+    stateCell('<svg width="100" height="100"><ellipse cx="50" cy="55" rx="25" ry="30" fill="#20252d"/></svg>'),
+  ]);
+  await sharp({
+    create: {
+      width: 209,
+      height: 209,
+      channels: 3,
+      background: '#ffffff',
+    },
+  })
+    .composite([
+      {input: glide, left: 3, top: 3},
+      {input: flap, left: 106, top: 3},
+      {input: brake, left: 3, top: 106},
+      {input: grounded, left: 106, top: 106},
+    ])
+    .png()
+    .toFile(sourceFile);
+  const sourceSha256 = await sha256File(sourceFile);
+  const requestRelative = `projects/${slug}/requests/crow-flight-sheet.json`;
+  const states = [
+    ['glide', 0, 0],
+    ['flap', 0, 1],
+    ['brake', 1, 0],
+    ['grounded', 1, 1],
+  ].map(([stateId, row, column]) => ({
+    stateId,
+    row,
+    column,
+    facing: 'right',
+    anchors: [
+      {id: 'body-center', x: 0.5, y: 0.5},
+      {id: 'ground-contact', x: 0.5, y: 0.8},
+    ],
+  }));
+  const request = {
+    schemaVersion: 8,
+    projectSlug: slug,
+    assetId: 'crow-flight-sheet',
+    capability: 'image',
+    output: sourceRelative,
+    prompt: 'fixture',
+    outputSurface: {
+      mode: 'chroma-key',
+      keyColor: '#ff00ff',
+      tolerance: 24,
+      keyPlane: {
+        mode: 'provider-native-observed',
+        policyId: 'flat-v1',
+      },
+    },
+    compositionBinding: {
+      sceneId: 'scene',
+      nodeId: 'crow',
+      pattern: 'state-sequence',
+      registrationId: 'crow-registration',
+      sourceMasterAssetId: 'crow-master',
+      outputRole: 'registered-state-sheet',
+      canvas: {width: 209, height: 209},
+      derivation: {
+        method: 'provider-generation',
+        parentAssetId: 'crow-master',
+      },
+    },
+    stateSheetBinding: {
+      poseFamilyId: 'crow-flight',
+      registrationId: 'crow-registration',
+      sourceMasterAssetId: 'crow-master',
+      identityReferenceAssetId: 'crow-master',
+      anchorPolicy: {
+        requiredAnchorIds: ['body-center', 'ground-contact'],
+        maximumDrift: 0.06,
+      },
+      layout: {columns: 2, rows: 2},
+      states,
+      recoveryPolicy: {
+        strategy: 'preserve-sheet-context',
+        localDeterministicFixFirst: true,
+        isolatedCellGeneration: 'forbidden',
+        fallback: 'full-sheet-regeneration',
+      },
+    },
+    semanticBinding: {
+      riskClass: 'identity-critical',
+      contractIds: ['crow-identity'],
+    },
+  };
+  const attemptId = 'img-33333333-3333-4333-8333-333333333333';
+  const ledgerEvent = {
+    schemaVersion: 1,
+    attemptId,
+    event: 'closed',
+    status: 'rejected',
+    projectSlug: slug,
+    assetId: request.assetId,
+    provider: 'fixture-provider',
+    model: 'fixture-model',
+    requestFingerprint: generationRequestFingerprint(request),
+    quotaConsumed: true,
+    output: sourceRelative,
+    outputSha256: sourceSha256,
+    note: 'white gutters split the full-sheet key plane',
+    at: '2026-07-24T00:00:00.000Z',
+  };
+  const ledgerFile = path.join(projectDirectory, 'generation-attempts.jsonl');
+  await Promise.all([
+    writeJson(path.join(root, requestRelative), request),
+    writeJson(path.join(projectDirectory, 'assets-manifest.json'), {
+      schemaVersion: 4,
+      projectSlug: slug,
+      assets: [],
+    }),
+    fs.mkdir(projectDirectory, {recursive: true}).then(() =>
+      fs.writeFile(ledgerFile, `${JSON.stringify(ledgerEvent)}\n`, 'utf8')),
+  ]);
+  const cellRects = {
+    glide: {left: 3, top: 3, width: 100, height: 100},
+    flap: {left: 106, top: 3, width: 100, height: 100},
+    brake: {left: 3, top: 106, width: 100, height: 100},
+    grounded: {left: 106, top: 106, width: 100, height: 100},
+  };
+  const spec = {
+    schemaVersion: 1,
+    projectSlug: slug,
+    attemptId,
+    historicalRequest: requestRelative,
+    source: {file: sourceRelative, sha256: sourceSha256},
+    recoveryAssetId: request.assetId,
+    reason: 'complete-state-sheet-observed-plane-recovery',
+    cells: states.map(({stateId}) => ({
+      packageRole: 'state',
+      stateId,
+      sourceRect: cellRects[stateId],
+      keyPlane: {
+        mode: 'provider-native-observed',
+        policyId: 'flat-v1',
+      },
+    })),
+  };
+  const provider = {
+    id: 'fixture-provider',
+    adapter: 'host',
+    tool: 'fixture-image',
+    model: 'fixture-model',
+  };
+  const incomplete = structuredClone(spec);
+  incomplete.cells.pop();
+  await assert.rejects(
+    () => inspectRejectedOutputRecovery({root, spec: incomplete, provider}),
+    /完整状态族/,
+  );
+  const crossing = structuredClone(spec);
+  crossing.cells[0].sourceRect.width = 102;
+  await assert.rejects(
+    () => inspectRejectedOutputRecovery({root, spec: crossing, provider}),
+    /名义状态格/,
+  );
+  const ledgerBefore = await fs.readFile(ledgerFile);
+  const inspected = await inspectRejectedOutputRecovery({
+    root,
+    spec,
+    provider,
+    now: '2026-07-24T01:00:00.000Z',
+  });
+  assert.deepEqual(
+    inspected.providerObservation.cells.map(
+      ({packageRole, stateId}) => ({packageRole, stateId}),
+    ),
+    states.map(({stateId}) => ({packageRole: 'state', stateId})),
+  );
+  assert.deepEqual(inspected.recovery.observedKeyColors, {
+    glide: '#f602e8',
+    flap: '#f602e8',
+    brake: '#f602e8',
+    grounded: '#f602e8',
+  });
+  const recorded = await writeRejectedOutputRecovery(inspected);
+  assert.equal(recorded.ledgerSha256After, recorded.ledgerSha256Before);
+  assert.deepEqual(await fs.readFile(ledgerFile), ledgerBefore);
+});
+
 test('rejected standalone chroma-key output recovers only from one full-canvas observed plane', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-recovery-'));
   const slug = 'standalone-recovery';

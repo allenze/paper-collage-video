@@ -33,12 +33,13 @@
     "cells": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 2,
+      "maxItems": 6,
       "items": {
         "type": "object",
         "required": ["packageRole", "sourceRect", "keyPlane"],
         "properties": {
-          "packageRole": {"enum": ["image", "subject", "support-front"]},
+          "packageRole": {"enum": ["image", "subject", "support-front", "state"]},
+          "stateId": {"type": "string", "minLength": 1},
           "sourceRect": {
             "type": "object",
             "required": ["left", "top", "width", "height"],
@@ -60,6 +61,16 @@
             "additionalProperties": false
           }
         },
+        "allOf": [
+          {
+            "if": {
+              "required": ["packageRole"],
+              "properties": {"packageRole": {"const": "state"}}
+            },
+            "then": {"required": ["stateId"]},
+            "else": {"not": {"required": ["stateId"]}}
+          }
+        ],
         "additionalProperties": false
       }
     }

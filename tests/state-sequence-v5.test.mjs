@@ -19,7 +19,10 @@ import {
   summarizeActualPoseSheets,
   validateStateSheetSpec,
 } from '../scripts/state-sheet-lib.mjs';
-import {resolveTargetViewportSnapshot} from '../scripts/world-motion-proof-lib.mjs';
+import {
+  buildTargetWorldMotionProof,
+  resolveTargetViewportSnapshot,
+} from '../scripts/world-motion-proof-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STYLE_REQUEST = {
@@ -384,11 +387,56 @@ test('state sheet processor turns one recorded provider image into registered lo
       projectSlug: slug,
       assets: [
         {
-          recordId: '1'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+          recordId: '1'.padStart(64, '0'), lifecycle: {status: 'recovery-source', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture-recovered-state-sheet', supersededBy: null},
           assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
+          attemptId: 'img-44444444-4444-4444-8444-444444444444',
+          recoveredFromRejectedAttempt: true,
           requestFingerprint: 'a'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
           recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
           stateSheetBinding: binding, familyFingerprint: null,
+          providerObservation: {
+            schemaVersion: 1,
+            mode: 'provider-native-observed',
+            policyId: 'flat-v1',
+            policyFingerprint: 'c'.repeat(64),
+            observationFingerprint: 'd'.repeat(64),
+            sourceAttempt: {
+              attemptId: 'img-44444444-4444-4444-8444-444444444444',
+              status: 'rejected',
+              quotaConsumed: true,
+              requestFingerprint: 'a'.repeat(64),
+              output: path.relative(ROOT, input),
+            },
+            cells: ['reading', 'pointing'].map((stateId, index) => ({
+              schemaVersion: 1,
+              packageRole: 'state',
+              stateId,
+              mode: 'provider-native-observed',
+              policy: {},
+              policyFingerprint: 'c'.repeat(64),
+              requestedKeyColor: '#ff00ff',
+              observedKeyColor: '#ff00ff',
+              rect: {
+                left: index * 100,
+                top: 0,
+                width: 100,
+                height: 100,
+              },
+              metrics: {
+                totalPixels: 10000,
+                candidatePixels: 8000,
+                coverage: 0.8,
+                boundaryCoverage: 1,
+                requestedToObservedDistance: 0,
+                clusterP95Distance: 0,
+                clusterP99Distance: 0,
+                largestComponentShare: 1,
+                foregroundP10Distance: 100,
+              },
+              passed: true,
+              reasons: [],
+            })),
+          },
         },
         {
           recordId: '9'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'identity-reference', supersededBy: null},
@@ -423,7 +471,12 @@ test('state sheet processor turns one recorded provider image into registered lo
     assert.equal(report.schemaVersion, 4);
     assert.equal(report.anchorRegistrationProof.passed, true);
     assert.equal(report.identityReference.assetId, 'reader-master');
-    assert.equal(report.generationMode, 'initial-family-sheet');
+    assert.equal(report.generationMode, 'rejected-output-recovery');
+    assert.equal(report.sourceLifecycle, 'recovery-source');
+    assert.deepEqual(report.observedKeyColors, {
+      reading: '#ff00ff',
+      pointing: '#ff00ff',
+    });
     assert.equal(report.isolatedCellGenerationUsed, false);
     assert.equal(report.derivedStateCount, 2);
     assert.equal(report.avoidedIndividualCalls, 1);
@@ -699,4 +752,103 @@ test('world-motion proof resolves a looping state sequence through its hold stat
   } finally {
     await fs.rm(directory, {recursive: true, force: true});
   }
+});
+
+test('world-motion proof isolates an editable shape without a raster source', async () => {
+  const scene = {
+    camera: {preset: 'static'},
+    composition: {
+      nodes: [{
+        id: 'carried-stone',
+        kind: 'shape',
+        shape: 'ellipse',
+        style: {
+          fill: '#74685c',
+          stroke: '#3f352d',
+          strokeWidth: 2,
+          radius: 999,
+        },
+        z: 3,
+        depth: 0,
+        transform: {
+          x: 0.2,
+          y: 0.3,
+          width: 0.08,
+          height: 0.1,
+          anchorX: 0.5,
+          anchorY: 0.5,
+        },
+        motion: {
+          keyframes: [
+            {at: 0, offsetX: 0, offsetY: 0},
+            {at: 1, offsetX: 0.4, offsetY: -0.1},
+          ],
+        },
+      }],
+    },
+  };
+  const snapshot = await resolveTargetViewportSnapshot({
+    scene,
+    nodeId: 'carried-stone',
+    progress: 0.5,
+    video: {width: 1000, height: 500},
+  });
+  assert.equal(snapshot.source, 'shape:ellipse');
+  assert.equal(snapshot.sourceKind, 'editable-shape');
+  assert.deepEqual(snapshot.alphaBounds, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+  });
+  assert.ok(snapshot.visibleAreaRatio > 0.99);
+  assert.ok(snapshot.screenOccupancy > 0);
+});
+
+test('world-motion proof keeps a readable occupancy floor for small editable props', async () => {
+  const scene = {
+    camera: {preset: 'static'},
+    composition: {
+      nodes: [{
+        id: 'carried-stone',
+        kind: 'shape',
+        shape: 'ellipse',
+        style: {
+          fill: '#74685c',
+          stroke: '#3f352d',
+          strokeWidth: 2,
+          radius: 999,
+        },
+        z: 3,
+        depth: 0,
+        transform: {
+          x: 0.2,
+          y: 0.3,
+          width: 0.018,
+          height: 0.024,
+          anchorX: 0.5,
+          anchorY: 0.5,
+        },
+        motion: {
+          keyframes: [
+            {at: 0, offsetX: 0, offsetY: 0},
+            {at: 1, offsetX: 0.4, offsetY: -0.1},
+          ],
+        },
+      }],
+    },
+  };
+  const proof = await buildTargetWorldMotionProof({
+    scene,
+    nodeId: 'carried-stone',
+    proofTimes: [
+      {id: 'start', at: 0},
+      {id: 'end', at: 1},
+    ],
+    video: {width: 1920, height: 1080},
+  });
+  assert.equal(proof.thresholds.minimumScreenOccupancy, 0.00025);
+  assert.equal(proof.readabilityPassed, true);
+  assert.equal(proof.motionResolvable, true);
+  assert.equal(proof.passed, true);
 });

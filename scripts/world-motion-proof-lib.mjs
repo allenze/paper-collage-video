@@ -16,6 +16,7 @@ import {resolveSequenceState} from './state-sequence-lib.mjs';
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 const clamp01 = (value) => clamp(value, 0, 1);
 const cleanNumber = (value) => Number(value.toFixed(6));
+const EDITABLE_SHAPE_MINIMUM_SCREEN_OCCUPANCY = 0.00025;
 
 const ease = (value, name = 'ease-in-out') => {
   const t = clamp01(value);
@@ -128,6 +129,26 @@ const sourceForNode = (node, progress) => {
   return resolveSequenceState({node, progress})?.src ?? null;
 };
 
+const visualIsolationForNode = async (node, progress) => {
+  const source = sourceForNode(node, progress);
+  if (source) {
+    const alphaBounds = await alphaBoundsForSource(source);
+    return {
+      source,
+      sourceKind: 'asset',
+      alphaBounds,
+    };
+  }
+  if (node.kind === 'shape') {
+    return {
+      source: `shape:${node.shape}`,
+      sourceKind: 'editable-shape',
+      alphaBounds: {x: 0, y: 0, width: 1, height: 1},
+    };
+  }
+  return null;
+};
+
 export const resolveTargetViewportSnapshot = async ({
   scene,
   nodeId,
@@ -137,9 +158,11 @@ export const resolveTargetViewportSnapshot = async ({
 }) => {
   const entry = nodeEntry(scene, nodeId, video);
   if (!entry) throw new Error(`worldMotionProof target 不存在：${nodeId}`);
-  const source = sourceForNode(entry.node, progress);
-  if (!source) throw new Error(`worldMotionProof target ${nodeId} 没有可隔离的视觉来源。`);
-  const alpha = await alphaBoundsForSource(source);
+  const isolation = await visualIsolationForNode(entry.node, progress);
+  if (!isolation) {
+    throw new Error(`worldMotionProof target ${nodeId} 没有可隔离的视觉来源。`);
+  }
+  const {source, sourceKind, alphaBounds: alpha} = isolation;
   if (!alpha) throw new Error(`worldMotionProof target ${nodeId} 来源不存在：${source}`);
   const authored = {
     x: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'offsetX', 0),
@@ -185,6 +208,7 @@ export const resolveTargetViewportSnapshot = async ({
   return {
     progress,
     source,
+    sourceKind,
     alphaBounds: alpha,
     viewportBounds: Object.fromEntries(Object.entries(cameraRect).map(([key, value]) => [key, cleanNumber(value)])),
     centroid: {
@@ -228,6 +252,14 @@ export const buildTargetWorldMotionProof = async ({
   }
   const first = snapshots[0];
   const last = snapshots.at(-1);
+  const effectiveMinimumScreenOccupancy = snapshots.every(
+    ({sourceKind}) => sourceKind === 'editable-shape',
+  )
+    ? Math.min(
+        minimumScreenOccupancy,
+        EDITABLE_SHAPE_MINIMUM_SCREEN_OCCUPANCY,
+      )
+    : minimumScreenOccupancy;
   const displacement = first && last ? {
     x: cleanNumber(
       (last.centroid.x - first.centroid.x) * video.width -
@@ -241,7 +273,7 @@ export const buildTargetWorldMotionProof = async ({
   const readabilityPassed = snapshots.every(
     ({visibleAreaRatio, screenOccupancy}) =>
       visibleAreaRatio >= minimumVisibleAreaRatio &&
-      screenOccupancy >= minimumScreenOccupancy &&
+      screenOccupancy >= effectiveMinimumScreenOccupancy &&
       screenOccupancy <= maximumScreenOccupancy,
   );
   const displacementPixels = Math.hypot(displacement.x, displacement.y);
@@ -253,7 +285,7 @@ export const buildTargetWorldMotionProof = async ({
     targetId: nodeId,
     thresholds: {
       minimumVisibleAreaRatio,
-      minimumScreenOccupancy,
+      minimumScreenOccupancy: effectiveMinimumScreenOccupancy,
       maximumScreenOccupancy,
       minimumDisplacementRatio,
       requireMotion,

@@ -67,6 +67,7 @@ try {
       result.providerObservation.observationFingerprint,
     cells: result.providerObservation.cells.map((cell) => ({
       packageRole: cell.packageRole,
+      ...(cell.stateId ? {stateId: cell.stateId} : {}),
       requestedKeyColor: cell.requestedKeyColor,
       observedKeyColor: cell.observedKeyColor,
       metrics: cell.metrics,

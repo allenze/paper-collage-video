@@ -56,7 +56,8 @@
         ],
         "properties": {
           "schemaVersion": {"const": 1},
-          "packageRole": {"enum": ["image", "subject", "support-front"]},
+          "packageRole": {"enum": ["image", "subject", "support-front", "state"]},
+          "stateId": {"type": "string", "minLength": 1},
           "mode": {"const": "provider-native-observed"},
           "policy": {"type": "object"},
           "policyFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
@@ -102,6 +103,16 @@
           "passed": {"const": true},
           "reasons": {"type": "array", "maxItems": 0}
         },
+        "allOf": [
+          {
+            "if": {
+              "required": ["packageRole"],
+              "properties": {"packageRole": {"const": "state"}}
+            },
+            "then": {"required": ["stateId"]},
+            "else": {"not": {"required": ["stateId"]}}
+          }
+        ],
         "additionalProperties": false
       }
     }

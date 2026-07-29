@@ -1505,6 +1505,19 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
         }
       }
       if (contract.kind === 'travel-facing') {
+        const cadenceContract = contracts.find(
+          (candidate) =>
+            candidate.kind === 'gait' &&
+            candidate.sceneId === contract.sceneId &&
+            candidate.nodeId === contract.nodeId,
+        );
+        if (!cadenceContract) {
+          issues.push({
+            code: 'storyboard-travel-facing-gait-required',
+            message: `运动朝向契约 ${contract.id} 必须为同一角色声明 gait 契约，以证明可见位移期间持续使用至少两个注册动作状态。`,
+            location,
+          });
+        }
         const sequence = scene.compositionPlan?.stateSequences?.find(
           ({nodeId}) => nodeId === contract.nodeId,
         );
