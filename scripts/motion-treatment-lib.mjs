@@ -35,6 +35,7 @@ export const CHANGE_CLASSES = [
 ];
 export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field'];
 export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'traverse', 'sway', 'parallax-camera', 'scroll-world-x'];
+export const STATE_FACINGS = ['left', 'right', 'front', 'back', 'neutral'];
 export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'rise-drift', 'burst', 'orbit'];
 export const MOTIF_FIELD_DISTRIBUTIONS = ['scattered', 'grid', 'edge'];
 export const COMPOSITION_PATTERNS = [
@@ -386,12 +387,20 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (!CONTINUOUS_PRESETS.includes(motion.preset)) {
       addIssue(issues, 'treatment-motion-preset', `未知 continuous preset：${motion.preset}`, `${location}.motion.preset`);
     }
-    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
+    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'continuous-transform 不得夹带 state-sequence 字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'state-sequence') {
     for (const key of ['poseFamilyId', 'stateId', 'visualChange']) {
       if (!nonEmpty(motion[key])) addIssue(issues, `treatment-state-${key}`, `${key} 不能为空。`, `${location}.motion.${key}`);
+    }
+    if (!STATE_FACINGS.includes(motion.facing)) {
+      addIssue(
+        issues,
+        'treatment-state-facing',
+        'state-sequence facing 必须明确声明为 left、right、front、back 或 neutral。',
+        `${location}.motion.facing`,
+      );
     }
     if (!['once', 'loop', 'ping-pong'].includes(motion.playback)) {
       addIssue(issues, 'treatment-state-playback', 'state-sequence playback 无效。', `${location}.motion.playback`);
@@ -441,7 +450,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (motion.transition === 'cut' ? motion.durationSeconds !== 0 : !(Number.isFinite(motion.durationSeconds) && motion.durationSeconds > 0)) {
       addIssue(issues, 'treatment-visibility-duration', 'cut 时长必须为 0，其他 visibility-transition 时长必须大于 0。', `${location}.motion.durationSeconds`);
     }
-    if (['preset', 'poseFamilyId', 'stateId', 'visualChange', 'playback', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
+    if (['preset', 'poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'visibility-transition 不得夹带连续或状态序列字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'motif-field') {
@@ -481,7 +490,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         }
       }
     }
-    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds'].some((key) => motion[key] !== undefined)) {
+    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds'].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'motif-field 不得夹带状态或显隐字段。', `${location}.motion`);
     }
   } else if (motion && Object.keys(motion).some((key) => key !== 'kind')) {
@@ -712,6 +721,7 @@ const compileScene = (scene) => {
         family.states.push({
           id: treatment.motion.stateId,
           at: beat.at,
+          facing: treatment.motion.facing,
           visualChange: treatment.motion.visualChange,
         });
         if (treatment.necessity === 'required') family.necessity = 'required';
@@ -889,9 +899,20 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
       poseFamilyId: treatment.motion.poseFamilyId,
       necessity: 'enhancement',
       stateIds: new Set(),
+      stateFacings: new Map(),
     };
     family.targetIds.add(treatment.targetId);
     family.stateIds.add(treatment.motion.stateId);
+    const priorFacing = family.stateFacings.get(treatment.motion.stateId);
+    if (priorFacing && priorFacing !== treatment.motion.facing) {
+      throw new Error(
+        `状态家族 ${family.poseFamilyId} 的状态 ${treatment.motion.stateId} 跨镜头声明了冲突朝向：${priorFacing} / ${treatment.motion.facing}。请拆分为不同状态，或统一构图方向。`,
+      );
+    }
+    family.stateFacings.set(
+      treatment.motion.stateId,
+      treatment.motion.facing,
+    );
     if (treatment.necessity === 'required') family.necessity = 'required';
     stateFamilyMap.set(key, family);
   }
@@ -903,6 +924,9 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
       poseFamilyId: family.poseFamilyId,
       necessity: family.necessity,
       stateIds: [...family.stateIds].sort(),
+      stateFacings: [...family.stateFacings.entries()]
+        .map(([stateId, facing]) => ({stateId, facing}))
+        .sort((left, right) => left.stateId.localeCompare(right.stateId)),
       grid: family.stateIds.size <= 4
         ? {columns: 2, rows: 2}
         : {columns: 3, rows: 2},
@@ -1391,13 +1415,13 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
     }
     const runtimeShape = node && {
       poseFamilyId: node.poseFamilyId,
-      states: node.states?.map(({id, at}) => ({id, at})),
+      states: node.states?.map(({id, at, facing}) => ({id, at, facing})),
       playback: node.playback,
       transition: node.transition?.type,
     };
     const plannedShape = {
       poseFamilyId: planned.poseFamilyId,
-      states: planned.states.map(({id, at}) => ({id, at})),
+      states: planned.states.map(({id, at, facing}) => ({id, at, facing})),
       playback: planned.playback,
       transition: planned.transition,
     };

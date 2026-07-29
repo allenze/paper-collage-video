@@ -10,6 +10,7 @@ import {resolvePythonCommand} from './python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
   inspectStateAnchorRegistration,
+  resolveOutputStateRegistration,
   stateOutputName,
   validateStateSheetSpec,
 } from './state-sheet-lib.mjs';
@@ -132,7 +133,10 @@ try {
       anchors,
     }),
   ) ?? [];
-  if (JSON.stringify(sourceStates) !== JSON.stringify(spec.states)) throw new Error('state sheet spec 必须覆盖 source asset 的完整有序姿态族，不能只处理或替换单格');
+  const specSourceStates = spec.states.map(
+    ({orientationTransform, ...state}) => state,
+  );
+  if (JSON.stringify(sourceStates) !== JSON.stringify(specSourceStates)) throw new Error('state sheet spec 必须覆盖 source asset 的完整有序姿态族，不能只处理或替换单格');
   if (
     sourceBinding.identityReferenceAssetId !== spec.identityReference.assetId ||
     JSON.stringify(sourceBinding.anchorPolicy) !== JSON.stringify(spec.anchorPolicy)
@@ -188,6 +192,14 @@ try {
         '--key-color', spec.keying.keyColor, '--matte-erode', String(spec.keying.matteErode),
         '--metadata', `${output}.key.json`, '--force',
       ]);
+      if (state.orientationTransform?.kind === 'horizontal-mirror') {
+        const mirrored = path.join(
+          temporary,
+          `${spec.poseFamilyId}-${state.id}-horizontal-mirror.png`,
+        );
+        await sharp(output).flop().png().toFile(mirrored);
+        await fs.copyFile(mirrored, output);
+      }
     }
   } finally {
     await fs.rm(temporary, {recursive: true, force: true});
@@ -204,7 +216,10 @@ try {
   const dimensions = new Set(members.map(({metadata}) => `${metadata.width}x${metadata.height}`));
   if (dimensions.size !== 1) throw new Error(`注册状态格尺寸不一致：${[...dimensions].join(', ')}`);
   const anchorRegistrationProof = inspectStateAnchorRegistration({
-    states: spec.states,
+    states: spec.states.map((state) => ({
+      ...state,
+      ...resolveOutputStateRegistration(state),
+    })),
     anchorPolicy: spec.anchorPolicy,
   });
   if (!anchorRegistrationProof.passed) {
@@ -213,6 +228,7 @@ try {
   const anchorEvidence = new Map();
   for (const member of members) {
     const state = spec.states.find(({id}) => id === member.stateId);
+    const outputRegistration = resolveOutputStateRegistration(state);
     const evidenceFile = path.join(
       outputDirectory,
       `${spec.poseFamilyId}-${member.stateId}-anchors.png`,
@@ -220,7 +236,7 @@ try {
     await writeAnchorOverlay({
       input: path.resolve(ROOT, member.file),
       output: evidenceFile,
-      anchors: state.anchors,
+      anchors: outputRegistration.anchors,
       width: member.metadata.width,
       height: member.metadata.height,
     });
@@ -233,6 +249,7 @@ try {
   const recordedAt = new Date().toISOString();
   const derived = members.map(({stateId, sha256: memberSha256, file, stat, metadata}) => {
     const state = spec.states.find(({id}) => id === stateId);
+    const outputRegistration = resolveOutputStateRegistration(state);
     const assetId = `${spec.poseFamilyId}-${stateId}`;
     const requestFingerprint = createHash('sha256').update(`${source.requestFingerprint}:${stateId}:${familyFingerprint}`).digest('hex');
     return {
@@ -271,6 +288,7 @@ try {
             ? explicitExtractionFor({spec, state}).placement
             : null,
           registrationCanvas: spec.extraction?.canvas ?? null,
+          orientationTransform: state.orientationTransform ?? null,
         },
       },
       stateBinding: {
@@ -278,8 +296,8 @@ try {
         stateId,
         registrationId: spec.registration.id,
         sourceMasterAssetId: spec.registration.sourceMasterAssetId,
-        facing: state.facing,
-        anchors: state.anchors,
+        facing: outputRegistration.facing,
+        anchors: outputRegistration.anchors,
         identityReferenceAssetId: identityReference.assetId,
         identityReferenceSha256: identityReference.sha256,
         anchorEvidence: anchorEvidence.get(stateId),

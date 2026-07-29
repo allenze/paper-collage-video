@@ -14,6 +14,7 @@ import {
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
+  resolveOutputStateRegistration,
   stateOutputName,
   summarizeActualPoseSheets,
   validateStateSheetSpec,
@@ -41,6 +42,49 @@ const stateContract = (state) => ({
   ...state,
   facing: 'right',
   anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+});
+
+test('horizontal mirror derives opposite facing and registered anchors deterministically', () => {
+  const source = {
+    id: 'stride',
+    facing: 'left',
+    anchors: [{id: 'ground-contact', x: 0.25, y: 0.9}],
+    orientationTransform: {
+      kind: 'horizontal-mirror',
+      outputFacing: 'right',
+    },
+  };
+  assert.deepEqual(resolveOutputStateRegistration(source), {
+    facing: 'right',
+    anchors: [{id: 'ground-contact', x: 0.75, y: 0.9}],
+  });
+  const invalid = {
+    schemaVersion: 1,
+    projectSlug: 'fixture-project',
+    sceneId: 'scene-1',
+    nodeId: 'reader',
+    poseFamilyId: 'reader-poses',
+    sourceAssetId: 'reader-sheet',
+    input: 'public/reader-sheet.png',
+    outputDirectory: 'public/states',
+    registration: {
+      id: 'reader-registration',
+      sourceMasterAssetId: 'reader-master',
+    },
+    identityReference: {assetId: 'reader-master'},
+    anchorPolicy,
+    layout: {columns: 2, rows: 1},
+    states: [
+      {...stateContract({id: 'reading', row: 0, column: 0}), orientationTransform: {kind: 'horizontal-mirror', outputFacing: 'right'}},
+      stateContract({id: 'pointing', row: 0, column: 1}),
+    ],
+    keying: {keyColor: '#ff00ff', matteErode: 1},
+  };
+  assert.ok(
+    validateStateSheetSpec(invalid).some((error) =>
+      error.includes('orientationTransform'),
+    ),
+  );
 });
 
 const sheetRequest = () => ({
@@ -313,7 +357,7 @@ test('state sheet processor turns one recorded provider image into registered lo
     await fs.mkdir(projectDirectory, {recursive: true});
     await fs.mkdir(publicDirectory, {recursive: true});
     const left = await sharp({create: {width: 100, height: 100, channels: 3, background: '#ff00ff'}})
-      .composite([{input: Buffer.from('<svg width="100" height="100"><circle cx="50" cy="54" r="28" fill="#3b7d42"/></svg>')}])
+      .composite([{input: Buffer.from('<svg width="100" height="100"><circle cx="30" cy="54" r="24" fill="#3b7d42"/></svg>')}])
       .png().toBuffer();
     const right = await sharp({create: {width: 100, height: 100, channels: 3, background: '#ff00ff'}})
       .composite([{input: Buffer.from('<svg width="100" height="100"><rect x="24" y="24" width="52" height="60" rx="12" fill="#d48a32"/></svg>')}])
@@ -363,7 +407,13 @@ test('state sheet processor turns one recorded provider image into registered lo
       layout: {columns: 2, rows: 1}, states: [
         {id: 'reading', row: 0, column: 0},
         {id: 'pointing', row: 0, column: 1},
-      ].map(stateContract),
+      ].map((state) => ({
+        ...stateContract(state),
+        orientationTransform: {
+          kind: 'horizontal-mirror',
+          outputFacing: 'left',
+        },
+      })),
       keying: {keyColor: '#ff00ff', matteErode: 1},
     }, null, 2)}\n`);
     const processed = spawnSync(process.execPath, ['scripts/process-state-sheet.mjs', path.relative(ROOT, specFile)], {cwd: ROOT, encoding: 'utf8'});
@@ -385,6 +435,35 @@ test('state sheet processor turns one recorded provider image into registered lo
     const manifest = JSON.parse(await fs.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'));
     assert.equal(manifest.assets.filter(({adapter}) => adapter === 'registered-sheet-cell').length, 2);
     assert.equal(new Set(manifest.assets.filter(({stateBinding}) => stateBinding).map(({familyFingerprint}) => familyFingerprint)).size, 1);
+    const reading = manifest.assets.find(
+      ({assetId, lifecycle}) =>
+        assetId === 'reader-poses-reading' && lifecycle.status === 'active',
+    );
+    assert.equal(reading.stateBinding.facing, 'left');
+    assert.equal(
+      reading.compositionBinding.derivation.orientationTransform.kind,
+      'horizontal-mirror',
+    );
+    const alphaCentroidX = await sharp(
+      path.join(outputDirectory, 'reader-poses-reading.png'),
+    ).ensureAlpha().raw().toBuffer({resolveWithObject: true}).then(
+      ({data, info}) => {
+        let weightedX = 0;
+        let alphaTotal = 0;
+        for (let y = 0; y < info.height; y += 1) {
+          for (let x = 0; x < info.width; x += 1) {
+            const alpha = data[(y * info.width + x) * info.channels + 3];
+            weightedX += x * alpha;
+            alphaTotal += alpha;
+          }
+        }
+        return weightedX / alphaTotal;
+      },
+    );
+    assert.ok(
+      alphaCentroidX > 60,
+      `expected mirrored alpha centroid > 60, got ${alphaCentroidX}`,
+    );
     assert.deepEqual(summarizeActualPoseSheets(manifest), {
       families: [{
         poseFamilyId: 'reader-poses',

@@ -149,6 +149,9 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'subtitle-clearance',
   'causal-continuity',
   'gait-cadence-clean',
+  'signed-travel-direction-correct',
+  'travel-facing-readable',
+  'travel-monotonic-clean',
 ];
 
 export const QUALITY_CHECKS = [
@@ -202,6 +205,12 @@ const COMPOSITE_PROFILES = {
     'final-composition-readable',
   ],
   'spatial-gait': ['gait-cadence-clean', 'final-composition-readable'],
+  'spatial-travel-facing': [
+    'signed-travel-direction-correct',
+    'travel-facing-readable',
+    'travel-monotonic-clean',
+    'final-composition-readable',
+  ],
 };
 
 const requiredChecksForSpatialContract = (contract) => {
@@ -210,6 +219,9 @@ const requiredChecksForSpatialContract = (contract) => {
   }
   if (contract.kind === 'gait') {
     return COMPOSITE_PROFILES['spatial-gait'];
+  }
+  if (contract.kind === 'travel-facing') {
+    return COMPOSITE_PROFILES['spatial-travel-facing'];
   }
   return [
     ...COMPOSITE_PROFILES['spatial-grounding'],
@@ -974,7 +986,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
           nodeId: contract.subjectNodeId,
           proofTimeIds: contract.proofTimeIds,
         }]
-      : contract.kind === 'gait'
+      : contract.kind === 'gait' || contract.kind === 'travel-facing'
         ? [{
             sceneId: contract.sceneId,
             nodeId: contract.nodeId,
@@ -1004,7 +1016,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
             contract.frontOcclusion?.nodeId,
           ].filter(Boolean),
         }]
-      : contract.kind === 'gait'
+      : contract.kind === 'gait' || contract.kind === 'travel-facing'
         ? [{sceneId: contract.sceneId, nodeIds: [contract.nodeId]}]
         : [
             {

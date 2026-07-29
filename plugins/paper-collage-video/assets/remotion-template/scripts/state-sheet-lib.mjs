@@ -17,6 +17,22 @@ const rectsOverlap = (left, right) =>
 const validFacing = (value) =>
   ['left', 'right', 'front', 'back', 'neutral'].includes(value);
 
+export const resolveOutputStateRegistration = (state) => {
+  if (state?.orientationTransform?.kind !== 'horizontal-mirror') {
+    return {
+      facing: state?.facing,
+      anchors: state?.anchors ?? [],
+    };
+  }
+  return {
+    facing: state.orientationTransform.outputFacing,
+    anchors: (state.anchors ?? []).map((anchor) => ({
+      ...anchor,
+      x: 1 - anchor.x,
+    })),
+  };
+};
+
 const anchorMap = (anchors) =>
   new Map((anchors ?? []).map((anchor) => [anchor.id, anchor]));
 
@@ -88,6 +104,19 @@ export const validateStateSheetSpec = (spec) => {
     if (state.row !== expectedRow || state.column !== expectedColumn) errors.push(`state ${state.id ?? index} 必须按行优先连续排布在 ${expectedRow}:${expectedColumn}`);
     if (state.row >= rows || state.column >= columns) errors.push(`state ${state.id ?? index} 格位越界`);
     if (!validFacing(state.facing)) errors.push(`state ${state.id ?? index} facing 无效`);
+    if (state.orientationTransform !== undefined) {
+      const transform = state.orientationTransform;
+      const validHorizontalMirror =
+        transform?.kind === 'horizontal-mirror' &&
+        ['left', 'right'].includes(state.facing) &&
+        ['left', 'right'].includes(transform.outputFacing) &&
+        transform.outputFacing !== state.facing;
+      if (!validHorizontalMirror) {
+        errors.push(
+          `state ${state.id ?? index} orientationTransform 必须把 left/right 水平镜像为相反 outputFacing`,
+        );
+      }
+    }
     const anchors = anchorMap(state.anchors);
     if (
       !Array.isArray(state.anchors) ||
@@ -113,7 +142,10 @@ export const validateStateSheetSpec = (spec) => {
   }
   if (spec?.states?.length > columns * rows) errors.push('states 数量超过 sheet 容量');
   const anchorRegistration = inspectStateAnchorRegistration({
-    states: spec?.states ?? [],
+    states: (spec?.states ?? []).map((state) => ({
+      ...state,
+      ...resolveOutputStateRegistration(state),
+    })),
     anchorPolicy: spec?.anchorPolicy,
   });
   if (!anchorRegistration.passed) {

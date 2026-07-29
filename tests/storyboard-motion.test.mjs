@@ -409,7 +409,7 @@ test('style proof planning covers semantic, coupled, and state risks with the fe
     importance: 'hero',
     necessity: 'required',
     changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: 'butterfly-flight', stateId: 'folded', visualChange: 'Wings folded', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'butterfly-flight', stateId: 'folded', facing: 'right', visualChange: 'Wings folded', playback: 'once', transition: 'cut'},
     composition: {pattern: 'supported-subject', relationship: {id: 'butterfly-on-flower', predicate: 'on', object: 'flower', proof: 'Butterfly remains registered to the flower'}},
     graphic: null,
     semanticRisk: 'topology',
@@ -703,13 +703,13 @@ test('Cao Chong-style hero actions compile to one context-preserving pose sheet'
   scene.beats[0].treatments = [{
     id: 'cao-hold-book', targetId: 'cao', importance: 'hero', necessity: 'required',
     changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'holding-book', visualChange: 'Cao holds the open book', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'holding-book', facing: 'right', visualChange: 'Cao holds the open book', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-establish', rationale: 'Start the hero pose family on the common canvas.',
   }];
   scene.beats[1].treatments = [{
     id: 'cao-point-board', targetId: 'cao', importance: 'hero', necessity: 'required',
     changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'pointing-board', visualChange: 'Cao points at the board', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'pointing-board', facing: 'right', visualChange: 'Cao points at the board', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-action', rationale: 'A real limb change needs a registered state, not rotation.',
   }];
   scene.proofTimes[0].stateAssertions = [{nodeId: 'cao', stateId: 'holding-book'}];
@@ -728,6 +728,10 @@ test('Cao Chong-style hero actions compile to one context-preserving pose sheet'
     poseFamilyId: 'cao-actions',
     necessity: 'required',
     stateIds: ['holding-book', 'pointing-board'],
+    stateFacings: [
+      {stateId: 'holding-book', facing: 'right'},
+      {stateId: 'pointing-board', facing: 'right'},
+    ],
     grid: {columns: 2, rows: 2},
     providerCalls: 1,
     repairPolicy: 'masked-edit-complete-sheet',
@@ -748,6 +752,7 @@ test('temporal instances that reuse one pose family consume one registered sheet
       kind: 'state-sequence',
       poseFamilyId: 'hare-actions',
       stateId,
+      facing: 'right',
       visualChange: `${targetId} shows ${stateId}`,
       playback: 'once',
       transition: 'cut',
@@ -785,6 +790,11 @@ test('temporal instances that reuse one pose family consume one registered sheet
     poseFamilyId: 'hare-actions',
     necessity: 'required',
     stateIds: ['head-low', 'run', 'sleep'],
+    stateFacings: [
+      {stateId: 'head-low', facing: 'right'},
+      {stateId: 'run', facing: 'right'},
+      {stateId: 'sleep', facing: 'right'},
+    ],
     grid: {columns: 2, rows: 2},
     providerCalls: 1,
     repairPolicy: 'masked-edit-complete-sheet',
@@ -795,7 +805,7 @@ test('temporal instances that reuse one pose family consume one registered sheet
 test('project-level state-plan comparison checks the full playback contract', () => {
   const planned = {
     poseFamilyId: 'hare-actions',
-    states: [{id: 'sleep', at: 0}, {id: 'run-a', at: 0.2}, {id: 'run-b', at: 0.4}],
+    states: [{id: 'sleep', at: 0, facing: 'right'}, {id: 'run-a', at: 0.2, facing: 'right'}, {id: 'run-b', at: 0.4, facing: 'right'}],
     playback: {mode: 'loop', cycles: 3, activeFrom: 0.2, activeUntil: 0.8, holdStateId: 'sleep', activeStateIds: ['run-a', 'run-b']},
     transition: 'cut',
   };
@@ -829,14 +839,14 @@ test('state-family authoring compiles a held prelude and registered gait plan th
     ...base,
     id: 'hare-sleep',
     proofTimeId: 'proof-establish',
-    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'sleep', visualChange: 'Hare sleeps', playback: 'loop', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'sleep', facing: 'right', visualChange: 'Hare sleeps', playback: 'loop', transition: 'cut'},
   }];
   scene.beats[1].treatments = [{
     ...base,
     id: 'hare-stride-a',
     proofTimeId: 'proof-action',
     motion: {
-      kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-a', visualChange: 'Left foreleg forward',
+      kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-a', facing: 'right', visualChange: 'Left foreleg forward',
       playback: 'loop', transition: 'cut', cycles: 3, activeFrom: 0.48, activeStateIds: ['stride-a', 'stride-b'],
     },
   }];
@@ -844,7 +854,7 @@ test('state-family authoring compiles a held prelude and registered gait plan th
     ...base,
     id: 'hare-stride-b',
     proofTimeId: 'proof-final',
-    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-b', visualChange: 'Right foreleg forward', playback: 'loop', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-b', facing: 'right', visualChange: 'Right foreleg forward', playback: 'loop', transition: 'cut'},
   }];
   scene.proofTimes[0].stateAssertions = [{nodeId: 'hare', stateId: 'sleep'}];
   scene.proofTimes[1].stateAssertions = [{nodeId: 'hare', stateId: 'stride-a'}];
@@ -860,7 +870,7 @@ test('state-family authoring compiles a held prelude and registered gait plan th
     composition: {
       nodes: [{
         id: 'hare', kind: 'state-sequence', poseFamilyId: 'hare-actions',
-        states: family.states.map(({id, at}) => ({id, at})),
+        states: family.states.map(({id, at, facing}) => ({id, at, facing})),
         playback: structuredClone(family.playback),
         transition: {type: family.transition, durationSeconds: 0},
       }],
@@ -878,12 +888,12 @@ test('required hero state families cannot be silently downgraded to fit draft bu
   scene.beats[0].proofTimeId = 'proof-establish';
   scene.beats[0].treatments = ['cao', 'elephant'].map((targetId) => ({
     id: `${targetId}-start`, targetId, importance: 'hero', necessity: 'required', changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'start', visualChange: 'Start pose', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'start', facing: 'right', visualChange: 'Start pose', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-establish', rationale: 'Required opening state.',
   }));
   scene.beats[1].treatments = ['cao', 'elephant'].map((targetId) => ({
     id: `${targetId}-finish`, targetId, importance: 'hero', necessity: 'required', changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'finish', visualChange: 'Finish pose', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'finish', facing: 'right', visualChange: 'Finish pose', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-action', rationale: 'Required final state.',
   }));
   scene.proofTimes[0].stateAssertions = ['cao', 'elephant'].map((nodeId) => ({nodeId, stateId: 'start'}));

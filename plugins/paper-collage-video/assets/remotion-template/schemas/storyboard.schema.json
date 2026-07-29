@@ -211,6 +211,7 @@
             "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera", "scroll-world-x", "fall-drift", "rise-drift", "burst", "orbit"]},
             "poseFamilyId": {"type": "string", "minLength": 1},
             "stateId": {"type": "string", "minLength": 1},
+            "facing": {"enum": ["left", "right", "front", "back", "neutral"]},
             "visualChange": {"type": "string", "minLength": 1},
             "playback": {"enum": ["once", "loop", "ping-pong"]},
             "transition": {"enum": ["cut", "crossfade", "fade-rise", "fade-scale"]},
@@ -235,6 +236,12 @@
               "items": {"$ref": "#/$defs/motifExclusionZone"}
             }
           },
+          "allOf": [
+            {
+              "if": {"properties": {"kind": {"const": "state-sequence"}}},
+              "then": {"required": ["facing"]}
+            }
+          ],
           "additionalProperties": false
         },
         "composition": {
@@ -488,10 +495,11 @@
           "minItems": 2,
           "items": {
             "type": "object",
-            "required": ["id", "at", "visualChange"],
+            "required": ["id", "at", "facing", "visualChange"],
             "properties": {
               "id": {"type": "string", "minLength": 1},
               "at": {"type": "number", "minimum": 0, "maximum": 1},
+              "facing": {"enum": ["left", "right", "front", "back", "neutral"]},
               "visualChange": {"type": "string", "minLength": 1}
             },
             "additionalProperties": false
@@ -663,13 +671,27 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["targetId", "targetIds", "poseFamilyId", "necessity", "stateIds", "grid", "providerCalls", "repairPolicy"],
+            "required": ["targetId", "targetIds", "poseFamilyId", "necessity", "stateIds", "stateFacings", "grid", "providerCalls", "repairPolicy"],
             "properties": {
               "targetId": {"type": "string", "minLength": 1},
               "targetIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
               "poseFamilyId": {"type": "string", "minLength": 1},
               "necessity": {"enum": ["required", "enhancement"]},
               "stateIds": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+              "stateFacings": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "required": ["stateId", "facing"],
+                  "properties": {
+                    "stateId": {"type": "string", "minLength": 1},
+                    "facing": {"enum": ["left", "right", "front", "back", "neutral"]}
+                  },
+                  "additionalProperties": false
+                }
+              },
               "grid": {
                 "type": "object",
                 "required": ["columns", "rows"],

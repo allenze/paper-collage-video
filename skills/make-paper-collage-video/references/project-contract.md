@@ -156,7 +156,7 @@ boundaries. Subtitle derivation uses those spaces as preferred breakpoints and
 balances a remaining unspaced run across the fewest legal cues; do not delete
 both punctuation and spacing and expect sentence boundaries to be recoverable.
 
-`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, an `anchorPolicy`, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Every state declares facing, normalized anchors, and an identity-reference asset id plus SHA-256. The state-sheet processor verifies the current identity asset, rejects anchor drift, and writes fingerprinted per-state anchor overlays before registering derived cells. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
+`state-sequence` is the first-class limited-animation primitive. It owns one `poseFamilyId`, a shared registration canvas, an `anchorPolicy`, ordered states, playback (`once`, `loop`, `ping-pong`), and a `cut` or bounded `crossfade`. Every authored state treatment and compiled state declares facing, normalized anchors, and an identity-reference asset id plus SHA-256. The compiler rejects one pose-family/state id reused with conflicting facings. The state-sheet processor verifies the current identity asset, rejects anchor drift, and writes fingerprinted per-state anchor overlays before registering derived cells. A reviewed left/right source state may be deterministically mirrored as a complete registered-cell derivative; the processor flips its anchors, records source/output facing plus provenance, and does not count that local correction as a provider call. A loop may declare `activeFrom` and ordered `activeStateIds` to keep authored prelude poses until the selected registered gait starts; it may additionally declare `activeUntil` and `holdStateId` so the active window ends on one registered state. The cycles are distributed only across that active window. Continuous transform/emphasis motion applies once to the node while the renderer selects registered visual states internally. Never replace this with overlapping assets and hand-authored opacity toggles.
 
 One `poseFamilyId` denotes one registered provider state sheet even when a continuous scene uses multiple temporal node instances of that family (for example, a sleeping identity and its later chase). `directingSummary.poseSheetPlans.targetIds` must expose every reuse target, while provider demand, state-sheet calls, and the state-capacity ceiling count the shared family only once. This preserves truthful provider cost evidence without forcing a project-specific animation workaround.
 
@@ -208,7 +208,7 @@ chase must never reverse: it samples every authored `offsetX` keyframe between i
 proofs, permits a final zero-motion hold, and rejects any backward segment.
 
 Root `spatialContracts[]` is the executable spatial-truth layer shared by the
-Storyboard and Project. It has three kinds:
+Storyboard and Project. It has four kinds:
 
 - `grounding` binds one scene, subject, support, at least two proof ids, a
   normalized or registered state anchor, an explicit support polyline, gap and
@@ -226,6 +226,13 @@ Storyboard and Project. It has three kinds:
   states, a minimum state-change rate, and whether cycling must continue through
   the window end. It rejects a pose that freezes before the shot ends even if
   the background continues moving.
+- `travel-facing` binds a horizontally moving state-sequence, ordered proof
+  window, signed direction, minimum travel, exact expected facing, and rationale.
+  It samples the assembled pre-camera path, rejects reverse segments, and checks
+  every active state. A state-sequence target using directional `traverse` must
+  have this contract, so legal metadata alone cannot approve a backward-flying
+  or backward-running character. An in-place `settle` does not require a travel
+  contract.
 
 `project:storyboard` copies the array into `project.json`; project validation
 rejects drift. The directing fingerprint, composition-proof target, runtime

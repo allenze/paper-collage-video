@@ -1004,6 +1004,18 @@ export type SpatialContract =
       stateIds: string[];
       minimumChangesPerSecond: number;
       continueThroughWindowEnd: boolean;
+    }
+  | {
+      id: string;
+      kind: 'travel-facing';
+      sceneId: string;
+      nodeId: string;
+      fromProofTimeId: string;
+      throughProofTimeId: string;
+      direction: 'left' | 'right';
+      expectedFacing: 'left' | 'right' | 'front' | 'back' | 'neutral';
+      minimumTravel: number;
+      rationale: string;
     };
 
 export type PaperCollageProject = {

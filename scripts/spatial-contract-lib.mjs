@@ -1198,6 +1198,167 @@ const inspectGait = (project, contract) => {
   };
 };
 
+const inspectTravelFacing = (project, contract) => {
+  const timeline = deriveSceneTimeline(project);
+  const scene = timeline.scenes.find(({id}) => id === contract.sceneId);
+  const checks = [];
+  if (!scene) {
+    return {
+      passed: false,
+      checks: [{
+        id: 'travel-facing-scene-exists',
+        passed: false,
+        expected: contract.sceneId,
+        actual: null,
+      }],
+      measurements: [],
+    };
+  }
+  const from = proofFor(scene, contract.fromProofTimeId);
+  const through = proofFor(scene, contract.throughProofTimeId);
+  const initial = resolveSceneNodes({
+    scene,
+    video: project.video,
+    progress: from?.at ?? 0,
+  }).entries.get(contract.nodeId);
+  if (
+    !from ||
+    !through ||
+    through.at <= from.at ||
+    initial?.node.kind !== 'state-sequence'
+  ) {
+    checks.push({
+      id: 'travel-facing-window-resolves',
+      passed: false,
+      expected: {
+        nodeKind: 'state-sequence',
+        orderedProofs: [
+          contract.fromProofTimeId,
+          contract.throughProofTimeId,
+        ],
+      },
+      actual: {
+        nodeKind: initial?.node.kind ?? null,
+        from: from?.at ?? null,
+        through: through?.at ?? null,
+      },
+    });
+    return {passed: false, checks, measurements: []};
+  }
+  const fromFrame = Math.round(
+    from.at * Math.max(0, scene.durationInFrames - 1),
+  );
+  const throughFrame = Math.round(
+    through.at * Math.max(0, scene.durationInFrames - 1),
+  );
+  const samples = [];
+  for (let frame = fromFrame; frame <= throughFrame; frame += 1) {
+    const progress = frame / Math.max(1, scene.durationInFrames - 1);
+    const entry = resolveSceneNodes({
+      scene,
+      video: project.video,
+      progress,
+    }).entries.get(contract.nodeId);
+    if (!entry || entry.node.kind !== 'state-sequence') continue;
+    const center = applyMatrix(entry.localMatrix, {
+      x: entry.width * 0.5,
+      y: entry.height * 0.5,
+    });
+    const state = resolveSequenceState({node: entry.node, progress});
+    samples.push({
+      frame,
+      progress,
+      x: center.x / project.video.width,
+      y: center.y / project.video.height,
+      stateId: state?.id ?? null,
+      facing: state?.facing ?? null,
+    });
+  }
+  const direction = contract.direction === 'right' ? 1 : -1;
+  const signedSegments = samples.slice(1).map((sample, index) =>
+    direction * (sample.x - samples[index].x),
+  );
+  const netTravel = samples.length >= 2
+    ? direction * (samples.at(-1).x - samples[0].x)
+    : 0;
+  const observedStates = [
+    ...new Map(
+      samples.map(({stateId, facing}) => [
+        stateId,
+        {stateId, facing},
+      ]),
+    ).values(),
+  ];
+  checks.push(
+    {
+      id: 'travel-facing-samples-resolve',
+      passed: samples.length >= 2,
+      expected: 'at least two resolved state-sequence samples',
+      actual: samples.length,
+    },
+    {
+      id: 'travel-facing-direction',
+      passed: netTravel + 1e-9 >= contract.minimumTravel,
+      expected: {
+        direction: contract.direction,
+        minimumTravel: contract.minimumTravel,
+      },
+      actual: {netTravel},
+    },
+    {
+      id: 'travel-facing-monotonic',
+      passed: signedSegments.every((delta) => delta >= -1e-6),
+      expected: `no ${contract.direction === 'right' ? 'leftward' : 'rightward'} segment in the proof window`,
+      actual: {
+        minimumSignedSegment:
+          signedSegments.length > 0 ? Math.min(...signedSegments) : null,
+      },
+    },
+    {
+      id: 'travel-facing-state-metadata',
+      passed:
+        observedStates.length > 0 &&
+        observedStates.every(
+          ({facing}) => facing === contract.expectedFacing,
+        ),
+      expected: {
+        facing: contract.expectedFacing,
+        rationale: contract.rationale,
+      },
+      actual: observedStates,
+    },
+  );
+  const endpoints = [
+    {proofTimeId: from.id, sample: samples[0]},
+    {proofTimeId: through.id, sample: samples.at(-1)},
+  ];
+  return {
+    passed: checks.every(({passed}) => passed),
+    checks,
+    measurements: endpoints.map(({proofTimeId, sample}) => ({
+      sceneId: scene.id,
+      proofTimeId,
+      nodeId: contract.nodeId,
+      center: sample ? {
+        x: sample.x * project.video.width,
+        y: sample.y * project.video.height,
+      } : null,
+      startCenter: samples[0] ? {
+        x: samples[0].x * project.video.width,
+        y: samples[0].y * project.video.height,
+      } : null,
+      endCenter: samples.at(-1) ? {
+        x: samples.at(-1).x * project.video.width,
+        y: samples.at(-1).y * project.video.height,
+      } : null,
+      direction: contract.direction,
+      expectedFacing: contract.expectedFacing,
+      observedFacing: sample?.facing ?? null,
+      netTravel,
+    })),
+  };
+};
+
 export const inspectSpatialContract = async (
   project,
   contract,
@@ -1210,12 +1371,15 @@ export const inspectSpatialContract = async (
     return inspectContinuity(project, contract);
   }
   if (contract.kind === 'gait') return inspectGait(project, contract);
+  if (contract.kind === 'travel-facing') {
+    return inspectTravelFacing(project, contract);
+  }
   return {
     passed: false,
     checks: [{
       id: 'spatial-contract-kind',
       passed: false,
-      expected: ['grounding', 'continuity', 'gait'],
+      expected: ['grounding', 'continuity', 'gait', 'travel-facing'],
       actual: contract.kind ?? null,
     }],
     measurements: [],
@@ -1265,14 +1429,17 @@ export const validateSpatialContracts = async (project) => {
 
 export const validateStoryboardSpatialContracts = (storyboard) => {
   const issues = [];
-  if (storyboard.spatialContracts === undefined) return issues;
-  if (!Array.isArray(storyboard.spatialContracts)) {
+  if (
+    storyboard.spatialContracts !== undefined &&
+    !Array.isArray(storyboard.spatialContracts)
+  ) {
     return [{
       code: 'storyboard-spatial-contracts-type',
       message: 'spatialContracts 必须为数组。',
       location: 'spatialContracts',
     }];
   }
+  const contracts = storyboard.spatialContracts ?? [];
   const sceneById = new Map(
     (storyboard.scenes ?? []).map((scene, index) => [
       scene.id,
@@ -1281,7 +1448,7 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
   );
   const ids = new Set();
   const groundingById = new Map();
-  for (const [index, contract] of storyboard.spatialContracts.entries()) {
+  for (const [index, contract] of contracts.entries()) {
     const location = `spatialContracts[${index}]`;
     if (
       typeof contract?.id !== 'string' ||
@@ -1297,7 +1464,11 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
     }
     ids.add(contract.id);
     if (contract.kind === 'grounding') groundingById.set(contract.id, contract);
-    if (contract.kind === 'grounding' || contract.kind === 'gait') {
+    if (
+      contract.kind === 'grounding' ||
+      contract.kind === 'gait' ||
+      contract.kind === 'travel-facing'
+    ) {
       const scene = sceneById.get(contract.sceneId)?.scene;
       if (!scene) {
         issues.push({
@@ -1320,6 +1491,44 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
             message: `空间契约 ${contract.id} 引用了未知证明时刻 ${proofTimeId}。`,
             location,
           });
+        }
+      }
+      if (contract.kind === 'travel-facing') {
+        const sequence = scene.compositionPlan?.stateSequences?.find(
+          ({nodeId}) => nodeId === contract.nodeId,
+        );
+        if (!sequence) {
+          issues.push({
+            code: 'storyboard-travel-facing-node',
+            message: `运动朝向契约 ${contract.id} 必须引用编译后的 state-sequence 节点。`,
+            location: `${location}.nodeId`,
+          });
+        } else {
+          const fromAt = scene.proofTimes.find(
+            ({id}) => id === contract.fromProofTimeId,
+          )?.at;
+          const throughAt = scene.proofTimes.find(
+            ({id}) => id === contract.throughProofTimeId,
+          )?.at;
+          if (fromAt !== undefined && throughAt !== undefined) {
+            const activeStates = sequence.states.filter((state, stateIndex) => {
+              const nextAt =
+                sequence.states[stateIndex + 1]?.at ?? 1;
+              return state.at <= throughAt && nextAt >= fromAt;
+            });
+            if (
+              activeStates.length === 0 ||
+              activeStates.some(
+                ({facing}) => facing !== contract.expectedFacing,
+              )
+            ) {
+              issues.push({
+                code: 'storyboard-travel-facing-state',
+                message: `运动朝向契约 ${contract.id} 的窗口内状态必须全部声明 facing=${contract.expectedFacing}。`,
+                location,
+              });
+            }
+          }
         }
       }
     }
@@ -1348,7 +1557,7 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
       }
     }
   }
-  for (const [index, contract] of storyboard.spatialContracts.entries()) {
+  for (const [index, contract] of contracts.entries()) {
     if (contract.kind !== 'continuity') continue;
     const grounding = (contract.groundingContractIds ?? []).map((id) =>
       groundingById.get(id),
@@ -1364,6 +1573,37 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
         message: `连续性契约 ${contract.id} 必须绑定出入两幕各自的 grounding 契约。`,
         location: `spatialContracts[${index}].groundingContractIds`,
       });
+    }
+  }
+  for (const scene of storyboard.scenes ?? []) {
+    const sequenceNodeIds = new Set(
+      (scene.compositionPlan?.stateSequences ?? []).map(({nodeId}) => nodeId),
+    );
+    const directedTargets = [
+      ...new Set(
+        (scene.compositionPlan?.continuousMotions ?? [])
+          .filter(
+            ({nodeId, preset}) =>
+              sequenceNodeIds.has(nodeId) && preset === 'traverse',
+          )
+          .map(({nodeId}) => nodeId),
+      ),
+    ];
+    for (const nodeId of directedTargets) {
+      if (
+        !contracts.some(
+          (contract) =>
+            contract.kind === 'travel-facing' &&
+            contract.sceneId === scene.id &&
+            contract.nodeId === nodeId,
+        )
+      ) {
+        issues.push({
+          code: 'storyboard-travel-facing-required',
+          message: `镜头 ${scene.id} 的移动状态角色 ${nodeId} 必须声明 travel-facing 契约，绑定实际行进方向与状态朝向。`,
+          location: 'spatialContracts',
+        });
+      }
     }
   }
   return issues;
@@ -1385,6 +1625,9 @@ export const summarizeSpatialContracts = (project) => ({
     0,
   gait:
     project.spatialContracts?.filter(({kind}) => kind === 'gait').length ?? 0,
+  travelFacing:
+    project.spatialContracts?.filter(({kind}) => kind === 'travel-facing')
+      .length ?? 0,
 });
 
 const escapeXml = (value) =>
@@ -1421,11 +1664,17 @@ export const spatialContractDebugOverlay = ({
   const anchor = measurement?.anchor
     ? `<circle cx="${measurement.anchor.x}" cy="${measurement.anchor.y}" r="11" fill="${color}"/><line x1="${measurement.anchor.x}" y1="${measurement.anchor.y}" x2="${measurement.nearestSurfacePoint.x}" y2="${measurement.nearestSurfacePoint.y}" stroke="${color}" stroke-width="5"/>`
     : '';
+  const travelArrow =
+    measurement?.startCenter && measurement?.endCenter
+      ? `<line x1="${measurement.startCenter.x}" y1="${measurement.startCenter.y}" x2="${measurement.endCenter.x}" y2="${measurement.endCenter.y}" stroke="${color}" stroke-width="8" marker-end="url(#travel-arrow)"/><circle cx="${measurement.center?.x ?? measurement.startCenter.x}" cy="${measurement.center?.y ?? measurement.startCenter.y}" r="12" fill="${color}"/>`
+      : '';
   return Buffer.from(`
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="travel-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="${color}"/></marker></defs>
       ${zones}
       ${surface ? `<polyline points="${surface}" fill="none" stroke="#64d2ff" stroke-width="7"/>` : ''}
       ${anchor}
+      ${travelArrow}
       <rect x="16" y="16" width="${Math.min(width - 32, 1040)}" height="54" rx="10" fill="rgba(0,0,0,.78)" stroke="${color}" stroke-width="3"/>
       <text x="34" y="52" fill="white" font-size="25" font-family="sans-serif">${escapeXml(`${proof.contractId} · ${proof.kind} · ${proof.passed ? 'PASS' : 'FAIL'}`)}</text>
     </svg>

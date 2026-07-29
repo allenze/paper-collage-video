@@ -431,6 +431,69 @@ test('gait cadence rejects activeUntil that freezes the runner before the proof 
   );
 });
 
+test('travel-facing rejects reverse flight and state metadata that faces away from travel', async () => {
+  const contract = {
+    id: 'crow-flies-right',
+    kind: 'travel-facing',
+    sceneId: 'scene-1',
+    nodeId: 'runner',
+    fromProofTimeId: 'start',
+    throughProofTimeId: 'end',
+    direction: 'right',
+    expectedFacing: 'right',
+    minimumTravel: 0.35,
+    rationale: 'The crow faces the same direction as its visible flight path.',
+  };
+  const movingRight = baseProject([
+    scene({
+      id: 'scene-1',
+      nodes: [gaitNode({
+        motion: {
+          keyframes: [
+            {at: 0, offsetX: -0.25, offsetY: 0},
+            {at: 1, offsetX: 0.25, offsetY: 0},
+          ],
+        },
+      })],
+    }),
+  ], [contract]);
+  const passing = await inspectSpatialContract(movingRight, contract);
+  assert.equal(passing.passed, true);
+  assert.ok(
+    passing.checks.some(
+      ({id, passed}) => id === 'travel-facing-direction' && passed,
+    ),
+  );
+
+  const wrongFacing = structuredClone(movingRight);
+  wrongFacing.scenes[0].composition.nodes[0].states.forEach((state) => {
+    state.facing = 'left';
+  });
+  const facingFailure = await inspectSpatialContract(wrongFacing, contract);
+  assert.equal(facingFailure.passed, false);
+  assert.ok(
+    facingFailure.checks.some(
+      ({id, passed}) => id === 'travel-facing-state-metadata' && !passed,
+    ),
+  );
+
+  const reverseMotion = structuredClone(movingRight);
+  reverseMotion.scenes[0].composition.nodes[0].motion.keyframes = [
+    {at: 0, offsetX: 0.25, offsetY: 0},
+    {at: 1, offsetX: -0.25, offsetY: 0},
+  ];
+  const directionFailure = await inspectSpatialContract(
+    reverseMotion,
+    contract,
+  );
+  assert.equal(directionFailure.passed, false);
+  assert.ok(
+    directionFailure.checks.some(
+      ({id, passed}) => id === 'travel-facing-direction' && !passed,
+    ),
+  );
+});
+
 test('storyboard validation and quality target collection carry spatial contracts end to end', async () => {
   const contract = {
     id: 'rabbit-run',
@@ -463,4 +526,83 @@ test('storyboard validation and quality target collection carry spatial contract
   assert.equal(target?.pattern, 'spatial-contract');
   assert.ok(target.requiredChecks.includes('gait-cadence-clean'));
   assert.deepEqual(target.proofTimeIds, ['start', 'end']);
+});
+
+test('moving state-sequence directing requires travel-facing authoring and quality evidence', async () => {
+  const contract = {
+    id: 'crow-flies-right',
+    kind: 'travel-facing',
+    sceneId: 'scene-1',
+    nodeId: 'runner',
+    fromProofTimeId: 'start',
+    throughProofTimeId: 'end',
+    direction: 'right',
+    expectedFacing: 'right',
+    minimumTravel: 0.35,
+    rationale: 'The crow faces the same direction as its visible flight path.',
+  };
+  const storyboard = {
+    scenes: [{
+      id: 'scene-1',
+      proofTimes,
+      compositionPlan: {
+        stateSequences: [{
+          nodeId: 'runner',
+          states: [
+            {id: 'run-a', at: 0, facing: 'right'},
+            {id: 'run-b', at: 0.5, facing: 'right'},
+          ],
+        }],
+        continuousMotions: [{
+          id: 'runner-traverse',
+          nodeId: 'runner',
+          preset: 'traverse',
+          at: 0.5,
+          proofTimeId: 'middle',
+        }],
+      },
+    }],
+    spatialContracts: [contract],
+  };
+  assert.deepEqual(validateStoryboardSpatialContracts(storyboard), []);
+  const missing = structuredClone(storyboard);
+  missing.spatialContracts = [];
+  assert.ok(
+    validateStoryboardSpatialContracts(missing).some(
+      ({code}) => code === 'storyboard-travel-facing-required',
+    ),
+  );
+  const inPlaceSettle = structuredClone(missing);
+  inPlaceSettle.scenes[0].compositionPlan.continuousMotions[0].preset =
+    'settle';
+  assert.deepEqual(validateStoryboardSpatialContracts(inPlaceSettle), []);
+  const mismatched = structuredClone(storyboard);
+  mismatched.spatialContracts[0].expectedFacing = 'left';
+  assert.ok(
+    validateStoryboardSpatialContracts(mismatched).some(
+      ({code}) => code === 'storyboard-travel-facing-state',
+    ),
+  );
+
+  const project = baseProject([
+    scene({
+      id: 'scene-1',
+      nodes: [gaitNode({
+        motion: {
+          keyframes: [
+            {at: 0, offsetX: -0.25, offsetY: 0},
+            {at: 1, offsetX: 0.25, offsetY: 0},
+          ],
+        },
+      })],
+    }),
+  ], [contract]);
+  const targets = await collectCompositeQualityTargets(project, {
+    manifest: {assets: []},
+  });
+  const target = targets.find(
+    ({compositeId}) => compositeId === 'spatial-contract:crow-flies-right',
+  );
+  assert.ok(target.requiredChecks.includes('travel-facing-readable'));
+  assert.ok(target.requiredChecks.includes('signed-travel-direction-correct'));
 });

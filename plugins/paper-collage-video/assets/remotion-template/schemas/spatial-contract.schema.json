@@ -232,11 +232,44 @@
       },
       "additionalProperties": false
     },
+    "travelFacing": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "sceneId",
+        "nodeId",
+        "fromProofTimeId",
+        "throughProofTimeId",
+        "direction",
+        "expectedFacing",
+        "minimumTravel",
+        "rationale"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"const": "travel-facing"},
+        "sceneId": {"type": "string", "minLength": 1},
+        "nodeId": {"type": "string", "minLength": 1},
+        "fromProofTimeId": {"type": "string", "minLength": 1},
+        "throughProofTimeId": {"type": "string", "minLength": 1},
+        "direction": {"enum": ["left", "right"]},
+        "expectedFacing": {"enum": ["left", "right", "front", "back", "neutral"]},
+        "minimumTravel": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2
+        },
+        "rationale": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
     "contract": {
       "oneOf": [
         {"$ref": "#/$defs/grounding"},
         {"$ref": "#/$defs/continuity"},
-        {"$ref": "#/$defs/gait"}
+        {"$ref": "#/$defs/gait"},
+        {"$ref": "#/$defs/travelFacing"}
       ]
     }
   }

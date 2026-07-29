@@ -101,6 +101,12 @@ leave after a verified legal run. Use a `monotonic-travel` trajectory assertion
 for a forward-only chase that may end in a true stop, rather than faking the
 hold with a small backward correction.
 
+Every `state-sequence` treatment declares the visible state's exact `facing`.
+The compiler carries it into the registered family and provider-facing sheet
+plan, rejects cross-scene reuse of one state id with conflicting facings, and
+compares it with the runtime state record. Do not infer facing later from a
+prompt or asset filename.
+
 For a state family with an opening pose and later cyclic action, author the
 same `playback` mode on every related treatment, then declare the family-level
 `cycles`, `activeFrom`, and ordered `activeStateIds` on one of those treatments.
@@ -120,6 +126,15 @@ registered-state cadence and continue through its final proof. These contracts
 measure the assembled runtime tree; moving a subject upward, assigning a large
 descendant z-index inside the wrong stacking context, or letting
 `activeUntil` freeze early cannot satisfy them.
+
+Use `travel-facing` whenever a state-sequence character moves horizontally
+through the directional `traverse` preset. Bind the ordered proof window, `left|right`
+travel direction, positive minimum travel, exact expected facing, and a
+human-readable rationale. Runtime proof samples the assembled pre-camera path,
+rejects backtracking, and checks every active registered state's facing. An
+intentional backward or sideways-looking performance remains possible only by
+declaring the differing expected facing and rationale explicitly. Do not
+classify an in-place `settle` as travel merely because it has local pose motion.
 
 Use continuous preset `traverse` for a subject whose world-relative path must be
 materially larger than camera drift; runtime validation requires a normalized

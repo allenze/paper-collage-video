@@ -143,8 +143,8 @@ export const stateSequenceMatchesStoryboardPlan = (actual, planned) =>
   actual?.poseFamilyId === planned?.poseFamilyId &&
   JSON.stringify(actual?.playback ?? null) === JSON.stringify(planned?.playback ?? null) &&
   actual?.transition?.type === planned?.transition &&
-  JSON.stringify((actual?.states ?? []).map(({id, at}) => ({id, at}))) ===
-    JSON.stringify((planned?.states ?? []).map(({id, at}) => ({id, at})));
+  JSON.stringify((actual?.states ?? []).map(({id, at, facing}) => ({id, at, facing}))) ===
+    JSON.stringify((planned?.states ?? []).map(({id, at, facing}) => ({id, at, facing})));
 
 export const proofOverlapsTransition = ({
   at,

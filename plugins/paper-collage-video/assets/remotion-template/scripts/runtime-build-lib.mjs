@@ -30,6 +30,7 @@ export const RUNTIME_BUILD_INPUTS = [
   'schemas/semantic-contracts.schema.json',
   'schemas/semantic-revision-authorization.schema.json',
   'schemas/spatial-contract.schema.json',
+  'schemas/state-sheet.schema.json',
   'schemas/storyboard.schema.json',
   'schemas/storyboard-authoring.schema.json',
   'schemas/style-catalog.schema.json',
