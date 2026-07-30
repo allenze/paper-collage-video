@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.19.0-dev.1",
-  "fingerprint": "ccbdba87a8354605c680389e510986319c8406770360059eeec0a1818914c49f",
+  "fingerprint": "b68f44313c32bedc93254d006f8444e46d69b95f2ba3ed3ddd206ecce7c7b6fd",
   "surfaces": {
-    "final-visual": "962ccf1d03368012deddb026baa98d73508e56be813f6f62cc4df9c1d0b188ab",
-    "composition-proof": "e79cd7e737504bbddcf12202d109cbd0ea9ecb11974b4eebe5cc6015bcb8f522",
+    "final-visual": "bdce7d2814fc0ecb6c985ffb0c5bad12f77e3728929676ff6dae36420cbb5dc1",
+    "composition-proof": "30f2ebfc0ffa66bcccdf5a216c5f9ea4be0612761aee07fe24d1013a0c6fb32e",
     "audio-delivery": "8d0675f85d066830ef2c054d8f0917df6b680c3840f9c5c34c00622d04b20f9b"
   },
   "files": {
@@ -38,11 +38,15 @@
     "schemas/storyboard-authoring.schema.json": "5bcb7167b0056fb013adaf19cff80d95e75557f52dc6c32d3434a9b6a0b239ff",
     "schemas/style-catalog.schema.json": "f3da1fb9b48ed7537f87e2b341f1ee6063c35baf6008861aca42d42dff413c78",
     "schemas/style-profile.schema.json": "c1ad08daf4a51c58ea12b6c36980dd0aedb878d42582161c1689038ed2f71ca3",
-    "public/style-catalog/catalog.json": "b400505123859a618df4847cdedc2d5c6ca6640b4d8fd4da54fe3c42d904aa98",
-    "public/style-catalog/generation-provenance.json": "b02d8a7825b19264846c2530856ea7f1921cba0813870d1ff9a9cf57f67609fa",
+    "public/style-catalog/catalog.json": "6d4d84b758cdc76241dae849f63a86dbf1972b15eaf1e242aca34965c17029c2",
+    "public/style-catalog/generation-provenance.json": "bda0cf5a6a4eb7ff48cb5cfdf6ee2c31548208a1d9a731283bdc1e8618e197f0",
     "public/style-catalog/childrens-picture-book-paper.png": "2b9267a155929bcd742321027a9edbd17e2d2a31414e983e41a584d657a64d23",
     "public/style-catalog/hand-drawn-cutout-explainer.png": "43cb87cc01d9eef777b1b2a3f07b02dd169e67ae9716b90836dfd5875472f4bb",
     "public/style-catalog/archival-collage.png": "e96bec7f3d2a318e2459cacd0e53124a5f7c1d938c7043c754e6ea25d66a2b19",
+    "public/style-catalog/korean-cinematic-comic.png": "92c4ee7fbdbd8f8996a72a66afbba3754c2137aca7e8202750bf40e6d586b0eb",
+    "public/style-catalog/japanese-animation-comic.png": "2a3a383c033983a7cf013d64fbfd482fe841033932ca73ea54f5f776b9ec348b",
+    "public/style-catalog/hong-kong-action-comic.png": "84a8e6b21bc55f5cee75c7705a1f465b32a306e44f76fb81da89359a8dbb2d0b",
+    "public/style-catalog/american-superhero-comic.png": "a1018320518f3d8c8d167bcf310f7f152d06145f92691cec10d5ac96986500cb",
     "scripts/composition-lib.mjs": "36894348718e63e6e1354a84ce74bef3448732c6114ee1270d34619b446649c2",
     "scripts/creative-plan-lib.mjs": "0a2f0e7d80603a2afdb3f0a17a6ced182f796cca43a58cc3089138fc1930c4e5",
     "scripts/intake-lib.mjs": "53f797bf4a7b7d9dca8fb95c66b63cfd7755baa1af97c6981e7553b0ea94d53b",

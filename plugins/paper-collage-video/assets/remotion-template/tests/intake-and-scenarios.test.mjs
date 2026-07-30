@@ -223,6 +223,34 @@ test('built-in style catalog is dynamic and contains fingerprinted cards for one
       ['paper-story', 'clean-video'].includes(profile.motion.transitionSet),
     ),
   );
+  const comicStyleIds = [
+    'korean-cinematic-comic',
+    'japanese-animation-comic',
+    'hong-kong-action-comic',
+    'american-superhero-comic',
+  ];
+  const comicStyles = comicStyleIds.map((styleId) => {
+    const style = catalog.styles.find(({id}) => id === styleId);
+    assert.ok(style, `missing bundled comic style ${styleId}`);
+    return style;
+  });
+  for (const {profile} of comicStyles) {
+    assert.equal(profile.motion.transitionSet, 'clean-video');
+    assert.equal(profile.render.theme.surface.texture, null);
+    assert.equal(profile.render.theme.surface.subjectEdge.mode, 'none');
+    assert.equal(profile.render.theme.surface.subjectShadow.mode, 'none');
+    assert.ok(profile.motion.visualSfx.maxPerScene <= 2);
+    assert.ok(
+      profile.generation.negativeDirectives.some((directive) =>
+        directive.includes('long-scroll comic layouts'),
+      ),
+    );
+    assert.ok(
+      profile.generation.negativeDirectives.some((directive) =>
+        directive.includes('Speech balloons'),
+      ),
+    );
+  }
   const dimensions = new Set();
   for (const style of catalog.styles) {
     assert.equal((await fs.stat(style.absolutePath)).isFile(), true);
