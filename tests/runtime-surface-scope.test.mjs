@@ -48,6 +48,28 @@ test('runtime build inputs discover every current style card from the catalog', 
 
 test('composition-proof runtime surface excludes subtitle and audio-delivery changes', async () => {
   assert.ok(
+    RUNTIME_BUILD_INPUTS.includes('fixtures/starter-demo/project.json'),
+    'the default composition props must participate in the complete runtime identity',
+  );
+  for (const entrypoint of ['src/index.ts', 'src/Root.tsx']) {
+    assert.ok(
+      RUNTIME_BUILD_INPUTS.includes(entrypoint),
+      `${entrypoint} must participate in the complete runtime identity`,
+    );
+    assert.ok(
+      RUNTIME_SURFACE_INPUTS['final-visual'].includes(entrypoint),
+      `${entrypoint} must invalidate final visual frames`,
+    );
+    assert.ok(
+      RUNTIME_SURFACE_INPUTS['composition-proof'].includes(entrypoint),
+      `${entrypoint} must invalidate visual composition proof`,
+    );
+    assert.ok(
+      !RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(entrypoint),
+      `${entrypoint} must not invalidate audio delivery`,
+    );
+  }
+  assert.ok(
     !RUNTIME_SURFACE_INPUTS['composition-proof'].includes(
       'src/SubtitleOverlay.tsx',
     ),

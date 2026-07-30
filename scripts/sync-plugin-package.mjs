@@ -207,6 +207,7 @@ for (const entry of [
   'scripts/style-motion-proof.mjs',
   'scripts/style-proof-lib.mjs',
   'scripts/world-trajectory-lib.mjs',
+  'src/Root.tsx',
   'src/MainVideo.tsx',
   'src/EditorialNodes.tsx',
   'src/editorialPrimitives.mjs',
@@ -259,6 +260,7 @@ for (const entry of [
   'tests/visibility-scene-transition.test.mjs',
   'fixtures/composition-v4',
   'fixtures/canonical-container',
+  'fixtures/starter-demo/project.json',
   'fixtures/vox-primitives',
   'fixtures/directing-revision-fixture.mjs',
   'fixtures/editorial-fixture.mjs',
@@ -378,35 +380,6 @@ lock.packages[''].name = workspacePackage.name;
 lock.packages[''].version = workspacePackage.version;
 lock.packages[''].license = workspacePackage.license;
 await writeJson(path.join(RUNTIME_ROOT, 'package-lock.json'), lock);
-
-const rootSource = `import {Composition, type CalculateMetadataFunction} from 'remotion';
-import starterDemo from '../projects/starter-demo/project.json';
-import {MainVideo} from './MainVideo';
-import {normalizeProject, type PaperCollageProject} from './project';
-
-const defaultProject = starterDemo as PaperCollageProject;
-
-const calculateProjectMetadata: CalculateMetadataFunction<PaperCollageProject> = ({props}) => {
-  const normalized = normalizeProject(props);
-  return {
-    durationInFrames: normalized.durationInFrames,
-    fps: normalized.video.fps,
-    width: normalized.video.width,
-    height: normalized.video.height,
-    defaultOutName: \`${'${normalized.slug}'}.mp4\`,
-  };
-};
-
-export const RemotionRoot = () => (
-  <Composition
-    id="Paper-Collage"
-    component={MainVideo}
-    defaultProps={defaultProject}
-    calculateMetadata={calculateProjectMetadata}
-  />
-);
-`;
-await fs.writeFile(path.join(RUNTIME_ROOT, 'src', 'Root.tsx'), rootSource, 'utf8');
 
 const starterToneBuffer = makeTestToneWav();
 const starterToneSha256 = createHash('sha256').update(starterToneBuffer).digest('hex');

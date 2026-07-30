@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.19.0-dev.1",
-  "fingerprint": "b68f44313c32bedc93254d006f8444e46d69b95f2ba3ed3ddd206ecce7c7b6fd",
+  "fingerprint": "d4fe69f8d82cc44fb10921801c16b9706672f0ac17d3c0cfca086cb9d3200d57",
   "surfaces": {
-    "final-visual": "bdce7d2814fc0ecb6c985ffb0c5bad12f77e3728929676ff6dae36420cbb5dc1",
-    "composition-proof": "30f2ebfc0ffa66bcccdf5a216c5f9ea4be0612761aee07fe24d1013a0c6fb32e",
-    "audio-delivery": "8d0675f85d066830ef2c054d8f0917df6b680c3840f9c5c34c00622d04b20f9b"
+    "final-visual": "15de734410ed7c34f269dcd55db05c66d0b2ed677e0516aa9a83b9df67bde9df",
+    "composition-proof": "adc7e950a3604bbc21678fbff341139e2dfe7d886cf022b97449e4cfc1f250f4",
+    "audio-delivery": "a3842165de8a0ed90c3590457d98c592bf816925cd36c0acde2a8b3b38c23cfe"
   },
   "files": {
     "package.json": "47f34718bc3b4fd824e45203b5624a35ee6c8c453f9fe2787468e82ec8e91dce",
@@ -108,7 +108,7 @@
     "scripts/quality-lib.mjs": "8be8136b830f341df497845839b13f02913cb429a14bc29c3c0c59d93e30446e",
     "scripts/render-cache-lib.mjs": "e6be65793efb26af8f2e73c19fced329ad5f570a88b1b02994580ee5a79483b9",
     "scripts/render-status-lib.mjs": "7ae7e4cab43d6e0c743a4196b22a0376c8151a2428e9b3c7e18ce0b73e19fb68",
-    "scripts/runtime-build-lib.mjs": "ee468911c68a0945b4f8d508d58eed5631df11cb948bc06c1042dfa532165d73",
+    "scripts/runtime-build-lib.mjs": "d09627a647690e7bfaa8854d9d5ef53ea61c4bf3d88abe6a87cee8ef524d3b4e",
     "scripts/semantic-contract-lib.mjs": "07cd4cf1ec35a934337d1d0c78360877a11265453ff24ead699be241fd9e5d63",
     "scripts/remove_chroma_key.py": "a8260a226b51a1311dcc1221365a56e04e66343e2b170096a837cd641a9a53df",
     "scripts/state-sequence-lib.mjs": "983dbc0b76034af0a58280758a018505441f26928da43f7c93ff36ea7cfa99b4",
@@ -135,9 +135,12 @@
     "fixtures/canonical-container/canonical-container-binding.json": "ea6e953a906d2f3a6cfb7dd2bb83b581d74c43be0811bf7b1d66eeb5eb9a1da8",
     "fixtures/canonical-container/canonical-container-intent.json": "2983f33092ed5b86f0b14b69aa0a5f20fe297b6591074202fe883f05b409c17e",
     "fixtures/canonical-container/canonical-container-plan.json": "0fdf43ab50ba12ffb2ddd1750732fd34fb3fc317fcf615d2eedd262dc14695cb",
+    "fixtures/starter-demo/project.json": "9c62a0ed1cb53abcc53fb75f913f655f9136c4d7424d68c1cd4ee68a06135a55",
     "fixtures/motion-contract-fixture.mjs": "b75a037642d7c12d15fc5bfd9bde9f88477b768b411154af2e6c2e7cb538efbd",
     "fixtures/phase2-proof-fixture.mjs": "e95e5d92cf4ed715a6ddea5e1edc75897363d3bfa48414397f446fe3e2c7a1c5",
     "fixtures/looping-world-fixture.mjs": "948b2aa568258f57ccd770f29bf04ec5450255604157d9677c349e306926c541",
+    "src/index.ts": "5462d3268136731ce43bfd7c5072ea1ba48b51fec94fa30076f5044f4b39e4a2",
+    "src/Root.tsx": "c2772d8a51969a31b414e253bc6a13f8d8a9642a507765487f763c9e049bd867",
     "src/MainVideo.tsx": "e38f9c06fd749cfd4700d04ee8e10daac75b971b53425283b856487e947a3f36",
     "src/EditorialNodes.tsx": "e48494069387f1a50abfb7ecb5e1e0dffd2efb0492c194b822514862d8355f1a",
     "src/ReplicaChapterScene.tsx": "f22d13299296d46197b2e4804c011e7a9f1b258ce2d574b174b47d52ce2f6fa9",

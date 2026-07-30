@@ -479,6 +479,10 @@ test('bootstrap creates an isolated resumable workspace and is idempotent', asyn
       readJson(path.join(target, 'package.json')).name,
       'paper-collage-video-workspace',
     );
+    assert.match(
+      await fsp.readFile(path.join(target, 'src', 'Root.tsx'), 'utf8'),
+      /starterDemo as unknown as PaperCollageProject/,
+    );
     assert.ok(fs.existsSync(path.join(target, 'providers.json')));
     assert.ok(fs.existsSync(path.join(target, 'providers.local.example.json')));
 

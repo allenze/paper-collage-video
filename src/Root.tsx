@@ -6,7 +6,7 @@ import {
   type PaperCollageProject,
 } from './project';
 
-const defaultProject = starterDemo as PaperCollageProject;
+const defaultProject = starterDemo as unknown as PaperCollageProject;
 
 const calculateProjectMetadata: CalculateMetadataFunction<PaperCollageProject> = ({
   props,
