@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.19.0-dev.1",
-  "fingerprint": "d4fe69f8d82cc44fb10921801c16b9706672f0ac17d3c0cfca086cb9d3200d57",
+  "fingerprint": "c4c3bae813bde2efe275feee4a7012fdda7cd8f573b0c1af4c08547046a285a4",
   "surfaces": {
-    "final-visual": "15de734410ed7c34f269dcd55db05c66d0b2ed677e0516aa9a83b9df67bde9df",
-    "composition-proof": "adc7e950a3604bbc21678fbff341139e2dfe7d886cf022b97449e4cfc1f250f4",
+    "final-visual": "011039339442ae9f1d14804fd6213eb176c1a9c8370a7053e5e1ea07ef7e3898",
+    "composition-proof": "819d87642cf4730f9641d3a990dd7ee6c442d1d23557a2b47074c95d0859a6be",
     "audio-delivery": "a3842165de8a0ed90c3590457d98c592bf816925cd36c0acde2a8b3b38c23cfe"
   },
   "files": {
@@ -65,7 +65,7 @@
     "scripts/generation-attempt-lib.mjs": "b878fc8e7e825b852fd83f86541f92b34a0cefcb37075eaa4830146ff4f499ab",
     "scripts/layer-source-plan-lib.mjs": "4b110076e9dc696ce5c464abd593f6af88a75493479dc4d00aa1b34a1d2e7f63",
     "scripts/container-source-plan-lib.mjs": "34e46e70365c114a5ceb9c92899cf40b310b6af814800ee861f5c64593a7f8e6",
-    "scripts/layer-stack-proof-lib.mjs": "0e02bc7033959e566247eb2082131630f329e1d4a6244ce1882b5402b3a1212d",
+    "scripts/layer-stack-proof-lib.mjs": "6fc587dbde552ddc83bc530cf96ae0f42a38e6caa321da68df73302b0ede4112",
     "scripts/looping-strip-lib.mjs": "8a3b44c576dfc9f52c2c3129df31dcc366c9b506421ae2c92e43b19c66423254",
     "scripts/motion-approval-lib.mjs": "51b628c6f0a41921215aedbb0b965996f81ab99acfee80d67bc7a07b4f39ef19",
     "scripts/motion-contract-lib.mjs": "4a44d77c120bcb5cc93b7e7b76ca70aab5c1398f714ec95903ba444ffb9de34c",

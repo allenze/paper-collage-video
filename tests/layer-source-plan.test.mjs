@@ -416,6 +416,44 @@ test('registered layer sheet proof resolves the reference cell before comparison
       width: 100,
       height: 100,
     });
+    const providerNativeOddSheet = path.join(
+      directory,
+      'provider-native-odd-sheet.png',
+    );
+    await sharp({
+      create: {
+        width: 201,
+        height: 203,
+        channels: 4,
+        background: '#d3b986ff',
+      },
+    }).png().toFile(providerNativeOddSheet);
+    const providerNativeRecord = structuredClone(record);
+    providerNativeRecord.request.layerPackageBinding.sheetLayout.providerSource = {
+      canvasMode: 'provider-native',
+      minimumWidth: 200,
+      minimumHeight: 200,
+      cellExtraction: 'explicit-rects',
+    };
+    assert.deepEqual(
+      await referenceCellRectForRegisteredSheet({
+        record: providerNativeRecord,
+        file: providerNativeOddSheet,
+      }),
+      {
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 101,
+      },
+    );
+    await assert.rejects(
+      referenceCellRectForRegisteredSheet({
+        record,
+        file: providerNativeOddSheet,
+      }),
+      /原生画布无法按 2x2 提取 reference 格位/,
+    );
     const memberFiles = new Map();
     for (const [id, color] of [
       ['rear', '#d3b986ff'],

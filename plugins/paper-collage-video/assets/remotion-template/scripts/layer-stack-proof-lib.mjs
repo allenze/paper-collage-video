@@ -66,21 +66,43 @@ export const referenceCellRectForRegisteredSheet = async ({
   const metadata = await sharp(file).metadata();
   if (
     !Number.isInteger(metadata.width) ||
-    !Number.isInteger(metadata.height) ||
-    metadata.width % columns !== 0 ||
-    metadata.height % rows !== 0
+    !Number.isInteger(metadata.height)
   ) {
     throw new Error(
       `registered-layer-sheet ${record.assetId ?? 'unknown'} 的原生画布无法按 ${columns}x${rows} 提取 reference 格位`,
     );
   }
-  const width = metadata.width / columns;
-  const height = metadata.height / rows;
+  const providerNativeExplicit =
+    binding.sheetLayout.providerSource?.canvasMode === 'provider-native' &&
+    binding.sheetLayout.providerSource?.cellExtraction === 'explicit-rects';
+  if (
+    !providerNativeExplicit &&
+    (
+      metadata.width % columns !== 0 ||
+      metadata.height % rows !== 0
+    )
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId ?? 'unknown'} 的原生画布无法按 ${columns}x${rows} 提取 reference 格位`,
+    );
+  }
+  const left = Math.floor(
+    referenceCell.column * metadata.width / columns,
+  );
+  const right = Math.floor(
+    (referenceCell.column + 1) * metadata.width / columns,
+  );
+  const top = Math.floor(
+    referenceCell.row * metadata.height / rows,
+  );
+  const bottom = Math.floor(
+    (referenceCell.row + 1) * metadata.height / rows,
+  );
   return {
-    left: referenceCell.column * width,
-    top: referenceCell.row * height,
-    width,
-    height,
+    left,
+    top,
+    width: right - left,
+    height: bottom - top,
   };
 };
 

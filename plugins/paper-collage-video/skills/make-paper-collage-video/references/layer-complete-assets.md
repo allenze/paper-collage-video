@@ -149,6 +149,10 @@ the same three fingerprinted local members. This costs one expected provider
 image call, creates three deterministic local derivatives, and avoids three
 calls compared with reference + three full-context edits.
 
+The layer-stack reference proof uses the same floor-bounded grid convention
+for the reference cell, so odd provider-native widths or heights remain
+reviewable without resizing or overwriting the provider result.
+
 ### Context-preserving layer edits
 
 Use one complete reference generation plus three provider edits. Every member
