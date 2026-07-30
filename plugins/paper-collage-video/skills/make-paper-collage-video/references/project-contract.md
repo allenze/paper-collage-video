@@ -133,6 +133,14 @@ contract. Visible derived consumers own composition, occlusion, depth,
 responsive, and semantic review; the derivation-only family owns deterministic
 completeness, provenance, and derivation integrity.
 
+A top-level visible `registered-depth-stack` may instead declare
+`stackingContext=scene` when an external scene subject must sit between its
+registered planes. This does not loosen registration: the group must keep a
+full-canvas identity transform and motion with no visibility carrier, all three
+members retain the shared registration and reveal envelopes, and their unique
+integer `z` values participate directly in the scene stacking order. Spatial
+contracts remain the authority for required front occlusion.
+
 `theme` is not free-form authoring after intake: it must equal
 `styleProfile.render.theme`. The schema-v2 Profile owns palette plus a neutral
 `surface` contract: optional texture, optional subject edge, and optional

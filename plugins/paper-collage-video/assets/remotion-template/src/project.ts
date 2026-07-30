@@ -742,6 +742,13 @@ export type CompositionGroupNode = {
     | 'looping-environment'
     | 'canonical-container';
   renderParticipation?: 'visible' | 'derivation-only';
+  /**
+   * `scene` lets a top-level registered depth stack expose its three
+   * full-canvas members to the scene z-order so an external character can sit
+   * between the rear and front planes. The group transform/motion must remain
+   * identity; member transforms own all visible motion.
+   */
+  stackingContext?: 'isolated' | 'scene';
   z: number;
   depth?: number;
   coordinateSpace: CoordinateSpace;

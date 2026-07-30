@@ -100,7 +100,7 @@ polygon mask 裁切所有状态，并量化 fill、rim gap、bottom coverage、r
 唯一 `container-surface` 权威消费者。终态指标不达标、额外 waterline、内容
 状态重画瓶体或独立状态重生都会被拒绝。
 
-组装后先运行 `project:composition-proof`。它使用移除字幕的专用输入，只重渲染项目、资产或 `composition-proof` runtime surface 指纹变化的证明帧/目标，因此字幕实现独立变化不会清空资产和组合审核；普通耦合素材生成 alpha、棋盘格、紧裁和运动压力证据，depth stack 生成 neutral/reference/exploded 和三画幅 reveal-envelope 极值证据。仅用于注册技术来源的顶层耦合组声明 `renderParticipation=derivation-only`，不进入画面、导演档位或人工构图审核，只接受确定性的完整性、provenance 和派生检查。报告也写入已验证的世界与轨迹契约摘要。显式 `--force` 会禁用所有证明缓存并写入报告。随后用 `project:quality scaffold` 生成待填写审核批次，检查真实全帧、关系裁切、跨场景人物比较、机构受力链和说明图原分辨率裁切，再用 `record-batch` 记录真实判断。脚手架不会预先通过任何检查。说明图 SVG 的程序噪声滤镜由运行时确定性拒绝。这个内部证据步骤不增加第四个人工门。
+组装后先运行 `project:composition-proof`。它使用移除字幕的专用输入，只重渲染项目、资产或 `composition-proof` runtime surface 指纹变化的证明帧/目标，因此字幕实现独立变化不会清空资产和组合审核；普通耦合素材生成 alpha、棋盘格、紧裁和运动压力证据，depth stack 生成 neutral/reference/exploded 和三画幅 reveal-envelope 极值证据。仅用于注册技术来源的顶层耦合组声明 `renderParticipation=derivation-only`，不进入画面、导演档位或人工构图审核，只接受确定性的完整性、provenance 和派生检查。需要让外部人物处于注册后景与前景之间时，顶层可见 depth stack 使用 `stackingContext=scene`，组本身保持 identity，由三个成员的唯一 `z` 与空间契约共同证明遮挡次序。报告也写入已验证的世界与轨迹契约摘要。显式 `--force` 会禁用所有证明缓存并写入报告。随后用 `project:quality scaffold` 生成待填写审核批次，检查真实全帧、关系裁切、跨场景人物比较、机构受力链和说明图原分辨率裁切，再用 `record-batch` 记录真实判断。脚手架不会预先通过任何检查。说明图 SVG 的程序噪声滤镜由运行时确定性拒绝。这个内部证据步骤不增加第四个人工门。
 
 素材完成后只运行：
 

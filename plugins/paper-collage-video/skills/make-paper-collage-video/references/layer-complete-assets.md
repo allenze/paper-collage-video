@@ -61,6 +61,16 @@ structure the runtime consumers so their first divergent stacking ancestors
 have the correct order. Do not duplicate the foreground asset at low opacity or
 raise the subject out of contact to fake clearance.
 
+When a top-level visible `registered-depth-stack` must interleave with an
+external scene subject, declare `stackingContext=scene`. Its group transform,
+motion, opacity, and visibility remain identity; each complete registered member
+uses its own unique integer `z`, so the rear and subject planes can remain below
+the external subject while `support-front` paints above it. The renderer keeps
+the shared registration canvas, camera/parallax, reveal-envelope proof, and
+source-family provenance while exposing only the member stacking order to the
+scene. Use this only for a top-level visible depth stack; coupled groups that
+need a moving carrier remain isolated.
+
 ## Compile the Source Package Before Provider Approval
 
 For every layer-aware treatment, author:

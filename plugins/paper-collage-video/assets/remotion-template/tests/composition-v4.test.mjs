@@ -204,6 +204,31 @@ test('v10 registered depth stacks require full-canvas ordered layers inside ever
       ({code}) => code === 'composition-layer-scale-shrink',
     ),
   );
+
+  const sceneStack = depthStackGroup();
+  sceneStack.stackingContext = 'scene';
+  sceneStack.children[0].z = 0;
+  sceneStack.children[1].z = 1;
+  sceneStack.children[2].z = 4;
+  assert.deepEqual(validate(sceneStack).issues, []);
+
+  const movingSceneStack = structuredClone(sceneStack);
+  movingSceneStack.motion = {
+    keyframes: [{at: 0, scale: 1}, {at: 1, scale: 1.02}],
+  };
+  assert.ok(
+    validate(movingSceneStack).issues.some(
+      ({code}) => code === 'composition-scene-stacking-carrier',
+    ),
+  );
+
+  const duplicateSceneZ = structuredClone(sceneStack);
+  duplicateSceneZ.children[2].z = 1;
+  assert.ok(
+    validate(duplicateSceneZ).issues.some(
+      ({code}) => code === 'composition-scene-stacking-z',
+    ),
+  );
 });
 
 test('geometry, event catalog and fingerprints remain deterministic', () => {
@@ -216,6 +241,10 @@ test('geometry, event catalog and fingerprints remain deterministic', () => {
   changed.support.contactAnchor.x = 0.51;
   assert.notEqual(first, hashCompositionValue(changed));
   assert.equal(first, hashCompositionValue(supportedGroup()));
+  const stackHash = hashCompositionValue(depthStackGroup());
+  const sceneStack = depthStackGroup();
+  sceneStack.stackingContext = 'scene';
+  assert.notEqual(stackHash, hashCompositionValue(sceneStack));
 
   const events = deriveEventTimeline({
     scene: {id: 'scene', durationInFrames: 100, events: [{id: 'impact', beatId: 'fall', at: 0.5, targetId: 'sword', visual: {kind: 'emphasis', action: 'drop-impact', durationSeconds: 0.4, intensity: 1}, proofTimeId: 'proof-impact', sound: {src: 'impact.wav'}}]},

@@ -795,6 +795,71 @@ export const validateCompositionStructure = ({
       );
     }
     if (
+      node.stackingContext !== undefined &&
+      !['isolated', 'scene'].includes(node.stackingContext)
+    ) {
+      add(
+        'error',
+        'composition-stacking-context',
+        'group.stackingContext 必须是 isolated 或 scene。',
+        `${nodeLocation}.stackingContext`,
+      );
+    }
+    if (node.stackingContext === 'scene') {
+      const transform = node.transform ?? {};
+      const identityTransform =
+        transform.x === 0 &&
+        transform.y === 0 &&
+        transform.width === 1 &&
+        transform.height === 1 &&
+        transform.anchorX === 0 &&
+        transform.anchorY === 0 &&
+        (transform.scale === undefined || transform.scale === 1) &&
+        (transform.rotation === undefined || transform.rotation === 0) &&
+        (transform.opacity === undefined || transform.opacity === 1);
+      const authored = maximumAuthoredMotion(node.motion);
+      const identityMotion =
+        authored.x === 0 &&
+        authored.y === 0 &&
+        authored.scale === 0 &&
+        authored.rotationDegrees === 0 &&
+        (node.motion?.keyframes ?? []).every(
+          ({opacity = 1}) => opacity === 1,
+        );
+      const childZ = (node.children ?? []).map(({z}) => z);
+      if (
+        parent !== null ||
+        node.pattern !== 'registered-depth-stack' ||
+        renderParticipation !== 'visible'
+      ) {
+        add(
+          'error',
+          'composition-scene-stacking-scope',
+          'scene stacking 只能用于顶层可见 registered-depth-stack。',
+          `${nodeLocation}.stackingContext`,
+        );
+      }
+      if (!identityTransform || !identityMotion || node.visibility !== undefined) {
+        add(
+          'error',
+          'composition-scene-stacking-carrier',
+          'scene stacking 组必须使用完整画布 identity transform/motion，且不得声明 visibility；可见运动由成员独立承担。',
+          nodeLocation,
+        );
+      }
+      if (
+        childZ.some((value) => !Number.isInteger(value)) ||
+        new Set(childZ).size !== childZ.length
+      ) {
+        add(
+          'error',
+          'composition-scene-stacking-z',
+          'scene stacking 的三个成员必须声明互不重复的整数 z，以便与场景兄弟节点确定性交错。',
+          `${nodeLocation}.children`,
+        );
+      }
+    }
+    if (
       node.renderParticipation === 'derivation-only' &&
       (
         parent !== null ||

@@ -289,8 +289,10 @@ const slotOrder = (node, layering = 'between-supports') => {
 };
 
 const renderOrder = (node, parent) =>
-  parent &&
-  ['supported-subject', 'registered-depth-stack'].includes(parent.pattern)
+  parent?.stackingContext === 'scene'
+    ? node.z
+    : parent &&
+      ['supported-subject', 'registered-depth-stack'].includes(parent.pattern)
     ? slotOrder(node, parent.support?.layering)
     : node.z;
 
@@ -466,7 +468,7 @@ const resolveSceneNodes = ({scene, video, progress}) => {
           parentMatrix: matrix,
           parentWidth: width,
           parentHeight: height,
-          path: renderPath,
+          path: node.stackingContext === 'scene' ? path : renderPath,
         });
       }
     }

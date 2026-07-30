@@ -309,6 +309,42 @@ test('paint-order proof rejects an internal foreground that cannot cover a top-l
   );
 });
 
+test('scene-stacked registered layers can interleave with a top-level subject', async () => {
+  const front = asset({id: 'front', z: 4, registrationId: 'scene-stack'});
+  const rear = asset({id: 'rear', z: 0, registrationId: 'scene-stack'});
+  const light = asset({id: 'light', z: 1, registrationId: 'scene-stack'});
+  const environment = {
+    id: 'environment',
+    kind: 'group',
+    pattern: 'registered-depth-stack',
+    stackingContext: 'scene',
+    z: 0,
+    coordinateSpace: {width: 1000, height: 1000},
+    transform: transform(),
+    motion: still,
+    children: [rear, light, front],
+  };
+  const ground = asset({id: 'ground', z: 0});
+  const runner = gaitNode({});
+  const project = baseProject([
+    scene({id: 'scene-1', nodes: [environment, ground, runner]}),
+  ]);
+  const contract = grounding({
+    frontOcclusion: {
+      nodeId: 'front',
+      relation: 'in-front-of-subject',
+      minimumAlphaOverlap: 0,
+    },
+  });
+  const result = await inspectSpatialContract(project, contract);
+  assert.equal(result.passed, true);
+  assert.ok(
+    result.checks.some(
+      ({id, passed}) => id.startsWith('paint-order:') && passed,
+    ),
+  );
+});
+
 test('locked-contact catches idle drift even when the wide contact tolerance still passes', async () => {
   const ground = asset({id: 'ground'});
   const runner = gaitNode({

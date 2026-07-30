@@ -631,6 +631,37 @@ const GroupView = ({
   rootNodes: CompositionNode[];
   zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
 }) => {
+  if (node.stackingContext === 'scene') {
+    return (
+      <>
+        {[...node.children]
+          .sort((left, right) => left.z - right.z)
+          .map((child) => (
+            <CompositionNodeView
+              key={child.id}
+              node={child}
+              parent={node.coordinateSpace}
+              progress={progress}
+              frame={frame}
+              fps={fps}
+              events={events}
+              durationSeconds={durationSeconds}
+              seed={seed}
+              renderZ={child.z}
+              surface={surface}
+              cameraX={cameraX}
+              cameraY={cameraY}
+              cameraZoom={cameraZoom}
+              parallax={parallax}
+              sceneId={sceneId}
+              editorial={editorial}
+              rootNodes={rootNodes}
+              zones={zones}
+            />
+          ))}
+      </>
+    );
+  }
   const loopingWorld = node.pattern === 'looping-environment';
   const resolved = composeNodeTransform({
     node,
