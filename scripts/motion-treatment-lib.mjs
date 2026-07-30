@@ -1550,11 +1550,16 @@ export const validateCompiledDirecting = (
 const hasVisibleNodeMotion = (node) => {
   if (node?.motion?.idle && node.motion.idle.preset !== 'still' && node.motion.idle.intensity > 0) return true;
   const frames = node?.motion?.keyframes ?? [];
-  if (frames.length < 2) return false;
-  return ['offsetX', 'offsetY', 'scale', 'rotation', 'opacity'].some((property) => {
+  const moves = frames.length >= 2 && ['offsetX', 'offsetY', 'scale', 'rotation', 'opacity'].some((property) => {
     const values = frames.map((frame) => frame[property]).filter((value) => value !== undefined);
     return values.length > 0 && new Set(values).size > 1;
   });
+  if (moves) return true;
+  return (
+    node?.kind === 'group' &&
+    node.stackingContext === 'scene' &&
+    (node.children ?? []).some(hasVisibleNodeMotion)
+  );
 };
 
 const traverseSpan = (node) => {

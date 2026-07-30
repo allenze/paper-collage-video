@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.19.0-dev.1",
-  "fingerprint": "8334e5e61b1cbed9673bf85d104dd85444a62a38e420ab665521c30b44257dc9",
+  "fingerprint": "7c1b5771aa4468d395831a75a188141050040e6c8449572145c0b5d0641ca3f4",
   "surfaces": {
-    "final-visual": "0daad2fdc0e18b8c9691bcc0431930c156d998e71eeb073acc5f1900e1c7dc52",
-    "composition-proof": "5244b1187c89066b1c8cfacf19d6d60463529224c00f0be84830745c1b5b5ef5",
+    "final-visual": "050599a0a5b76505c640f40b6a65a62e3110db8c0a2e173ff49139a99bf5563b",
+    "composition-proof": "d0b1584058049cef14b4f42fc2e0b91fbc6d04bfe10ea5c8e26ebb8ceb434300",
     "audio-delivery": "a3842165de8a0ed90c3590457d98c592bf816925cd36c0acde2a8b3b38c23cfe"
   },
   "files": {
@@ -69,7 +69,7 @@
     "scripts/looping-strip-lib.mjs": "8a3b44c576dfc9f52c2c3129df31dcc366c9b506421ae2c92e43b19c66423254",
     "scripts/motion-approval-lib.mjs": "51b628c6f0a41921215aedbb0b965996f81ab99acfee80d67bc7a07b4f39ef19",
     "scripts/motion-contract-lib.mjs": "4a44d77c120bcb5cc93b7e7b76ca70aab5c1398f714ec95903ba444ffb9de34c",
-    "scripts/motion-treatment-lib.mjs": "4afb37a68b866fb46a01074fcaaaf4b2379f6c755f44615ccf0e229d2fced2ac",
+    "scripts/motion-treatment-lib.mjs": "29259ada35ae5542eb745f54c71b0ad7b650513db5014a6e89c4fff4401e4d0a",
     "scripts/observed-key-plane-lib.mjs": "b95c92507c92539b63605dde12df64d16f61c193f6fcbdf576193bff9a85d188",
     "scripts/provider-attempt.mjs": "ff0271376c16225ac77c1dd51613aae5d8cd658e7eeaf941dc6772590c2996c3",
     "scripts/provider-lib.mjs": "0b226f00e7f696b6b97d102e8499b15b29639ae2369aadc2c1f92660dc8a5770",

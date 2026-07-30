@@ -400,6 +400,49 @@ test('traverse and bottom-pivot sway treatments require their runtime motion sig
   }).some(({code}) => code === 'directing-traverse-span'));
 });
 
+test('scene-stacked depth stacks satisfy carrier motion through moving registered children', () => {
+  const storyboardScene = {
+    compositionPlan: {
+      continuousMotions: [{
+        id: 'stack-drift',
+        nodeId: 'depth-stack',
+        preset: 'drift',
+        at: 0,
+        proofTimeId: 'proof-establish',
+      }],
+    },
+  };
+  const runtimeScene = {
+    composition: {
+      nodes: [{
+        id: 'depth-stack',
+        kind: 'group',
+        pattern: 'registered-depth-stack',
+        stackingContext: 'scene',
+        motion: {
+          keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}],
+        },
+        children: [{
+          id: 'rear',
+          kind: 'asset',
+          motion: {
+            keyframes: [{at: 0, offsetX: -0.01}, {at: 1, offsetX: 0.01}],
+          },
+        }],
+      }],
+    },
+  };
+  assert.deepEqual(
+    validateDirectingExecution({scene: runtimeScene, storyboardScene}),
+    [],
+  );
+  runtimeScene.composition.nodes[0].children[0].motion.keyframes[1].offsetX = -0.01;
+  assert.ok(
+    validateDirectingExecution({scene: runtimeScene, storyboardScene})
+      .some(({code}) => code === 'directing-continuous-drift'),
+  );
+});
+
 test('style proof planning covers semantic, coupled, and state risks with the fewest source families', () => {
   const authored = authoredStoryboard();
   authored.scenes[0].beats[0].proofTimeId = 'proof-establish';
