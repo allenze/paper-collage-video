@@ -3,6 +3,13 @@
 Read this before planning or generating any visual whose rear, subject, and
 front planes may move at different speeds, directions, scales, or rotations.
 
+Do not use this three-depth-plane contract for a bottle, tank, gauge, bezel, or
+other rigid frame whose internal contents change. That mechanism uses
+[canonical-containers.md](canonical-containers.md): one clean plate, one unique
+canonical frame, one complete contents-only state sheet, and one shared
+interior mask. Treating water plus a separate waterline as depth members gives
+two nodes authority over the same surface and is invalid.
+
 ## Decide Motion Capability Before Source Generation
 
 An opaque composed image contains only the pixels visible in that composition.

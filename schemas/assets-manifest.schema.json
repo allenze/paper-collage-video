@@ -19,7 +19,7 @@
           "capability": {"enum": ["text", "image", "voice"]},
           "file": {"type": "string"},
           "provider": {"type": "string"},
-          "adapter": {"enum": ["host", "command", "manual", "registered-sheet-cell", "registered-family-member", "looping-strip-derivative"]},
+          "adapter": {"enum": ["host", "command", "manual", "registered-sheet-cell", "registered-family-member", "looping-strip-derivative", "canonical-container-derivative"]},
           "tool": {"type": ["string", "null"]},
           "model": {"type": ["string", "null"]},
           "externalId": {"type": ["string", "null"]},
@@ -51,6 +51,18 @@
             "oneOf": [
               {"type": "null"},
               {"$ref": "https://local.paper-collage.dev/registered-family-binding.schema.json"}
+            ]
+          },
+          "containerPackageBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/asset-request.schema.json#/properties/containerPackageBinding"}
+            ]
+          },
+          "canonicalContainerBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/canonical-container-binding.schema.json"}
             ]
           },
           "loopingStripBinding": {

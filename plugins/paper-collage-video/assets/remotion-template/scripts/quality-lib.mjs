@@ -52,6 +52,9 @@ import {
 import {
   assertRegisteredFamilyGroupMembers,
 } from './registered-family-lib.mjs';
+import {
+  inspectCanonicalContainerGroupMembers,
+} from './canonical-container-lib.mjs';
 import {inspectStateAnchorRegistration} from './state-sheet-lib.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
@@ -80,6 +83,11 @@ export const ASSET_QUALITY_CHECKS = [
   'diagram-edge-clean',
   'small-text-legible',
   'no-procedural-noise-on-semantic-lines',
+  'clean-plate-clear',
+  'canonical-frame-only',
+  'container-content-only',
+  'container-state-separation',
+  'container-fill-progression',
 ];
 
 export const COMPOSITE_QUALITY_CHECKS = [
@@ -154,6 +162,14 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'signed-travel-direction-correct',
   'travel-facing-readable',
   'travel-monotonic-clean',
+  'canonical-frame-unique',
+  'clean-plate-clear',
+  'interior-state-aligned',
+  'no-interior-overflow',
+  'bottom-load-retained',
+  'fill-state-measurable',
+  'terminal-fill-readable',
+  'authoritative-surface-unique',
 ];
 
 const compositionAppearance = (appearance) => {
@@ -184,6 +200,17 @@ const COMPOSITE_PROFILES = {
   'supported-subject': ['support-contact', 'inside-or-on-readable', 'front-occlusion', 'shared-motion', 'identity-continuity', 'motion-isolation-clean'],
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
   'registered-depth-stack': ['registration-aligned', 'layer-completeness-proven', 'depth-order-readable', 'neutral-reconstruction-readable', 'exploded-view-readable', 'responsive-motion-stress-clean', 'final-composition-readable'],
+  'canonical-container': [
+    'canonical-frame-unique',
+    'clean-plate-clear',
+    'interior-state-aligned',
+    'no-interior-overflow',
+    'bottom-load-retained',
+    'fill-state-measurable',
+    'terminal-fill-readable',
+    'authoritative-surface-unique',
+    'final-composition-readable',
+  ],
   event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
   'state-sequence': [
     'state-order-correct',
@@ -390,6 +417,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     reviewScope = 'source-asset',
     semanticBinding = null,
     registeredFamilyBinding = null,
+    canonicalContainerBinding = null,
     stateSheetBinding = null,
     outputSurface = null,
     stateSheetRecoveryBinding = null,
@@ -427,6 +455,10 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       if (registeredFamilyBinding) {
         existing.registeredFamilyBinding = registeredFamilyBinding;
       }
+      if (canonicalContainerBinding) {
+        existing.canonicalContainerBinding =
+          canonicalContainerBinding;
+      }
       if (stateSheetBinding) existing.stateSheetBinding = stateSheetBinding;
       if (outputSurface) existing.outputSurface = outputSurface;
       if (stateSheetRecoveryBinding) existing.stateSheetRecoveryBinding = stateSheetRecoveryBinding;
@@ -445,6 +477,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       reviewScope,
       semanticBinding,
       registeredFamilyBinding,
+      canonicalContainerBinding,
       stateSheetBinding,
       outputSurface,
       stateSheetRecoveryBinding,
@@ -518,6 +551,8 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     if (record.capability !== 'image') continue;
     const semanticBinding = record.semanticBinding ?? record.request?.semanticBinding ?? null;
     const registeredFamilyBinding = record.registeredFamilyBinding ?? null;
+    const canonicalContainerBinding =
+      record.canonicalContainerBinding ?? null;
     const boundContracts = (semanticBinding?.contractIds ?? [])
       .map((id) => semanticContracts.contracts.get(id))
       .filter(Boolean);
@@ -538,6 +573,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       requiredChecks: [...new Set([...(record.request?.quality?.requiredChecks ?? []), ...semanticChecks])],
       semanticBinding,
       registeredFamilyBinding,
+      canonicalContainerBinding,
       stateSheetBinding,
       outputSurface: record.request?.outputSurface ?? null,
       stateSheetRecoveryBinding,
@@ -873,7 +909,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       const stateRecords = node.states.map((state) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(state.src)))) ?? null);
       const registeredFamilyGroup =
         parent?.kind === 'group' &&
-        ['supported-subject', 'registered-environment', 'registered-depth-stack'].includes(
+        ['supported-subject', 'registered-environment', 'registered-depth-stack', 'canonical-container'].includes(
           parent.pattern,
         )
           ? parent
@@ -904,6 +940,12 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         ? activeManifestAssets(assetManifest).filter((record) =>
             registeredFamilyIds.has(
               record?.registeredFamilyBinding?.familyId,
+            ) ||
+            (
+              registeredFamilyGroup.pattern ===
+                'canonical-container' &&
+              record?.canonicalContainerBinding?.familyId ===
+                registeredFamilyGroup.canonicalContainer?.familyId
             ),
           )
         : [];
@@ -948,7 +990,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       });
     }
     for (const {node: group, renderParticipation} of collectCompositionGroups(scene.composition)) {
-      if (!['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(group.pattern)) continue;
+      if (!['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(group.pattern)) continue;
       const members = descendants(group).filter((node) => ['asset', 'state-sequence', 'world-strip'].includes(node.kind));
       const sources = [
         ...members.flatMap((member) => member.kind === 'state-sequence' ? member.states.map(({src}) => src) : [member.src]),
@@ -966,13 +1008,20 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       );
       const familyContextRecords = activeManifestAssets(assetManifest).filter(
         (record) =>
-          familyIds.has(record?.registeredFamilyBinding?.familyId),
+          familyIds.has(record?.registeredFamilyBinding?.familyId) ||
+          (
+            group.pattern === 'canonical-container' &&
+            record?.canonicalContainerBinding?.familyId ===
+              group.canonicalContainer?.familyId
+          ),
       );
       const familyProvenance = familyRecords.map((record) => record ? {
         assetId: record.assetId,
         compositionBinding: record.compositionBinding ?? record.request?.compositionBinding ?? null,
         registeredFamilyBinding: record.registeredFamilyBinding ?? null,
         loopingStripBinding: record.loopingStripBinding ?? null,
+        canonicalContainerBinding:
+          record.canonicalContainerBinding ?? null,
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
       const fingerprint = hashCompositionValue(
@@ -1021,6 +1070,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         group,
         familyRecords,
         familyContextRecords,
+        manifest: assetManifest,
       });
     }
     for (const event of scene.events ?? []) {
@@ -1521,6 +1571,7 @@ export const stateSequenceRegistrationStatus = ({
   sequence,
   stateRecords,
   registeredFamily,
+  canonicalContainerGroup = null,
 }) => {
   const poseStateRegistrationsBound = stateRecords.every((record, index) => {
     if (!record) return false;
@@ -1550,15 +1601,43 @@ export const stateSequenceRegistrationStatus = ({
         binding?.origin === sequence.registration.origin
       );
     });
+  const canonicalContainerStatesBound =
+    canonicalContainerGroup?.pattern === 'canonical-container' &&
+    canonicalContainerGroup.canonicalContainer?.contentsNodeId ===
+      sequence.id &&
+    stateRecords.every((record, index) => {
+      const binding = record?.canonicalContainerBinding;
+      return (
+        binding?.role === 'content-state' &&
+        binding?.familyId === sequence.poseFamilyId &&
+        binding?.registrationId === sequence.registration.id &&
+        binding?.sourceMasterAssetId ===
+          sequence.registration.sourceMasterAssetId &&
+        binding?.canvas?.width ===
+          sequence.registration.canvas.width &&
+        binding?.canvas?.height ===
+          sequence.registration.canvas.height &&
+        binding?.stateId === sequence.states[index]?.id &&
+        binding?.familyFingerprint ===
+          canonicalContainerGroup.canonicalContainer
+            .familyFingerprint
+      );
+    });
   return {
-    passed: poseStateRegistrationsBound || registeredFamilyStatesBound,
-    mode: registeredFamilyStatesBound
+    passed:
+      poseStateRegistrationsBound ||
+      registeredFamilyStatesBound ||
+      canonicalContainerStatesBound,
+    mode: canonicalContainerStatesBound
+      ? 'canonical-container'
+      : registeredFamilyStatesBound
       ? 'registered-family'
       : poseStateRegistrationsBound
         ? 'pose-state'
         : 'unbound',
     poseStateRegistrationsBound,
     registeredFamilyStatesBound,
+    canonicalContainerStatesBound,
   };
 };
 
@@ -1811,6 +1890,121 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       })),
     });
   }
+  if (target.pattern === 'canonical-container') {
+    const family = await inspectCanonicalContainerGroupMembers({
+      root: ROOT,
+      group: target.group,
+      manifest: target.manifest,
+    });
+    const proof = proofEntry?.canonicalContainerProof;
+    const artifactFiles = Object.values(
+      proof?.artifacts ?? {},
+    ).filter(Boolean);
+    const artifactsCurrent =
+      artifactFiles.length === 3 &&
+      (
+        await Promise.all(
+          artifactFiles.map(async (file) => {
+            try {
+              const absolute = assertWorkspaceFile(file);
+              return (
+                await fileExists(absolute) &&
+                await hashFile(absolute) ===
+                  proof?.artifactHashes?.[file]
+              );
+            } catch {
+              return false;
+            }
+          }),
+        )
+      ).every(Boolean);
+    const contract = target.group.canonicalContainer;
+    const terminal = contract.states.find(
+      ({id}) => id === contract.terminalStateId,
+    );
+    checks.push(
+      {
+        id: 'canonical-container-family-current',
+        passed: family.passed,
+        expected: 'all canonical source and derived records current',
+        actual: family.errors,
+      },
+      {
+        id: 'canonical-container-proof',
+        passed:
+          proof?.passed === true &&
+          artifactsCurrent &&
+          proof?.familyFingerprint ===
+            contract.familyFingerprint,
+        expected: {
+          passed: true,
+          familyFingerprint: contract.familyFingerprint,
+          artifactCount: 3,
+        },
+        actual: {
+          passed: proof?.passed ?? false,
+          familyFingerprint:
+            proof?.familyFingerprint ?? null,
+          artifactCount: artifactFiles.length,
+        },
+      },
+      {
+        id: 'canonical-container-authority',
+        passed:
+          target.group.children.filter(
+            ({slot}) => slot === 'container-frame',
+          ).length === 1 &&
+          target.group.children.filter(
+            ({semanticCoverage = []}) =>
+              semanticCoverage.includes(
+                `container-surface:${contract.authoritativeSurfaceId}`,
+              ),
+          ).length === 1,
+        expected: 'one frame and one authoritative contents consumer',
+        actual: target.group.children.map(
+          ({id, slot, semanticCoverage}) => ({
+            id,
+            slot,
+            semanticCoverage,
+          }),
+        ),
+      },
+      {
+        id: 'canonical-container-state-metrics',
+        passed: contract.states.every(
+          ({metrics}) =>
+            metrics.outsideMaskPixels === 0 &&
+            metrics.centerDrift <=
+              contract.alignmentPolicy.maximumCenterDrift &&
+            metrics.bottomGap <=
+              contract.alignmentPolicy.maximumBottomGap &&
+            metrics.fillLevelDeviation <=
+              contract.alignmentPolicy
+                .maximumFillLevelDeviation &&
+            metrics.interiorRetention >=
+              contract.alignmentPolicy.minimumInteriorRetention,
+        ),
+        expected: contract.alignmentPolicy,
+        actual: contract.states.map(({id, metrics}) => ({
+          id,
+          metrics,
+        })),
+      },
+      {
+        id: 'canonical-container-terminal',
+        passed:
+          terminal?.metrics.fillLevel >=
+            contract.terminalPolicy.minimumFillLevel &&
+          terminal?.metrics.rimGap <=
+            contract.terminalPolicy.maximumRimGap &&
+          terminal?.metrics.bottomBandCoverage >=
+            contract.terminalPolicy
+              .minimumBottomBandCoverage,
+        expected: contract.terminalPolicy,
+        actual: terminal?.metrics ?? null,
+      },
+    );
+  }
   if (target.pattern === 'looping-environment') {
     const strips = target.group.children.filter(({kind}) => kind === 'world-strip');
     const stripRecords = target.familyRecords.filter(
@@ -1894,7 +2088,10 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       const proof = proofFrames.find((frame) => frame.proofTimeId === proofTimeId);
       return proof ? [proofTimeId] : [];
     }));
-    const registeredFamily = target.registeredFamilyGroup
+    const registeredFamily =
+      target.registeredFamilyGroup &&
+      target.registeredFamilyGroup.pattern !==
+        'canonical-container'
       ? assertRegisteredFamilyGroupMembers({
           group: target.registeredFamilyGroup,
           members: registeredGroupMembersForTarget({
@@ -1908,6 +2105,11 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       sequence: target.sequence,
       stateRecords: target.stateRecords,
       registeredFamily,
+      canonicalContainerGroup:
+        target.registeredFamilyGroup?.pattern ===
+        'canonical-container'
+          ? target.registeredFamilyGroup
+          : null,
     });
     const registeredDimensions = new Set(target.stateRecords.map((record) =>
       record?.media ? `${record.media.width}x${record.media.height}` : 'missing',
@@ -1977,6 +2179,7 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
           anchorRegistrationProof.passed &&
           (
             registrationStatus.registeredFamilyStatesBound ||
+            registrationStatus.canonicalContainerStatesBound ||
             anchorEvidence.every(({passed}) => passed)
           ),
         expected:
@@ -1986,6 +2189,8 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
           anchorEvidence,
           registeredFamilyStatesBound:
             registrationStatus.registeredFamilyStatesBound,
+          canonicalContainerStatesBound:
+            registrationStatus.canonicalContainerStatesBound,
         },
       },
       {
@@ -2271,6 +2476,8 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
       stateSheetBinding: asset.stateSheetBinding,
       stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
       registeredFamilyBinding: asset.registeredFamilyBinding,
+      canonicalContainerBinding:
+        asset.canonicalContainerBinding,
       recoverySourceSha256: asset.recoverySourceSha256,
       reviewScope: asset.reviewScope,
       manifestRecordId: asset.manifestRecordId,
@@ -2486,6 +2693,13 @@ const layerStackProofEvidenceFiles = (layerStackProof) =>
     ),
   ].filter(Boolean);
 
+const canonicalContainerProofEvidenceFiles = (
+  canonicalContainerProof,
+) =>
+  Object.values(
+    canonicalContainerProof?.artifacts ?? {},
+  ).filter(Boolean);
+
 const assetEvidenceFiles = (entry) =>
   [
     entry?.alphaMask,
@@ -2583,6 +2797,9 @@ export const createQualityReviewScaffold = async ({
     const files = [
       ...(proof?.proofFrames ?? []).flatMap(proofEvidenceFiles),
       ...layerStackProofEvidenceFiles(proof?.layerStackProof),
+      ...canonicalContainerProofEvidenceFiles(
+        proof?.canonicalContainerProof,
+      ),
     ];
     if (
       composite.requiredChecks?.includes('style-profile-consistent') &&

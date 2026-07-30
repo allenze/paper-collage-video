@@ -23,6 +23,9 @@ ASSET_HARDENING_INPUT_DIRECTORY = (
     / "registered-family"
     / "inputs"
 )
+CANONICAL_CONTAINER_FIXTURE_DIRECTORY = (
+    ROOT / "fixtures" / "canonical-container"
+)
 
 
 def load_json(file: Path) -> dict:
@@ -50,6 +53,32 @@ for name, schema in schemas.items():
 def validate(instance_file: Path, schema_name: str) -> None:
     schema = schemas[schema_name]
     validator = Draft202012Validator(schema, registry=registry)
+    errors = sorted(
+        validator.iter_errors(load_json(instance_file)),
+        key=lambda error: list(error.absolute_path),
+    )
+    if errors:
+        rendered = "\n".join(
+            f"{instance_file.relative_to(ROOT)}:{'/'.join(map(str, error.absolute_path))}: {error.message}"
+            for error in errors
+        )
+        raise ValueError(rendered)
+
+
+def validate_ref(
+    instance_file: Path,
+    schema_name: str,
+    fragment: str,
+) -> None:
+    validator = Draft202012Validator(
+        {
+            "$ref": (
+                f"https://local.paper-collage.dev/{schema_name}"
+                f"#{fragment}"
+            )
+        },
+        registry=registry,
+    )
     errors = sorted(
         validator.iter_errors(load_json(instance_file)),
         key=lambda error: list(error.absolute_path),
@@ -100,6 +129,28 @@ try:
         ASSET_HARDENING_INPUT_DIRECTORY / "rejected-output-recovery.json",
         "rejected-output-recovery.schema.json",
     )
+    validate(
+        CANONICAL_CONTAINER_FIXTURE_DIRECTORY
+        / "canonical-container.json",
+        "canonical-container.schema.json",
+    )
+    validate(
+        CANONICAL_CONTAINER_FIXTURE_DIRECTORY
+        / "canonical-container-binding.json",
+        "canonical-container-binding.schema.json",
+    )
+    validate_ref(
+        CANONICAL_CONTAINER_FIXTURE_DIRECTORY
+        / "canonical-container-intent.json",
+        "storyboard.schema.json",
+        "/$defs/canonicalContainerIntent",
+    )
+    validate_ref(
+        CANONICAL_CONTAINER_FIXTURE_DIRECTORY
+        / "canonical-container-plan.json",
+        "storyboard.schema.json",
+        "/$defs/canonicalContainerPlan",
+    )
 except (FileNotFoundError, KeyError, ValueError) as error:
     print(f"v11 schema validation failed:\n{error}", file=sys.stderr)
     raise SystemExit(1)
@@ -107,5 +158,6 @@ except (FileNotFoundError, KeyError, ValueError) as error:
 print(
     "✓ v11 authoring, compiled storyboard, three project contracts, "
     "asset manifests, looping-strip derivations, registered-family derivation, "
-    "and rejected-output recovery are schema-valid"
+    "canonical-container intent/derivation/binding/compiled plan, and rejected-output recovery "
+    "are schema-valid"
 )

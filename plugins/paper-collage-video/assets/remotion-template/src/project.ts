@@ -61,6 +61,76 @@ export type CompositionRegistration = {
   origin: 'top-left';
 };
 
+export type CanonicalContainerMetrics = {
+  rawBounds: RegisteredFamilyRect;
+  alignedBounds: RegisteredFamilyRect;
+  maskBounds: RegisteredFamilyRect;
+  translation: {x: number; y: number};
+  centerDrift: number;
+  bottomGap: number;
+  fillLevel: number;
+  fillLevelDeviation: number;
+  rimGap: number;
+  bottomBandCoverage: number;
+  interiorRetention: number;
+  clippedPixels: number;
+  outsideMaskPixels: number;
+};
+
+export type CanonicalContainerContract = {
+  schemaVersion: 1;
+  familyId: string;
+  sourcePackageId: string;
+  sourceStrategy: 'canonical-frame-with-content-sheet';
+  familyFingerprint: string;
+  cleanPlateNodeId: string;
+  canonicalFrameNodeId: string;
+  contentsNodeId: string;
+  cleanPlateAssetId: string;
+  cleanPlateSha256: string;
+  canonicalFrameAssetId: string;
+  canonicalFrameSha256: string;
+  contentSheetAssetId: string;
+  contentSheetSha256: string;
+  interiorMaskAssetId: string;
+  interiorMaskSha256: string;
+  authoritativeSurfaceId: string;
+  interiorShape: {
+    kind: 'polygon';
+    points: Array<[number, number]>;
+  };
+  alignmentPolicy: {
+    mode: 'center-bottom';
+    maximumTranslationX: number;
+    maximumTranslationY: number;
+    maximumCenterDrift: number;
+    maximumBottomGap: number;
+    maximumFillLevelDeviation: number;
+    minimumInteriorRetention: number;
+  };
+  states: Array<{
+    id: string;
+    fillLevel: number;
+    assetId: string;
+    sha256: string;
+    metrics: CanonicalContainerMetrics;
+  }>;
+  terminalStateId: string;
+  terminalPolicy: {
+    minimumFillLevel: number;
+    maximumRimGap: number;
+    minimumBottomBandCoverage: number;
+    bottomBandHeight: number;
+  };
+  recoveryPolicy: {
+    strategy: 'preserve-content-sheet-context';
+    localDeterministicFixFirst: true;
+    isolatedStateGeneration: 'forbidden';
+    providerRepair: 'masked-complete-sheet-edit';
+    fallback: 'full-content-sheet-regeneration';
+  };
+};
+
 export type RegisteredFamilyRole =
   | 'support-rear'
   | 'subject'
@@ -668,7 +738,8 @@ export type CompositionGroupNode = {
     | 'supported-subject'
     | 'registered-environment'
     | 'registered-depth-stack'
-    | 'looping-environment';
+    | 'looping-environment'
+    | 'canonical-container';
   renderParticipation?: 'visible' | 'derivation-only';
   z: number;
   depth?: number;
@@ -708,6 +779,7 @@ export type CompositionGroupNode = {
     };
     overscanPx: number;
   };
+  canonicalContainer?: CanonicalContainerContract;
   support?: {
     subjectId: string;
     layering?: 'between-supports' | 'subject-front';

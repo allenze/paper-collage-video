@@ -510,10 +510,11 @@
         "motifFields": [],
         "graphics": [],
         "layerStacks": [],
-        "loopingEnvironments": []
+        "loopingEnvironments": [],
+        "canonicalContainers": []
       },
       "directing": {
-        "fingerprint": "290d2ca1838adaa0bf47a580fd4a1d996809ef9f04f6f0c42baa19c761f9650d",
+        "fingerprint": "e10856d631e0c53619126af07f0c0402548ea1333639c2a1a7dc568ec2e860a7",
         "treatmentCount": 3,
         "riskScore": 13,
         "highestRiskTreatmentId": "show-traveler"
@@ -646,7 +647,7 @@
           "targetId": "traveler",
           "proofTimeId": "proof-action",
           "riskScore": 13,
-          "directingFingerprint": "290d2ca1838adaa0bf47a580fd4a1d996809ef9f04f6f0c42baa19c761f9650d",
+          "directingFingerprint": "e10856d631e0c53619126af07f0c0402548ea1333639c2a1a7dc568ec2e860a7",
           "sourceFamilyKey": "target:traveler",
           "coverage": [
             "baseline:representative"
@@ -657,8 +658,8 @@
         "target:traveler"
       ],
       "motionContractFingerprint": "182fde495834b686439fc32109ed8fca95f1a65472fc3fa28a810b5cda45dc7c",
-      "fingerprint": "bad6d929a3611df86ce2d09f2c65d672227a1ba60b5637a2eece93523c70ff2c"
+      "fingerprint": "53e0c9c7fc2cc9d460b09b19103a774052836b44ce8627e9b204e11ed588457e"
     },
-    "fingerprint": "85b83b113c42b8c380baf57252adb9c2533dd521a0b5df98e8b1aca7fc7c8724"
+    "fingerprint": "b4f466e50674a7729fc7fd7e1159b1740a99aa43aae0792b8812b232d5e5a89e"
   }
 }

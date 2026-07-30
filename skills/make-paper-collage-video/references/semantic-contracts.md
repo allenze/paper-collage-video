@@ -152,6 +152,13 @@ rear/subject/front motion additionally requires complete layer roles and
 responsive reveal envelopes. Do not invent synonymous check names because the
 quality recorder rejects unknown enums.
 
+For a rigid frame with changing internal contents, use
+`canonical-container` in addition to the mechanism semantic contract. The
+mechanism contract states what the fill or accumulation means; the container
+contract proves that one frame, one interior mask, one authoritative contents
+sequence, and measurable terminal state execute it. Do not represent the same
+internal surface with both a fill texture and a separate waterline image.
+
 Spatial truth is orthogonal to semantic topology. Use root
 `spatialContracts[]` to prove a current contact anchor against a support
 surface, real foreground paint order, subtitle clearance, sustained gait

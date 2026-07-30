@@ -47,6 +47,15 @@ package and read [layer-complete-assets.md](layer-complete-assets.md). A
 source strategy, all three complete members, shared canvas, reveal envelopes,
 and context-preserving recovery policy.
 
+Before authoring a rigid-frame/internal-state request, compile its
+`canonicalContainers[]` source package and read
+[canonical-containers.md](canonical-containers.md). Each of its three provider
+roots carries the same `containerPackageBinding`; only `packageRole`,
+`assetId`, output role/surface, canvas, prompt directive, and role-specific
+checks differ. The content sheet canvas is the registered cell canvas
+multiplied by its declared grid. It is one complete provider root, never one
+request per fill state.
+
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",

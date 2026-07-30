@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   collectStyleProofTargets,
@@ -59,11 +61,52 @@ export const assertStyleTargetPatternProof = ({target, proof}) => {
   }
 };
 
-const assertEvidenceFile = async (file, label) => {
+const assertEvidenceFile = async (file, label, root = ROOT) => {
   if (typeof file !== 'string' || file.length === 0) throw new Error(`风格拓扑证明缺少 ${label}。`);
-  const absolute = path.resolve(ROOT, file);
-  if (absolute !== ROOT && !absolute.startsWith(`${ROOT}${path.sep}`)) throw new Error(`风格拓扑证明路径越过工作区：${file}`);
+  const absolute = path.resolve(root, file);
+  if (absolute !== root && !absolute.startsWith(`${root}${path.sep}`)) throw new Error(`风格拓扑证明路径越过工作区：${file}`);
   if (!(await fileExists(absolute))) throw new Error(`风格拓扑证明文件不存在：${file}`);
+  return absolute;
+};
+
+const hashFile = async (file) =>
+  createHash('sha256').update(await fs.readFile(file)).digest('hex');
+
+export const assertCanonicalContainerStyleProof = async ({
+  target,
+  proof,
+  root = ROOT,
+}) => {
+  if (target.pattern !== 'canonical-container') return;
+  const containerProof = proof.canonicalContainerProof;
+  const artifactEntries = Object.entries(
+    containerProof?.artifacts ?? {},
+  );
+  if (
+    containerProof?.passed !== true ||
+    containerProof.familyFingerprint !==
+      target.group?.canonicalContainer?.familyFingerprint ||
+    artifactEntries.length !== 3
+  ) {
+    throw new Error(
+      `${proof.compositeId} 缺少通过且绑定当前家族的 canonical-container 证明。`,
+    );
+  }
+  for (const [key, file] of artifactEntries) {
+    const absolute = await assertEvidenceFile(
+      file,
+      `${proof.compositeId}.canonicalContainer.${key}`,
+      root,
+    );
+    if (
+      await hashFile(absolute) !==
+      containerProof.artifactHashes?.[file]
+    ) {
+      throw new Error(
+        `${proof.compositeId} 的 canonical-container 证明文件已变化：${file}。`,
+      );
+    }
+  }
 };
 
 const allPassed = (semanticChecks) => Object.values(semanticChecks ?? {}).every((status) => status === 'passed');
@@ -138,6 +181,7 @@ export const assertStyleProofReady = async (slug) => {
       throw new Error(`${proof.compositeId} 的风格拓扑证明已过期；请重新生成。`);
     }
     assertStyleTargetPatternProof({target, proof});
+    await assertCanonicalContainerStyleProof({target, proof});
     const frames = proof.proofFrames ?? [];
     for (const proofTimeId of target.proofTimeIds) {
       const frame = frames.find((candidate) => candidate.proofTimeId === proofTimeId);
@@ -255,6 +299,13 @@ export const assertStyleProofReady = async (slug) => {
       compositeEvidence.push(
         ...proof.loopingWorldProof.strips.map(
           ({derivationReport}) => derivationReport,
+        ),
+      );
+    }
+    if (target.pattern === 'canonical-container') {
+      compositeEvidence.push(
+        ...Object.values(
+          proof.canonicalContainerProof.artifacts,
         ),
       );
     }

@@ -11,6 +11,11 @@ import {
   validateLayerCompositionIntent,
 } from './layer-source-plan-lib.mjs';
 import {
+  collectCanonicalContainerPlans,
+  compileCanonicalContainerPlan,
+  validateCanonicalContainerIntent,
+} from './container-source-plan-lib.mjs';
+import {
   compileMotionContract,
   validateCompiledMotionContract,
 } from './motion-contract-lib.mjs';
@@ -44,6 +49,7 @@ export const COMPOSITION_PATTERNS = [
   'registered-environment',
   'registered-depth-stack',
   'looping-environment',
+  'canonical-container',
 ];
 export const GRAPHIC_KINDS = ['typography', 'shape', 'annotation', 'data-graphic'];
 export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'reveal', 'route', 'data-state'];
@@ -209,6 +215,7 @@ export const treatmentRiskScore = (treatment) =>
   (treatment?.composition?.pattern === 'registered-depth-stack' ? 6 : 0) +
   (treatment?.composition?.pattern === 'registered-environment' ? 4 : 0) +
   (treatment?.composition?.pattern === 'looping-environment' ? 5 : 0) +
+  (treatment?.composition?.pattern === 'canonical-container' ? 7 : 0) +
   (treatment?.composition?.pattern === 'supported-subject' ? 3 : 0) +
   (IMPORTANCE_SCORE[treatment?.importance] ?? 0) +
   (treatment?.necessity === 'required' ? 1 : 0);
@@ -225,7 +232,7 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   if ((STYLE_SEMANTIC_SEVERITY[treatment.semanticRisk] ?? 0) === highestSemanticSeverity && highestSemanticSeverity > 0) {
     coverage.push(`semantic:${treatment.semanticRisk}`);
   }
-  if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(treatment.composition?.pattern)) {
+  if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(treatment.composition?.pattern)) {
     coverage.push(`relationship:${treatment.composition.pattern}`);
   }
   if (treatment.composition?.motionCapability === 'bounded-relative') {
@@ -293,7 +300,7 @@ export const compileStyleProofPlan = (
       requiredCoverage.add(coverage);
     }
   }
-  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(compositionPattern))) {
+  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(compositionPattern))) {
     requiredCoverage.add('relationship:coupled');
   }
   const representative = [...candidates].sort((left, right) =>
@@ -525,7 +532,8 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   } else if (
     composition.pattern !== 'free' &&
     composition.pattern !== 'registered-depth-stack' &&
-    composition.pattern !== 'looping-environment'
+    composition.pattern !== 'looping-environment' &&
+    composition.pattern !== 'canonical-container'
   ) {
     const relationship = composition.relationship;
     if (!relationship || typeof relationship !== 'object') {
@@ -548,6 +556,10 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   issues.push(
     ...validateLayerCompositionIntent(composition, {
       location: `${location}.composition`,
+    }),
+    ...validateCanonicalContainerIntent(composition, {
+      location: `${location}.composition`,
+      treatment,
     }),
   );
   if (composition?.pattern === 'looping-environment') {
@@ -658,6 +670,17 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   } else if (composition?.world !== undefined) {
     addIssue(issues, 'treatment-world-pattern', 'composition.world 只适用于 looping-environment。', `${location}.composition.world`);
   }
+  if (
+    composition?.pattern !== 'canonical-container' &&
+    composition?.container !== undefined
+  ) {
+    addIssue(
+      issues,
+      'treatment-container-pattern',
+      'composition.container 只适用于 canonical-container。',
+      `${location}.composition.container`,
+    );
+  }
 
   if (treatment.graphic !== null && treatment.graphic !== undefined) {
     if (!GRAPHIC_KINDS.includes(treatment.graphic?.kind)) {
@@ -706,6 +729,7 @@ const compileScene = (scene) => {
   const graphics = [];
   const layerStacks = new Map();
   const loopingEnvironments = new Map();
+  const canonicalContainers = new Map();
   const treatments = [];
 
   for (const beat of scene.beats ?? []) {
@@ -849,6 +873,29 @@ const compileScene = (scene) => {
         }
         if (!prior) layerStacks.set(key, layerStack);
       }
+      const canonicalContainer = compileCanonicalContainerPlan({
+        sceneId: scene.id,
+        treatment,
+      });
+      if (canonicalContainer) {
+        const key = canonicalContainer.groupId;
+        const prior = canonicalContainers.get(key);
+        const stable = ({
+          treatmentId,
+          proofTimeId,
+          ...value
+        }) => value;
+        if (
+          prior &&
+          JSON.stringify(stable(prior)) !==
+            JSON.stringify(stable(canonicalContainer))
+        ) {
+          throw new Error(
+            `canonical container ${scene.id}::${key} 在同一镜头中定义不一致。`,
+          );
+        }
+        if (!prior) canonicalContainers.set(key, canonicalContainer);
+      }
     }
   }
 
@@ -882,6 +929,9 @@ const compileScene = (scene) => {
     loopingEnvironments: [...loopingEnvironments.values()].sort((left, right) =>
       left.targetId.localeCompare(right.targetId),
     ),
+    canonicalContainers: [...canonicalContainers.values()].sort(
+      (left, right) => left.groupId.localeCompare(right.groupId),
+    ),
   };
   const directing = {
     fingerprint: hashCompositionValue({sceneId: scene.id, beats: scene.beats, compositionPlan}),
@@ -909,7 +959,11 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
     }))),
   );
   const stateFamilyMap = new Map();
-  for (const treatment of treatments.filter(({motion}) => motion.kind === 'state-sequence')) {
+  for (const treatment of treatments.filter(
+    ({motion, composition}) =>
+      motion.kind === 'state-sequence' &&
+      composition?.pattern !== 'canonical-container',
+  )) {
     // A poseFamilyId denotes one registered provider sheet. A continuous scene may
     // intentionally use several temporal instances of that same family (for
     // example, a sleeping hare and the later chase) without creating another
@@ -1007,6 +1061,7 @@ export const summarizeProfileFulfillment = (scenes, demand, promise = null) => {
             'registered-environment',
             'registered-depth-stack',
             'looping-environment',
+            'canonical-container',
           ].includes(pattern),
         ),
     ).length,
@@ -1279,6 +1334,7 @@ export const compileStoryboardDirecting = (
   const generationBudget = summarizeLayerSourcePackages(scenes, {
     poseSheetCalls: demand.estimatedPoseSheetCalls,
     hardCeiling: plan?.assetBudget?.maxGeneratedImages ?? null,
+    additionalPlans: collectCanonicalContainerPlans(scenes),
   });
   if (
     Number.isInteger(generationBudget.hardCeiling) &&
@@ -1288,7 +1344,7 @@ export const compileStoryboardDirecting = (
     addIssue(
       budgetIssues,
       'directing-image-attempt-budget',
-      `分层 source packages 与姿态母版至少需要 ${generationBudget.requiredProviderImageCalls} 次图片 provider 调用，超过 ${plan.productionProfile} 档位硬上限 ${generationBudget.hardCeiling}；请提高档位、改用可靠 registered-layer-sheet 或缩小范围。`,
+      `source packages 与姿态母版至少需要 ${generationBudget.requiredProviderImageCalls} 次图片 provider 调用，超过 ${plan.productionProfile} 档位硬上限 ${generationBudget.hardCeiling}；请提高档位、使用可靠批量状态来源或缩小范围。`,
       'directingSummary.generationBudget.requiredProviderImageCalls',
     );
   }
@@ -1449,6 +1505,76 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
     };
     if (node?.kind !== 'state-sequence' || JSON.stringify(runtimeShape) !== JSON.stringify(plannedShape)) {
       addIssue(issues, 'directing-state-sequence-drift', `状态家族 ${planned.nodeId} 与编译计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
+    }
+  }
+  for (
+    const planned of
+      storyboardScene?.compositionPlan?.canonicalContainers ?? []
+  ) {
+    const group = nodes.get(planned.groupId);
+    const binding = group?.canonicalContainer;
+    const contents = group?.children?.find(
+      ({id}) => id === planned.targetId,
+    );
+    const runtimeShape = binding && {
+      familyId: binding.familyId,
+      sourcePackageId: binding.sourcePackageId,
+      sourceStrategy: binding.sourceStrategy,
+      registrationId: group.registration?.id,
+      sourceMasterAssetId: group.registration?.sourceMasterAssetId,
+      canvas: group.registration?.canvas,
+      cleanPlateAssetId: binding.cleanPlateAssetId,
+      canonicalFrameAssetId: binding.canonicalFrameAssetId,
+      contentSheetAssetId: binding.contentSheetAssetId,
+      interiorMaskAssetId: binding.interiorMaskAssetId,
+      authoritativeSurfaceId: binding.authoritativeSurfaceId,
+      interiorShape: binding.interiorShape,
+      alignmentPolicy: binding.alignmentPolicy,
+      states: binding.states?.map(({id, fillLevel}) => ({
+        id,
+        at: contents?.states?.find((state) => state.id === id)?.at,
+        fillLevel,
+      })),
+      terminalStateId: binding.terminalStateId,
+      terminalPolicy: binding.terminalPolicy,
+      recoveryPolicy: binding.recoveryPolicy,
+    };
+    const plannedShape = {
+      familyId: planned.familyId,
+      sourcePackageId: planned.sourcePackageId,
+      sourceStrategy: planned.sourceStrategy,
+      registrationId: planned.registrationId,
+      sourceMasterAssetId: planned.sourceMasterAssetId,
+      canvas: planned.canvas,
+      cleanPlateAssetId: planned.cleanPlateAssetId,
+      canonicalFrameAssetId: planned.canonicalFrameAssetId,
+      contentSheetAssetId: planned.contentSheetAssetId,
+      interiorMaskAssetId: planned.interiorMaskAssetId,
+      authoritativeSurfaceId: planned.authoritativeSurfaceId,
+      interiorShape: planned.interiorShape,
+      alignmentPolicy: planned.alignmentPolicy,
+      states: planned.states.map(({id, at, fillLevel}) => ({
+        id,
+        at,
+        fillLevel,
+      })),
+      terminalStateId: planned.terminalStateId,
+      terminalPolicy: planned.terminalPolicy,
+      recoveryPolicy: planned.recoveryPolicy,
+    };
+    if (
+      group?.kind !== 'group' ||
+      group.pattern !== 'canonical-container' ||
+      contents?.kind !== 'state-sequence' ||
+      binding?.contentsNodeId !== planned.targetId ||
+      JSON.stringify(runtimeShape) !== JSON.stringify(plannedShape)
+    ) {
+      addIssue(
+        issues,
+        'directing-canonical-container-drift',
+        `容器机制 ${planned.groupId} 与编译计划不一致。`,
+        `${location}.composition.nodes#${planned.groupId}`,
+      );
     }
   }
   for (const planned of storyboardScene?.compositionPlan?.continuousMotions ?? []) {

@@ -79,6 +79,7 @@
       "reviewScope": "runtime-visible",
       "semanticBinding": null,
       "registeredFamilyBinding": null,
+      "canonicalContainerBinding": null,
       "stateSheetBinding": null,
       "outputSurface": null,
       "stateSheetRecoveryBinding": null,
@@ -93,7 +94,7 @@
         "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a"
       },
       "sha256": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
-      "fingerprint": "b802451a334fbc0ad12ca44dfb6f11cbd1e0c0e7ad7adf600262b763ca42d57e",
+      "fingerprint": "1fc6737b3674e445bd2579b0f0c7af450eac5331c3880ba7552cadcc9ec890cb",
       "requiredChecks": [
         "no-text",
         "no-watermark",
@@ -231,6 +232,7 @@
       "reviewScope": "runtime-visible",
       "semanticBinding": null,
       "registeredFamilyBinding": null,
+      "canonicalContainerBinding": null,
       "stateSheetBinding": null,
       "outputSurface": null,
       "stateSheetRecoveryBinding": null,
@@ -245,7 +247,7 @@
         "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a"
       },
       "sha256": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
-      "fingerprint": "5377802cf60f6137e52204564d9d331d4e53b262ae2805f2189fffe2aac2ddf0",
+      "fingerprint": "eda094ecb0cc808d4b3bfeb48bd5c230c3ad86e1ea6fa655f123317b1ea1522f",
       "requiredChecks": [
         "subject-complete",
         "identity-consistent",
@@ -390,7 +392,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
-      "fingerprint": "79e2d075c3bdcd27c9175f5167fb19427faf4a6a8f13dc8769071b11535057b2",
+      "fingerprint": "badae7d9e35aa763ab9c9b16c8252893384f39776390f0b780bec51bb7ef189b",
       "proofTimeIds": [
         "proof-establish"
       ],
@@ -424,8 +426,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "79e2d075c3bdcd27c9175f5167fb19427faf4a6a8f13dc8769071b11535057b2",
-            "actual": "79e2d075c3bdcd27c9175f5167fb19427faf4a6a8f13dc8769071b11535057b2"
+            "expected": "badae7d9e35aa763ab9c9b16c8252893384f39776390f0b780bec51bb7ef189b",
+            "actual": "badae7d9e35aa763ab9c9b16c8252893384f39776390f0b780bec51bb7ef189b"
           },
           {
             "id": "proof-artifacts-present",
@@ -473,7 +475,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "33ca0da49ad6545fd8c4c140d191c3b619c876ab40e435a6514496d94f6000cb",
-      "fingerprint": "8752da7625461db06e102fa6d1f28bece9fa2dfbf6380bc70951f5ffc8281e7d",
+      "fingerprint": "3b712a8466372fda9eb684efd2e328f17547bc2da19dcdc170e22ae27b80b730",
       "proofTimeIds": [
         "proof-action"
       ],
@@ -507,8 +509,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "8752da7625461db06e102fa6d1f28bece9fa2dfbf6380bc70951f5ffc8281e7d",
-            "actual": "8752da7625461db06e102fa6d1f28bece9fa2dfbf6380bc70951f5ffc8281e7d"
+            "expected": "3b712a8466372fda9eb684efd2e328f17547bc2da19dcdc170e22ae27b80b730",
+            "actual": "3b712a8466372fda9eb684efd2e328f17547bc2da19dcdc170e22ae27b80b730"
           },
           {
             "id": "proof-artifacts-present",
@@ -556,7 +558,7 @@
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
       "compositionHash": "e0b2febd866012364c55f448cee0cca01ad63359e1ffe7776b238f7996a82e39",
-      "fingerprint": "c4c81c9755545366a997c226929d06a78b3fe55e5661852027e299ff9c5627f2",
+      "fingerprint": "8dc72911fbbf2071c22dcc4e7baed27de7cf4becfcfb90a536757774a333616d",
       "proofTimeIds": [
         "proof-final"
       ],
@@ -590,8 +592,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "c4c81c9755545366a997c226929d06a78b3fe55e5661852027e299ff9c5627f2",
-            "actual": "c4c81c9755545366a997c226929d06a78b3fe55e5661852027e299ff9c5627f2"
+            "expected": "8dc72911fbbf2071c22dcc4e7baed27de7cf4becfcfb90a536757774a333616d",
+            "actual": "8dc72911fbbf2071c22dcc4e7baed27de7cf4becfcfb90a536757774a333616d"
           },
           {
             "id": "proof-artifacts-present",
@@ -641,7 +643,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "d99da323765001cb4e9ad6e8f54da5059bad8a4fdecd1dae4b44d00cde6003c8",
-      "fingerprint": "7698333ced64b7bf124d2f271462d81015f1e0f11bafbca4d6d306a1c8a0d895",
+      "fingerprint": "93ce7225befe71c7cb0e1d179e34058ae09bc1c89e00ff2f53538952f333a13b",
       "proofTimeIds": [
         "proof-establish",
         "proof-action",
@@ -704,8 +706,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "7698333ced64b7bf124d2f271462d81015f1e0f11bafbca4d6d306a1c8a0d895",
-            "actual": "7698333ced64b7bf124d2f271462d81015f1e0f11bafbca4d6d306a1c8a0d895"
+            "expected": "93ce7225befe71c7cb0e1d179e34058ae09bc1c89e00ff2f53538952f333a13b",
+            "actual": "93ce7225befe71c7cb0e1d179e34058ae09bc1c89e00ff2f53538952f333a13b"
           },
           {
             "id": "proof-artifacts-present",
@@ -747,7 +749,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "5d49509e53bca73ce5e6e021bfd5f6963e497b332c87aa1351f218df4daaf690",
-      "fingerprint": "341c40dce487a5076ed2861c6df3f9ddea40b2492312d72cbd2633d82e90c321",
+      "fingerprint": "3b7f9b82b46611b02b92a2c7acb78d2da9d12288488f31e8aa2242a05990b100",
       "proofTimeIds": [
         "proof-establish",
         "proof-action",
@@ -815,8 +817,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "341c40dce487a5076ed2861c6df3f9ddea40b2492312d72cbd2633d82e90c321",
-            "actual": "341c40dce487a5076ed2861c6df3f9ddea40b2492312d72cbd2633d82e90c321"
+            "expected": "3b7f9b82b46611b02b92a2c7acb78d2da9d12288488f31e8aa2242a05990b100",
+            "actual": "3b7f9b82b46611b02b92a2c7acb78d2da9d12288488f31e8aa2242a05990b100"
           },
           {
             "id": "proof-artifacts-present",
@@ -853,5 +855,5 @@
       "status": "passed"
     }
   ],
-  "reviewSurfaceFingerprint": "4fe5875619737c1f398b6b5c6133459449a120260b412e3ed5cc5220b021d9c9"
+  "reviewSurfaceFingerprint": "8b5b6f9e2b2645c20d66e970540e7c93cd4c88108aae54063768b94338cd5606"
 }

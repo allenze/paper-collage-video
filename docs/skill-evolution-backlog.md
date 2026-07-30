@@ -5,6 +5,39 @@ paper-collage Skill or runtime gap. It is not a substitute for implementation:
 an item stays open until its contract, renderer, validation, proof, tests,
 documentation, and packaged-plugin copy are updated together.
 
+## 2026-07-30 — Canonical rigid containers and measurable internal state
+
+- **Origin:** `wu-ya-he-shui-v2` / 《乌鸦喝水》 F006, F019, F023–F025,
+  and F027. The production project is closed and is not modified by this work.
+- **Observed failure:** a bottle frame, fill texture, and small water-surface
+  texture could be generated or positioned as independent visible assets. They
+  disagreed in scale and placement, allowed more than one layer to represent
+  the same water, and did not prove that the final fill reached the intended
+  level. Local nudging could improve one frame but could not establish a
+  reusable source or runtime contract.
+- **Required capability:** one first-class `canonical-container` authoring and
+  runtime pattern: a clean plate, one unique canonical frame, one complete
+  contents-only state sheet, one shared polygon interior mask, bounded
+  center/bottom auto-registration, one authoritative internal surface,
+  measurable ordered states, and measurable terminal fill. Provider prompts,
+  recovery, provenance, fingerprints, renderer order, validation, quality, and
+  proof must all consume that same contract.
+- **Acceptance evidence:** deterministic fixtures intentionally offset every
+  state and prove bounded correction plus zero outside-mask pixels; negative
+  tests reject excessive repair, fake alpha, duplicate water surfaces, missing
+  provider role directives, a provider grid/plan mismatch, and an incomplete
+  terminal state. Schema instances cover the authoring intent, derivation,
+  manifest binding, and compiled source plan.
+- **Status:** implemented and verified on 2026-07-30. TypeScript and Schema v11
+  pass; the source suite passes 252/252. The packaged runtime suite passes with
+  233 checks plus three dependency-gated skips before bootstrap; the same
+  installed-cache package passes 236/236 with zero skips after a fresh
+  bootstrap. Source, packaged plugin, installed cache, and fresh workspace share
+  runtime fingerprint
+  `5990c23e246e13309412d255d3f738d7ab95efebf57e1e2eea32b1bcad6ff097`.
+  The fresh workspace doctor reports READY and its type check and Schema v11
+  validation also pass.
+
 ## 2026-07-28 — Delivery-equivalent audio and immutable review evidence
 
 - **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F010, F017, F025,

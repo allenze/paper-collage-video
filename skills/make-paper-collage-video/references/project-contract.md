@@ -270,6 +270,7 @@ Use only these patterns:
 | `supported-subject` | person in boat, object on table, hand holding prop | rear support, subject, front support, shared registration, contact and occlusion zones |
 | `registered-depth-stack` | independently moving rear, subject, and front planes | clean rear plate, full subject silhouette, full front overlay, shared registration, strict depth, responsive reveal envelopes, and optional subject-only travel envelopes |
 | `registered-environment` | land/water, sky/ground, wall/floor, tabletop edge | shared master canvas, registration, fixed boundary, upper/lower clipped members |
+| `canonical-container` | one rigid bottle, tank, gauge, cavity, or bezel with changing internal contents | exactly one clean plate, one canonical frame, one contents state sequence, shared full-canvas registration/interior mask, one authoritative internal surface, measured ordered states, and a measured terminal state |
 | `looping-environment` | car/train/boat travelling through a persistent horizontal world | two to four seamless `world-strip` roles, one non-scrolling tracked subject, ground reference, monotonic depth speeds, and before/seam/after proof bindings |
 
 Groups own carrier motion; children own only local motion. Do not repeat the group's world path on attached children. Local z-order is deterministic. The default `between-supports` order is support rear, optional contact shadow, subject, support front. Use `support.layering=subject-front` only when the approved visual language requires the complete subject silhouette to remain above every support member; quality review then proves `subject-front-clear` instead of front occlusion. Registered environment members use the complete master canvas with top-left origin; textures may move within a fixed clip, but the boundary must not move across semantic content.
@@ -289,6 +290,16 @@ the registered derivation, so a changed source package, mask, clip, placement,
 reveal envelope, or render size invalidates cached evidence.
 
 Derivation method is part of correctness. Complex silhouettes and negative spaces require capable segmentation/matting or careful manual tracing; a coarse enclosing polygon is invalid even when it has clean hard alpha. When extraction quality cannot be proved, keep the complete master rigid and use whole-family/camera motion instead of fabricating independent parts.
+
+A `canonical-container` is deliberately stricter than a free stack of prop
+images. Its child order is fixed to clean plate, contents, then frame. All
+children preserve the full registration canvas, children cannot carry
+independent transform motion, and only the contents sequence owns
+`container-surface:<authoritativeSurfaceId>`. The family fingerprint binds the
+three provider roots, one polygon mask, all state hashes/metrics, terminal
+policy, and context-preserving recovery policy. A duplicate fill/waterline node,
+frame redraw inside the contents sheet, or terminal state below its measured
+threshold invalidates the composition.
 
 Every adjacent scene pair has one top-level `sceneTransitions[]` record with
 narrative `intent` and `rationale`. An intent-only schema-v11 authoring record

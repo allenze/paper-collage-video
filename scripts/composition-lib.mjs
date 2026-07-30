@@ -160,6 +160,11 @@ export const flattenCompositionNodes = (
 export const collectCompositionGroups = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'group');
 
+export const collectCanonicalContainers = (composition) =>
+  collectCompositionGroups(composition).filter(
+    ({node}) => node.pattern === 'canonical-container',
+  );
+
 export const collectCompositionAssets = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'asset');
 
@@ -1262,6 +1267,259 @@ export const validateCompositionStructure = ({
             add('error', 'composition-looping-world-displacement', '必需 world travel 必须让 ground strip 在相机补偿后至少移动一个 viewport。', `${nodeLocation}.loopingEnvironment.travel.distanceViewports`);
           }
         }
+      }
+    }
+
+    if (node.pattern === 'canonical-container') {
+      const container = node.canonicalContainer;
+      if (!node.registration) {
+        add(
+          'error',
+          'composition-container-registration',
+          'canonical-container 必须声明唯一母版 registration。',
+          `${nodeLocation}.registration`,
+        );
+      }
+      if (
+        node.registration &&
+        (
+          node.registration.canvas.width !== node.coordinateSpace.width ||
+          node.registration.canvas.height !== node.coordinateSpace.height
+        )
+      ) {
+        add(
+          'error',
+          'composition-container-registration-canvas',
+          '容器 registration.canvas 必须与 group.coordinateSpace 一致。',
+          `${nodeLocation}.registration.canvas`,
+        );
+      }
+      if (
+        container?.schemaVersion !== 1 ||
+        !nonEmpty(container?.familyId) ||
+        container?.sourceStrategy !==
+          'canonical-frame-with-content-sheet' ||
+        !/^[a-f0-9]{64}$/.test(
+          container?.familyFingerprint ?? '',
+        )
+      ) {
+        add(
+          'error',
+          'composition-container-binding',
+          'canonical-container 必须绑定当前 schema-v1 family fingerprint。',
+          `${nodeLocation}.canonicalContainer`,
+        );
+      }
+      const children = node.children ?? [];
+      const cleanPlate = children.find(
+        ({id}) => id === container?.cleanPlateNodeId,
+      );
+      const frame = children.find(
+        ({id}) => id === container?.canonicalFrameNodeId,
+      );
+      const contents = children.find(
+        ({id}) => id === container?.contentsNodeId,
+      );
+      if (
+        children.length !== 3 ||
+        cleanPlate?.kind !== 'asset' ||
+        cleanPlate.slot !== 'container-clean-plate' ||
+        frame?.kind !== 'asset' ||
+        frame.slot !== 'container-frame' ||
+        contents?.kind !== 'state-sequence' ||
+        contents.slot !== 'container-contents'
+      ) {
+        add(
+          'error',
+          'composition-container-members',
+          'canonical-container 必须且只能包含 container-clean-plate、container-contents、container-frame 三个权威成员。',
+          `${nodeLocation}.children`,
+        );
+      }
+      const expectedCoverage = {
+        [container?.cleanPlateNodeId]:
+          `container-clean-plate:${container?.familyId}`,
+        [container?.contentsNodeId]:
+          `container-surface:${container?.authoritativeSurfaceId}`,
+        [container?.canonicalFrameNodeId]:
+          `container-frame:${container?.familyId}`,
+      };
+      const coverageIds = new Set();
+      for (const child of children) {
+        const childLocation = `${nodeLocation}.children#${child.id}`;
+        const registrationId =
+          child.kind === 'state-sequence'
+            ? child.registration?.id
+            : child.registrationId;
+        if (registrationId !== node.registration?.id) {
+          add(
+            'error',
+            'composition-container-member-registration',
+            `容器成员 ${child.id} 必须共享 registrationId。`,
+            childLocation,
+          );
+        }
+        const transform = child.transform ?? {};
+        if (
+          transform.x !== 0 ||
+          transform.y !== 0 ||
+          transform.width !== 1 ||
+          transform.height !== 1 ||
+          transform.anchorX !== 0 ||
+          transform.anchorY !== 0
+        ) {
+          add(
+            'error',
+            'composition-container-member-transform',
+            `容器成员 ${child.id} 必须保持完整母版画布，禁止独立缩放或错位。`,
+            `${childLocation}.transform`,
+          );
+        }
+        const hasLocalMotion = (
+          child.motion?.keyframes ?? []
+        ).some(
+          ({
+            offsetX = 0,
+            offsetY = 0,
+            scale = 1,
+            rotation = 0,
+            opacity = 1,
+          }) =>
+            offsetX !== 0 ||
+            offsetY !== 0 ||
+            scale !== 1 ||
+            rotation !== 0 ||
+            opacity !== 1,
+        );
+        if (
+          hasLocalMotion ||
+          (
+            child.motion?.idle &&
+            child.motion.idle.preset !== 'still'
+          )
+        ) {
+          add(
+            'error',
+            'composition-container-member-motion',
+            `容器成员 ${child.id} 不得独立漂移；整体运动只能由父组承载。`,
+            `${childLocation}.motion`,
+          );
+        }
+        const expected = expectedCoverage[child.id];
+        const coverage = child.semanticCoverage ?? [];
+        if (
+          !expected ||
+          coverage.length !== 1 ||
+          coverage[0] !== expected ||
+          coverageIds.has(coverage[0])
+        ) {
+          add(
+            'error',
+            'composition-container-authority',
+            `容器成员 ${child.id} 必须且只能声明自身的一个权威语义覆盖。`,
+            `${childLocation}.semanticCoverage`,
+          );
+        }
+        coverageIds.add(coverage[0]);
+      }
+      if (
+        contents?.poseFamilyId !== container?.familyId ||
+        JSON.stringify(
+          contents?.states?.map(({id}) => id),
+        ) !==
+          JSON.stringify(
+            container?.states?.map(({id}) => id),
+          )
+      ) {
+        add(
+          'error',
+          'composition-container-state-family',
+          'container-contents 的状态 id 必须与 canonicalContainer.states 完全一致。',
+          `${nodeLocation}.canonicalContainer.states`,
+        );
+      }
+      const containerStateIds = new Set();
+      let previousFill = -Infinity;
+      for (const [index, state] of (
+        container?.states ?? []
+      ).entries()) {
+        const stateLocation =
+          `${nodeLocation}.canonicalContainer.states[${index}]`;
+        if (
+          !nonEmpty(state?.id) ||
+          containerStateIds.has(state.id) ||
+          !finite(state?.fillLevel) ||
+          state.fillLevel <= previousFill ||
+          !/^[a-f0-9]{64}$/.test(state?.sha256 ?? '') ||
+          state.metrics?.outsideMaskPixels !== 0 ||
+          state.metrics?.centerDrift >
+            (container?.alignmentPolicy?.maximumCenterDrift ??
+              -Infinity) ||
+          state.metrics?.bottomGap >
+            (container?.alignmentPolicy?.maximumBottomGap ??
+              -Infinity) ||
+          state.metrics?.fillLevelDeviation >
+            (container?.alignmentPolicy
+              ?.maximumFillLevelDeviation ?? -Infinity) ||
+          state.metrics?.interiorRetention <
+            (container?.alignmentPolicy
+              ?.minimumInteriorRetention ?? Infinity)
+        ) {
+          add(
+            'error',
+            'composition-container-state-metrics',
+            '每个容器状态必须唯一、fillLevel 递增、无内腔溢出，并满足对齐与填充偏差阈值。',
+            stateLocation,
+          );
+        }
+        containerStateIds.add(state?.id);
+        previousFill = state?.fillLevel ?? previousFill;
+      }
+      const terminal = container?.states?.find(
+        ({id}) => id === container?.terminalStateId,
+      );
+      if (
+        !terminal ||
+        terminal !== container?.states?.at(-1) ||
+        terminal.metrics?.fillLevel <
+          (container?.terminalPolicy?.minimumFillLevel ??
+            Infinity) ||
+        terminal.metrics?.rimGap >
+          (container?.terminalPolicy?.maximumRimGap ??
+            -Infinity) ||
+        terminal.metrics?.bottomBandCoverage <
+          (container?.terminalPolicy
+            ?.minimumBottomBandCoverage ?? Infinity)
+      ) {
+        add(
+          'error',
+          'composition-container-terminal',
+          '容器终态必须是最后状态，并满足最小填充、最大瓶口间隙和底部承载覆盖。',
+          `${nodeLocation}.canonicalContainer.terminalStateId`,
+        );
+      }
+    }
+  }
+  const authoritativeContainerSurfaces = new Map();
+  for (const {node, renderParticipation} of flat) {
+    if (
+      renderParticipation !== 'visible' ||
+      !['asset', 'state-sequence'].includes(node.kind)
+    ) {
+      continue;
+    }
+    for (const coverage of node.semanticCoverage ?? []) {
+      if (!coverage.startsWith('container-surface:')) continue;
+      const previous = authoritativeContainerSurfaces.get(coverage);
+      if (previous) {
+        add(
+          'error',
+          'composition-container-surface-duplicate',
+          `权威容器表面 ${coverage} 被 ${previous.id} 与 ${node.id} 重复表示；水体、水面或其他同义贴图只能保留一个消费者。`,
+          `${location}.nodes#${node.id}.semanticCoverage`,
+        );
+      } else {
+        authoritativeContainerSurfaces.set(coverage, node);
       }
     }
   }

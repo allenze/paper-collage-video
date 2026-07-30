@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import {createHash} from 'node:crypto';
 import {
   collectCompositionAssets,
   collectCompositionGroups,
@@ -58,10 +59,15 @@ import {
   spatialContractDebugOverlay,
   summarizeSpatialContracts,
 } from './spatial-contract-lib.mjs';
+import {
+  buildCanonicalContainerProof,
+} from './canonical-container-lib.mjs';
 
 const args = process.argv.slice(2);
 const [slug] = args.filter((argument) => !argument.startsWith('--'));
 const force = args.includes('--force');
+const hashFile = async (file) =>
+  createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
@@ -290,6 +296,7 @@ try {
           'supported-subject',
           'registered-environment',
           'registered-depth-stack',
+          'canonical-container',
         ].includes(parent.pattern)
       ) continue;
       coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {
@@ -344,10 +351,13 @@ try {
       path.normalize(path.join('public', node.src)),
     ) ?? null;
     const registeredFamilyBinding = record?.registeredFamilyBinding ?? null;
+    const canonicalContainerBinding =
+      record?.canonicalContainerBinding ?? null;
     const cached = previousEvidence.get(`${sceneId}:${node.id}:${node.src}`);
     if (!force && await assetEvidenceIsCurrent(cached, node, {
       renderSize,
       registeredFamilyBinding,
+      canonicalContainerBinding,
     })) {
       assetEvidence.push(cached);
       reusedEvidence += 1;
@@ -359,6 +369,7 @@ try {
           evidenceId: `${sceneId}-${node.id}${stateId ? `-${stateId}` : ''}`,
           renderSize,
           registeredFamilyBinding,
+          canonicalContainerBinding,
         }),
         sceneId,
       });
@@ -539,6 +550,33 @@ try {
         cached.loopingWorldProof?.passed === true
       ) &&
       (
+        target.pattern !== 'canonical-container' ||
+        (
+          cached.canonicalContainerProof?.passed === true &&
+          cached.canonicalContainerProof?.familyFingerprint ===
+            target.group.canonicalContainer?.familyFingerprint &&
+          Object.values(
+            cached.canonicalContainerProof.artifacts ?? {},
+          ).length === 3 &&
+          (
+            await Promise.all(
+              Object.values(
+                cached.canonicalContainerProof.artifacts ?? {},
+              ).map(async (file) => {
+                if (!file) return false;
+                const absolute = path.resolve(ROOT, file);
+                return (
+                  await fileExists(absolute) &&
+                  await hashFile(absolute) ===
+                    cached.canonicalContainerProof
+                      .artifactHashes?.[file]
+                );
+              }),
+            )
+          ).every(Boolean)
+        )
+      ) &&
+      (
         target.pattern !== 'spatial-contract' ||
         cached.spatialProof?.passed === true
       );
@@ -699,6 +737,37 @@ try {
         );
       }
     }
+    let canonicalContainerProof = null;
+    if (target.pattern === 'canonical-container') {
+      const built = await buildCanonicalContainerProof({
+        root: ROOT,
+        group: target.group,
+        manifest,
+        directory: evidenceDirectory,
+        evidenceId: `${target.sceneId}-${target.nodeId}-canonical-container`,
+      });
+      canonicalContainerProof = {
+        ...built,
+        familyFingerprint:
+          target.group.canonicalContainer.familyFingerprint,
+        artifacts: Object.fromEntries(
+          Object.entries(built.artifacts).map(([key, file]) => [
+            key,
+            path.relative(ROOT, file),
+          ]),
+        ),
+        artifactHashes: Object.fromEntries(
+          Object.entries(built.artifactHashes).map(
+            ([file, hash]) => [path.relative(ROOT, file), hash],
+          ),
+        ),
+      };
+      if (!canonicalContainerProof.passed) {
+        throw new Error(
+          `canonical container ${target.nodeId} 的 frame/mask/alignment/final-state proof 未通过。`,
+        );
+      }
+    }
     composites.push({
       compositeId: target.compositeId,
       sceneId: target.sceneId,
@@ -707,6 +776,7 @@ try {
       proofFrames,
       layerStackProof,
       loopingWorldProof,
+      canonicalContainerProof,
       spatialProof,
     });
     generatedComposites += 1;

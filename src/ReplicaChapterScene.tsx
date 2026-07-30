@@ -81,6 +81,9 @@ const slotOrder = (node: CompositionNode, layering: 'between-supports' | 'subjec
     subject: -10,
     'support-front': 0,
   } as Record<string, number>;
+  fixed['container-clean-plate'] = -30;
+  fixed['container-contents'] = -20;
+  fixed['container-frame'] = -10;
   return fixed[node.slot ?? ''] ?? node.z;
 };
 
@@ -715,7 +718,7 @@ const GroupView = ({
             events={events}
             durationSeconds={durationSeconds}
             seed={seed}
-            renderZ={['supported-subject', 'registered-depth-stack'].includes(node.pattern) ? slotOrder(child, node.support?.layering) : child.z}
+            renderZ={['supported-subject', 'registered-depth-stack', 'canonical-container'].includes(node.pattern) ? slotOrder(child, node.support?.layering) : child.z}
             paperEdge={paperEdge}
             cutoutTreatment={cutoutTreatment}
             cameraX={cameraX}

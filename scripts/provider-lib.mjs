@@ -36,6 +36,10 @@ import {
   styleProfileBinding,
   validateStyleProfileBinding,
 } from './style-catalog-lib.mjs';
+import {
+  canonicalContainerPackageBindingMatchesPlan,
+  validateCanonicalContainerIntent,
+} from './container-source-plan-lib.mjs';
 
 export const PROVIDER_CAPABILITIES = ['text', 'image', 'voice'];
 export const PROVIDER_ADAPTERS = ['host', 'command', 'manual'];
@@ -78,8 +82,20 @@ const IMAGE_QUALITY_CHECKS = [
   'diagram-edge-clean',
   'small-text-legible',
   'no-procedural-noise-on-semantic-lines',
+  'clean-plate-clear',
+  'canonical-frame-only',
+  'container-content-only',
+  'container-state-separation',
+  'container-fill-progression',
 ];
 const PROVIDER_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export const CANONICAL_CONTAINER_PROMPT_DIRECTIVES = {
+  'clean-plate': 'CLEAN_PLATE_ONLY_NO_CONTAINER',
+  'canonical-frame': 'CANONICAL_FRAME_ONLY_NO_CONTENTS',
+  'content-state-sheet':
+    'CONTENT_STATES_ONLY_NO_CONTAINER_FRAME_OR_EXTRA_SURFACE',
+};
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -125,6 +141,7 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     stateSheetBinding: request.stateSheetBinding ?? null,
     stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
     layerPackageBinding: request.layerPackageBinding ?? null,
+    containerPackageBinding: request.containerPackageBinding ?? null,
     semanticBinding: request.semanticBinding ?? null,
     timingBinding: request.timingBinding ?? null,
     outputSurface: request.outputSurface ?? null,
@@ -810,16 +827,24 @@ export const validateAssetRequest = (request) => {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 compositionBinding');
     const binding = request.compositionBinding;
     if (!binding.sceneId || !binding.nodeId || !binding.outputRole) errors.push('compositionBinding 缺少 sceneId、nodeId 或 outputRole');
-    if (!['free', 'supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
+    if (!['free', 'supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'state-sequence', 'canonical-container'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
     if (!Number.isInteger(binding.canvas?.width) || binding.canvas.width < 1 || !Number.isInteger(binding.canvas?.height) || binding.canvas.height < 1) errors.push('compositionBinding.canvas 无效');
     if (!['provider-generation', 'provider-edit', 'alpha-extraction', 'crop', 'seamless-period-crop', 'mask-application', 'manual-import'].includes(binding.derivation?.method)) errors.push('compositionBinding.derivation.method 无效');
     if (binding.pattern !== 'state-sequence' && (request.stateBinding || request.stateSheetBinding || request.stateSheetRecoveryBinding)) errors.push('stateBinding/stateSheetBinding/stateSheetRecoveryBinding 只能用于 state-sequence');
-    if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
+    if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence', 'canonical-container'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
     if (
       binding.pattern === 'registered-depth-stack' &&
       !isPlainObject(request.layerPackageBinding)
     ) {
       errors.push('registered-depth-stack 图像必须声明 layerPackageBinding');
+    }
+    if (
+      binding.pattern === 'canonical-container' &&
+      !isPlainObject(request.containerPackageBinding)
+    ) {
+      errors.push(
+        'canonical-container 图像必须声明 containerPackageBinding',
+      );
     }
     if (binding.pattern === 'state-sequence') {
       const state = request.stateBinding;
@@ -1171,6 +1196,226 @@ export const validateAssetRequest = (request) => {
       }
     }
   }
+  if (request?.containerPackageBinding !== undefined) {
+    const binding = request.containerPackageBinding;
+    if (
+      request.capability !== 'image' ||
+      !isPlainObject(binding)
+    ) {
+      errors.push('containerPackageBinding 只能用于 image request');
+    } else {
+      const composition = request.compositionBinding;
+      if (
+        composition?.pattern !== 'canonical-container' ||
+        binding.sourceStrategy !==
+          'canonical-frame-with-content-sheet' ||
+        binding.registrationId !== composition.registrationId ||
+        binding.sourceMasterAssetId !==
+          composition.sourceMasterAssetId
+      ) {
+        errors.push(
+          'containerPackageBinding 必须与 canonical-container compositionBinding 使用同一注册族',
+        );
+      }
+      errors.push(
+        ...validateCanonicalContainerIntent(
+          {
+            pattern: 'canonical-container',
+            container: {
+              ...binding,
+              groupId: composition?.nodeId,
+              states: (binding.states ?? []).map(
+                ({stateId, ...state}) => ({
+                  id: stateId,
+                  ...state,
+                }),
+              ),
+            },
+          },
+          {location: 'request.compositionBinding'},
+        ).map(({message}) => message),
+      );
+      const ids = [
+        binding.cleanPlateAssetId,
+        binding.canonicalFrameAssetId,
+        binding.contentSheetAssetId,
+        binding.interiorMaskAssetId,
+      ];
+      if (
+        !PROVIDER_ID_PATTERN.test(binding.familyId ?? '') ||
+        !PROVIDER_ID_PATTERN.test(binding.sourcePackageId ?? '') ||
+        ids.some((id) => !PROVIDER_ID_PATTERN.test(id ?? '')) ||
+        new Set(ids).size !== ids.length
+      ) {
+        errors.push(
+          'container package 必须声明唯一且格式有效的 plate/frame/sheet/mask 资产 id',
+        );
+      }
+      if (
+        binding.frameRedrawPolicy !==
+          'forbidden-in-content-states' ||
+        binding.duplicateSurfacePolicy !==
+          'single-authoritative-state-sequence'
+      ) {
+        errors.push(
+          'container package 必须禁止状态格重画容器，并只保留一个权威内部表面消费者',
+        );
+      }
+      const expectedRecovery = {
+        strategy: 'preserve-content-sheet-context',
+        localDeterministicFixFirst: true,
+        isolatedStateGeneration: 'forbidden',
+        providerRepair: 'masked-complete-sheet-edit',
+        fallback: 'full-content-sheet-regeneration',
+      };
+      if (
+        JSON.stringify(stableValue(binding.recoveryPolicy)) !==
+        JSON.stringify(stableValue(expectedRecovery))
+      ) {
+        errors.push(
+          'container recoveryPolicy 必须保留完整内容状态表上下文并禁止 isolated state generation',
+        );
+      }
+      const states = binding.states ?? [];
+      const cells = new Set();
+      const stateIds = new Set();
+      let previousAt = -Infinity;
+      let previousFill = -Infinity;
+      const layout = binding.sheetLayout;
+      if (
+        !Number.isInteger(layout?.columns) ||
+        layout.columns < 1 ||
+        layout.columns > 4 ||
+        !Number.isInteger(layout?.rows) ||
+        layout.rows < 1 ||
+        layout.rows > 4 ||
+        !Array.isArray(states) ||
+        states.length < 2 ||
+        states.length > layout.columns * layout.rows
+      ) {
+        errors.push(
+          'container content state sheet 必须声明可容纳至少两个状态的 1..4 网格',
+        );
+      }
+      for (const state of states) {
+        const cell = `${state.row}:${state.column}`;
+        if (
+          !PROVIDER_ID_PATTERN.test(state.stateId ?? '') ||
+          stateIds.has(state.stateId) ||
+          cells.has(cell) ||
+          !Number.isInteger(state.row) ||
+          state.row < 0 ||
+          state.row >= (layout?.rows ?? 0) ||
+          !Number.isInteger(state.column) ||
+          state.column < 0 ||
+          state.column >= (layout?.columns ?? 0) ||
+          !Number.isFinite(state.at) ||
+          state.at < 0 ||
+          state.at > 1 ||
+          state.at <= previousAt ||
+          !Number.isFinite(state.fillLevel) ||
+          state.fillLevel < 0 ||
+          state.fillLevel > 1 ||
+          state.fillLevel <= previousFill
+        ) {
+          errors.push(
+            'container states 必须具有唯一格位、唯一 id，并按 at/fillLevel 严格递增',
+          );
+        }
+        stateIds.add(state.stateId);
+        cells.add(cell);
+        previousAt = state.at ?? previousAt;
+        previousFill = state.fillLevel ?? previousFill;
+      }
+      if (
+        !states.some(
+          ({stateId}) => stateId === binding.terminalStateId,
+        ) ||
+        states.at(-1)?.stateId !== binding.terminalStateId
+      ) {
+        errors.push(
+          'container terminalStateId 必须引用最后一个最高水位状态',
+        );
+      }
+      const roleToAssetId = {
+        'clean-plate': binding.cleanPlateAssetId,
+        'canonical-frame': binding.canonicalFrameAssetId,
+        'content-state-sheet': binding.contentSheetAssetId,
+      };
+      const expectedOutputRole = {
+        'clean-plate': 'container-clean-plate',
+        'canonical-frame': 'container-frame',
+        'content-state-sheet': 'container-content-state-sheet',
+      };
+      if (
+        !Object.hasOwn(roleToAssetId, binding.packageRole) ||
+        roleToAssetId[binding.packageRole] !== request.assetId ||
+        composition?.outputRole !==
+          expectedOutputRole[binding.packageRole]
+      ) {
+        errors.push(
+          'container request 的 packageRole、assetId 与 outputRole 必须一致',
+        );
+      }
+      const expectedCanvas =
+        binding.packageRole === 'content-state-sheet'
+          ? {
+              width: binding.canvas?.width * layout?.columns,
+              height: binding.canvas?.height * layout?.rows,
+            }
+          : binding.canvas;
+      if (
+        expectedCanvas?.width !== composition?.canvas?.width ||
+        expectedCanvas?.height !== composition?.canvas?.height
+      ) {
+        errors.push(
+          'container request composition canvas 与注册画布或内容状态表网格不一致',
+        );
+      }
+      const surfaceMode = request.outputSurface?.mode;
+      if (
+        (
+          binding.packageRole === 'clean-plate' &&
+          surfaceMode !== 'opaque'
+        ) ||
+        (
+          binding.packageRole === 'canonical-frame' &&
+          !['alpha', 'chroma-key'].includes(surfaceMode)
+        ) ||
+        (
+          binding.packageRole === 'content-state-sheet' &&
+          surfaceMode !== 'alpha'
+        )
+      ) {
+        errors.push(
+          'clean plate 必须 opaque，canonical frame 必须透明/色键，content state sheet 必须 alpha',
+        );
+      }
+      const directive =
+        CANONICAL_CONTAINER_PROMPT_DIRECTIVES[binding.packageRole];
+      if (!directive || !request.prompt?.includes(directive)) {
+        errors.push(
+          `container prompt 必须包含角色约束 ${directive ?? 'unknown-role'}`,
+        );
+      }
+      const roleChecks = {
+        'clean-plate': ['clean-plate-clear'],
+        'canonical-frame': ['canonical-frame-only'],
+        'content-state-sheet': [
+          'container-content-only',
+          'container-state-separation',
+          'container-fill-progression',
+        ],
+      };
+      for (const check of roleChecks[binding.packageRole] ?? []) {
+        if (!request.quality?.requiredChecks?.includes(check)) {
+          errors.push(
+            `container ${binding.packageRole} request 必须包含质量检查 ${check}`,
+          );
+        }
+      }
+    }
+  }
   if (request?.semanticBinding !== undefined) {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 semanticBinding');
     const binding = request.semanticBinding;
@@ -1289,6 +1534,39 @@ export const loadAssetRequest = async (requestInput) => {
     ) {
       throw new Error(
         'layerPackageBinding 必须与当前 storyboard 编译出的 source package 完全一致',
+      );
+    }
+  }
+  if (request.containerPackageBinding) {
+    const storyboardFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'storyboard.json',
+    );
+    if (!(await fileExists(storyboardFile))) {
+      throw new Error(
+        'canonical container provider request 缺少已编译 storyboard，不能在规划前调用 provider',
+      );
+    }
+    const storyboard = await readJson(storyboardFile);
+    const binding = request.containerPackageBinding;
+    const plan =
+      storyboard.directingSummary?.generationBudget
+        ?.sourcePackagePlans?.find(
+          ({id}) => id === binding.sourcePackageId,
+        );
+    if (
+      !plan ||
+      plan.pattern !== 'canonical-container' ||
+      plan.groupId !== request.compositionBinding.nodeId ||
+      !canonicalContainerPackageBindingMatchesPlan({
+        binding,
+        plan,
+      })
+    ) {
+      throw new Error(
+        'containerPackageBinding 必须与当前 storyboard 编译出的 canonical container source package 完全一致',
       );
     }
   }
@@ -1764,6 +2042,8 @@ export const recordAssetProvenance = async ({
       stateBinding: request.stateBinding ?? null,
       stateSheetBinding: request.stateSheetBinding ?? null,
       stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
+      containerPackageBinding:
+        request.containerPackageBinding ?? null,
       semanticBinding: request.semanticBinding ?? null,
       providerObservation,
       familyFingerprint: null,

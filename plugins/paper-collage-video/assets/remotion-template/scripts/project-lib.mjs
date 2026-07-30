@@ -52,6 +52,9 @@ import {
   inspectAlphaBands,
 } from './alpha-band-lib.mjs';
 import {assertRegisteredFamilyGroupMembers} from './registered-family-lib.mjs';
+import {
+  inspectCanonicalContainerGroupMembers,
+} from './canonical-container-lib.mjs';
 import {validateProductionContracts} from './world-trajectory-lib.mjs';
 import {validateSpatialContracts} from './spatial-contract-lib.mjs';
 
@@ -1171,6 +1174,24 @@ export const validateProject = async (project, options = {}) => {
             'composition-registered-family',
             `${group.pattern} 必须消费三成员、层完整、共享注册画布族：${result.errors.join('；')}`,
             groupLocation,
+          );
+        }
+      }
+      for (const {node: group} of compositionResult.groups.filter(
+        ({node}) => node.pattern === 'canonical-container',
+      )) {
+        const result =
+          await inspectCanonicalContainerGroupMembers({
+            root: ROOT,
+            group,
+            manifest,
+          });
+        if (!result.passed) {
+          add(
+            'error',
+            'composition-canonical-container-family',
+            `canonical-container 必须消费唯一 frame、clean plate、完整内容状态表、同一内腔 mask 与当前本地派生状态：${result.errors.join('；')}`,
+            `${sceneLocation}.composition.nodes#${group.id}`,
           );
         }
       }

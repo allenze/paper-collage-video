@@ -27,6 +27,9 @@ import {
 } from './asset-manifest-lib.mjs';
 import {buildLoopingWorldProof} from './world-motion-proof-lib.mjs';
 import {spatialContractDebugOverlay} from './spatial-contract-lib.mjs';
+import {
+  buildCanonicalContainerProof,
+} from './canonical-container-lib.mjs';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -239,7 +242,7 @@ try {
   );
   const coupledGroups = selectedScenes.flatMap((scene) =>
     collectCompositionGroups(scene.composition)
-      .filter(({node}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(node.pattern))
+      .filter(({node}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(node.pattern))
       .map((entry) => ({...entry, sceneId: scene.id})),
   );
   const stateSequences = selectedScenes.flatMap((scene) =>
@@ -314,6 +317,8 @@ try {
           height: Math.max(1, Math.round(rect.height * STYLE_PROOF_RENDER_SCALE)),
         },
         registeredFamilyBinding: record?.registeredFamilyBinding ?? null,
+        canonicalContainerBinding:
+          record?.canonicalContainerBinding ?? null,
       }),
       sceneId,
     });
@@ -440,6 +445,38 @@ try {
         );
       }
     }
+    let canonicalContainerProof = null;
+    if (target.pattern === 'canonical-container') {
+      const built = await buildCanonicalContainerProof({
+        root: ROOT,
+        group: target.group,
+        manifest,
+        directory: evidenceDirectory,
+        evidenceId:
+          `${target.sceneId}-${target.nodeId}-canonical-container`,
+      });
+      canonicalContainerProof = {
+        ...built,
+        familyFingerprint:
+          target.group.canonicalContainer.familyFingerprint,
+        artifacts: Object.fromEntries(
+          Object.entries(built.artifacts).map(([key, file]) => [
+            key,
+            path.relative(ROOT, file),
+          ]),
+        ),
+        artifactHashes: Object.fromEntries(
+          Object.entries(built.artifactHashes).map(
+            ([file, hash]) => [path.relative(ROOT, file), hash],
+          ),
+        ),
+      };
+      if (!canonicalContainerProof.passed) {
+        throw new Error(
+          `canonical container ${target.nodeId} 的 style frame/mask/alignment/final-state proof 未通过。`,
+        );
+      }
+    }
     composites.push({
       compositeId: target.compositeId,
       pattern: target.pattern,
@@ -449,6 +486,7 @@ try {
       proofFrames,
       layerStackProof,
       loopingWorldProof,
+      canonicalContainerProof,
       spatialProof,
     });
   }

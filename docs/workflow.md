@@ -85,6 +85,15 @@ intake 确认后，Codex 只用宿主模型生成一个共同故事骨架和三�
 
 生成时同时遵守概念批准的精确图片 attempt 上限、profile ceiling、编译后的 `sourcePackagePlans` 与 `poseSheetPlans`；profile ceiling 较大也不能越过更窄的人批 cap。废稿、质量拒绝和生成后放弃的结果在发生额度消耗时同样计数。同一人物或道具的多个状态始终用一次 2x2 或 3x2 注册 sheet 生成并在本地保留统一画布切格/抠图。一个 `poseFamilyId` 即一张 provider 状态母版：同一连续镜头为了显隐、睡醒或追赶而使用多个时间实例时，`poseSheetPlans.targetIds` 会列出全部复用节点，但只计一次 provider 调用。单格失败先做本地确定性重处理；若必须调用 provider，只能用完整原 sheet 作为上下文做局部 mask 编辑并证明其他格未变，否则整张重生。不得独立生一格再拼回家族。相对运动图层优先用一张 2x2 registered layer sheet 同时提供 reference、完整 rear、完整 subject 和完整 front；provider 不能可靠产出该 sheet 时，才使用一次完整 reference 加三次保留 reference 上下文的 layer edits。flat reference 只能用于重建比较，不能被 mask 冒充隐藏内容完整的成员。派生状态和 layer splits 不重复计为 provider 调用，最终报告列出真实源调用、确定性派生和避免调用。没有完整图层源包时保持 `rigid-locked` 整体运动。角色 generation family 与图层 source family 独立。图片质量逐文件绑定 SHA-256 和语义契约指纹，组合质量绑定成员、变换、reveal envelopes、环境边界、事件、场景交接、证明和语义目标。只读 attempt summary 与 validation report 同时给出 profile ceiling、人批 cap、预计、已用、预留和剩余额度，作为预算 proof。
 
+刚性瓶体、罐体、仪表或空腔的内部状态不用自由水层堆叠，也不冒充
+`registered-depth-stack`。它们使用 `canonical-container`：三次 provider root
+分别生成无容器 clean plate、唯一 canonical frame 和一张只含内部内容的完整
+状态表；本地派生器在同一注册画布上做有界 center-bottom 登记，以同一个
+polygon mask 裁切所有状态，并量化 fill、rim gap、bottom coverage、retention
+和 overflow。运行时只有 clean plate、contents、frame 三个槽，contents 是
+唯一 `container-surface` 权威消费者。终态指标不达标、额外 waterline、内容
+状态重画瓶体或独立状态重生都会被拒绝。
+
 组装后先运行 `project:composition-proof`。它使用移除字幕的专用输入，只重渲染项目、资产或 `composition-proof` runtime surface 指纹变化的证明帧/目标，因此字幕实现独立变化不会清空资产和组合审核；普通耦合素材生成 alpha、棋盘格、紧裁和运动压力证据，depth stack 生成 neutral/reference/exploded 和三画幅 reveal-envelope 极值证据。仅用于注册技术来源的顶层耦合组声明 `renderParticipation=derivation-only`，不进入画面、导演档位或人工构图审核，只接受确定性的完整性、provenance 和派生检查。报告也写入已验证的世界与轨迹契约摘要。显式 `--force` 会禁用所有证明缓存并写入报告。随后用 `project:quality scaffold` 生成待填写审核批次，检查真实全帧、关系裁切、跨场景人物比较、机构受力链和说明图原分辨率裁切，再用 `record-batch` 记录真实判断。脚手架不会预先通过任何检查。说明图 SVG 的程序噪声滤镜由运行时确定性拒绝。这个内部证据步骤不增加第四个人工门。
 
 素材完成后只运行：
