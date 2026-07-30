@@ -180,7 +180,7 @@ test('manual image imports record provenance without a generation attempt', asyn
 });
 
 const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
-  schemaVersion: 11,
+  schemaVersion: 12,
   slug,
   arc: 'A concise progression from setup through action to resolution.',
   style: {
@@ -684,7 +684,7 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 11);
+    assert.equal(project.schemaVersion, 12);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
@@ -697,7 +697,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 11);
+    assert.equal(storyboardTemplate.schemaVersion, 12);
     assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
@@ -869,9 +869,9 @@ test('new projects require a locked storyboard before concept approval', async (
     const compiledStoryboard = JSON.parse(
       await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
     );
-    assert.equal(compiledStoryboard.schemaVersion, 11);
+    assert.equal(compiledStoryboard.schemaVersion, 12);
     assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
-    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'paper-slide'));
+    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'slide' && treatment.edgeStyle === 'paper'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.motivation === 'semantic-default'));
 
     const compactStatus = spawnSync(

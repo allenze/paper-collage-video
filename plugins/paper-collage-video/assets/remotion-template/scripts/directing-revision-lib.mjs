@@ -213,10 +213,13 @@ export const prepareDirectingRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 11,
+    schemaVersion: 12,
     slug: currentStoryboard.slug,
     status: 'ready',
-    sceneTransitions: materializeSceneTransitionRecipes(authored.sceneTransitions),
+    sceneTransitions: materializeSceneTransitionRecipes(
+      authored.sceneTransitions,
+      styleProfile?.motion?.transitionSet,
+    ),
     updatedAt: at,
   }, {plan, styleProfile});
 
@@ -444,11 +447,12 @@ export const prepareSemanticRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 11,
+    schemaVersion: 12,
     slug: currentStoryboard.slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(
       authored.sceneTransitions,
+      styleProfile?.motion?.transitionSet,
     ),
     updatedAt: at,
   }, {plan: nextPlan, styleProfile});

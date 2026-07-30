@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "slug": "starter-demo",
   "title": "Paper Collage Starter",
   "intake": {
@@ -9,21 +9,21 @@
     "aspectRatio": "16:9",
     "visualStylePreset": "childrens-picture-book-paper",
     "parallaxPreference": "auto",
-    "styleCatalogVersion": "2026-07-27.1",
-    "styleCatalogFingerprint": "ad25f05bae22b98230c5ecea50b0767192e5a9912b5d0c7df01cb3777d7bc4e0",
-    "styleProfileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a",
+    "styleCatalogVersion": "2026-07-30.1",
+    "styleCatalogFingerprint": "bff9528f34847b839e24782c2474d47783f05b8c8712565908729f2f1685d50c",
+    "styleProfileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
     "confirmedAt": "2026-01-01T00:00:00.000Z",
     "note": "Bundled fixture",
     "updatedAt": "2026-01-01T00:00:00.000Z"
   },
   "styleProfile": {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "id": "childrens-picture-book-paper",
     "label": "儿童绘本纸片",
     "summary": "圆润、温暖、层次清楚，适合儿童故事和轻松寓言。",
-    "catalogVersion": "2026-07-27.1",
-    "catalogFingerprint": "ad25f05bae22b98230c5ecea50b0767192e5a9912b5d0c7df01cb3777d7bc4e0",
-    "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a",
+    "catalogVersion": "2026-07-30.1",
+    "catalogFingerprint": "bff9528f34847b839e24782c2474d47783f05b8c8712565908729f2f1685d50c",
+    "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
     "referenceImage": "style-catalog/childrens-picture-book-paper.png",
     "generation": {
       "promptDirectives": [
@@ -50,11 +50,19 @@
         "float",
         "sway"
       ],
-      "preferredTransitions": [
-        "page-turn",
-        "paper-wipe",
-        "paper-iris"
-      ]
+      "transitionSet": "paper-story",
+      "visualSfx": {
+        "policy": "rare",
+        "maxPerScene": 1,
+        "allowedKinds": [
+          "impact",
+          "motion"
+        ],
+        "durationRangeSeconds": [
+          0.2,
+          0.55
+        ]
+      }
     },
     "render": {
       "theme": {
@@ -64,16 +72,26 @@
         "ink": "#4a3027",
         "subtitle": "#fff8e8",
         "subtitleBackground": "rgba(74, 48, 39, .78)",
-        "paperEdge": "#fff4dc",
         "foreground": "#9f563d",
-        "texture": "textures/paper-grain.png",
         "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
-        "cutout": {
-          "edgeWidthPx": 4,
-          "shadowOffsetXPx": 0,
-          "shadowOffsetYPx": 8,
-          "shadowBlurPx": 8,
-          "shadowColor": "rgba(64, 39, 28, .24)"
+        "surface": {
+          "texture": {
+            "src": "textures/paper-grain.png",
+            "opacity": 0.14,
+            "blendMode": "multiply"
+          },
+          "subjectEdge": {
+            "mode": "paper-outline",
+            "color": "#fff4dc",
+            "widthPx": 4
+          },
+          "subjectShadow": {
+            "mode": "drop-shadow",
+            "offsetXPx": 0,
+            "offsetYPx": 8,
+            "blurPx": 8,
+            "color": "rgba(64, 39, 28, .24)"
+          }
         }
       }
     },
@@ -121,7 +139,7 @@
     },
     "styleProfileBinding": {
       "id": "childrens-picture-book-paper",
-      "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a",
+      "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
       "pacing": "gentle"
     },
     "scenes": [
@@ -169,8 +187,8 @@
       "ambient-strategy-consistent",
       "sync-anchors-current"
     ],
-    "approvalFingerprint": "5ca35c840f4e76a4e114f2be5292f4da4eee3f275e7e50567fb672000cbe3441",
-    "fingerprint": "182fde495834b686439fc32109ed8fca95f1a65472fc3fa28a810b5cda45dc7c"
+    "approvalFingerprint": "13f317323e6777f5a858bc95a5165b3ced4cbb2efa6e6516de87535affb57a5d",
+    "fingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320"
   },
   "plan": {
     "schemaVersion": 4,
@@ -226,16 +244,26 @@
     "ink": "#4a3027",
     "subtitle": "#fff8e8",
     "subtitleBackground": "rgba(74, 48, 39, .78)",
-    "paperEdge": "#fff4dc",
     "foreground": "#9f563d",
-    "texture": "textures/paper-grain.png",
     "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
-    "cutout": {
-      "edgeWidthPx": 4,
-      "shadowOffsetXPx": 0,
-      "shadowOffsetYPx": 8,
-      "shadowBlurPx": 8,
-      "shadowColor": "rgba(64, 39, 28, .24)"
+    "surface": {
+      "texture": {
+        "src": "textures/paper-grain.png",
+        "opacity": 0.14,
+        "blendMode": "multiply"
+      },
+      "subjectEdge": {
+        "mode": "paper-outline",
+        "color": "#fff4dc",
+        "widthPx": 4
+      },
+      "subjectShadow": {
+        "mode": "drop-shadow",
+        "offsetXPx": 0,
+        "offsetYPx": 8,
+        "blurPx": 8,
+        "color": "rgba(64, 39, 28, .24)"
+      }
     }
   },
   "voice": {

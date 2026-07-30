@@ -169,8 +169,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/verify-phase2-proof.mjs',
   );
   assert.equal(
-    packageJson.scripts['schema:v11'],
-    'node scripts/schema-v11.mjs',
+    packageJson.scripts['schema:v12'],
+    'node scripts/schema-v12.mjs',
   );
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
@@ -207,7 +207,10 @@ test('packaged runtime is lightweight and independent from production projects',
       'report.json',
     ),
   );
-  assert.equal(starterProject.schemaVersion, 11);
+  const catalogStyleImages = readJson(
+    path.join(ROOT, 'public', 'style-catalog', 'catalog.json'),
+  ).styles.map(({image}) => `public/${image}`);
+  assert.equal(starterProject.schemaVersion, 12);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
   assert.equal(starterProject.scenes[0].events.length, 3);
@@ -320,8 +323,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/storyboard-lib.mjs',
     'scripts/world-trajectory-lib.mjs',
     'scripts/render-phase2-proof.mjs',
-    'scripts/schema-v11.mjs',
-    'scripts/validate_v11_schemas.py',
+    'scripts/schema-v12.mjs',
+    'scripts/validate_v12_schemas.py',
     'scripts/verify-phase2-proof.mjs',
     'scripts/verify-vox-sample.mjs',
     'scripts/prove-alpha-bands.mjs',
@@ -386,9 +389,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'public/fixtures/vox-phase2-proof/narration-1.timing.json',
     'public/style-catalog/catalog.json',
     'public/style-catalog/generation-provenance.json',
-    'public/style-catalog/childrens-picture-book-paper.png',
-    'public/style-catalog/hand-drawn-cutout-explainer.png',
-    'public/style-catalog/archival-collage.png',
+    ...catalogStyleImages,
   ]) {
     assert.deepEqual(
       fs.readFileSync(path.join(RUNTIME_ROOT, relative)),

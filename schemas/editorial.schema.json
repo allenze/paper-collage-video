@@ -264,7 +264,7 @@
         },
         "continuityTolerance": {"type": "number", "minimum": 0, "maximum": 1},
         "invalidPolicy": {"enum": ["reject", "fallback"]},
-        "fallback": {"enum": ["cut", "paper-wipe", "panel-replace"]},
+        "fallback": {"enum": ["cut", "wipe", "panel-replace"]},
         "treatment": {"enum": ["hard-cut", "card-switch", "panel-replace", "data-state", "slide", "wipe", "scale-swap", "value-tween"]}
       },
       "allOf": [

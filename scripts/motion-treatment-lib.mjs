@@ -52,7 +52,7 @@ export const COMPOSITION_PATTERNS = [
   'canonical-container',
 ];
 export const GRAPHIC_KINDS = ['typography', 'shape', 'annotation', 'data-graphic'];
-export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'reveal', 'route', 'data-state'];
+export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'shake', 'drop-impact', 'reveal', 'route', 'data-state'];
 export const SEMANTIC_RISKS = ['decorative', 'identity', 'topology', 'mechanism', 'diagram'];
 export const RELATIONSHIP_PREDICATES = [
   'inside',
@@ -252,6 +252,7 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   }
   if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
   if (treatment.motion?.kind === 'motif-field') coverage.push('motion:motif-field');
+  if (treatment.graphic?.role === 'visual-sfx') coverage.push('graphic:visual-sfx');
   if (treatment.motion?.preset === 'scroll-world-x') {
     coverage.push('motion:looping-world');
     coverage.push('proof:world-motion');
@@ -689,6 +690,39 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (!GRAPHIC_ANIMATIONS.includes(treatment.graphic?.animation)) {
       addIssue(issues, 'treatment-graphic-animation', 'graphic.animation 无效。', `${location}.graphic.animation`);
     }
+    if (!['generic', 'visual-sfx'].includes(treatment.graphic?.role)) {
+      addIssue(issues, 'treatment-graphic-role', 'graphic.role 必须为 generic 或 visual-sfx。', `${location}.graphic.role`);
+    }
+    if (treatment.graphic?.role === 'visual-sfx') {
+      if (treatment.graphic.kind !== 'typography') {
+        addIssue(issues, 'treatment-visual-sfx-kind', 'visual-sfx 必须使用 typography。', `${location}.graphic.kind`);
+      }
+      if (!['impact', 'motion'].includes(treatment.graphic.sfxKind)) {
+        addIssue(issues, 'treatment-visual-sfx-type', 'visual-sfx.sfxKind 必须为 impact 或 motion。', `${location}.graphic.sfxKind`);
+      }
+      if (!nonEmpty(treatment.graphic.text) || [...treatment.graphic.text].length > 8) {
+        addIssue(issues, 'treatment-visual-sfx-text', 'visual-sfx.text 必须是 1–8 个字符。', `${location}.graphic.text`);
+      }
+      if (
+        !Number.isFinite(treatment.graphic.durationSeconds) ||
+        treatment.graphic.durationSeconds < 0.1 ||
+        treatment.graphic.durationSeconds > 1
+      ) {
+        addIssue(issues, 'treatment-visual-sfx-duration', 'visual-sfx.durationSeconds 必须位于 0.1–1 秒。', `${location}.graphic.durationSeconds`);
+      }
+      if (treatment.graphic.audioBinding !== 'beat-sound-cue') {
+        addIssue(issues, 'treatment-visual-sfx-audio', 'visual-sfx 必须绑定所属 beat.soundCue。', `${location}.graphic.audioBinding`);
+      }
+      if (!['stamp', 'shake', 'drop-impact'].includes(treatment.graphic.animation)) {
+        addIssue(issues, 'treatment-visual-sfx-animation', 'visual-sfx 只使用 stamp、shake 或 drop-impact。', `${location}.graphic.animation`);
+      }
+    } else if (
+      ['sfxKind', 'text', 'durationSeconds', 'audioBinding'].some(
+        (key) => treatment.graphic[key] !== undefined,
+      )
+    ) {
+      addIssue(issues, 'treatment-generic-graphic-fields', 'generic graphic 不得声明 visual-sfx 专用字段。', `${location}.graphic`);
+    }
   }
 
   const route = routeForChangeClass[treatment.changeClass];
@@ -812,9 +846,20 @@ const compileScene = (scene) => {
       if (treatment.graphic) {
         graphics.push({
           id: treatment.id,
+          beatId: beat.id,
           nodeId: treatment.targetId,
           kind: treatment.graphic.kind,
           animation: treatment.graphic.animation,
+          role: treatment.graphic.role,
+          ...(treatment.graphic.role === 'visual-sfx'
+            ? {
+                sfxKind: treatment.graphic.sfxKind,
+                text: treatment.graphic.text,
+                durationSeconds: treatment.graphic.durationSeconds,
+                audioBinding: treatment.graphic.audioBinding,
+                soundCue: beat.soundCue,
+              }
+            : {}),
           at: beat.at,
           proofTimeId: treatment.proofTimeId ?? null,
         });
@@ -1173,6 +1218,7 @@ export const compileStoryboardDirecting = (
       addIssue(issues, 'storyboard-derived-fields', '输入不得手写 compositionPlan 或 directing；它们由编译器生成。', `scenes[${sceneIndex}]`);
     }
     const motifTargets = new Map();
+    let visualSfxCount = 0;
     const motionPolicy = scene.motionPolicy ?? 'standard';
     if (!['standard', 'locked-static'].includes(motionPolicy)) {
       addIssue(
@@ -1209,6 +1255,53 @@ export const compileStoryboardDirecting = (
       for (const [treatmentIndex, treatment] of (beat.treatments ?? []).entries()) {
         const location = `${beatLocation}.treatments[${treatmentIndex}]`;
         issues.push(...validateTreatment(treatment, {location, beatAt: beat.at}));
+        if (treatment.graphic?.role === 'visual-sfx') {
+          visualSfxCount += 1;
+          if (!nonEmpty(beat.soundCue)) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-sound-cue',
+              'visual-sfx 所属节拍必须声明离散 soundCue。',
+              `${beatLocation}.soundCue`,
+            );
+          }
+          if (!nonEmpty(treatment.proofTimeId)) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-proof',
+              'visual-sfx 必须绑定所属节拍的 proofTimeId。',
+              `${location}.proofTimeId`,
+            );
+          }
+          const policy = styleProfile?.motion?.visualSfx;
+          if (
+            policy &&
+            !policy.allowedKinds?.includes(treatment.graphic.sfxKind)
+          ) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-style-kind',
+              `当前 Style Profile 不允许 ${treatment.graphic.sfxKind} visual-sfx。`,
+              `${location}.graphic.sfxKind`,
+            );
+          }
+          if (
+            policy &&
+            (
+              treatment.graphic.durationSeconds <
+                policy.durationRangeSeconds?.[0] ||
+              treatment.graphic.durationSeconds >
+                policy.durationRangeSeconds?.[1]
+            )
+          ) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-style-duration',
+              `visual-sfx 时长必须位于当前 Style Profile 的 ${policy.durationRangeSeconds?.[0]}–${policy.durationRangeSeconds?.[1]} 秒。`,
+              `${location}.graphic.durationSeconds`,
+            );
+          }
+        }
         if (treatment.motion?.kind === 'motif-field') {
           if (motifTargets.has(treatment.targetId)) {
             addIssue(issues, 'treatment-motif-target-duplicate', `单镜头 motif-field 目标只能编排一次：${treatment.targetId}。`, `${location}.targetId`);
@@ -1231,6 +1324,18 @@ export const compileStoryboardDirecting = (
         issues,
         'treatment-motif-scene-budget',
         `单镜头 motif-field 总实例数必须不超过 ${MAX_MOTIF_INSTANCES_PER_SCENE}，当前为 ${motifInstanceCount}。`,
+        `scenes[${sceneIndex}].beats`,
+      );
+    }
+    const visualSfxLimit = styleProfile?.motion?.visualSfx?.maxPerScene;
+    if (
+      Number.isInteger(visualSfxLimit) &&
+      visualSfxCount > visualSfxLimit
+    ) {
+      addIssue(
+        issues,
+        'treatment-visual-sfx-scene-budget',
+        `当前 Style Profile 每镜头最多允许 ${visualSfxLimit} 个 visual-sfx，当前为 ${visualSfxCount}。`,
         `scenes[${sceneIndex}].beats`,
       );
     }
@@ -1720,6 +1825,82 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       addIssue(issues, 'directing-graphic-missing', `导演计划的图形目标不存在：${planned.nodeId}。`, `${location}.composition`);
     } else if (node.kind !== planned.kind) {
       addIssue(issues, 'directing-graphic-kind', `图形目标 ${planned.nodeId} 必须实现为 ${planned.kind}，当前为 ${node.kind}。`, `${location}.composition.nodes#${planned.nodeId}.kind`);
+    } else if (planned.role === 'visual-sfx') {
+      const durationSeconds =
+        Number(scene?.narration?.startSeconds ?? 0) +
+        Number(scene?.narration?.durationSeconds ?? 0) +
+        Number(scene?.tailSeconds ?? 0);
+      const expectedHideAt = Math.min(
+        1,
+        planned.at + planned.durationSeconds / Math.max(0.001, durationSeconds),
+      );
+      const events = scene?.events ?? [];
+      const matchingEvents = events.filter(
+        (event) =>
+          event.targetId === planned.nodeId &&
+          event.beatId === planned.beatId,
+      );
+      const show = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - planned.at) <= 0.035 &&
+          event.visual?.kind === 'visibility' &&
+          event.visual.action === 'show' &&
+          event.visual.transition === 'fade-scale',
+      );
+      const emphasis = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - planned.at) <= 0.035 &&
+          event.visual?.kind === 'emphasis' &&
+          event.visual.action === planned.animation,
+      );
+      const hide = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - expectedHideAt) <= 0.035 &&
+          event.visual?.kind === 'visibility' &&
+          event.visual.action === 'hide' &&
+          event.visual.transition === 'fade-scale',
+      );
+      const sound = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - planned.at) <= 0.035 &&
+          Boolean(event.sound),
+      );
+      if (node.role !== 'visual-sfx' || node.text !== planned.text) {
+        addIssue(
+          issues,
+          'directing-visual-sfx-node',
+          `visual-sfx ${planned.nodeId} 必须是 role=visual-sfx 且文字精确为“${planned.text}”的 typography 节点。`,
+          `${location}.composition.nodes#${planned.nodeId}`,
+        );
+      }
+      if (node.visibility?.initial !== 'hidden') {
+        addIssue(
+          issues,
+          'directing-visual-sfx-initial',
+          `visual-sfx ${planned.nodeId} 必须初始隐藏。`,
+          `${location}.composition.nodes#${planned.nodeId}.visibility`,
+        );
+      }
+      if (!show || !emphasis || !hide || !sound) {
+        addIssue(
+          issues,
+          'directing-visual-sfx-events',
+          `visual-sfx ${planned.nodeId} 必须在同一节拍包含 fade-scale show、${planned.animation} emphasis、约 ${planned.durationSeconds}s 后的 fade-scale hide，以及同步音效。`,
+          `${location}.events`,
+        );
+      }
+      if (
+        ![show, emphasis, sound]
+          .filter(Boolean)
+          .some((event) => event.proofTimeId === planned.proofTimeId)
+      ) {
+        addIssue(
+          issues,
+          'directing-visual-sfx-proof',
+          `visual-sfx ${planned.nodeId} 的出现、强调或音效事件必须绑定 ${planned.proofTimeId}。`,
+          `${location}.events`,
+        );
+      }
     } else if (!hasVisibleNodeMotion(node)) {
       addIssue(issues, 'directing-graphic-motion', `图形目标 ${planned.nodeId} 必须实现 ${planned.animation} 动效。`, `${location}.composition.nodes#${planned.nodeId}.motion`);
     }

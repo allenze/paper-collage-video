@@ -135,6 +135,11 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'field-loop-clean',
   'typography-fit-clean',
   'typography-timing-bound',
+  'visual-sfx-audio-sync',
+  'visual-sfx-subtitle-clear',
+  'visual-sfx-subject-clear',
+  'visual-sfx-density-controlled',
+  'visual-sfx-style-consistent',
   'annotation-routing-clean',
   'annotation-exclusions-clean',
   'data-mapping-valid',
@@ -889,7 +894,17 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         compositionHash: hashCompositionValue(node),
         fingerprint,
         proofTimeIds: proofTimes.map(({id}) => id),
-        requiredChecks: COMPOSITE_PROFILES[pattern],
+        requiredChecks:
+          node.kind === 'typography' && node.role === 'visual-sfx'
+            ? [
+                ...COMPOSITE_PROFILES[pattern],
+                'visual-sfx-audio-sync',
+                'visual-sfx-subtitle-clear',
+                'visual-sfx-subject-clear',
+                'visual-sfx-density-controlled',
+                'visual-sfx-style-consistent',
+              ]
+            : COMPOSITE_PROFILES[pattern],
         reviewScope: 'runtime-visible',
         editorialNode: node,
         sceneNodes: scene.composition?.nodes ?? [],
@@ -898,6 +913,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         exclusionZones: project.editorial?.responsiveProfiles?.find(
           ({id}) => id === project.editorial.activeProfile,
         )?.exclusionZones ?? [],
+        events: (scene.events ?? []).filter(
+          ({targetId}) => targetId === node.id,
+        ),
       });
     }
     for (const {node, parent, renderParticipation} of collectStateSequences(scene.composition)) {
@@ -2316,6 +2334,39 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       {id: 'typography-fit', passed: !layout.overflow, expected: 'no overflow', actual: layout},
       {id: 'typography-edit-points', passed: timingBound, expected: pointIds, actual: timingBound},
     );
+    if (node.role === 'visual-sfx') {
+      const showEvents = (target.events ?? []).filter(
+        ({visual}) =>
+          visual?.kind === 'visibility' && visual.action === 'show',
+      );
+      const hideEvents = (target.events ?? []).filter(
+        ({visual}) =>
+          visual?.kind === 'visibility' && visual.action === 'hide',
+      );
+      const soundEvents = (target.events ?? []).filter(({sound}) => sound);
+      const beatIds = new Set(showEvents.map(({beatId}) => beatId));
+      const audioSynchronized = soundEvents.some(
+        ({beatId, at}) =>
+          beatIds.has(beatId) &&
+          showEvents.some(
+            (show) => show.beatId === beatId && Math.abs(show.at - at) <= 0.035,
+          ),
+      );
+      checks.push(
+        {
+          id: 'visual-sfx-event-lifecycle',
+          passed: showEvents.length > 0 && hideEvents.length > 0,
+          expected: 'show then hide',
+          actual: {show: showEvents.length, hide: hideEvents.length},
+        },
+        {
+          id: 'visual-sfx-audio-sync',
+          passed: audioSynchronized,
+          expected: 'sound and show within 0.035 normalized time',
+          actual: audioSynchronized,
+        },
+      );
+    }
   }
   if (target.pattern === 'annotation') {
     const route = resolveAnnotationRoute({

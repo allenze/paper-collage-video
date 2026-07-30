@@ -34,10 +34,13 @@ try {
   const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 11,
+    schemaVersion: 12,
     slug,
     status: 'ready',
-    sceneTransitions: materializeSceneTransitionRecipes(supplied.sceneTransitions),
+    sceneTransitions: materializeSceneTransitionRecipes(
+      supplied.sceneTransitions,
+      project.styleProfile?.motion?.transitionSet,
+    ),
     updatedAt: new Date().toISOString(),
   };
   const storyboard = compileStoryboardDirecting(authored, {

@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -553,7 +553,7 @@
     },
     "styleProfileBinding": {
       "id": "childrens-picture-book-paper",
-      "profileFingerprint": "e59ce71ab38b78edf5d7f3242a351f34052a50ed3cf08c3857e3bcd4d8eef28a",
+      "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
       "pacing": "gentle"
     },
     "scenes": [
@@ -601,8 +601,8 @@
       "ambient-strategy-consistent",
       "sync-anchors-current"
     ],
-    "approvalFingerprint": "5ca35c840f4e76a4e114f2be5292f4da4eee3f275e7e50567fb672000cbe3441",
-    "fingerprint": "182fde495834b686439fc32109ed8fca95f1a65472fc3fa28a810b5cda45dc7c"
+    "approvalFingerprint": "13f317323e6777f5a858bc95a5165b3ced4cbb2efa6e6516de87535affb57a5d",
+    "fingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320"
   },
   "directingSummary": {
     "profile": "draft",
@@ -657,9 +657,9 @@
       "sourceFamilyKeys": [
         "target:traveler"
       ],
-      "motionContractFingerprint": "182fde495834b686439fc32109ed8fca95f1a65472fc3fa28a810b5cda45dc7c",
-      "fingerprint": "53e0c9c7fc2cc9d460b09b19103a774052836b44ce8627e9b204e11ed588457e"
+      "motionContractFingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320",
+      "fingerprint": "256fa1a824c14d6341e27a6f9bcf658daf2472c96aa41ed92cd43c9256599151"
     },
-    "fingerprint": "b4f466e50674a7729fc7fd7e1159b1740a99aa43aae0792b8812b232d5e5a89e"
+    "fingerprint": "6a63c50a247248463422375b3f9e1406fc9daa0ae5ca199fe8a95d2211d4a72c"
   }
 }

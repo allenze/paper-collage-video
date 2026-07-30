@@ -1,8 +1,78 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/style-profile.schema.json",
-  "title": "Executable Paper Collage Style Profile v1",
+  "title": "Executable Video Style Profile v2",
   "$defs": {
+    "surfaceTexture": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["src", "opacity", "blendMode"],
+          "properties": {
+            "src": {"type": "string", "minLength": 1},
+            "opacity": {"type": "number", "minimum": 0, "maximum": 1},
+            "blendMode": {"enum": ["normal", "multiply", "screen", "overlay"]}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "subjectEdge": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["none", "paper-outline"]},
+        "color": {"type": "string", "minLength": 1},
+        "widthPx": {"type": "number", "minimum": 0, "maximum": 16}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"mode": {"const": "paper-outline"}}},
+          "then": {"required": ["color", "widthPx"]},
+          "else": {"not": {"anyOf": [{"required": ["color"]}, {"required": ["widthPx"]}]}}
+        }
+      ],
+      "additionalProperties": false
+    },
+    "subjectShadow": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["none", "drop-shadow"]},
+        "offsetXPx": {"type": "number", "minimum": -32, "maximum": 32},
+        "offsetYPx": {"type": "number", "minimum": -32, "maximum": 32},
+        "blurPx": {"type": "number", "minimum": 0, "maximum": 48},
+        "color": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"mode": {"const": "drop-shadow"}}},
+          "then": {"required": ["offsetXPx", "offsetYPx", "blurPx", "color"]},
+          "else": {
+            "not": {
+              "anyOf": [
+                {"required": ["offsetXPx"]},
+                {"required": ["offsetYPx"]},
+                {"required": ["blurPx"]},
+                {"required": ["color"]}
+              ]
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "surface": {
+      "type": "object",
+      "required": ["texture", "subjectEdge", "subjectShadow"],
+      "properties": {
+        "texture": {"$ref": "#/$defs/surfaceTexture"},
+        "subjectEdge": {"$ref": "#/$defs/subjectEdge"},
+        "subjectShadow": {"$ref": "#/$defs/subjectShadow"}
+      },
+      "additionalProperties": false
+    },
     "theme": {
       "type": "object",
       "required": [
@@ -12,10 +82,8 @@
         "ink",
         "subtitle",
         "subtitleBackground",
-        "paperEdge",
         "foreground",
-        "texture",
-        "cutout"
+        "surface"
       ],
       "properties": {
         "canvas": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
@@ -24,30 +92,38 @@
         "ink": {"type": "string"},
         "subtitle": {"type": "string"},
         "subtitleBackground": {"type": "string"},
-        "paperEdge": {"type": "string"},
         "foreground": {"type": "string"},
-        "texture": {"type": "string", "minLength": 1},
+        "surface": {"$ref": "#/$defs/surface"},
         "fontFamily": {"type": "string"},
-        "fontFile": {"type": "string"},
-        "cutout": {"$ref": "#/$defs/cutout"}
+        "fontFile": {"type": "string"}
       },
       "additionalProperties": false
     },
-    "cutout": {
+    "visualSfx": {
       "type": "object",
       "required": [
-        "edgeWidthPx",
-        "shadowOffsetXPx",
-        "shadowOffsetYPx",
-        "shadowBlurPx",
-        "shadowColor"
+        "policy",
+        "maxPerScene",
+        "allowedKinds",
+        "durationRangeSeconds"
       ],
       "properties": {
-        "edgeWidthPx": {"type": "number", "minimum": 0, "maximum": 16},
-        "shadowOffsetXPx": {"type": "number", "minimum": -32, "maximum": 32},
-        "shadowOffsetYPx": {"type": "number", "minimum": -32, "maximum": 32},
-        "shadowBlurPx": {"type": "number", "minimum": 0, "maximum": 48},
-        "shadowColor": {"type": "string", "minLength": 1}
+        "policy": {"enum": ["rare", "selective", "expressive"]},
+        "maxPerScene": {"type": "integer", "minimum": 0, "maximum": 3},
+        "allowedKinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["impact", "motion"]}
+        },
+        "durationRangeSeconds": {
+          "type": "array",
+          "prefixItems": [
+            {"type": "number", "minimum": 0.1, "maximum": 1},
+            {"type": "number", "minimum": 0.1, "maximum": 1}
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
       },
       "additionalProperties": false
     },
@@ -55,7 +131,7 @@
       "type": "object",
       "required": ["schemaVersion", "generation", "motion", "render", "quality"],
       "properties": {
-        "schemaVersion": {"const": 1},
+        "schemaVersion": {"const": 2},
         "generation": {
           "type": "object",
           "required": [
@@ -102,31 +178,22 @@
         },
         "motion": {
           "type": "object",
-          "required": ["pacing", "preferredIdlePresets", "preferredTransitions"],
+          "required": [
+            "pacing",
+            "preferredIdlePresets",
+            "transitionSet",
+            "visualSfx"
+          ],
           "properties": {
-            "pacing": {"enum": ["gentle", "playful", "measured"]},
+            "pacing": {"enum": ["gentle", "playful", "measured", "dynamic"]},
             "preferredIdlePresets": {
               "type": "array",
               "minItems": 1,
               "uniqueItems": true,
               "items": {"enum": ["float", "breathe", "drift", "sway", "still"]}
             },
-            "preferredTransitions": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "enum": [
-                  "paper-wipe",
-                  "dip-to-paper",
-                  "paper-slide",
-                  "torn-wipe",
-                  "paper-iris",
-                  "page-turn",
-                  "paper-shutters"
-                ]
-              }
-            }
+            "transitionSet": {"enum": ["paper-story", "clean-video"]},
+            "visualSfx": {"$ref": "#/$defs/visualSfx"}
           },
           "additionalProperties": false
         },
@@ -191,13 +258,10 @@
         "quality"
       ],
       "properties": {
-        "schemaVersion": {"const": 1},
+        "schemaVersion": {"const": 2},
         "id": {
-          "enum": [
-            "childrens-picture-book-paper",
-            "hand-drawn-cutout-explainer",
-            "archival-collage"
-          ]
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
         },
         "label": {"type": "string", "minLength": 1},
         "summary": {"type": "string", "minLength": 1},
@@ -235,11 +299,8 @@
       "properties": {
         "schemaVersion": {"const": 1},
         "id": {
-          "enum": [
-            "childrens-picture-book-paper",
-            "hand-drawn-cutout-explainer",
-            "archival-collage"
-          ]
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
         },
         "catalogVersion": {"type": "string", "minLength": 1},
         "profileFingerprint": {

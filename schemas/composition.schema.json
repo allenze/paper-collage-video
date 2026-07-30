@@ -513,6 +513,7 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "kind": {"const": "typography"},
+        "role": {"enum": ["visual-sfx"]},
         "text": {"type": "string"},
         "treatment": {
           "type": "object",

@@ -42,7 +42,7 @@ For a reusable system change, run:
 
 ```bash
 npm run proof:phase2:prepare
-npm run schema:v11
+npm run schema:v12
 npm run proof:phase2:render
 npm run proof:phase2:verify
 ```

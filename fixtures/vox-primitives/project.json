@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "motionContract": null,
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
@@ -40,16 +40,12 @@
     "ink": "#263a3d",
     "subtitle": "#fff8ea",
     "subtitleBackground": "rgba(38,58,61,.78)",
-    "paperEdge": "#f5eedc",
     "foreground": "#263a3d",
-    "texture": "textures/paper-grain.png",
     "fontFamily": "Arial, Helvetica, sans-serif",
-    "cutout": {
-      "edgeWidthPx": 3,
-      "shadowOffsetXPx": 0,
-      "shadowOffsetYPx": 10,
-      "shadowBlurPx": 7,
-      "shadowColor": "rgba(20,15,12,.28)"
+    "surface": {
+      "texture": {"src": "textures/paper-grain.png", "opacity": 0.14, "blendMode": "multiply"},
+      "subjectEdge": {"mode": "paper-outline", "color": "#f5eedc", "widthPx": 3},
+      "subjectShadow": {"mode": "drop-shadow", "offsetXPx": 0, "offsetYPx": 10, "blurPx": 7, "color": "rgba(20,15,12,.28)"}
     }
   },
   "voice": {"mode": "fictional", "provider": "local-fixture", "displayName": "Engineering tone"},
@@ -66,7 +62,7 @@
       "tailSeconds": 2.5,
       "appearance": {
         "background": "#d9c7a5",
-        "paperTexture": {"visible": true, "opacity": 0.12, "blendMode": "multiply"},
+        "surfaceTexture": {"visible": true, "opacity": 0.12, "blendMode": "multiply"},
         "chapter": {"visible": false},
         "subtitles": {"variant": "hidden"}
       },
@@ -174,7 +170,7 @@
       "tailSeconds": 2.5,
       "appearance": {
         "background": "#c85b45",
-        "paperTexture": {"visible": true, "opacity": 0.1, "blendMode": "multiply"},
+        "surfaceTexture": {"visible": true, "opacity": 0.1, "blendMode": "multiply"},
         "chapter": {"visible": false},
         "subtitles": {"variant": "hidden"}
       },

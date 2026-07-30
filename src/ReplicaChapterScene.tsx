@@ -53,14 +53,25 @@ const clamp = {
   extrapolateRight: 'clamp',
 } as const;
 
-export const cutoutFilter = (
-  paperEdge: string,
-  treatment: ProjectTheme['cutout'],
-) =>
-  `drop-shadow(${treatment.edgeWidthPx}px 0 ${paperEdge}) ` +
-  `drop-shadow(${-treatment.edgeWidthPx}px 0 ${paperEdge}) ` +
-  `drop-shadow(${treatment.shadowOffsetXPx}px ${treatment.shadowOffsetYPx}px ` +
-  `${treatment.shadowBlurPx}px ${treatment.shadowColor})`;
+export const subjectSurfaceFilter = (
+  surface: ProjectTheme['surface'],
+) => {
+  const filters: string[] = [];
+  if (surface.subjectEdge.mode === 'paper-outline') {
+    const {color, widthPx} = surface.subjectEdge;
+    filters.push(
+      `drop-shadow(${widthPx}px 0 ${color})`,
+      `drop-shadow(${-widthPx}px 0 ${color})`,
+    );
+  }
+  if (surface.subjectShadow.mode === 'drop-shadow') {
+    const {offsetXPx, offsetYPx, blurPx, color} = surface.subjectShadow;
+    filters.push(
+      `drop-shadow(${offsetXPx}px ${offsetYPx}px ${blurPx}px ${color})`,
+    );
+  }
+  return filters.length > 0 ? filters.join(' ') : undefined;
+};
 
 const phaseFor = (id: string, seed: number) => {
   let value = seed >>> 0;
@@ -210,8 +221,7 @@ const AssetView = ({
   durationSeconds,
   seed,
   renderZ,
-  paperEdge,
-  cutoutTreatment,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -228,8 +238,7 @@ const AssetView = ({
   durationSeconds: number;
   seed: number;
   renderZ: number;
-  paperEdge: string;
-  cutoutTreatment: ProjectTheme['cutout'];
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -244,9 +253,7 @@ const AssetView = ({
       data-composition-kind="asset"
       style={{
         ...containerStyle({node, resolved, renderZ}),
-        filter: cutout
-          ? cutoutFilter(paperEdge, cutoutTreatment)
-          : undefined,
+        filter: cutout ? subjectSurfaceFilter(surface) : undefined,
         ...clipStyle({node, boundaries}),
       }}
     >
@@ -270,8 +277,7 @@ const StateSequenceView = ({
   durationSeconds,
   seed,
   renderZ,
-  paperEdge,
-  cutoutTreatment,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -288,8 +294,7 @@ const StateSequenceView = ({
   durationSeconds: number;
   seed: number;
   renderZ: number;
-  paperEdge: string;
-  cutoutTreatment: ProjectTheme['cutout'];
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -308,7 +313,7 @@ const StateSequenceView = ({
       style={{
         ...containerStyle({node, resolved, renderZ}),
         height: registeredHeight,
-        filter: cutoutFilter(paperEdge, cutoutTreatment),
+        filter: subjectSurfaceFilter(surface),
         ...clipStyle({node, boundaries}),
       }}
     >
@@ -597,8 +602,7 @@ const GroupView = ({
   durationSeconds,
   seed,
   renderZ,
-  paperEdge,
-  cutoutTreatment,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -617,8 +621,7 @@ const GroupView = ({
   durationSeconds: number;
   seed: number;
   renderZ: number;
-  paperEdge: string;
-  cutoutTreatment: ProjectTheme['cutout'];
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -719,8 +722,7 @@ const GroupView = ({
             durationSeconds={durationSeconds}
             seed={seed}
             renderZ={['supported-subject', 'registered-depth-stack', 'canonical-container'].includes(node.pattern) ? slotOrder(child, node.support?.layering) : child.z}
-            paperEdge={paperEdge}
-            cutoutTreatment={cutoutTreatment}
+            surface={surface}
             cameraX={cameraX}
             cameraY={cameraY}
             cameraZoom={cameraZoom}
@@ -748,8 +750,7 @@ const CompositionNodeView = ({
   durationSeconds,
   seed,
   renderZ = node.z,
-  paperEdge,
-  cutoutTreatment,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -771,8 +772,7 @@ const CompositionNodeView = ({
   durationSeconds: number;
   seed: number;
   renderZ?: number;
-  paperEdge: string;
-  cutoutTreatment: ProjectTheme['cutout'];
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -787,9 +787,9 @@ const CompositionNodeView = ({
   if (node.kind === 'group' && node.renderParticipation === 'derivation-only') {
     return null;
   }
-  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cutoutTreatment, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
-  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cutoutTreatment, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
-  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cutoutTreatment, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
+  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
+  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
+  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
   if (node.kind === 'typography') {
     const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
     return <TypographyView node={node as CompositionTypographyNode} sceneId={sceneId} frame={frame} editorial={editorial} container={containerStyle({node, resolved, renderZ})} width={resolved.width} height={resolved.height ?? parent.height} />;
@@ -825,8 +825,7 @@ const CompositionNodeView = ({
             events={events}
             durationSeconds={durationSeconds}
             seed={seed}
-            paperEdge={paperEdge}
-            cutoutTreatment={cutoutTreatment}
+            surface={surface}
             cameraX={0}
             cameraY={0}
             cameraZoom={1}
@@ -855,7 +854,7 @@ const ChapterLabel = ({eyebrow, label, theme, variant = 'plain'}: Pick<Normalize
   const enter = spring({frame, fps, config: {damping: 20, stiffness: 90}});
   const opacity = interpolate(frame, [0, Math.round(0.4 * fps), Math.round(3 * fps), Math.round(3.93 * fps)], [0, 1, 1, 0], clamp);
   return (
-    <div style={{position: 'absolute', zIndex: 70, top: 62 * scale, left: 76 * scale, opacity, transform: `translateX(${(1 - enter) * -42}px) rotate(-0.6deg)`, color: theme.ink, padding: variant === 'paper-tab' ? `${18 * scale}px ${28 * scale}px ${20 * scale}px` : 0, background: variant === 'paper-tab' ? 'rgba(247,241,228,.94)' : undefined, border: variant === 'paper-tab' ? `2px solid ${theme.paperEdge}` : undefined, boxShadow: variant === 'paper-tab' ? '0 8px 22px rgba(28,22,15,.24), 0 2px 0 rgba(255,255,255,.65) inset' : undefined, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif')}}>
+    <div style={{position: 'absolute', zIndex: 70, top: 62 * scale, left: 76 * scale, opacity, transform: `translateX(${(1 - enter) * -42}px) rotate(-0.6deg)`, color: theme.ink, padding: variant === 'paper-tab' ? `${18 * scale}px ${28 * scale}px ${20 * scale}px` : 0, background: variant === 'paper-tab' ? 'rgba(247,241,228,.94)' : undefined, border: variant === 'paper-tab' ? `2px solid ${theme.surface.subjectEdge.mode === 'paper-outline' ? theme.surface.subjectEdge.color : theme.accent}` : undefined, boxShadow: variant === 'paper-tab' ? '0 8px 22px rgba(28,22,15,.24), 0 2px 0 rgba(255,255,255,.65) inset' : undefined, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif')}}>
       <div style={{fontSize: 24 * scale, fontWeight: 700, letterSpacing: 7 * scale, color: variant === 'paper-tab' ? '#7A5B18' : theme.accent, textShadow: variant === 'paper-tab' ? '0 1px 0 rgba(255,255,255,.8)' : undefined}}>{eyebrow}</div>
       <div style={{marginTop: 8 * scale, fontSize: 56 * scale, fontWeight: 800, letterSpacing: 6 * scale, textShadow: variant === 'paper-tab' ? '0 1px 0 rgba(255,255,255,.8)' : undefined}}>{label}</div>
       <div style={{width: 290 * scale * enter, height: 5 * scale, marginTop: 12 * scale, background: `linear-gradient(90deg, ${theme.accent}, transparent)`}} />
@@ -897,7 +896,15 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme, editorial}: 
   const cameraX = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'x', fallback: 0});
   const cameraY = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'y', fallback: 0});
   const boundary = resolveSceneTransitionPresentation({transition: scene.enterTransition, frame});
-  const paperTexture = scene.appearance?.paperTexture ?? {visible: true, opacity: 0.14, blendMode: 'multiply' as const};
+  const surfaceTexture = scene.appearance?.surfaceTexture ?? (
+    theme.surface.texture
+      ? {
+          visible: true,
+          opacity: theme.surface.texture.opacity,
+          blendMode: theme.surface.texture.blendMode,
+        }
+      : {visible: false, opacity: 0, blendMode: 'normal' as const}
+  );
   const profile = editorial.responsiveProfiles.find(({id}) => id === editorial.activeProfile);
   const zones = profile?.exclusionZones ?? [];
   return (
@@ -906,10 +913,10 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme, editorial}: 
       <AbsoluteFill>
         <AbsoluteFill style={{transform: `translate3d(${cameraX}px, ${cameraY}px, 0) scale(${cameraZoom})`, transformOrigin: '50% 54%'}}>
           {[...scene.composition.nodes].sort((a, b) => a.z - b.z).map((node) => (
-            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} cutoutTreatment={theme.cutout} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} sceneId={scene.id} editorial={editorial} rootNodes={scene.composition.nodes} zones={zones} />
+            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} surface={theme.surface} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} sceneId={scene.id} editorial={editorial} rootNodes={scene.composition.nodes} zones={zones} />
           ))}
         </AbsoluteFill>
-        {paperTexture.visible ? <AbsoluteFill style={{opacity: paperTexture.opacity, mixBlendMode: paperTexture.blendMode, backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}
+        {surfaceTexture.visible && theme.surface.texture ? <AbsoluteFill style={{opacity: surfaceTexture.opacity, mixBlendMode: surfaceTexture.blendMode, backgroundImage: `url(${staticFile(theme.surface.texture.src)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}
       </AbsoluteFill>
       {scene.appearance?.chapter?.visible === false ? null : <ChapterLabel eyebrow={scene.eyebrow} label={scene.label} theme={theme} variant={scene.appearance?.chapter?.variant} />}
       <SubtitleOverlay cues={scene.subtitles} theme={theme} appearance={scene.appearance?.subtitles} safeArea={profile?.safeArea} />

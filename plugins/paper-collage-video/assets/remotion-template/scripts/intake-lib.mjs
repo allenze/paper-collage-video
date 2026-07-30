@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {STYLE_IDS} from './style-catalog-lib.mjs';
+import {STYLE_ID_PATTERN} from './style-catalog-lib.mjs';
 
 export const ASPECT_RATIOS = {
   '16:9': {width: 1920, height: 1080, label: '横屏 16:9'},
@@ -78,8 +78,8 @@ export const validateIntake = (intake) => {
   if (!Object.hasOwn(ASPECT_RATIOS, intake.aspectRatio)) {
     add('画幅必须是 16:9 或 9:16。', 'intake.aspectRatio');
   }
-  if (!STYLE_IDS.includes(intake.visualStylePreset)) {
-    add('视觉风格必须来自内置三风格目录。', 'intake.visualStylePreset');
+  if (!STYLE_ID_PATTERN.test(intake.visualStylePreset ?? '')) {
+    add('视觉风格必须是有效的目录风格 id。', 'intake.visualStylePreset');
   }
   if (!Object.hasOwn(PARALLAX_PREFERENCES, intake.parallaxPreference)) {
     add('视差偏好必须是 auto、prefer 或 minimal。', 'intake.parallaxPreference');
@@ -116,6 +116,12 @@ export const confirmIntake = ({
   catalog,
   at = new Date().toISOString(),
 }) => {
+  const selectedStyle = catalog.styles.find(
+    ({id}) => id === selection.visualStylePreset,
+  );
+  if (!selectedStyle) {
+    throw new Error(`视觉风格不在当前目录中：${selection.visualStylePreset ?? 'missing'}。`);
+  }
   const intake = {
     schemaVersion: 2,
     status: 'confirmed',
@@ -124,9 +130,7 @@ export const confirmIntake = ({
     parallaxPreference: selection.parallaxPreference,
     styleCatalogVersion: catalog.version,
     styleCatalogFingerprint: catalog.fingerprint,
-    styleProfileFingerprint:
-      catalog.styles.find(({id}) => id === selection.visualStylePreset)
-        ?.profileFingerprint ?? null,
+    styleProfileFingerprint: selectedStyle.profileFingerprint,
     confirmedAt: at,
     note: String(selection.note ?? '').trim(),
     updatedAt: at,

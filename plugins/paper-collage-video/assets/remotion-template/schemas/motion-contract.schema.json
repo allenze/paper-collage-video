@@ -29,7 +29,7 @@
       "properties": {
         "schemaVersion": {"const": 1},
         "summary": {"type": "string", "minLength": 1},
-        "pacing": {"enum": ["gentle", "playful", "measured"]},
+        "pacing": {"enum": ["gentle", "playful", "measured", "dynamic"]},
         "performance": {
           "type": "object",
           "required": [
@@ -107,18 +107,12 @@
       "type": "object",
       "required": ["id", "profileFingerprint", "pacing"],
       "properties": {
-        "id": {
-          "enum": [
-            "childrens-picture-book-paper",
-            "hand-drawn-cutout-explainer",
-            "archival-collage"
-          ]
-        },
+        "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
         "profileFingerprint": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$"
         },
-        "pacing": {"enum": ["gentle", "playful", "measured"]}
+        "pacing": {"enum": ["gentle", "playful", "measured", "dynamic"]}
       },
       "additionalProperties": false
     },
@@ -218,16 +212,7 @@
           ]
         },
         "type": {
-          "enum": [
-            "cut",
-            "paper-wipe",
-            "dip-to-paper",
-            "paper-slide",
-            "torn-wipe",
-            "paper-iris",
-            "page-turn",
-            "paper-shutters"
-          ]
+          "enum": ["cut", "wipe", "dip", "slide", "iris", "page-turn", "shutters"]
         },
         "motivation": {
           "enum": ["semantic-default", "authored", "rhythmic", "impact"]

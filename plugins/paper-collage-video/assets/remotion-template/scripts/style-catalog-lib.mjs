@@ -8,6 +8,7 @@ const DEFAULT_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const FINGERPRINT_PATTERN = /^[a-f0-9]{64}$/;
+export const STYLE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const stableValue = (value) => {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -18,12 +19,6 @@ const stableValue = (value) => {
       .map((key) => [key, stableValue(value[key])]),
   );
 };
-
-export const STYLE_IDS = [
-  'childrens-picture-book-paper',
-  'hand-drawn-cutout-explainer',
-  'archival-collage',
-];
 
 export const styleProfileBinding = (styleProfile) => {
   const generation = styleProfile?.generation ?? {};
@@ -53,8 +48,8 @@ export const validateStyleProfileBinding = (binding) => {
   if (binding.schemaVersion !== 1) {
     add('styleProfileBinding.schemaVersion 必须为 1。', 'styleProfileBinding.schemaVersion');
   }
-  if (!STYLE_IDS.includes(binding.id)) {
-    add('styleProfileBinding.id 必须来自内置风格目录。', 'styleProfileBinding.id');
+  if (!STYLE_ID_PATTERN.test(binding.id ?? '')) {
+    add('styleProfileBinding.id 必须是有效的目录风格 id。', 'styleProfileBinding.id');
   }
   if (typeof binding.catalogVersion !== 'string' || !binding.catalogVersion) {
     add('styleProfileBinding.catalogVersion 不能为空。', 'styleProfileBinding.catalogVersion');
@@ -81,11 +76,11 @@ export const validateStyleProfileSnapshot = (profile) => {
   if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
     return [{message: '缺少已冻结的 styleProfile。', location: 'styleProfile'}];
   }
-  if (profile.schemaVersion !== 1) {
-    add('styleProfile.schemaVersion 必须为 1。', 'styleProfile.schemaVersion');
+  if (profile.schemaVersion !== 2) {
+    add('styleProfile.schemaVersion 必须为 2。', 'styleProfile.schemaVersion');
   }
-  if (!STYLE_IDS.includes(profile.id)) {
-    add('styleProfile.id 必须来自内置风格目录。', 'styleProfile.id');
+  if (!STYLE_ID_PATTERN.test(profile.id ?? '')) {
+    add('styleProfile.id 必须是有效的目录风格 id。', 'styleProfile.id');
   }
   for (const [key, value] of [
     ['label', profile.label],
@@ -111,20 +106,50 @@ export const validateStyleProfileSnapshot = (profile) => {
     add(issue.message, issue.location.replace('styleProfileBinding', 'styleProfile'));
   }
   const theme = profile.render?.theme;
+  const surface = theme?.surface;
+  const edge = surface?.subjectEdge;
+  const shadow = surface?.subjectShadow;
   if (
     !theme ||
     typeof theme !== 'object' ||
     !/^#[0-9a-f]{6}$/i.test(theme.canvas ?? '') ||
-    !/^#[0-9a-f]{6}$/i.test(theme.paperEdge ?? '') ||
-    typeof theme.texture !== 'string' ||
-    !theme.texture ||
-    !Number.isFinite(theme.cutout?.edgeWidthPx) ||
-    !Number.isFinite(theme.cutout?.shadowOffsetXPx) ||
-    !Number.isFinite(theme.cutout?.shadowOffsetYPx) ||
-    !Number.isFinite(theme.cutout?.shadowBlurPx) ||
-    typeof theme.cutout?.shadowColor !== 'string'
+    !surface ||
+    !['none', 'paper-outline'].includes(edge?.mode) ||
+    !['none', 'drop-shadow'].includes(shadow?.mode) ||
+    (edge.mode === 'paper-outline' &&
+      (!Number.isFinite(edge.widthPx) || typeof edge.color !== 'string')) ||
+    (shadow.mode === 'drop-shadow' &&
+      (!Number.isFinite(shadow.offsetXPx) ||
+        !Number.isFinite(shadow.offsetYPx) ||
+        !Number.isFinite(shadow.blurPx) ||
+        typeof shadow.color !== 'string')) ||
+    (surface.texture !== null &&
+      (typeof surface.texture?.src !== 'string' ||
+        !surface.texture.src ||
+        !Number.isFinite(surface.texture.opacity) ||
+        !['normal', 'multiply', 'screen', 'overlay'].includes(
+          surface.texture.blendMode,
+        )))
   ) {
-    add('styleProfile.render.theme 或 cutout 契约不完整。', 'styleProfile.render.theme');
+    add('styleProfile.render.theme.surface 契约不完整。', 'styleProfile.render.theme.surface');
+  }
+  const visualSfx = profile.motion?.visualSfx;
+  if (
+    !['paper-story', 'clean-video'].includes(profile.motion?.transitionSet) ||
+    !['rare', 'selective', 'expressive'].includes(visualSfx?.policy) ||
+    !Number.isInteger(visualSfx?.maxPerScene) ||
+    visualSfx.maxPerScene < 0 ||
+    visualSfx.maxPerScene > 3 ||
+    !Array.isArray(visualSfx?.allowedKinds) ||
+    visualSfx.allowedKinds.some((kind) => !['impact', 'motion'].includes(kind)) ||
+    !Array.isArray(visualSfx?.durationRangeSeconds) ||
+    visualSfx.durationRangeSeconds.length !== 2 ||
+    visualSfx.durationRangeSeconds.some(
+      (duration) => !Number.isFinite(duration) || duration < 0.1 || duration > 1,
+    ) ||
+    visualSfx.durationRangeSeconds[0] > visualSfx.durationRangeSeconds[1]
+  ) {
+    add('styleProfile.motion 的 transitionSet 或 visualSfx 契约无效。', 'styleProfile.motion');
   }
   if (
     !Array.isArray(profile.quality?.requiredAssetChecks) ||
@@ -140,16 +165,18 @@ export const validateStyleProfileSnapshot = (profile) => {
 export const loadStyleCatalog = async ({root = DEFAULT_ROOT} = {}) => {
   const catalogFile = path.join(root, 'public', 'style-catalog', 'catalog.json');
   const catalog = JSON.parse(await fs.readFile(catalogFile, 'utf8'));
-  if (catalog.schemaVersion !== 2) {
-    throw new Error('style catalog schemaVersion 必须为 2。');
+  if (catalog.schemaVersion !== 3) {
+    throw new Error('style catalog schemaVersion 必须为 3。');
   }
+  if (!Array.isArray(catalog.styles) || catalog.styles.length < 1) {
+    throw new Error('style catalog 必须至少包含一个正式视觉风格。');
+  }
+  const ids = catalog.styles.map(({id}) => id);
   if (
-    !Array.isArray(catalog.styles) ||
-    catalog.styles.length !== STYLE_IDS.length ||
-    JSON.stringify(catalog.styles.map(({id}) => id).sort()) !==
-      JSON.stringify([...STYLE_IDS].sort())
+    ids.some((id) => !STYLE_ID_PATTERN.test(id ?? '')) ||
+    new Set(ids).size !== ids.length
   ) {
-    throw new Error('style catalog 必须恰好包含三个正式视觉风格。');
+    throw new Error('style catalog 的风格 id 必须有效且唯一。');
   }
   const images = {};
   for (const style of catalog.styles) {
@@ -157,8 +184,8 @@ export const loadStyleCatalog = async ({root = DEFAULT_ROOT} = {}) => {
     const source = await fs.readFile(absolutePath);
     const imageSha256 = sha256(source);
     images[style.image] = imageSha256;
-    if (style.profile?.schemaVersion !== 1) {
-      throw new Error(`${style.id} 缺少 executable style profile v1。`);
+    if (style.profile?.schemaVersion !== 2) {
+      throw new Error(`${style.id} 缺少 executable style profile v2。`);
     }
     style.profileFingerprint = sha256(
       JSON.stringify(
@@ -220,7 +247,7 @@ export const materializeStyleProfile = (catalog, styleId) => {
   const style = catalog.styles.find(({id}) => id === styleId);
   if (!style) throw new Error(`未知视觉风格：${styleId}。`);
   const snapshot = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: style.id,
     label: style.label,
     summary: style.summary,

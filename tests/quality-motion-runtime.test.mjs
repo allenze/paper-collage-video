@@ -350,15 +350,17 @@ test('executable style profiles create one fingerprinted whole-film quality targ
       ink: '#ffffff',
       subtitle: '#ffffff',
       subtitleBackground: '#000000',
-      paperEdge: '#ffffff',
       foreground: '#111111',
-      texture: 'textures/paper-grain.png',
-      cutout: {
-        edgeWidthPx: 3,
-        shadowOffsetXPx: 0,
-        shadowOffsetYPx: 10,
-        shadowBlurPx: 7,
-        shadowColor: 'rgba(20,15,12,.28)',
+      surface: {
+        texture: {src: 'textures/paper-grain.png', opacity: 0.14, blendMode: 'multiply'},
+        subjectEdge: {mode: 'paper-outline', color: '#ffffff', widthPx: 3},
+        subjectShadow: {
+          mode: 'drop-shadow',
+          offsetXPx: 0,
+          offsetYPx: 10,
+          blurPx: 7,
+          color: 'rgba(20,15,12,.28)',
+        },
       },
     },
     video: {width: 100, height: 100, fps: 30},
@@ -422,8 +424,8 @@ test('v9 scene transitions use one seconds-based intent-routed opaque-boundary p
       },
     ],
     sceneTransitions: [
-      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', treatment: {type: 'paper-wipe', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.4}},
-      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', treatment: {type: 'dip-to-paper', motivation: 'authored', durationSeconds: 0.4}},
+      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', treatment: {type: 'wipe', edgeStyle: 'paper', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.4}},
+      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', treatment: {type: 'dip', edgeStyle: 'paper', motivation: 'authored', durationSeconds: 0.4}},
     ],
   });
   assert.equal(timeline.scenes[0].from, 0);
@@ -432,7 +434,7 @@ test('v9 scene transitions use one seconds-based intent-routed opaque-boundary p
   assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v11 projects are rejected instead of migrated', async () => {
+test('pre-v12 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -446,14 +448,14 @@ test('pre-v11 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 11'),
+          code === 'schema-version' && message.includes('必须为 12'),
     ),
   );
 });
 
-test('v11 projects require an explicit bounded narration gain', async () => {
+test('v12 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 11,
+    schemaVersion: 12,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},

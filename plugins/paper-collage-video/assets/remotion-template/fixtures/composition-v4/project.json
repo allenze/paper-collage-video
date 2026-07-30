@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "motionContract": null,
   "slug": "composition-v5-fixture",
   "title": "Composition v5 Fixture",
@@ -34,9 +34,13 @@
   "video": {"width": 1920, "height": 1080, "fps": 30},
   "theme": {
     "canvas": "#6e1e19", "sceneBackground": "#d9dfcf", "accent": "#a33a2d", "ink": "#4a291f",
-    "subtitle": "#fff8ea", "subtitleBackground": "rgba(58,25,18,.72)", "paperEdge": "#f5eedc",
-    "foreground": "#8d251e", "texture": "textures/paper-grain.png",
-    "cutout": {"edgeWidthPx": 3, "shadowOffsetXPx": 0, "shadowOffsetYPx": 10, "shadowBlurPx": 7, "shadowColor": "rgba(20,15,12,.28)"}
+    "subtitle": "#fff8ea", "subtitleBackground": "rgba(58,25,18,.72)",
+    "foreground": "#8d251e",
+    "surface": {
+      "texture": {"src": "textures/paper-grain.png", "opacity": 0.14, "blendMode": "multiply"},
+      "subjectEdge": {"mode": "paper-outline", "color": "#f5eedc", "widthPx": 3},
+      "subjectShadow": {"mode": "drop-shadow", "offsetXPx": 0, "offsetYPx": 10, "blurPx": 7, "color": "rgba(20,15,12,.28)"}
+    }
   },
   "voice": {"mode": "fictional", "provider": "fixture", "displayName": "Fixture"},
   "audio": {"narration": {"volume": 0.01}, "music": null, "mastering": {"targetLufs": -24, "toleranceLufs": 3, "truePeakDbtp": -18}},

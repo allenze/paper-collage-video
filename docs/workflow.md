@@ -41,14 +41,20 @@ intake 与三档方案都发生在 `capability-review` 内；`brief` 和
 `project:intake --json` 返回三个结构化问题：
 
 - `16:9`（1920×1080）或 `9:16`（1080×1920）；
-- 儿童绘本纸片、手绘剪纸 / 手绘解释、复古档案拼贴；
+- 当前动态风格目录中的一个条目；
 - 分层视差：自动推荐、优先使用、尽量少用。
 
-系统先并排展示三张使用同一龟兔森林构图的内置文生图 PNG，再打开 Ask
+系统先并排展示目录返回的全部龟兔森林标准构图风格卡，再打开 Ask
 Question。图片无文字、随插件版本化并进入 runtime fingerprint；生成成本只在
 插件开发时发生一次，用户每次选择时只是读取本地文件，不调用 provider。它们只
 帮助理解视觉语言，不能替代后续故事专属风格样张。
-“分层视差”是文字描述的运动偏好，不是第四种视觉风格。第一弹窗不选择成本。
+“分层视差”是文字描述的运动偏好，不是另一个视觉风格。第一弹窗不选择成本。
+
+漫画类 Style Profile 仍按视频镜头组织画面，使用正常硬切、擦拭、遮盖、滑动、
+虹膜或百叶转场；不得模拟沿长画布连续向下滚动。对白、解释和旁白不烘焙进气泡，
+而由音轨与字幕承担。只有离散撞击或运动音效可以选择性加入短促可编辑的视觉拟声字，
+并与同一 beat 的 `soundCue`、显隐事件和证明时刻绑定；风雨、车流、人群等环境声
+通常只保留在音频中。
 
 ## 2. 三档方案与组合确认
 
@@ -73,11 +79,11 @@ intake 确认后，Codex 只用宿主模型生成一个共同故事骨架和三�
 肢体、手持物、接触关系、机构状态、真实跑步或睡醒发生了变化。这些必须使用
 状态家族或耦合组合契约。
 
-用户选择一张卡即完成这一次组合批准，不再追加例行确认。系统随后自动物化计划、为整片编排结构化 `motionDirection`、为每个节拍分配 `performanceRole` 并判断可见变化，再用 `project:storyboard` 锁定 schema-v11 `treatments`、统一 edit points、三画幅导演计划与相邻场景边界。命令确定性编译 `motionContract`、`compositionPlan`、`sourcePackagePlans`、多维风格证明计划、姿态母版网格、provider/local/avoided 调用账目和指纹。`project:confirm-concept` 会核对 storyboard 的姿态家族、状态清单和注册源包是否与已批准卡片完全一致；只有一致时才复用刚才的选择记录 `scenarioDecision`、`budgetDecision`、`sourcePackageDecision` 和 provider。若发生实质漂移，回到同一方案门展示更新后的精确卡，而不是悄悄继续。在 cap 记录前不得调用图片 provider。
+用户选择一张卡即完成这一次组合批准，不再追加例行确认。系统随后自动物化计划、为整片编排结构化 `motionDirection`、为每个节拍分配 `performanceRole` 并判断可见变化，再用 `project:storyboard` 锁定 schema-v12 `treatments`、统一 edit points、三画幅导演计划与相邻场景边界。命令确定性编译 `motionContract`、`compositionPlan`、`sourcePackagePlans`、多维风格证明计划、姿态母版网格、provider/local/avoided 调用账目和指纹。`project:confirm-concept` 会核对 storyboard 的姿态家族、状态清单和注册源包是否与已批准卡片完全一致；只有一致时才复用刚才的选择记录 `scenarioDecision`、`budgetDecision`、`sourcePackageDecision` 和 provider。若发生实质漂移，回到同一方案门展示更新后的精确卡，而不是悄悄继续。在 cap 记录前不得调用图片 provider。
 
 ## 3. 风格与虚构音色确认
 
-只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。需要透明运动层的 registered 2×2 sheet 使用逐格 surface：reference/rear 保持不透明，subject/front 在宿主模型原生 alpha 不可靠时使用已声明且不与主体冲突的纯色色键。provider-native 原图原样登记，分隔线裁除、色键、缩放和 key metadata 由正式 registered-family 派生器完成并计为三个本地 derivative。`project:style-proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v11 组合 proof，绑定完整目标清单、计划指纹和动作契约双指纹。schema-v7 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。现有 style/voice gate 同时展示 `motion-language-card.json`，并把人的决定归因写入 `motion-approval.json`，不增加第四个人工等待节点。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
+只生成编译器多维 `styleProofPlan` 所需的最少源包家族和足够判断的短试听。样张生图前先把人物身份、复杂拓扑、功能机构和说明图分类并锁定通用语义契约；宿主生图预留真实尝试额度。需要透明运动层的 registered 2×2 sheet 使用逐格 surface：reference/rear 保持不透明，subject/front 在宿主模型原生 alpha 不可靠时使用已声明且不与主体冲突的纯色色键。provider-native 原图原样登记，分隔线裁除、色键、缩放和 key metadata 由正式 registered-family 派生器完成并计为三个本地 derivative。`project:style-proof` 覆盖最高语义风险类别、每种具体耦合关系和状态序列，并允许同一源包证明多种风险；它渲染 3–5 秒真实 v12 组合 proof，绑定完整目标清单、计划指纹和动作契约双指纹。schema-v7 样式报告对包括 `free` 在内的所有选中目标生成非空结构化 composite。现有 style/voice gate 同时展示 `motion-language-card.json`，并把人的决定归因写入 `motion-approval.json`，不增加第四个人工等待节点。普通耦合证明包含逐成员 alpha、棋盘格、紧裁和 motion stress；`registered-depth-stack` 改用家族级 neutral reconstruction、reference comparison、exploded checkerboard，以及三个实际画幅各自正负 reveal-envelope 极值。`approve-style-voice` 会拒绝空、缺失、过期或仍待审核的证明。人批准且证明通过后进入批量生产；真人声音克隆需要单独的授权与合法参考材料。
 
 ## 4. 批量生产与质量门
 
@@ -102,7 +108,7 @@ polygon mask 裁切所有状态，并量化 fill、rim gap、bottom coverage、r
 npm run project:assets-ready -- <slug>
 ```
 
-该命令依次核对当前动作语言批准、同步真实旁白时长与 timing、生成/导入字幕时间、构建确定性时间线混音并实际编码/检测 96k 预览 AAC 与 192k 最终 AAC、核对故事板蓝图/v11 组合与动作契约/源包/v9 editorial/状态序列/关键帧/edit points/高级切换/三画幅导演计划、核验组合证明指纹、执行资产、组合和整片动作质量门并推进到 `preview`。节点关键帧位移统一使用相对父级的 `offsetX`/`offsetY`；`transform.x`/`transform.y` 是绝对布局，相机 `x`/`y` 是像素。质量 scaffold 的每条证明都绑定当前组合指纹与证据 SHA-256，旧帧不能混入新审查。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 首先检查 seal/未完成工作项，再执行其他预检与半尺寸渲染；新渲染和音频-only 刷新都会直接复用已检测的对应 AAC 码流。视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流，任何视觉指纹变化都强制完整帧渲染。
+该命令依次核对当前动作语言批准、同步真实旁白时长与 timing、生成/导入字幕时间、构建确定性时间线混音并实际编码/检测 96k 预览 AAC 与 192k 最终 AAC、核对故事板蓝图/v12 组合与动作契约/源包/v9 editorial/状态序列/关键帧/edit points/高级切换/三画幅导演计划、核验组合证明指纹、执行资产、组合和整片动作质量门并推进到 `preview`。节点关键帧位移统一使用相对父级的 `offsetX`/`offsetY`；`transform.x`/`transform.y` 是绝对布局，相机 `x`/`y` 是像素。质量 scaffold 的每条证明都绑定当前组合指纹与证据 SHA-256，旧帧不能混入新审查。在 `preview` / `human-review` 阶段重复执行会做幂等复核而不再次 advance。随后 `project:preview` 首先检查 seal/未完成工作项，再执行其他预检与半尺寸渲染；新渲染和音频-only 刷新都会直接复用已检测的对应 AAC 码流。视觉和音频指纹都不变时复用 artifact，只改音频时复用视频流，任何视觉指纹变化都强制完整帧渲染。
 
 渲染并发默认按可用 CPU 自动决定并封顶为 8。若完整 Chrome 在多页并发时无响应，可用 `PAPER_COLLAGE_RENDER_CONCURRENCY=1 npm run project:preview -- <slug>`（最终渲染同理）走正式的单路重试路径；该设置只控制同时打开的渲染页数，不改变帧率、画质或成片内容。
 
@@ -134,7 +140,7 @@ npm run project:resume -- <slug>
 - `project.json.intake` / `project.json.styleProfile`：画幅、内置视觉风格与视差偏好，以及冻结后的生成指令、动效偏好、渲染主题、质量门禁、参考图和风格指纹；
 - `planning-scenarios.json`：共同故事骨架、三档详细方案、预计调用、建议 cap、hard ceiling 和质量承诺；
 - `production.json`：阶段、审批、粗粒度批次、产物、事件历史；
-- `storyboard.json`：已批准的 v11 全片动作方向、节拍角色/treatments、source package、edit points 与三画幅/高级切换导演计划，以及编译生成的动作契约、调用预算、风险排名和证明指纹；
+- `storyboard.json`：已批准的 v12 全片动作方向、节拍角色/treatments、source package、edit points 与三画幅/高级切换导演计划，以及编译生成的动作契约、调用预算、风险排名和证明指纹；
 - `project.json.plan`：Creative Plan v4 scenario 指纹、story scope、profile ceiling、质量下限和人批图片 attempt 上限；
 - `requests/*.json` / `assets-manifest.json`：schema-v8 逐素材输入、可执行风格绑定、layer package/组合绑定与注册源家族；
 - `quality-report.json`：逐文件和组合关系的技术/语义质量与指纹；

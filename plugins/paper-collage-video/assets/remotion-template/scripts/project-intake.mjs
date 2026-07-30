@@ -27,7 +27,7 @@ const printGate = ({project, catalog}) => {
     title: project.title,
     status: project.intake?.status ?? 'pending',
     instruction:
-      '先向用户并排显示三张 styleCards，再用 Ask Question 收集三个选择；不要把内置风格卡当作项目风格样张。',
+      '先向用户展示当前目录中的全部 styleCards，再收集画幅、一个视觉风格和视差偏好；风格卡是目录参考，不是项目风格样张。',
     questions: [
       {
         id: 'aspectRatio',
@@ -59,7 +59,7 @@ const printGate = ({project, catalog}) => {
     return;
   }
   console.log(`项目：${project.title}`);
-  console.log('等待 intake：画幅、三选一视觉风格、分层视差偏好。');
+  console.log(`等待 intake：画幅、${catalog.styles.length} 选一视觉风格、分层视差偏好。`);
   for (const style of payload.questions[1].options) {
     console.log(`  ${style.id}: ${style.label} · ${style.absolutePath}`);
   }

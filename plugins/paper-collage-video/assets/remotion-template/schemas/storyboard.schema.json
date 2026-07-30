@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/storyboard.schema.json",
-  "title": "Compiled Paper Collage Storyboard v11",
+  "title": "Compiled Paper Collage Storyboard v12",
   "type": "object",
   "required": ["$schema", "schemaVersion", "slug", "status", "arc", "style", "motionDirection", "motionContract", "editorial", "scenes", "sceneTransitions", "directingSummary", "updatedAt"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 11},
+    "schemaVersion": {"const": 12},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "status": {"const": "ready"},
     "arc": {"type": "string", "minLength": 1},
@@ -58,23 +58,25 @@
       "type": "object",
       "required": ["type", "motivation", "durationSeconds"],
       "properties": {
-        "type": {"enum": ["cut", "paper-wipe", "dip-to-paper", "paper-slide", "torn-wipe", "paper-iris", "page-turn", "paper-shutters"]},
+        "type": {"enum": ["cut", "wipe", "dip", "slide", "iris", "page-turn", "shutters"]},
         "motivation": {"enum": ["semantic-default", "authored", "rhythmic", "impact"]},
         "durationSeconds": {"type": "number", "minimum": 0, "maximum": 1.5},
+        "edgeStyle": {"enum": ["clean", "paper", "torn"]},
         "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]},
         "beatId": {"type": "string", "minLength": 1}
       },
       "allOf": [
-        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}, "motivation": {"enum": ["rhythmic", "impact"]}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}, "motivation": {"enum": ["rhythmic", "impact"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["edgeStyle"]}]}}},
+        {"if": {"not": {"properties": {"type": {"const": "cut"}}}}, "then": {"required": ["edgeStyle"]}},
         {"if": {"properties": {"motivation": {"const": "rhythmic"}}}, "then": {"required": ["beatId"], "properties": {"type": {"const": "cut"}}}},
         {"if": {"properties": {"motivation": {"const": "impact"}}}, "then": {"properties": {"type": {"const": "cut"}}}},
-        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.2}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
-        {"if": {"properties": {"type": {"const": "paper-slide"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.25}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "torn-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "paper-iris"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.2}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"required": ["edgeStyle"], "properties": {"edgeStyle": {"const": "torn"}}}, "then": {"properties": {"type": {"const": "wipe"}}}},
+        {"if": {"properties": {"type": {"const": "dip"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "slide"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.25}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "iris"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
         {"if": {"properties": {"type": {"const": "page-turn"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.4}, "direction": {"enum": ["left-to-right", "right-to-left"]}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "paper-shutters"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.4}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}}
+        {"if": {"properties": {"type": {"const": "shutters"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.4}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}}
       ],
       "additionalProperties": false
     },
@@ -350,11 +352,38 @@
             {"type": "null"},
             {
               "type": "object",
-              "required": ["kind", "animation"],
+              "required": ["kind", "animation", "role"],
               "properties": {
                 "kind": {"enum": ["typography", "shape", "annotation", "data-graphic"]},
-                "animation": {"enum": ["pulse", "bounce", "draw", "stamp", "reveal", "route", "data-state"]}
+                "animation": {"enum": ["pulse", "bounce", "draw", "stamp", "shake", "drop-impact", "reveal", "route", "data-state"]},
+                "role": {"enum": ["generic", "visual-sfx"]},
+                "sfxKind": {"enum": ["impact", "motion"]},
+                "text": {"type": "string", "minLength": 1, "maxLength": 8},
+                "durationSeconds": {"type": "number", "minimum": 0.1, "maximum": 1},
+                "audioBinding": {"const": "beat-sound-cue"}
               },
+              "allOf": [
+                {
+                  "if": {"properties": {"role": {"const": "visual-sfx"}}},
+                  "then": {
+                    "required": ["sfxKind", "text", "durationSeconds", "audioBinding"],
+                    "properties": {
+                      "kind": {"const": "typography"},
+                      "animation": {"enum": ["stamp", "shake", "drop-impact"]}
+                    }
+                  },
+                  "else": {
+                    "not": {
+                      "anyOf": [
+                        {"required": ["sfxKind"]},
+                        {"required": ["text"]},
+                        {"required": ["durationSeconds"]},
+                        {"required": ["audioBinding"]}
+                      ]
+                    }
+                  }
+                }
+              ],
               "additionalProperties": false
             }
           ]
@@ -754,15 +783,28 @@
     },
     "graphicPlan": {
       "type": "object",
-      "required": ["id", "nodeId", "kind", "animation", "at", "proofTimeId"],
+      "required": ["id", "beatId", "nodeId", "kind", "animation", "role", "at", "proofTimeId"],
       "properties": {
         "id": {"type": "string", "minLength": 1},
+        "beatId": {"type": "string", "minLength": 1},
         "nodeId": {"type": "string", "minLength": 1},
-        "kind": {"enum": ["text", "shape"]},
-        "animation": {"enum": ["pulse", "bounce", "draw", "stamp"]},
+        "kind": {"enum": ["typography", "shape", "annotation", "data-graphic"]},
+        "animation": {"enum": ["pulse", "bounce", "draw", "stamp", "shake", "drop-impact", "reveal", "route", "data-state"]},
+        "role": {"enum": ["generic", "visual-sfx"]},
+        "sfxKind": {"enum": ["impact", "motion"]},
+        "text": {"type": "string", "minLength": 1, "maxLength": 8},
+        "durationSeconds": {"type": "number", "minimum": 0.1, "maximum": 1},
+        "audioBinding": {"const": "beat-sound-cue"},
+        "soundCue": {"type": "string", "minLength": 1},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
       },
+      "allOf": [
+        {
+          "if": {"properties": {"role": {"const": "visual-sfx"}}},
+          "then": {"required": ["sfxKind", "text", "durationSeconds", "audioBinding", "soundCue"]}
+        }
+      ],
       "additionalProperties": false
     },
     "sceneDirecting": {

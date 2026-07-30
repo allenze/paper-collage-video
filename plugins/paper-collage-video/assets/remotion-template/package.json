@@ -1,6 +1,6 @@
 {
   "name": "paper-collage-video-workspace",
-  "version": "0.18.0-dev.1",
+  "version": "0.19.0-dev.1",
   "description": "Configuration-driven paper-collage video pipeline and Codex plugin built with Remotion.",
   "private": true,
   "type": "module",
@@ -87,7 +87,7 @@
     "proof:looping-world:render": "node scripts/render-looping-world-proof.mjs",
     "proof:looping-world:verify": "node scripts/verify-looping-world-proof.mjs",
     "proof:looping-world": "npm run proof:looping-world:prepare && npm run proof:looping-world:render && npm run proof:looping-world:verify",
-    "schema:v11": "node scripts/schema-v11.mjs",
+    "schema:v12": "node scripts/schema-v12.mjs",
     "dev": "remotion studio src/index.ts --props=projects/starter-demo/project.json",
     "check": "tsc --noEmit",
     "bundle": "remotion bundle src/index.ts",

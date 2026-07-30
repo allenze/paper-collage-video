@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "slug": "starter-demo",
   "title": "Paper Collage Workspace",
   "intake": {
@@ -49,15 +49,25 @@
     "ink": "#4a291f",
     "subtitle": "#fff8ea",
     "subtitleBackground": "rgba(58, 25, 18, .72)",
-    "paperEdge": "#f5eedc",
     "foreground": "#8d251e",
-    "texture": "textures/paper-grain.png",
-    "cutout": {
-      "edgeWidthPx": 3,
-      "shadowOffsetXPx": 0,
-      "shadowOffsetYPx": 10,
-      "shadowBlurPx": 7,
-      "shadowColor": "rgba(20,15,12,.28)"
+    "surface": {
+      "texture": {
+        "src": "textures/paper-grain.png",
+        "opacity": 0.14,
+        "blendMode": "multiply"
+      },
+      "subjectEdge": {
+        "mode": "paper-outline",
+        "color": "#f5eedc",
+        "widthPx": 3
+      },
+      "subjectShadow": {
+        "mode": "drop-shadow",
+        "offsetXPx": 0,
+        "offsetYPx": 10,
+        "blurPx": 7,
+        "color": "rgba(20,15,12,.28)"
+      }
     }
   },
   "voice": {

@@ -44,8 +44,8 @@ export const validateStoryboard = (
 ) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 11) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 11。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 12) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 12。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -267,7 +267,7 @@ export const validateStoryboard = (
       if (!Object.hasOwn(beat, 'soundCue')) {
         add(
           'storyboard-beat-sound-field',
-          'v11 节拍必须显式声明 soundCue（离散事件音效字符串或 null）。',
+          'v12 节拍必须显式声明 soundCue（离散事件音效字符串或 null）。',
           `${beatLocation}.soundCue`,
         );
       }

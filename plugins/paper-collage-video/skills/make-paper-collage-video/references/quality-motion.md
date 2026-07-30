@@ -1,6 +1,6 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v11 composition/motion-contract/v9 editorial
+Read this before style sampling, bulk images, v12 composition/motion-contract/v9 editorial
 authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
@@ -79,9 +79,10 @@ Every current source or visible asset inherits the selected profile's
 even when the file bytes are unchanged. Composition quality adds exactly one
 whole-film `style-profile:<id>` target with the profile's
 `requiredCompositeChecks`. Its fingerprint binds the profile snapshot, render
-theme, runtime, scenes, and participating asset hashes. Therefore changing a
-palette, cutout edge/shadow treatment, directive, required check, reference
-card, or profile id invalidates stale asset/composite approvals.
+theme, transition set, visual-SFX policy, runtime, scenes, and participating
+asset hashes. Therefore changing a palette, surface texture/edge/shadow
+treatment, directive, required check, reference card, or profile id invalidates
+stale asset/composite approvals.
 
 The scaffold includes the frozen style-card reference as evidence and repeats
 `styleProfile.quality.reviewFocus` for the reviewer. Asset approval must verify
@@ -132,7 +133,7 @@ assets and the representative composite with those paths.
 }
 ```
 
-After final local audio, actual timing data, and real v11 composition/v9
+After final local audio, actual timing data, and real v12 composition/v9
 editorial groups/state sequences exist, run (the proof command synchronizes
 measured narration duration first and reuses only project-, asset-, and
 runtime-fingerprint-current frames/targets):
@@ -235,6 +236,12 @@ must not pass style approval.
 - `parallax-rig`: depth order readable, camera coupling clean, registered groups stable, final composition readable.
 - `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable. For `rise-drift`, verify monotonic bottom-to-top travel, slight expansion, and invisible respawn.
 - `typography`: fit/overflow, font loading, reveal/emphasis edit-point binding, mixed-script legibility, and safe-area/exclusion compliance.
+- `visual-sfx`: the short word is editable `role=visual-sfx` typography; its
+  audible cue and show/emphasis event are synchronized; its hide event preserves
+  the Profile duration; it never covers subtitles or the focal subject; the
+  scene stays within the Profile density limit; and lettering, color, contour,
+  and motion are consistent with the selected style. Dialogue, narration, and
+  environmental ambience do not pass as visual-SFX content.
 - `annotation`: semantic anchors, route validity, title/subtitle/motif exclusion clearance, lifecycle binding, and counter state.
 - `data-graphic`: data/domain/format/geometry mapping, focus/reveal states, edit-point binding, and deterministic SVG output.
 - `editorial-transition`: declared shape/position/scale/color/value continuity, hard-cut enforcement for match types, fallback policy, and before/at/after frames.
@@ -264,7 +271,7 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 ## Subtitles and Audio
 
 `project:assets-ready` owns motion-approval validation, narration
-synchronization, subtitle derivation, v11 composition/motion-contract/v9
+synchronization, subtitle derivation, v12 composition/motion-contract/v9
 editorial validation, current-proof enforcement, and all asset/composite/motion
 quality gates. Provider or forced-alignment timing wins; actual final-audio
 edit-point evidence is authoritative for editorial bindings. Review

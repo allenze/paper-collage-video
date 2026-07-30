@@ -918,7 +918,7 @@ export const createPhase2EditorialAuthoring = ({media}) => {
 
 export const createPhase2StoryboardAuthoring = ({media}) => ({
   $schema: '../../schemas/storyboard-authoring.schema.json',
-  schemaVersion: 11,
+  schemaVersion: 12,
   slug: PHASE2_PROOF_SLUG,
   status: 'ready',
   arc: 'Actual local audio becomes deterministic edit points, which direct reusable typography, annotation, data, responsive, and transition primitives.',
@@ -1007,7 +1007,7 @@ const projectScene = ({sceneIndex, media}) => {
     tailSeconds: 0,
     appearance: {
       background: sceneIndex === 1 ? '#e9d8a6' : '#dce8d2',
-      paperTexture: {visible: true, opacity: 0.08, blendMode: 'multiply'},
+      surfaceTexture: {visible: true, opacity: 0.08, blendMode: 'multiply'},
       chapter: {visible: false},
       subtitles: {variant: 'hidden'},
     },
@@ -1081,7 +1081,7 @@ export const createPhase2Project = ({media, profileId}) => {
   if (!profile) throw new Error(`未知 Phase 2 proof profile：${profileId}`);
   const project = {
     $schema: '../../schemas/project.schema.json',
-    schemaVersion: 11,
+    schemaVersion: 12,
     slug: PHASE2_PROOF_SLUG,
     title: `VOX Phase 2 Editorial System · ${profileId}`,
     intake: {
@@ -1109,16 +1109,26 @@ export const createPhase2Project = ({media, profileId}) => {
       ink: '#162b35',
       subtitle: '#fffaf0',
       subtitleBackground: 'rgba(22,43,53,.78)',
-      paperEdge: '#fffaf0',
       foreground: '#162b35',
-      texture: 'textures/paper-grain.png',
       fontFamily: 'Arial, Helvetica, sans-serif',
-      cutout: {
-        edgeWidthPx: 3,
-        shadowOffsetXPx: 0,
-        shadowOffsetYPx: 10,
-        shadowBlurPx: 7,
-        shadowColor: 'rgba(20,15,12,.28)',
+      surface: {
+        texture: {
+          src: 'textures/paper-grain.png',
+          opacity: 0.08,
+          blendMode: 'multiply',
+        },
+        subjectEdge: {
+          mode: 'paper-outline',
+          color: '#fffaf0',
+          widthPx: 3,
+        },
+        subjectShadow: {
+          mode: 'drop-shadow',
+          offsetXPx: 0,
+          offsetYPx: 10,
+          blurPx: 7,
+          color: 'rgba(20,15,12,.28)',
+        },
       },
     },
     voice: {

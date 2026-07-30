@@ -76,7 +76,7 @@ export const compileEditorialFixture = ({
 
 export const withCompiledEditorialFixture = (project, options = {}) => ({
   ...project,
-  schemaVersion: 11,
+  schemaVersion: 12,
   editorial: compileEditorialFixture({
     scenes: project.scenes ?? [],
     sceneTransitions: project.sceneTransitions ?? [],

@@ -182,8 +182,8 @@ for (const entry of [
   'scripts/storyboard-lib.mjs',
   'scripts/render-phase2-proof.mjs',
   'scripts/render-looping-world-proof.mjs',
-  'scripts/schema-v11.mjs',
-  'scripts/validate_v11_schemas.py',
+  'scripts/schema-v12.mjs',
+  'scripts/validate_v12_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-looping-world-proof.mjs',
   'scripts/verify-vox-sample.mjs',
@@ -347,7 +347,7 @@ const workspacePackage = {
     'proof:looping-world:render': rootPackage.scripts['proof:looping-world:render'],
     'proof:looping-world:verify': rootPackage.scripts['proof:looping-world:verify'],
     'proof:looping-world': rootPackage.scripts['proof:looping-world'],
-    'schema:v11': rootPackage.scripts['schema:v11'],
+    'schema:v12': rootPackage.scripts['schema:v12'],
     dev: 'remotion studio src/index.ts --props=projects/starter-demo/project.json',
     check: rootPackage.scripts.check,
     bundle: rootPackage.scripts.bundle,
@@ -457,7 +457,7 @@ const starterStyleProfile = materializeStyleProfile(
 );
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 11,
+  schemaVersion: 12,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
   intake: {
@@ -587,7 +587,7 @@ const project = {
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 11,
+  schemaVersion: 12,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',

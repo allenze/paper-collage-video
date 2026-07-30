@@ -15,7 +15,7 @@ export const directingRevisionPlan = {
 
 export const directingRevisionAuthoring = {
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 11,
+  schemaVersion: 12,
   slug: 'directing-revision-fixture',
   status: 'ready',
   arc: '一张纸面从建立空间到主体出现并稳定落版。',

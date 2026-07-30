@@ -1,7 +1,7 @@
 {
   "name": "paper-collage-video",
-  "version": "0.18.0-dev.1",
-  "description": "Create editable paper-collage and hand-drawn explainer videos with executable style and whole-film motion contracts, visual intake cards, costed planning scenarios, registered asset families, and proof-backed rendering.",
+  "version": "0.19.0-dev.1",
+  "description": "Create editable paper-collage, illustrated, and comic-inspired videos with executable style and whole-film motion contracts, dynamic visual intake cards, costed planning scenarios, registered asset families, and proof-backed rendering.",
   "author": {
     "name": "Paper Collage Video Contributors"
   },
@@ -9,13 +9,15 @@
     "remotion",
     "video",
     "paper-collage",
+    "comic-video",
+    "manga-inspired",
     "animation"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "纸片分层视频制作",
+    "displayName": "可编辑插画视频制作",
     "shortDescription": "把视觉与动作语言冻结为可执行约束，再比较三档成本与动画深度",
-    "longDescription": "初始化独立的 Remotion 工作区，先用三张内置风格卡确认画幅、视觉语言和视差偏好，并把选择冻结为贯通素材生成、渲染主题、动效偏好、质量门禁与指纹失效的可执行风格档案；再比较轻量成片、均衡动画、完整纵深三个故事与成本方案。用 Storyboard v11 编译整片动作语法、节拍角色、镜头与转场策略，在现有风格与虚构声音 gate 归因批准，并以整片质量证明、完整分层注册组合、状态序列和景深视差交付可恢复、可编辑的视频。",
+    "longDescription": "初始化独立的 Remotion 工作区，先展示动态内置风格目录并确认画幅、视觉语言和视差偏好，把选择冻结为贯通素材生成、中性渲染表面、转场集合、视觉拟声字、质量门禁与指纹失效的可执行风格档案；再比较轻量成片、均衡动画、完整纵深三个故事与成本方案。用 Storyboard v12 编译整片动作语法、节拍角色、镜头与转场策略，在现有风格与虚构声音 gate 归因批准，并以整片质量证明、完整分层注册组合、状态序列和景深视差交付可恢复、可编辑的视频。",
     "developerName": "Paper Collage Video Contributors",
     "category": "Creativity",
     "capabilities": [
@@ -23,7 +25,7 @@
       "Render"
     ],
     "defaultPrompt": [
-      "用 $make-paper-collage-video 做一条约 30 秒的纸片分层视频。",
+      "用 $make-paper-collage-video 做一条约 30 秒的漫画化插画视频。",
       "用 $make-paper-collage-video 做一个四幕的儿童历史故事，时长由你安排。",
       "用 $make-paper-collage-video 继续我上次中断的视频项目。"
     ]

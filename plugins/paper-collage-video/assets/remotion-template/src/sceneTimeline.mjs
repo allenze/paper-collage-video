@@ -4,13 +4,12 @@ const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0
 
 export const SCENE_TRANSITION_TYPES = Object.freeze([
   'cut',
-  'paper-wipe',
-  'dip-to-paper',
-  'paper-slide',
-  'torn-wipe',
-  'paper-iris',
+  'wipe',
+  'dip',
+  'slide',
+  'iris',
   'page-turn',
-  'paper-shutters',
+  'shutters',
 ]);
 
 export const SCENE_TRANSITION_INTENTS = Object.freeze([
@@ -29,26 +28,43 @@ export const SCENE_TRANSITION_MOTIVATIONS = Object.freeze([
   'impact',
 ]);
 
-export const PAPER_MOTION_DIRECTIONS = Object.freeze([
+export const TRANSITION_DIRECTIONS = Object.freeze([
   'left-to-right',
   'right-to-left',
   'top-to-bottom',
   'bottom-to-top',
 ]);
 
-export const TRANSITION_RECIPES = Object.freeze({
-  continuity: Object.freeze({treatment: Object.freeze({type: 'paper-slide', motivation: 'semantic-default', durationSeconds: 0.45, direction: 'right-to-left'})}),
-  'location-change': Object.freeze({treatment: Object.freeze({type: 'paper-wipe', motivation: 'semantic-default', durationSeconds: 0.5, direction: 'left-to-right'})}),
-  'time-passage': Object.freeze({treatment: Object.freeze({type: 'page-turn', motivation: 'semantic-default', durationSeconds: 0.7, direction: 'right-to-left'})}),
-  'focus-reveal': Object.freeze({treatment: Object.freeze({type: 'paper-iris', motivation: 'semantic-default', durationSeconds: 0.55})}),
-  'chapter-reset': Object.freeze({treatment: Object.freeze({type: 'paper-shutters', motivation: 'semantic-default', durationSeconds: 0.65})}),
-  impact: Object.freeze({treatment: Object.freeze({type: 'cut', motivation: 'impact', durationSeconds: 0})}),
+export const TRANSITION_RECIPE_SETS = Object.freeze({
+  'paper-story': Object.freeze({
+    continuity: Object.freeze({treatment: Object.freeze({type: 'slide', edgeStyle: 'paper', motivation: 'semantic-default', durationSeconds: 0.45, direction: 'right-to-left'})}),
+    'location-change': Object.freeze({treatment: Object.freeze({type: 'wipe', edgeStyle: 'paper', motivation: 'semantic-default', durationSeconds: 0.5, direction: 'left-to-right'})}),
+    'time-passage': Object.freeze({treatment: Object.freeze({type: 'page-turn', edgeStyle: 'paper', motivation: 'semantic-default', durationSeconds: 0.7, direction: 'right-to-left'})}),
+    'focus-reveal': Object.freeze({treatment: Object.freeze({type: 'iris', edgeStyle: 'paper', motivation: 'semantic-default', durationSeconds: 0.55})}),
+    'chapter-reset': Object.freeze({treatment: Object.freeze({type: 'shutters', edgeStyle: 'paper', motivation: 'semantic-default', durationSeconds: 0.65})}),
+    impact: Object.freeze({treatment: Object.freeze({type: 'cut', motivation: 'impact', durationSeconds: 0})}),
+  }),
+  'clean-video': Object.freeze({
+    continuity: Object.freeze({treatment: Object.freeze({type: 'slide', edgeStyle: 'clean', motivation: 'semantic-default', durationSeconds: 0.4, direction: 'right-to-left'})}),
+    'location-change': Object.freeze({treatment: Object.freeze({type: 'wipe', edgeStyle: 'clean', motivation: 'semantic-default', durationSeconds: 0.45, direction: 'left-to-right'})}),
+    'time-passage': Object.freeze({treatment: Object.freeze({type: 'dip', edgeStyle: 'clean', motivation: 'semantic-default', durationSeconds: 0.5})}),
+    'focus-reveal': Object.freeze({treatment: Object.freeze({type: 'iris', edgeStyle: 'clean', motivation: 'semantic-default', durationSeconds: 0.45})}),
+    'chapter-reset': Object.freeze({treatment: Object.freeze({type: 'dip', edgeStyle: 'clean', motivation: 'semantic-default', durationSeconds: 0.55})}),
+    impact: Object.freeze({treatment: Object.freeze({type: 'cut', motivation: 'impact', durationSeconds: 0})}),
+  }),
 });
 
-export const materializeSceneTransitionRecipes = (sceneTransitions = []) =>
+export const materializeSceneTransitionRecipes = (
+  sceneTransitions = [],
+  transitionSet = 'paper-story',
+) =>
   sceneTransitions.map((transition) => {
     if (transition?.treatment !== undefined) return transition;
-    const recipe = TRANSITION_RECIPES[transition?.intent];
+    const recipes = TRANSITION_RECIPE_SETS[transitionSet];
+    if (!recipes) {
+      throw new Error(`未知场景转场集合：${transitionSet}。`);
+    }
+    const recipe = recipes[transition?.intent];
     return recipe
       ? {...transition, treatment: {...recipe.treatment}}
       : transition;
@@ -73,25 +89,24 @@ export const summarizeSceneTransitions = (sceneTransitions = []) => {
   };
 };
 
-const DIRECTIONAL_TYPES = new Set(['paper-wipe', 'paper-slide', 'torn-wipe']);
+const DIRECTIONAL_TYPES = new Set(['wipe', 'slide']);
 const HORIZONTAL_TYPES = new Set(['page-turn']);
-const NON_DIRECTIONAL_TYPES = new Set(['cut', 'dip-to-paper', 'paper-iris', 'paper-shutters']);
+const NON_DIRECTIONAL_TYPES = new Set(['cut', 'dip', 'iris', 'shutters']);
 const HORIZONTAL_DIRECTIONS = new Set(['left-to-right', 'right-to-left']);
 const MINIMUM_DURATION = Object.freeze({
-  'paper-wipe': 0.2,
-  'dip-to-paper': 0.3,
-  'paper-slide': 0.25,
-  'torn-wipe': 0.3,
-  'paper-iris': 0.3,
+  wipe: 0.2,
+  dip: 0.3,
+  slide: 0.25,
+  iris: 0.3,
   'page-turn': 0.4,
-  'paper-shutters': 0.4,
+  shutters: 0.4,
 });
 const TYPES_BY_INTENT = Object.freeze({
-  continuity: new Set(['paper-slide', 'paper-wipe']),
-  'location-change': new Set(['paper-slide', 'paper-wipe', 'torn-wipe']),
-  'time-passage': new Set(['page-turn', 'torn-wipe', 'paper-wipe']),
-  'focus-reveal': new Set(['paper-iris']),
-  'chapter-reset': new Set(['paper-shutters', 'dip-to-paper', 'page-turn']),
+  continuity: new Set(['slide', 'wipe']),
+  'location-change': new Set(['slide', 'wipe']),
+  'time-passage': new Set(['page-turn', 'wipe', 'dip']),
+  'focus-reveal': new Set(['iris']),
+  'chapter-reset': new Set(['shutters', 'dip', 'page-turn']),
   impact: new Set(['cut']),
 });
 
@@ -152,6 +167,15 @@ export const validateSceneTransitionSequence = ({
     if (!SCENE_TRANSITION_MOTIVATIONS.includes(treatment.motivation)) {
       add('scene-transition-motivation', `未知剪辑动机：${treatment.motivation}`, `${location}.treatment.motivation`);
     }
+    if (treatment.type === 'cut') {
+      if (treatment.edgeStyle !== undefined) {
+        add('scene-transition-edge-style-forbidden', 'cut 不得声明 edgeStyle。', `${location}.treatment.edgeStyle`);
+      }
+    } else if (!['clean', 'paper', 'torn'].includes(treatment.edgeStyle)) {
+      add('scene-transition-edge-style', '动画转场必须声明 clean、paper 或 torn edgeStyle。', `${location}.treatment.edgeStyle`);
+    } else if (treatment.edgeStyle === 'torn' && treatment.type !== 'wipe') {
+      add('scene-transition-torn-edge-type', 'torn edgeStyle 只适用于 wipe。', `${location}.treatment.edgeStyle`);
+    }
     const isRhythmicCut = treatment.type === 'cut' && treatment.motivation === 'rhythmic';
     const isImpactCut = treatment.type === 'cut' && treatment.motivation === 'impact';
     if (
@@ -189,7 +213,7 @@ export const validateSceneTransitionSequence = ({
     if (treatment.type !== 'cut' && ['rhythmic', 'impact'].includes(treatment.motivation)) {
       add(
         'scene-transition-paper-motivation',
-        '纸张转场的 motivation 必须为 semantic-default 或 authored。',
+        '动画转场的 motivation 必须为 semantic-default 或 authored。',
         `${location}.treatment.motivation`,
       );
     }
@@ -215,7 +239,7 @@ export const validateSceneTransitionSequence = ({
       }
     }
     if (DIRECTIONAL_TYPES.has(treatment.type)) {
-      if (!PAPER_MOTION_DIRECTIONS.includes(treatment.direction)) {
+      if (!TRANSITION_DIRECTIONS.includes(treatment.direction)) {
         add('scene-transition-direction', `${treatment.type} 必须声明受支持的 direction。`, `${location}.treatment.direction`);
       }
     } else if (HORIZONTAL_TYPES.has(treatment.type)) {
@@ -378,7 +402,7 @@ const basePresentation = ({rawProgress = 1, progress = 1} = {}) => ({
   incomingClipPath: 'none',
   incomingTransform: 'none',
   incomingTransformOrigin: '50% 50%',
-  paperOpacity: 0,
+  coverOpacity: 0,
   edgeProgress: null,
   tornEdgePoints: null,
   irisRadius: null,
@@ -393,22 +417,28 @@ export const resolveSceneTransitionPresentation = ({transition, frame}) => {
   const rawProgress = clamp01(frame / Math.max(1, transition.durationInFrames - 1));
   const progress = smoothstep(rawProgress);
   const base = basePresentation({rawProgress, progress});
-  if (transition.treatment.type === 'paper-wipe') {
+  if (transition.treatment.type === 'wipe') {
+    if (transition.treatment.edgeStyle === 'torn') {
+      const tornEdgePoints = resolveTornEdgePoints(
+        transition.treatment.direction,
+        progress,
+      );
+      return {
+        ...base,
+        incomingClipPath: tornClipPath(
+          transition.treatment.direction,
+          tornEdgePoints,
+        ),
+        edgeProgress: progress,
+        tornEdgePoints,
+      };
+    }
     return {...base, incomingClipPath: wipeClipPath(transition.treatment.direction, progress), edgeProgress: progress};
   }
-  if (transition.treatment.type === 'paper-slide') {
+  if (transition.treatment.type === 'slide') {
     return {...base, incomingTransform: slideTransform(transition.treatment.direction, progress), edgeProgress: progress};
   }
-  if (transition.treatment.type === 'torn-wipe') {
-    const tornEdgePoints = resolveTornEdgePoints(transition.treatment.direction, progress);
-    return {
-      ...base,
-      incomingClipPath: tornClipPath(transition.treatment.direction, tornEdgePoints),
-      edgeProgress: progress,
-      tornEdgePoints,
-    };
-  }
-  if (transition.treatment.type === 'paper-iris') {
+  if (transition.treatment.type === 'iris') {
     const irisRadius = progress * 72;
     return {...base, incomingClipPath: `circle(${irisRadius}% at 50% 50%)`, irisRadius};
   }
@@ -420,7 +450,7 @@ export const resolveSceneTransitionPresentation = ({transition, frame}) => {
       pageTurnFold: Math.sin(progress * Math.PI),
     };
   }
-  if (transition.treatment.type === 'paper-shutters') {
+  if (transition.treatment.type === 'shutters') {
     return {
       ...base,
       incomingVisible: rawProgress >= 0.5,
@@ -430,7 +460,7 @@ export const resolveSceneTransitionPresentation = ({transition, frame}) => {
   return {
     ...base,
     incomingVisible: rawProgress >= 0.5,
-    paperOpacity: coverSwapEnvelope(rawProgress),
+    coverOpacity: coverSwapEnvelope(rawProgress),
   };
 };
 

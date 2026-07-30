@@ -9,10 +9,10 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `brief.md` | Human intent, audience, facts, format, style, rights, prohibitions |
 | `production.json` | State, approvals, coarse work batches, artifacts, event history |
 | `production-metrics.json` | Versioned wall-clock segments and observation-window summaries for production monitoring |
-| `storyboard.json` | Approved schema-v11 motion direction, beat performance roles/treatments, editorial authoring, scene boundaries, layer source packages, and compiler-owned motion/edit/directing/proof plans and fingerprints |
+| `storyboard.json` | Approved schema-v12 motion direction, beat performance roles/treatments, editorial authoring, scene boundaries, layer source packages, and compiler-owned motion/edit/directing/proof plans and fingerprints |
 | `motion-language-card.json` | Human-readable whole-film action grammar, pacing, scene phrases, final holds, exceptions, and approval/execution fingerprints |
 | `motion-approval.json` | Attributable style/voice-gate approval binding the human note, Style Profile, motion fingerprints, and style proof |
-| `project.json` | Frozen executable Style Profile, compiled motion contract, materialized theme, Creative Plan v4 ceilings/cap/source-package decision, and v11 Remotion execution tree |
+| `project.json` | Frozen executable Style Profile, compiled motion contract, materialized theme, Creative Plan v4 ceilings/cap/source-package decision, and v12 Remotion execution tree |
 | `requests/*.json` | Per-output generation/import request plus exact style/composition binding |
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
@@ -91,9 +91,9 @@ only as a `recovery-source` record produced by
 `provider:recover-rejected-source`, never by hand-editing the manifest or
 ledger. Its original attempt stays rejected and consumed.
 
-## v11 Project, Motion Contract v1, v9 Editorial, Composition, and Boundary Tree
+## v12 Project, Motion Contract v1, v9 Editorial, Composition, and Boundary Tree
 
-Schema v11 is the only supported Project, Storyboard Authoring, and Compiled
+Schema v12 is the only supported Project, Storyboard Authoring, and Compiled
 Storyboard contract. Creative Plan v4 owns the approved profile, its planning
 ceiling, and `approvedImageBudget`: the narrower exact attempt cap authorized by
 the human. The storyboard compiler owns
@@ -134,8 +134,11 @@ responsive, and semantic review; the derivation-only family owns deterministic
 completeness, provenance, and derivation integrity.
 
 `theme` is not free-form authoring after intake: it must equal
-`styleProfile.render.theme`. The profile owns palette, paper texture, and the
-cutout edge/shadow treatment applied to character/prop raster surfaces.
+`styleProfile.render.theme`. The schema-v2 Profile owns palette plus a neutral
+`surface` contract: optional texture, optional subject edge, and optional
+subject shadow. Paper Profiles opt into paper texture/outline/shadow; comic
+Profiles may set all three to `none`. The renderer must not add paper grain,
+white cutout borders, or paper shadows when the selected surface disables them.
 `theme.canvas` is a required opaque six-digit hex color. The renderer places it
 beneath every scene-specific background and uses it as the dip cover, so even a
 translucent scene treatment cannot expose pixels from the outgoing scene.
@@ -275,7 +278,10 @@ Use only these patterns:
 
 Groups own carrier motion; children own only local motion. Do not repeat the group's world path on attached children. Local z-order is deterministic. The default `between-supports` order is support rear, optional contact shadow, subject, support front. Use `support.layering=subject-front` only when the approved visual language requires the complete subject silhouette to remain above every support member; quality review then proves `subject-front-clear` instead of front occlusion. Registered environment members use the complete master canvas with top-left origin; textures may move within a fixed clip, but the boundary must not move across semantic content.
 
-Paper-edge drop shadows belong to character and prop cutouts. Never apply them automatically to full-canvas support members: an opaque rear plate would expose its rectangular canvas boundary as a false paper frame.
+When a Profile explicitly enables paper-outline/drop-shadow, apply them only to
+character and prop cutouts. Never apply them automatically to full-canvas
+support members: an opaque rear plate would expose its rectangular canvas
+boundary as a false frame. A Profile with `mode=none` receives neither effect.
 
 Coupled members share `registration.id`, `sourceMasterAssetId`, canvas
 dimensions, origin, and source-family provenance. For rigid contact/boundary
@@ -302,26 +308,29 @@ frame redraw inside the contents sheet, or terminal state below its measured
 threshold invalidates the composition.
 
 Every adjacent scene pair has one top-level `sceneTransitions[]` record with
-narrative `intent` and `rationale`. An intent-only schema-v11 authoring record
-compiles to a deterministic default `treatment`; an explicit treatment
-separately declares type, motivation, duration, optional direction, and optional
-boundary beat. Runtime types are `paper-slide`, `paper-wipe`, `torn-wipe`,
-`paper-iris`, `page-turn`, `paper-shutters`, `dip-to-paper`, and `cut`. A `cut`
-is either `rhythmic` with a `beatId` in the outgoing final 20% or incoming first
-20%, or `impact` with narrative intent `impact`. All normal continuity, place,
-time, focus, and chapter intents still default to animation. Spatial types use
-a hard clip or opaque incoming-scene translation. Cover types swap only during
-a fully opaque plateau. Alpha crossfades between semantic scenes are not
-supported. Animated duration is type-bounded inside `0.2..1.5s`; the outgoing
-`tailSeconds` and incoming narration lead must both cover it, and the report
-records intent/type/motivation counts plus transition proof samples. Advanced
-v9 match transitions are separately declared in `editorial.transitions[]`,
-bind an actual-audio edit point, and require dimension-specific continuity proof
-plus before/at/after frames.
+narrative `intent` and `rationale`. An intent-only schema-v12 authoring record
+compiles through the selected Profile's `motion.transitionSet`; an explicit
+treatment separately declares type, motivation, duration, optional direction,
+optional `edgeStyle=clean|paper|torn`, and optional boundary beat. The neutral
+runtime types are `slide`, `wipe`, `dip`, `iris`, `page-turn`, `shutters`, and
+`cut`. `paper-story` selects paper edges/covers where appropriate;
+`clean-video` selects ordinary video treatments without paper decoration.
+Neither set scrolls a long comic canvas. A `cut` is either `rhythmic` with a
+`beatId` in the outgoing final 20% or incoming first 20%, or `impact` with
+narrative intent `impact`. All normal continuity, place, time, focus, and
+chapter intents still default to animation. Spatial types use a hard clip or
+opaque incoming-scene translation. Cover types swap only during a fully opaque
+plateau. Alpha crossfades between semantic scenes are not supported. Animated
+duration is type-bounded inside `0.2..1.5s`; the outgoing `tailSeconds` and
+incoming narration lead must both cover it, and the report records
+intent/type/motivation counts plus transition proof samples. Advanced v9 match
+transitions are separately declared in `editorial.transitions[]`, bind an
+actual-audio edit point, and require dimension-specific continuity proof plus
+before/at/after frames.
 
 ## Proof and Event Contract
 
-- Storyboard authors own v11 `motionDirection`, beat `performanceRole`,
+- Storyboard authors own v12 `motionDirection`, beat `performanceRole`,
   `treatments`, layer source-package intent, editorial authoring, and boundary
   intent; they do not hand-author `motionContract`, `compositionPlan`,
   source-package cost totals, resolved edit points,
@@ -329,7 +338,7 @@ plus before/at/after frames.
   pose-sheet grids. `project:storyboard` deterministically compiles those
   derived fields and default transition recipes, then rejects drift.
 - Scene id, blueprint, compiled `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. Beat-bound, treatment-bound, and state-bound proof intent is immutable.
-- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue, optional terminal `activeUntil` lock, or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; when `activeUntil` is present the completed phase remains locked thereafter, otherwise the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence; a terminally locked travelling world must provide both its ordinary world-motion evidence and `world-lock-clean`. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled graphic target must exist as the declared editable `text` or `shape` node; every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
+- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue, optional terminal `activeUntil` lock, or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; when `activeUntil` is present the completed phase remains locked thereafter, otherwise the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence; a terminally locked travelling world must provide both its ordinary world-motion evidence and `world-lock-clean`. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled generic graphic target must exist as the declared editable node. A compiled `role=visual-sfx` graphic must be editable typography with exact text, start hidden, bind the same beat and discrete `soundCue`, and execute synchronized `fade-scale` show, declared emphasis, and `fade-scale` hide around its Profile-bounded duration. Every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside scene-boundary intervals.
 - A final state assertion must resolve to one fully opaque state, remain outside any state crossfade for at least that transition duration, and preserve the asserted state through the scene end.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one of `offsetX`, `offsetY`, `scale`, `rotation`, or `opacity`; legacy node-keyframe `x`/`y` is invalid rather than ambiguously interpreted.
@@ -366,7 +375,7 @@ Fix a wrong mask, crop, anchor, registration, or derivative without another huma
 Use repository scripts rather than reproducing ffprobe, FFmpeg, Remotion,
 extraction, layer/state-sheet processing, editorial/directing compilation,
 proof, attempt accounting, or report logic ad hoc. Only the current Creative
-Plan v4, project/storyboard schema v11, executable Style Profile schema v1,
+Plan v4, project/storyboard schema v12, executable Style Profile schema v2,
 motion-contract schema v1, quality-report schema v7, asset-request schema v8, registered-family schema v2,
 and current style-proof contract are supported; older contracts are
 intentionally not migrated or executed.

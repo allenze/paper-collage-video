@@ -1,3 +1,23 @@
+# Paper Collage Video 0.19.0-dev.1
+
+Paper Collage Video 0.19.0-dev.1 removes the paper-only runtime assumption and
+turns visual style into a dynamic executable catalog.
+
+- Project/Storyboard v12 and Style Profile v2 replace fixed style ids, paper
+  texture, cutout edge/shadow, and paper-prefixed transition types with dynamic
+  ids, a neutral surface contract, and Profile-selected `paper-story` or
+  `clean-video` transition recipes.
+- Comic-inspired videos remain ordinary shot-based videos. The runtime does not
+  simulate vertically scrolling a long comic canvas.
+- Dialogue, narration, and exposition remain audio plus subtitles. Sparse
+  `role=visual-sfx` typography is reserved for discrete impact or motion sounds
+  and must bind a real sound cue, explicit show/emphasis/hide lifecycle,
+  Profile density/duration limits, proof coverage, and human quality checks.
+- Runtime fingerprints and packaged-copy tests discover every catalog card
+  dynamically. Adding a valid official style no longer requires a code enum.
+- The existing three paper/collage Profiles preserve their visual output by
+  explicitly opting into paper texture, outline, shadow, and `paper-story`.
+
 # Paper Collage Video 0.18.0-dev.1
 
 Paper Collage Video 0.18.0-dev.1 turns whole-film motion direction into an

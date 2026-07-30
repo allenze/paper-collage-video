@@ -48,7 +48,7 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
 });
 
 const authoredStoryboard = () => ({
-  schemaVersion: 11,
+  schemaVersion: 12,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
@@ -126,7 +126,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v11 compiles treatments into motion/composition plans, risk selection, source packages, and cost evidence', () => {
+test('v12 compiles treatments into motion/composition plans, risk selection, source packages, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);
@@ -507,7 +507,7 @@ test('question marks and circles route to editable graphics without pose-sheet c
     changeClass: 'graphic-emphasis',
     motion: {kind: 'continuous-transform', preset: 'bounce'},
     composition: {pattern: 'free'},
-    graphic: {kind: 'shape', animation: 'bounce'},
+    graphic: {kind: 'shape', animation: 'bounce', role: 'generic'},
     semanticRisk: 'decorative',
     proofTimeId: 'proof-action',
     rationale: 'A live shape is cheaper and sharper than a new character pose.',
@@ -515,9 +515,11 @@ test('question marks and circles route to editable graphics without pose-sheet c
   const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
   assert.deepEqual(storyboard.scenes[0].compositionPlan.graphics, [{
     id: 'bounce-question-mark',
+    beatId: 'action',
     nodeId: 'question-mark',
     kind: 'shape',
     animation: 'bounce',
+    role: 'generic',
     at: 0.48,
     proofTimeId: 'proof-action',
   }]);
@@ -539,6 +541,121 @@ test('question marks and circles route to editable graphics without pose-sheet c
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
   }).some(({code}) => code === 'directing-continuous-drift'));
+});
+
+test('visual sound effects compile as sparse audio-bound typography with a complete runtime lifecycle', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[1].soundCue = 'hard landing';
+  authored.scenes[0].beats[1].treatments = [{
+    id: 'landing-impact-sfx',
+    targetId: 'landing-impact-text',
+    importance: 'supporting',
+    necessity: 'enhancement',
+    changeClass: 'graphic-emphasis',
+    motion: {kind: 'continuous-transform', preset: 'bounce'},
+    composition: {pattern: 'free'},
+    graphic: {
+      kind: 'typography',
+      animation: 'drop-impact',
+      role: 'visual-sfx',
+      sfxKind: 'impact',
+      text: '咚！',
+      durationSeconds: 0.45,
+      audioBinding: 'beat-sound-cue',
+    },
+    semanticRisk: 'decorative',
+    proofTimeId: 'proof-action',
+    rationale: 'A single impact word reinforces the audible landing without becoming dialogue.',
+  }];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
+  const graphic = storyboard.scenes[0].compositionPlan.graphics[0];
+  assert.deepEqual(graphic, {
+    id: 'landing-impact-sfx',
+    beatId: 'action',
+    nodeId: 'landing-impact-text',
+    kind: 'typography',
+    animation: 'drop-impact',
+    role: 'visual-sfx',
+    sfxKind: 'impact',
+    text: '咚！',
+    durationSeconds: 0.45,
+    audioBinding: 'beat-sound-cue',
+    soundCue: 'hard landing',
+    at: 0.48,
+    proofTimeId: 'proof-action',
+  });
+  assert.ok(
+    storyboard.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'graphic:visual-sfx',
+    ),
+  );
+
+  const runtimeScene = {
+    narration: {startSeconds: 0, durationSeconds: 6},
+    tailSeconds: 0,
+    composition: {
+      nodes: [{
+        id: 'landing-impact-text',
+        kind: 'typography',
+        role: 'visual-sfx',
+        text: '咚！',
+        visibility: {initial: 'hidden'},
+        motion: {idle: {preset: 'bounce', intensity: 0.4}},
+      }],
+    },
+    events: [
+      {
+        id: 'impact-show',
+        beatId: 'action',
+        targetId: 'landing-impact-text',
+        at: 0.48,
+        proofTimeId: 'proof-action',
+        visual: {
+          kind: 'visibility',
+          action: 'show',
+          transition: 'fade-scale',
+          durationSeconds: 0.08,
+        },
+        sound: {cue: 'hard landing'},
+      },
+      {
+        id: 'impact-emphasis',
+        beatId: 'action',
+        targetId: 'landing-impact-text',
+        at: 0.48,
+        proofTimeId: 'proof-action',
+        visual: {
+          kind: 'emphasis',
+          action: 'drop-impact',
+          durationSeconds: 0.2,
+          intensity: 1,
+        },
+      },
+      {
+        id: 'impact-hide',
+        beatId: 'action',
+        targetId: 'landing-impact-text',
+        at: 0.555,
+        proofTimeId: 'proof-action',
+        visual: {
+          kind: 'visibility',
+          action: 'hide',
+          transition: 'fade-scale',
+          durationSeconds: 0.08,
+        },
+      },
+    ],
+  };
+  assert.deepEqual(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }), []);
+
+  delete runtimeScene.events[0].sound;
+  assert.ok(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }).some(({code}) => code === 'directing-visual-sfx-events'));
 });
 
 test('visibility changes compile to persistent events with an explicit initial state', () => {
@@ -915,14 +1032,14 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v11 storyboard sound beats require an approved event-level proof', () => {
+test('v12 storyboard sound beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
   storyboard.scenes[0].beats[1].proofTimeId = null;
   assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})
     .some(({code}) => code === 'storyboard-sound-proof-required'));
 });
 
-test('v11 rejects the legacy audioCue field and requires an explicit soundCue', () => {
+test('v12 rejects the legacy audioCue field and requires an explicit soundCue', () => {
   const legacy = readyStoryboard();
   legacy.scenes[0].beats[1].audioCue = legacy.scenes[0].beats[1].soundCue;
   delete legacy.scenes[0].beats[1].soundCue;

@@ -152,11 +152,11 @@ try:
         "/$defs/canonicalContainerPlan",
     )
 except (FileNotFoundError, KeyError, ValueError) as error:
-    print(f"v11 schema validation failed:\n{error}", file=sys.stderr)
+    print(f"v12 schema validation failed:\n{error}", file=sys.stderr)
     raise SystemExit(1)
 
 print(
-    "✓ v11 authoring, compiled storyboard, three project contracts, "
+    "✓ v12 authoring, compiled storyboard, three project contracts, "
     "asset manifests, looping-strip derivations, registered-family derivation, "
     "canonical-container intent/derivation/binding/compiled plan, and rejected-output recovery "
     "are schema-valid"

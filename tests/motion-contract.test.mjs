@@ -17,7 +17,7 @@ const compile = (authoring = structuredClone(directingRevisionAuthoring)) =>
     styleProfile: directingRevisionStyleProfile,
   });
 
-test('v11 compiles one attributable whole-film motion contract and action-language card', () => {
+test('v12 compiles one attributable whole-film motion contract and action-language card', () => {
   const storyboard = compile();
   assert.equal(storyboard.motionContract.schemaVersion, 1);
   assert.equal(

@@ -288,7 +288,7 @@ export const summarizeResumeState = (
     if (context.intake?.status !== 'confirmed') {
       control.gate = 'intake';
       control.requiredDecision =
-        '请选择 16:9 / 9:16、三种内置视觉风格之一，以及分层视差偏好。';
+        '请选择 16:9 / 9:16、当前内置目录中的一种视觉风格，以及分层视差偏好。';
       control.expectedArtifacts = ['styleCatalog', 'intake'];
     } else if (context.planningScenarios?.status !== 'ready') {
       capabilityAutoContinue = true;

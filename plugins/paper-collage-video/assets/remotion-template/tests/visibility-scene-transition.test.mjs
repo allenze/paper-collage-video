@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   SCENE_TRANSITION_TYPES,
-  TRANSITION_RECIPES,
+  TRANSITION_RECIPE_SETS,
   deriveSceneTimeline,
   deriveTransitionProofSamples,
   materializeSceneTransitionRecipes,
@@ -97,7 +97,7 @@ test('scene boundary validation requires one adjacent contract and enough opaque
     toSceneId: 'two',
     intent: 'chapter-reset',
     rationale: 'Close one chapter before revealing the next.',
-    treatment: {type: 'dip-to-paper', motivation: 'authored', durationSeconds: 0.6},
+    treatment: {type: 'dip', edgeStyle: 'paper', motivation: 'authored', durationSeconds: 0.6},
   };
   assert.deepEqual(validateSceneTransitionSequence({scenes, sceneTransitions: [transition]}), []);
   const invalid = validateSceneTransitionSequence({
@@ -156,29 +156,30 @@ test('ordinary narrative intents can use a beat-aligned rhythmic cut', () => {
 
 test('every editorial intent has a valid deterministic default recipe and only impact defaults to cut', () => {
   const scenes = [scene('one', {tailSeconds: 1}), scene('two', {narrationStart: 1})];
-  const entries = Object.entries(TRANSITION_RECIPES);
-  assert.equal(entries.length, 6);
-  for (const [intent, recipe] of entries) {
-    const transition = {
-      id: 'one-to-two',
-      fromSceneId: 'one',
-      toSceneId: 'two',
-      intent,
-      rationale: `Use the registered ${intent} recipe.`,
-      ...recipe,
-    };
-    assert.deepEqual(validateSceneTransitionSequence({scenes, sceneTransitions: [transition]}), []);
-    assert.equal(recipe.treatment.type === 'cut', intent === 'impact');
+  for (const recipes of Object.values(TRANSITION_RECIPE_SETS)) {
+    const entries = Object.entries(recipes);
+    assert.equal(entries.length, 6);
+    for (const [intent, recipe] of entries) {
+      const transition = {
+        id: 'one-to-two',
+        fromSceneId: 'one',
+        toSceneId: 'two',
+        intent,
+        rationale: `Use the registered ${intent} recipe.`,
+        ...recipe,
+      };
+      assert.deepEqual(validateSceneTransitionSequence({scenes, sceneTransitions: [transition]}), []);
+      assert.equal(recipe.treatment.type === 'cut', intent === 'impact');
+    }
   }
   assert.deepEqual(SCENE_TRANSITION_TYPES, [
     'cut',
-    'paper-wipe',
-    'dip-to-paper',
-    'paper-slide',
-    'torn-wipe',
-    'paper-iris',
+    'wipe',
+    'dip',
+    'slide',
+    'iris',
     'page-turn',
-    'paper-shutters',
+    'shutters',
   ]);
 });
 
@@ -194,26 +195,32 @@ test('intent-only storyboard boundaries materialize a recipe while explicit exec
     ...intentOnly,
     treatment: {
       type: 'page-turn',
+      edgeStyle: 'paper',
       motivation: 'semantic-default',
       durationSeconds: 0.7,
       direction: 'right-to-left',
     },
   }]);
-  const explicit = {...intentOnly, treatment: {type: 'torn-wipe', motivation: 'authored', durationSeconds: 0.5, direction: 'bottom-to-top'}};
+  assert.equal(
+    materializeSceneTransitionRecipes([intentOnly], 'clean-video')[0]
+      .treatment.type,
+    'dip',
+  );
+  const explicit = {...intentOnly, treatment: {type: 'wipe', edgeStyle: 'torn', motivation: 'authored', durationSeconds: 0.5, direction: 'bottom-to-top'}};
   assert.equal(materializeSceneTransitionRecipes([explicit])[0], explicit);
 });
 
 test('transition reporting exposes animated coverage, cut ratio, types, and intents', () => {
   assert.deepEqual(summarizeSceneTransitions([
-    {intent: 'continuity', treatment: {type: 'paper-slide', motivation: 'semantic-default'}},
-    {intent: 'continuity', treatment: {type: 'paper-slide', motivation: 'authored'}},
+    {intent: 'continuity', treatment: {type: 'slide', edgeStyle: 'paper', motivation: 'semantic-default'}},
+    {intent: 'continuity', treatment: {type: 'slide', edgeStyle: 'clean', motivation: 'authored'}},
     {intent: 'impact', treatment: {type: 'cut', motivation: 'impact'}},
   ]), {
     total: 3,
     animatedCount: 2,
     cutCount: 1,
     cutRatio: 1 / 3,
-    typeCounts: {cut: 1, 'paper-slide': 2},
+    typeCounts: {cut: 1, slide: 2},
     intentCounts: {continuity: 2, impact: 1},
     motivationCounts: {authored: 1, impact: 1, 'semantic-default': 1},
   });
@@ -229,7 +236,7 @@ test('timeline overlaps only the declared boundary window and never fades whole 
       toSceneId: 'two',
       intent: 'location-change',
       rationale: 'A paper edge pushes the story into the next location.',
-      treatment: {type: 'paper-wipe', motivation: 'authored', durationSeconds: 0.6, direction: 'left-to-right'},
+      treatment: {type: 'wipe', edgeStyle: 'paper', motivation: 'authored', durationSeconds: 0.6, direction: 'left-to-right'},
     }],
   };
   const timeline = deriveSceneTimeline(project);
@@ -238,40 +245,40 @@ test('timeline overlaps only the declared boundary window and never fades whole 
   assert.equal(timeline.scenes[1].from, timeline.scenes[0].durationInFrames - 6);
   const mid = resolveSceneTransitionPresentation({transition: timeline.transitions[0], frame: 3});
   assert.equal(mid.incomingVisible, true);
-  assert.equal(mid.paperOpacity, 0);
+  assert.equal(mid.coverOpacity, 0);
   assert.match(mid.incomingClipPath, /^inset\(/);
   const samples = deriveTransitionProofSamples({timeline, fps: 10, durationSeconds: timeline.durationSeconds});
   assert.deepEqual(samples.map(({progress}) => progress), [0.25, 0.5, 0.75]);
 });
 
-test('spatial paper transitions reveal opaque incoming scenes without semantic alpha blending', () => {
+test('spatial transitions reveal opaque incoming scenes without semantic alpha blending', () => {
   const slideStart = resolveSceneTransitionPresentation({
-    transition: {treatment: {type: 'paper-slide', motivation: 'authored', direction: 'right-to-left', durationSeconds: 0.7}, durationInFrames: 21},
+    transition: {treatment: {type: 'slide', edgeStyle: 'paper', motivation: 'authored', direction: 'right-to-left', durationSeconds: 0.7}, durationInFrames: 21},
     frame: 0,
   });
   const slideEnd = resolveSceneTransitionPresentation({
-    transition: {treatment: {type: 'paper-slide', motivation: 'authored', direction: 'right-to-left', durationSeconds: 0.7}, durationInFrames: 21},
+    transition: {treatment: {type: 'slide', edgeStyle: 'paper', motivation: 'authored', direction: 'right-to-left', durationSeconds: 0.7}, durationInFrames: 21},
     frame: 20,
   });
   assert.equal(slideStart.incomingTransform, 'translate3d(100%, 0, 0)');
   assert.equal(slideEnd.incomingTransform, 'translate3d(0%, 0, 0)');
-  assert.equal(slideStart.paperOpacity, 0);
+  assert.equal(slideStart.coverOpacity, 0);
 
   const torn = resolveSceneTransitionPresentation({
-    transition: {treatment: {type: 'torn-wipe', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.7}, durationInFrames: 21},
+    transition: {treatment: {type: 'wipe', edgeStyle: 'torn', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.7}, durationInFrames: 21},
     frame: 10,
   });
   assert.match(torn.incomingClipPath, /^polygon\(/);
   assert.equal(torn.tornEdgePoints.length, 9);
-  assert.equal(torn.paperOpacity, 0);
+  assert.equal(torn.coverOpacity, 0);
 
-  const irisStart = resolveSceneTransitionPresentation({transition: {treatment: {type: 'paper-iris', motivation: 'authored', durationSeconds: 0.7}, durationInFrames: 21}, frame: 0});
-  const irisEnd = resolveSceneTransitionPresentation({transition: {treatment: {type: 'paper-iris', motivation: 'authored', durationSeconds: 0.7}, durationInFrames: 21}, frame: 20});
+  const irisStart = resolveSceneTransitionPresentation({transition: {treatment: {type: 'iris', edgeStyle: 'clean', motivation: 'authored', durationSeconds: 0.7}, durationInFrames: 21}, frame: 0});
+  const irisEnd = resolveSceneTransitionPresentation({transition: {treatment: {type: 'iris', edgeStyle: 'clean', motivation: 'authored', durationSeconds: 0.7}, durationInFrames: 21}, frame: 20});
   assert.equal(irisStart.incomingClipPath, 'circle(0% at 50% 50%)');
   assert.equal(irisEnd.incomingClipPath, 'circle(72% at 50% 50%)');
 
   const pageMiddle = resolveSceneTransitionPresentation({
-    transition: {treatment: {type: 'page-turn', motivation: 'authored', direction: 'right-to-left', durationSeconds: 0.7}, durationInFrames: 21},
+    transition: {treatment: {type: 'page-turn', edgeStyle: 'paper', motivation: 'authored', direction: 'right-to-left', durationSeconds: 0.7}, durationInFrames: 21},
     frame: 10,
   });
   assert.equal(pageMiddle.incomingClipPath, 'inset(0 0 0 50%)');
@@ -279,12 +286,12 @@ test('spatial paper transitions reveal opaque incoming scenes without semantic a
 });
 
 test('cover transitions swap semantic scenes during a guaranteed opaque plateau', () => {
-  for (const type of ['dip-to-paper', 'paper-shutters']) {
-    const transition = {treatment: {type, motivation: 'authored', durationSeconds: 0.7}, durationInFrames: 21};
+  for (const type of ['dip', 'shutters']) {
+    const transition = {treatment: {type, edgeStyle: 'clean', motivation: 'authored', durationSeconds: 0.7}, durationInFrames: 21};
     const before = resolveSceneTransitionPresentation({transition, frame: 8});
     const covered = resolveSceneTransitionPresentation({transition, frame: 10});
     const after = resolveSceneTransitionPresentation({transition, frame: 12});
-    const cover = (state) => type === 'dip-to-paper' ? state.paperOpacity : state.shutterClosure;
+    const cover = (state) => type === 'dip' ? state.coverOpacity : state.shutterClosure;
     assert.equal(before.incomingVisible, false);
     assert.equal(covered.incomingVisible, true);
     assert.equal(cover(covered), 1);

@@ -6,7 +6,7 @@ motion approval.
 
 ## Authoring Contract
 
-Storyboard v11 replaces descriptive `style.motionLanguage` prose with one
+Storyboard v12 replaces descriptive `style.motionLanguage` prose with one
 structured `motionDirection`. It declares:
 
 - the whole-film summary and pacing;

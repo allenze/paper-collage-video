@@ -30,6 +30,22 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sha256File = async (file) =>
   createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
+test('runtime build inputs discover every current style card from the catalog', async () => {
+  const catalog = JSON.parse(
+    await fs.readFile(
+      path.join(ROOT, 'public', 'style-catalog', 'catalog.json'),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(
+    RUNTIME_BUILD_INPUTS.filter((relative) =>
+      relative.startsWith('public/style-catalog/') &&
+      relative.endsWith('.png'),
+    ),
+    catalog.styles.map(({image}) => `public/${image}`),
+  );
+});
+
 test('composition-proof runtime surface excludes subtitle and audio-delivery changes', async () => {
   assert.ok(
     !RUNTIME_SURFACE_INPUTS['composition-proof'].includes(
@@ -435,7 +451,7 @@ test('derivation-only registered family passes deterministic checks without huma
       });
     }
     const project = {
-      schemaVersion: 11,
+      schemaVersion: 12,
       slug,
       video: {width: 100, height: 100, fps: 30},
       quality: {minimumAssetScale: 1},

@@ -16,25 +16,26 @@ Draft minimum coherent beats and estimate spoken duration before resolving the p
 ## Run Intake Before Cost Planning
 
 For a title-only request, run `project:intake -- <slug> --json` immediately
-after `project:new`. Show the three returned local style-card images before the
-Ask Question UI, then collect:
+after `project:new`. Show every returned local style-card image before the Ask
+Question UI, then collect:
 
 - `16:9` (1920×1080) or `9:16` (1080×1920);
-- `儿童绘本纸片`, `手绘剪纸 / 手绘解释`, or `复古档案拼贴`;
+- one of the current catalog entries, identified by its returned id and label;
 - parallax preference `auto`, `prefer`, or `minimal`.
 
-The three text-to-image PNGs use the same canonical turtle-and-hare forest
+The text-to-image PNGs use the same canonical turtle-and-hare forest
 composition so the comparison isolates visual language. They are bundled,
 versioned, fingerprinted assets: their generation happened once during plugin
 development, while showing them during intake consumes no provider calls. They
 do not replace the later story-specific style sample. Parallax is motion
-treatment, not a fourth visual style. Do not ask the production profile or cost
+treatment, not another visual style. Do not ask the production profile or cost
 in the intake popup.
 
 Confirming intake materializes the selected catalog entry as
 `project.json.styleProfile`: a fingerprinted, immutable project snapshot of
-generation directives, motion preferences, the exact render theme/cutout
-treatment, required quality checks, review focus, and reference image.
+generation directives, motion preferences, transition set, visual-SFX policy,
+the exact neutral render surface treatment, required quality checks, review
+focus, and reference image.
 `project.json.theme` must equal `styleProfile.render.theme`; neither is a prose
 hint or a palette suggestion. Planning scenarios bind the selected profile id,
 catalog version, and profile fingerprint so a later style change invalidates
@@ -127,7 +128,7 @@ The storyboard is not another human gate. It is part of the existing combined co
 
 - Give the whole film one explicit arc and one shared visual/motion language.
 - Give each planned scene a narrative role, single message, blueprint, estimated duration, and at least three ordered beats.
-- Read `motion-contract-v1.md` and `motion-directing.md`. Author one v11
+- Read `motion-contract-v1.md` and `motion-directing.md`. Author one v12
   `motionDirection`, assign every beat a `performanceRole`, and add one or more
   `treatments` to every beat.
   Author the visible change, motion or visibility mechanism, composition
@@ -142,7 +143,7 @@ The storyboard is not another human gate. It is part of the existing combined co
 - Define at least three proof moments per scene: an establishing state, an action/peak state, and a `final` state at or after `0.82`. Every proof needs a stable id, visible relationship assertions, and a `stateAssertions` array. Cover every planned sequence state at least once so its schedule can be verified deterministically.
 - Declare exactly one top-level `sceneTransitions[]` record for every adjacent pair. Author narrative `intent` and `rationale`, normally letting the compiler choose the registered animated recipe. Use `intent=impact` plus an impact-cut treatment when abruptness is semantic. For ordinary intents, use a `rhythmic` cut only with a `beatId` in the outgoing final 20% or incoming first 20%. Every animated boundary must be opaque and covered by both the outgoing tail and incoming narration lead.
 - Keep proof moments outside scene-boundary intervals so every sampled frame clearly proves the intended composition.
-- In schema v11, every beat and treatment declares `proofTimeId` as an approved
+- In schema v12, every beat and treatment declares `proofTimeId` as an approved
   proof id or `null`; treatment proof must match its beat. `soundCue` names only
   a discrete event SFX, never narration. If a beat names one, it must bind an
   event-level proof and production must attach a real sound asset to at least

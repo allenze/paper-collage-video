@@ -4,7 +4,7 @@ Read this while deciding how a story beat should move. The goal is not to maximi
 
 ## Bind Every Beat to the Whole-Film Grammar
 
-Storyboard v11 owns one structured `motionDirection` before individual
+Storyboard v12 owns one structured `motionDirection` before individual
 treatments are selected. Declare whole-film pacing, ordered performance grammar,
 anticipation/follow-through policy, pose strategy, minimum final hold, camera
 strategy, transition strategy, and ambient strategy. If pacing differs from the
@@ -35,7 +35,7 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `prop-state-change` | `state-sequence` | page turns, cards change, book lowers |
 | `contact-change` | `supported-subject` | person stands on a boat, book remains in hand |
 | `shared-boundary` | `registered-environment` | elephant crosses a waterline, object passes behind a desk edge |
-| `graphic-emphasis` | editable `text` or `shape` node plus `continuous-transform` | question marks, circles, arrows, highlights |
+| `graphic-emphasis` | editable typography/shape node plus `continuous-transform` | question marks, circles, arrows, highlights, or a short audio-bound visual sound effect |
 | `mechanism-state` | proof-bound treatment with `mechanism` or `diagram` risk | scale balance, force path, causal diagram |
 | `visibility-change` | `visibility-transition` plus node `visibility.initial` | a question mark first appears, a card is removed, a label remains after entering |
 | `decorative-field` | `motion.kind=motif-field` | bounded petals, dots, fragments, confetti, diagram accents |
@@ -151,7 +151,7 @@ registered member's full-canvas placement or top-left registration.
 
 ## Author Intent, Compile Execution
 
-Storyboard v11 input owns `motionDirection`, `beats[].performanceRole`,
+Storyboard v12 input owns `motionDirection`, `beats[].performanceRole`,
 `beats[].treatments[]`, any layer source-package
 intent, plus the v9 editorial authoring intent. It does not own
 `compositionPlan`, source-package cost totals, resolved edit points,
@@ -226,20 +226,59 @@ For a story such as 《曹冲称象》:
 
 This is a per-beat decision. One film can intentionally use all mechanisms; a simple title film may use only free layers and continuous transforms.
 
+## Keep Comic Text Native to Video
+
+Do not bake dialogue, explanation, or narration into generated speech balloons.
+The audio track carries speech and the subtitle surface carries readable text.
+This prevents duplicated language, unreadable provider text, and subtitles
+competing with balloons.
+
+Use `graphic.role=visual-sfx` only for a discrete impact or motion sound that
+benefits from a brief on-screen word such as `咚！`, `砰！`, or `嗖—`. It must:
+
+- use `kind=typography` and `sfxKind=impact|motion`;
+- contain 1–8 characters and use `stamp`, `shake`, or `drop-impact`;
+- bind `audioBinding=beat-sound-cue` and the same beat's non-empty
+  `soundCue`/`proofTimeId`;
+- stay inside the selected Profile's `allowedKinds`, duration range, and
+  `maxPerScene`;
+- exist as an editable `role=visual-sfx` typography node, initially hidden,
+  with synchronized show/emphasis/sound/hide events.
+
+Wind, rain, traffic, crowd, room tone, and other environmental beds normally
+remain audio-only. The style proof must include `graphic:visual-sfx` whenever
+one is authored. Avoid decorative repeats, subtitle overlap, subject
+occlusion, and any use that makes the frame read like a static comic page.
+
 ## Direct Scene Boundaries Separately
 
 Scene boundaries are whole-film editorial decisions, not node reveal effects. Declare exactly one top-level boundary per adjacent pair with an editorial `intent` and a concrete `rationale`. Prefer intent-only authoring and let `project:storyboard` materialize the default recipe:
 
-| Intent | Default recipe | Use |
-| --- | --- | --- |
-| `continuity` | `paper-slide`, 0.45s | Same action or thought continues |
-| `location-change` | `paper-wipe`, 0.5s | The paper edge carries the viewer to a new place |
-| `time-passage` | `page-turn`, 0.7s | A later moment or summarized interval begins |
-| `focus-reveal` | `paper-iris`, 0.55s | Attention narrows onto a newly important subject |
-| `chapter-reset` | `paper-shutters`, 0.65s | A chapter or tonal unit closes before the next opens |
-| `impact` | `cut` with `motivation=impact`, 0s | A deliberately abrupt shock, reveal, or comic hit |
+The concrete recipe comes from `styleProfile.motion.transitionSet`. The two
+sets preserve the same narrative intent while changing only the visible
+surface:
 
-Narrative intent and execution treatment are separate. Legal paper overrides are `paper-slide`, `paper-wipe`, or `torn-wipe` for spatial movement; `page-turn`, `torn-wipe`, or `paper-wipe` for elapsed time; `paper-iris` for focus; and `paper-shutters`, `dip-to-paper`, or `page-turn` for a chapter reset. Any ordinary intent may instead use `type=cut`, `motivation=rhythmic`, `durationSeconds=0`, and a `beatId` that resolves to the outgoing final 20% or incoming first 20%. Impact cuts use the `impact` intent and `motivation=impact`; do not mislabel a rhythmic edit as semantic impact. Spatial types reveal a fully opaque incoming scene through a hard clip or translation; cover types swap scenes only during a guaranteed fully opaque plateau. Never alpha-crossfade semantic scenes: it can combine an outgoing foreground with an incoming background into a false image. Budget the complete animated duration in both the outgoing tail and incoming narration lead.
+| Intent | `paper-story` | `clean-video` | Use |
+| --- | --- | --- | --- |
+| `continuity` | `slide`, paper edge, 0.45s | `slide`, clean edge, 0.4s | Same action or thought continues |
+| `location-change` | `wipe`, paper edge, 0.5s | `wipe`, clean edge, 0.45s | The viewer moves to a new place |
+| `time-passage` | `page-turn`, paper edge, 0.7s | `dip`, clean cover, 0.5s | A later moment or summarized interval begins |
+| `focus-reveal` | `iris`, paper edge, 0.55s | `iris`, clean edge, 0.45s | Attention narrows onto a newly important subject |
+| `chapter-reset` | `shutters`, paper edge, 0.65s | `dip`, clean cover, 0.55s | A chapter or tonal unit closes before the next opens |
+| `impact` | `cut`, `motivation=impact`, 0s | `cut`, `motivation=impact`, 0s | A deliberately abrupt shock, reveal, or comic hit |
+
+Narrative intent and execution treatment are separate. The neutral runtime
+types are `cut|wipe|dip|slide|iris|page-turn|shutters`, with optional
+`edgeStyle=clean|paper|torn`; `torn` is legal only for `wipe`. Any ordinary
+intent may instead use `type=cut`, `motivation=rhythmic`,
+`durationSeconds=0`, and a `beatId` that resolves to the outgoing final 20% or
+incoming first 20%. Impact cuts use the `impact` intent and
+`motivation=impact`; do not mislabel a rhythmic edit as semantic impact.
+Spatial types reveal a fully opaque incoming scene through a hard clip or
+translation; cover types swap scenes only during a guaranteed fully opaque
+plateau. Never alpha-crossfade semantic scenes, and never simulate a vertically
+scrolling long-comic reader. Budget the complete animated duration in both the
+outgoing tail and incoming narration lead.
 
 ## Proof and Review
 

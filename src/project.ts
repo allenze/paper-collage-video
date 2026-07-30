@@ -360,7 +360,7 @@ export type EditorialAdvancedTransition = {
   matchDimensions: Array<'shape' | 'position' | 'scale' | 'color' | 'value'>;
   continuityTolerance: number;
   invalidPolicy: 'reject' | 'fallback';
-  fallback?: 'cut' | 'paper-wipe' | 'panel-replace';
+  fallback?: 'cut' | 'wipe' | 'panel-replace';
   treatment:
     | 'hard-cut'
     | 'card-switch'
@@ -511,6 +511,7 @@ export type EditorialSystem = {
 export type CompositionTypographyNode = {
   id: string;
   kind: 'typography';
+  role?: 'visual-sfx';
   text: string;
   treatment: {
     fit: {
@@ -921,15 +922,15 @@ export type SceneBoundaryTransition = {
   treatment: {
     type:
       | 'cut'
-      | 'paper-wipe'
-      | 'dip-to-paper'
-      | 'paper-slide'
-      | 'torn-wipe'
-      | 'paper-iris'
+      | 'wipe'
+      | 'dip'
+      | 'slide'
+      | 'iris'
       | 'page-turn'
-      | 'paper-shutters';
+      | 'shutters';
     motivation: 'semantic-default' | 'authored' | 'rhythmic' | 'impact';
     durationSeconds: number;
+    edgeStyle?: 'clean' | 'paper' | 'torn';
     direction?:
       | 'left-to-right'
       | 'right-to-left'
@@ -962,15 +963,25 @@ export type ProjectTheme = {
   ink: string;
   subtitle: string;
   subtitleBackground: string;
-  paperEdge: string;
   foreground: string;
-  texture: string;
-  cutout: {
-    edgeWidthPx: number;
-    shadowOffsetXPx: number;
-    shadowOffsetYPx: number;
-    shadowBlurPx: number;
-    shadowColor: string;
+  surface: {
+    texture: null | {
+      src: string;
+      opacity: number;
+      blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+    };
+    subjectEdge:
+      | {mode: 'none'}
+      | {mode: 'paper-outline'; color: string; widthPx: number};
+    subjectShadow:
+      | {mode: 'none'}
+      | {
+          mode: 'drop-shadow';
+          offsetXPx: number;
+          offsetYPx: number;
+          blurPx: number;
+          color: string;
+        };
   };
   fontFamily?: string;
   fontFile?: string;
@@ -985,7 +996,7 @@ export type ProjectAudioMastering = {
 
 export type SceneAppearance = {
   background?: string;
-  paperTexture?: {
+  surfaceTexture?: {
     visible: boolean;
     opacity: number;
     blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
@@ -1092,15 +1103,12 @@ export type SpatialContract =
 
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 11;
+  schemaVersion: 12;
   slug: string;
   title: string;
   styleProfile: null | {
-    schemaVersion: 1;
-    id:
-      | 'childrens-picture-book-paper'
-      | 'hand-drawn-cutout-explainer'
-      | 'archival-collage';
+    schemaVersion: 2;
+    id: string;
     label: string;
     summary: string;
     catalogVersion: string;
@@ -1116,9 +1124,15 @@ export type PaperCollageProject = {
       >;
     };
     motion: {
-      pacing: 'gentle' | 'playful' | 'measured';
+      pacing: 'gentle' | 'playful' | 'measured' | 'dynamic';
       preferredIdlePresets: Array<'float' | 'breathe' | 'drift' | 'sway' | 'still'>;
-      preferredTransitions: string[];
+      transitionSet: 'paper-story' | 'clean-video';
+      visualSfx: {
+        policy: 'rare' | 'selective' | 'expressive';
+        maxPerScene: number;
+        allowedKinds: Array<'impact' | 'motion'>;
+        durationRangeSeconds: [number, number];
+      };
     };
     render: {theme: ProjectTheme};
     quality: {
@@ -1132,7 +1146,7 @@ export type PaperCollageProject = {
     direction: {
       schemaVersion: 1;
       summary: string;
-      pacing: 'gentle' | 'playful' | 'measured';
+      pacing: 'gentle' | 'playful' | 'measured' | 'dynamic';
       performance: {
         grammar: Array<
           | 'establish'
@@ -1156,12 +1170,9 @@ export type PaperCollageProject = {
       styleDeviationRationale: string | null;
     };
     styleProfileBinding: {
-      id:
-        | 'childrens-picture-book-paper'
-        | 'hand-drawn-cutout-explainer'
-        | 'archival-collage';
+      id: string;
       profileFingerprint: string;
-      pacing: 'gentle' | 'playful' | 'measured';
+      pacing: 'gentle' | 'playful' | 'measured' | 'dynamic';
     };
     scenes: Array<{
       sceneId: string;

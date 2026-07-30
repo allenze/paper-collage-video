@@ -246,7 +246,7 @@ const createLoopingWorldEditorial = ({media}) => {
 
 export const createLoopingWorldStoryboardAuthoring = ({media}) => ({
   $schema: '../../schemas/storyboard-authoring.schema.json',
-  schemaVersion: 11,
+  schemaVersion: 12,
   slug: LOOPING_WORLD_SLUG,
   status: 'ready',
   arc: 'A paper car crosses a continuous world whose mountains, trees, road, and foreground grass reveal distinct travel speeds without visible seams.',
@@ -456,7 +456,7 @@ export const createLoopingWorldProject = ({
   const storyboard = compileLoopingWorldStoryboard({media});
   return {
     $schema: '../../schemas/project.schema.json',
-    schemaVersion: 11,
+    schemaVersion: 12,
     slug: LOOPING_WORLD_SLUG,
     title: `VOX Phase 2.5 Looping World · ${profileId}`,
     intake: {
@@ -484,16 +484,26 @@ export const createLoopingWorldProject = ({
       ink: '#23333c',
       subtitle: '#fff8ea',
       subtitleBackground: 'rgba(35,51,60,.78)',
-      paperEdge: '#fff8ea',
       foreground: '#23333c',
-      texture: 'textures/paper-grain.png',
       fontFamily: 'Arial, Helvetica, sans-serif',
-      cutout: {
-        edgeWidthPx: 3,
-        shadowOffsetXPx: 0,
-        shadowOffsetYPx: 10,
-        shadowBlurPx: 7,
-        shadowColor: 'rgba(20,15,12,.28)',
+      surface: {
+        texture: {
+          src: 'textures/paper-grain.png',
+          opacity: 0.08,
+          blendMode: 'multiply',
+        },
+        subjectEdge: {
+          mode: 'paper-outline',
+          color: '#fff8ea',
+          widthPx: 3,
+        },
+        subjectShadow: {
+          mode: 'drop-shadow',
+          offsetXPx: 0,
+          offsetYPx: 10,
+          blurPx: 7,
+          color: 'rgba(20,15,12,.28)',
+        },
       },
     },
     voice: {
@@ -514,7 +524,7 @@ export const createLoopingWorldProject = ({
       tailSeconds: 0,
       appearance: {
         background: '#b9d7d2',
-        paperTexture: {visible: true, opacity: 0.08, blendMode: 'multiply'},
+        surfaceTexture: {visible: true, opacity: 0.08, blendMode: 'multiply'},
         chapter: {visible: false},
         subtitles: {variant: 'hidden'},
       },

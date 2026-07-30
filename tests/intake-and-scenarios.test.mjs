@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import Ajv2020 from 'ajv/dist/2020.js';
 import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 import test from 'node:test';
@@ -204,23 +205,23 @@ const makeScenarioInput = () => ({
   ],
 });
 
-test('built-in style catalog contains three fingerprinted cards for one canonical subject', async () => {
+test('built-in style catalog is dynamic and contains fingerprinted cards for one canonical subject', async () => {
   const catalog = await loadStyleCatalog({root: ROOT});
-  assert.equal(catalog.styles.length, 3);
+  assert.ok(catalog.styles.length >= 1);
   assert.match(catalog.fingerprint, /^[a-f0-9]{64}$/);
-  assert.equal(new Set(catalog.styles.map(({image}) => image)).size, 3);
+  assert.equal(
+    new Set(catalog.styles.map(({image}) => image)).size,
+    catalog.styles.length,
+  );
   assert.equal(
     new Set(catalog.styles.map(({profileFingerprint}) => profileFingerprint))
       .size,
-    3,
+    catalog.styles.length,
   );
-  assert.equal(
-    new Set(
-      catalog.styles.map(
-        ({profile}) => profile.render.theme.cutout.shadowBlurPx,
-      ),
-    ).size,
-    3,
+  assert.ok(
+    catalog.styles.every(({profile}) =>
+      ['paper-story', 'clean-video'].includes(profile.motion.transitionSet),
+    ),
   );
   const dimensions = new Set();
   for (const style of catalog.styles) {
@@ -240,7 +241,7 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
     ),
   );
   assert.equal(provenance.generator, 'Codex built-in image_gen');
-  assert.equal(provenance.generationCount, 3);
+  assert.equal(provenance.generationCount, provenance.images.length);
   assert.deepEqual(
     provenance.images.map(({id}) => id),
     catalog.styles.map(({id}) => id),
@@ -285,7 +286,7 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
     'hand-drawn-cutout-explainer',
   );
   assert.equal(
-    executable.render.theme.cutout.shadowBlurPx,
+    executable.render.theme.surface.subjectShadow.blurPx,
     7,
   );
   assert.ok(
@@ -293,6 +294,61 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
       'style-profile-conformant',
     ),
   );
+});
+
+test('a new valid catalog profile becomes selectable without changing a style id enum', async () => {
+  const source = await loadStyleCatalog({root: ROOT});
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'paper-collage-style-catalog-'),
+  );
+  try {
+    const catalogDirectory = path.join(directory, 'public', 'style-catalog');
+    await fs.mkdir(catalogDirectory, {recursive: true});
+    for (const style of source.styles) {
+      await fs.mkdir(
+        path.dirname(path.join(directory, 'public', style.image)),
+        {recursive: true},
+      );
+      await fs.copyFile(
+        style.absolutePath,
+        path.join(directory, 'public', style.image),
+      );
+    }
+    const addedImage = 'style-catalog/dynamic-test-style.png';
+    await fs.copyFile(
+      source.styles[0].absolutePath,
+      path.join(directory, 'public', addedImage),
+    );
+    const catalog = JSON.parse(
+      await fs.readFile(source.catalogFile, 'utf8'),
+    );
+    catalog.styles.push({
+      ...structuredClone(catalog.styles[0]),
+      id: 'dynamic-test-style',
+      label: '动态测试风格',
+      image: addedImage,
+    });
+    await fs.writeFile(
+      path.join(catalogDirectory, 'catalog.json'),
+      `${JSON.stringify(catalog, null, 2)}\n`,
+      'utf8',
+    );
+    const loaded = await loadStyleCatalog({root: directory});
+    assert.equal(loaded.styles.length, source.styles.length + 1);
+    assert.equal(
+      confirmIntake({
+        selection: {
+          aspectRatio: '16:9',
+          visualStylePreset: 'dynamic-test-style',
+          parallaxPreference: 'minimal',
+        },
+        catalog: loaded,
+      }).visualStylePreset,
+      'dynamic-test-style',
+    );
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
 });
 
 test('intake locks the two supported aspect ratios and separates parallax from visual style', async () => {

@@ -6,6 +6,21 @@ import {fileURLToPath} from 'node:url';
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 export const RUNTIME_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
 
+const STYLE_CATALOG_FILE = 'public/style-catalog/catalog.json';
+const styleCatalog = JSON.parse(
+  await fs.readFile(path.join(RUNTIME_ROOT, STYLE_CATALOG_FILE), 'utf8'),
+);
+const STYLE_CATALOG_IMAGE_INPUTS = styleCatalog.styles.map(({image}) => {
+  const normalized = path.posix.normalize(`public/${image}`);
+  if (
+    !normalized.startsWith('public/style-catalog/') ||
+    normalized.includes('..')
+  ) {
+    throw new Error(`风格目录图片路径越界：${image}`);
+  }
+  return normalized;
+});
+
 export const RUNTIME_BUILD_INPUTS = [
   'package.json',
   'requirements.txt',
@@ -37,11 +52,9 @@ export const RUNTIME_BUILD_INPUTS = [
   'schemas/storyboard-authoring.schema.json',
   'schemas/style-catalog.schema.json',
   'schemas/style-profile.schema.json',
-  'public/style-catalog/catalog.json',
+  STYLE_CATALOG_FILE,
   'public/style-catalog/generation-provenance.json',
-  'public/style-catalog/childrens-picture-book-paper.png',
-  'public/style-catalog/hand-drawn-cutout-explainer.png',
-  'public/style-catalog/archival-collage.png',
+  ...STYLE_CATALOG_IMAGE_INPUTS,
   'scripts/composition-lib.mjs',
   'scripts/creative-plan-lib.mjs',
   'scripts/intake-lib.mjs',
@@ -117,8 +130,8 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/subtitle-lib.mjs',
   'scripts/render-phase2-proof.mjs',
   'scripts/render-looping-world-proof.mjs',
-  'scripts/schema-v11.mjs',
-  'scripts/validate_v11_schemas.py',
+  'scripts/schema-v12.mjs',
+  'scripts/validate_v12_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-looping-world-proof.mjs',
   'scripts/verify-vox-sample.mjs',

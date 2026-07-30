@@ -102,7 +102,7 @@ export const createCompositionProofProject = (project) => ({
 export const createVisualFingerprint = async (project, mode) => {
   const runtimeBuildFingerprint =
     await createRuntimeSurfaceFingerprint('final-visual');
-  const sources = [project.theme.texture, project.theme.fontFile];
+  const sources = [project.theme.surface?.texture?.src, project.theme.fontFile];
   for (const scene of project.scenes ?? []) {
     sources.push(
       ...collectRuntimeVisibleCompositionSources(scene.composition),
@@ -136,7 +136,7 @@ export const createSceneProofFingerprint = async ({
   surface = 'final-visual',
 }) => {
   const runtimeFingerprint = await createRuntimeSurfaceFingerprint(surface);
-  const sources = [project.theme.texture, project.theme.fontFile];
+  const sources = [project.theme.surface?.texture?.src, project.theme.fontFile];
   sources.push(
     ...collectRuntimeVisibleCompositionSources(scene.composition),
   );

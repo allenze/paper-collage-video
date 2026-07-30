@@ -134,8 +134,8 @@ export const loadProject = async (slug) => {
   assertSlug(slug);
   const paths = projectPaths(slug);
   const project = await readJson(paths.projectFile);
-  if (project.schemaVersion !== 11) {
-    throw new Error('project.json 必须使用 schemaVersion 11；旧项目不会自动迁移。');
+  if (project.schemaVersion !== 12) {
+    throw new Error('project.json 必须使用 schemaVersion 12；旧项目不会自动迁移。');
   }
   return {paths, project};
 };
@@ -476,8 +476,8 @@ export const validateProject = async (project, options = {}) => {
     return inspection;
   };
 
-  if (project.schemaVersion !== 11) {
-    add('error', 'schema-version', 'schemaVersion 必须为 11。', 'schemaVersion');
+  if (project.schemaVersion !== 12) {
+    add('error', 'schema-version', 'schemaVersion 必须为 12。', 'schemaVersion');
   }
   if (!SLUG_PATTERN.test(project.slug ?? '')) {
     add('error', 'slug', 'slug 格式无效。', 'slug');
@@ -486,7 +486,7 @@ export const validateProject = async (project, options = {}) => {
     add('error', 'title', '项目必须有标题。', 'title');
   }
   if (project.intake === undefined) {
-    add('error', 'intake-required', 'v11 项目必须包含 intake。', 'intake');
+    add('error', 'intake-required', 'v12 项目必须包含 intake。', 'intake');
   } else {
     for (const issue of validateIntake(project.intake)) {
       add('error', 'intake-invalid', issue.message, issue.location);
@@ -902,13 +902,13 @@ export const validateProject = async (project, options = {}) => {
     if (!Number.isFinite(scene.tailSeconds) || scene.tailSeconds < 0) {
       add('error', 'scene-tail', 'tailSeconds 必须是非负秒数。', `${sceneLocation}.tailSeconds`);
     }
-    if (scene.appearance?.paperTexture && (
-      typeof scene.appearance.paperTexture.visible !== 'boolean' ||
-      !Number.isFinite(scene.appearance.paperTexture.opacity) ||
-      scene.appearance.paperTexture.opacity < 0 ||
-      scene.appearance.paperTexture.opacity > 1 ||
-      !['normal', 'multiply', 'screen', 'overlay'].includes(scene.appearance.paperTexture.blendMode)
-    )) add('error', 'scene-appearance-texture', 'appearance.paperTexture 无效。', `${sceneLocation}.appearance.paperTexture`);
+    if (scene.appearance?.surfaceTexture && (
+      typeof scene.appearance.surfaceTexture.visible !== 'boolean' ||
+      !Number.isFinite(scene.appearance.surfaceTexture.opacity) ||
+      scene.appearance.surfaceTexture.opacity < 0 ||
+      scene.appearance.surfaceTexture.opacity > 1 ||
+      !['normal', 'multiply', 'screen', 'overlay'].includes(scene.appearance.surfaceTexture.blendMode)
+    )) add('error', 'scene-appearance-texture', 'appearance.surfaceTexture 无效。', `${sceneLocation}.appearance.surfaceTexture`);
     if (scene.appearance?.chapter && (
       typeof scene.appearance.chapter.visible !== 'boolean' ||
       (scene.appearance.chapter.variant !== undefined && !['plain', 'paper-tab'].includes(scene.appearance.chapter.variant))
@@ -1296,7 +1296,34 @@ export const validateProject = async (project, options = {}) => {
       if (!Number.isFinite(event.at) || event.at < 0 || event.at > 1) add('error', 'scene-event-time', 'event.at 必须位于 0..1。', `${eventLocation}.at`);
       if (Number.isFinite(event.at) && event.at < previousEventAt) add('error', 'scene-event-order', 'events 必须按 at 非递减排列。', `${eventLocation}.at`);
       previousEventAt = Number.isFinite(event.at) ? event.at : previousEventAt;
-      if (beat && Math.abs(event.at - beat.at) > 0.035) add('error', 'scene-event-drift', 'event.at 必须与故事板节拍保持在 0.035 以内。', `${eventLocation}.at`);
+      const visualSfxPlan = storyboardScene?.compositionPlan?.graphics?.find(
+        (graphic) =>
+          graphic.role === 'visual-sfx' &&
+          graphic.nodeId === event.targetId &&
+          graphic.beatId === event.beatId,
+      );
+      const expectedVisualSfxHideAt = visualSfxPlan
+        ? Math.min(
+            1,
+            visualSfxPlan.at +
+              visualSfxPlan.durationSeconds /
+                Math.max(0.001, scene.durationInFrames / project.video.fps),
+          )
+        : null;
+      const isVisualSfxHide =
+        visualSfxPlan &&
+        event.visual?.kind === 'visibility' &&
+        event.visual.action === 'hide' &&
+        event.visual.transition === 'fade-scale' &&
+        Math.abs(event.at - expectedVisualSfxHideAt) <= 0.035;
+      if (beat && !isVisualSfxHide && Math.abs(event.at - beat.at) > 0.035) {
+        add(
+          'error',
+          'scene-event-drift',
+          'event.at 必须与故事板节拍保持在 0.035 以内；visual-sfx hide 必须位于其编译持续时间末端。',
+          `${eventLocation}.at`,
+        );
+      }
       if (beat?.proofTimeId && event.proofTimeId !== beat.proofTimeId) {
         add(
           'error',
@@ -1427,7 +1454,7 @@ export const validateProject = async (project, options = {}) => {
   }
 
   const sharedAssets = [
-    project.theme?.texture,
+    project.theme?.surface?.texture?.src,
     project.theme?.fontFile,
     project.audio?.music?.src,
   ].filter(Boolean);

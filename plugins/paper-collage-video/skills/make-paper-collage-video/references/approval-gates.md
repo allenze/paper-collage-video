@@ -6,7 +6,7 @@ Read this before presenting or recording a human gate, making a material paid ca
 
 Require explicit decisions for:
 
-1. Initial intake: `16:9|9:16`, one of three built-in visual styles, and text-only parallax preference.
+1. Initial intake: `16:9|9:16`, one style from the current built-in catalog, and text-only parallax preference.
 2. Combined scenario, story scope, duration/scenes, production profile, exact budget cap, facts, and provider plan.
 3. Story-specific visual sample, fictional voice, whole-film action-language card, and 3–5 second motion/topology proof.
 4. Rendered preview and requested creative changes.
@@ -38,7 +38,7 @@ invalidates all dependent style/proof/render evidence.
   mechanism-, or diagram-critical sample, then create at most one representative
   source package, a short fictional-voice audition, and one 3–5 second proof
   when motion is new or coupled topology is present. A topology or
-  limited-animation proof uses the actual v11 group/state sequence and renderer.
+  limited-animation proof uses the actual v12 group/state sequence and renderer.
   A `registered-depth-stack` uses its compiled layer-complete source package and
   family-aware proof: neutral reconstruction, reference comparison,
   checkerboard exploded members, and both extremes of the 16:9, 9:16, and 1:1

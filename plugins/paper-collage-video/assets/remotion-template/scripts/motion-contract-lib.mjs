@@ -71,11 +71,11 @@ export const validateMotionDirection = (
       'motionDirection.summary',
     );
   }
-  if (!['gentle', 'playful', 'measured'].includes(direction.pacing)) {
+  if (!['gentle', 'playful', 'measured', 'dynamic'].includes(direction.pacing)) {
     addIssue(
       issues,
       'motion-direction-pacing',
-      'motionDirection.pacing 必须为 gentle、playful 或 measured。',
+      'motionDirection.pacing 必须为 gentle、playful、measured 或 dynamic。',
       'motionDirection.pacing',
     );
   }
@@ -516,7 +516,7 @@ export const compileMotionContract = ({
   if (
     !styleProfile?.id ||
     !/^[a-f0-9]{64}$/.test(styleProfile?.profileFingerprint ?? '') ||
-    !['gentle', 'playful', 'measured'].includes(
+    !['gentle', 'playful', 'measured', 'dynamic'].includes(
       styleProfile?.motion?.pacing,
     )
   ) {

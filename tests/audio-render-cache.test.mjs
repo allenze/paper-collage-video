@@ -37,15 +37,21 @@ const makeProject = (slug) => withCompiledEditorialFixture({
     ink: '#fff',
     subtitle: '#fff',
     subtitleBackground: '#000',
-    paperEdge: '#fff',
     foreground: '#fff',
-    texture: `projects/${slug}/texture.png`,
-    cutout: {
-      edgeWidthPx: 3,
-      shadowOffsetXPx: 0,
-      shadowOffsetYPx: 10,
-      shadowBlurPx: 7,
-      shadowColor: 'rgba(20,15,12,.28)',
+    surface: {
+      texture: {
+        src: `projects/${slug}/texture.png`,
+        opacity: 0.14,
+        blendMode: 'multiply',
+      },
+      subjectEdge: {mode: 'paper-outline', color: '#fff', widthPx: 3},
+      subjectShadow: {
+        mode: 'drop-shadow',
+        offsetXPx: 0,
+        offsetYPx: 10,
+        blurPx: 7,
+        color: 'rgba(20,15,12,.28)',
+      },
     },
   },
   audio: {
