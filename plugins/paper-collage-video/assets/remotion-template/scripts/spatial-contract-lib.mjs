@@ -332,25 +332,18 @@ const worldOffsetFor = ({parent, node, progress, parentWidth}) => {
   }).cameraCompensatedDisplacement;
 };
 
-const resolveSceneNodes = ({scene, video, progress}) => {
+export const prepareSceneResolution = ({scene, video}) => {
   const timeline = deriveSceneTimeline({
     video,
     scenes: [scene],
     sceneTransitions: [],
   });
   const normalizedScene = timeline.scenes[0];
-  const fps = video.fps;
-  const frame = Math.round(
-    progress * Math.max(0, normalizedScene.durationInFrames - 1),
-  );
-  const durationSeconds = normalizedScene.durationInFrames / fps;
-  const camera = cameraStateAt(scene, progress);
-  const cameraMatrix = cameraMatrixAt({scene, progress, video});
-  const entries = new Map();
+  const descriptors = new Map();
+  const orderedDescriptors = [];
   const visit = ({
     nodes,
-    parent = null,
-    parentMatrix = identity(),
+    parentDescriptor = null,
     parentWidth,
     parentHeight,
     path = [],
@@ -362,110 +355,29 @@ const resolveSceneNodes = ({scene, video, progress}) => {
       const transform = node.transform ?? {};
       const width = Number(transform.width ?? 1) * parentWidth;
       const height = nodeHeight({node, width, parentHeight});
-      const authored = motionStateAt(node, progress);
-      const idle = idleStateAt({
-        node,
-        frame,
-        fps,
-        seed: scene.motion?.seed,
-      });
-      const emphasis = emphasisStateAt({
-        scene,
-        node,
-        progress,
-        durationSeconds,
-      });
-      const parallax = resolveParallaxState({
-        depth: node.depth ?? 0,
-        cameraX: camera.x,
-        cameraY: camera.y,
-        cameraZoom: camera.zoom,
-        parallax: scene.camera?.parallax,
-      });
-      const position = {
-        x:
-          Number(transform.x ?? 0) * parentWidth +
-          (authored.x + idle.x + emphasis.x) * parentWidth +
-          parallax.x +
-          worldOffsetFor({
-            parent,
-            node,
-            progress,
-            parentWidth,
-          }),
-        y:
-          Number(transform.y ?? 0) * parentHeight +
-          (authored.y + idle.y + emphasis.y) * parentHeight +
-          parallax.y,
-      };
-      const anchor = {
-        x: Number(transform.anchorX ?? 0),
-        y: Number(transform.anchorY ?? 0),
-      };
-      const pivot = {
-        x: Number(node.motion?.pivot?.x ?? anchor.x),
-        y: Number(node.motion?.pivot?.y ?? anchor.y),
-      };
-      const resolvedScale =
-        Number(transform.scale ?? 1) *
-        authored.scale *
-        idle.scale *
-        emphasis.scale *
-        parallax.scale;
-      const resolvedRotation =
-        Number(transform.rotation ?? 0) +
-        authored.rotation +
-        idle.rotation +
-        emphasis.rotation;
-      const localMatrix = multiply(
-        translate(position.x - anchor.x * width, position.y - anchor.y * height),
-        multiply(
-          translate(pivot.x * width, pivot.y * height),
-          multiply(
-            rotate(resolvedRotation),
-            multiply(
-              scale(resolvedScale),
-              translate(-pivot.x * width, -pivot.y * height),
-            ),
-          ),
-        ),
-      );
-      const matrix = multiply(parentMatrix, localMatrix);
       const renderPath = [
         ...path,
         {
           node,
           index,
-          order: renderOrder(node, parent),
+          order: renderOrder(node, parentDescriptor?.node ?? null),
         },
       ];
-      const corners = [
-        applyMatrix(matrix, {x: 0, y: 0}),
-        applyMatrix(matrix, {x: width, y: 0}),
-        applyMatrix(matrix, {x: width, y: height}),
-        applyMatrix(matrix, {x: 0, y: height}),
-      ].map((point) => applyMatrix(cameraMatrix, point));
-      entries.set(node.id, {
+      const descriptor = {
         node,
-        parent,
-        matrix: multiply(cameraMatrix, matrix),
-        localMatrix: matrix,
+        parentDescriptor,
+        parentWidth,
+        parentHeight,
         width,
         height,
-        corners,
-        bounds: {
-          left: Math.min(...corners.map(({x}) => x)),
-          top: Math.min(...corners.map(({y}) => y)),
-          right: Math.max(...corners.map(({x}) => x)),
-          bottom: Math.max(...corners.map(({y}) => y)),
-        },
         renderPath,
-      });
+      };
+      descriptors.set(node.id, descriptor);
+      orderedDescriptors.push(descriptor);
       if (node.kind === 'group') {
         visit({
           nodes: node.children,
-          parent: node,
-          parentMatrix: matrix,
+          parentDescriptor: descriptor,
           parentWidth: width,
           parentHeight: height,
           path: node.stackingContext === 'scene' ? path : renderPath,
@@ -479,10 +391,186 @@ const resolveSceneNodes = ({scene, video, progress}) => {
     parentHeight: video.height,
   });
   return {
-    entries,
+    scene,
+    video,
+    fps: video.fps,
+    durationInFrames: normalizedScene.durationInFrames,
+    durationSeconds: normalizedScene.durationInFrames / video.fps,
+    descriptors,
+    orderedDescriptors,
+  };
+};
+
+const preparedResolutionContextAt = (prepared, progress) => {
+  const frame = Math.round(
+    progress * Math.max(0, prepared.durationInFrames - 1),
+  );
+  const camera = cameraStateAt(prepared.scene, progress);
+  return {
     frame,
-    durationSeconds,
     camera,
+    cameraMatrix: cameraMatrixAt({
+      scene: prepared.scene,
+      progress,
+      video: prepared.video,
+    }),
+  };
+};
+
+const resolvePreparedDescriptorAt = ({
+  prepared,
+  descriptor,
+  progress,
+  context,
+  entries,
+}) => {
+  const cached = entries.get(descriptor.node.id);
+  if (cached) return cached;
+  const parentEntry = descriptor.parentDescriptor
+    ? resolvePreparedDescriptorAt({
+        prepared,
+        descriptor: descriptor.parentDescriptor,
+        progress,
+        context,
+        entries,
+      })
+    : null;
+  const {
+    node,
+    parentDescriptor,
+    parentWidth,
+    parentHeight,
+    width,
+    height,
+    renderPath,
+  } = descriptor;
+  const parent = parentDescriptor?.node ?? null;
+  const transform = node.transform ?? {};
+  const authored = motionStateAt(node, progress);
+  const idle = idleStateAt({
+    node,
+    frame: context.frame,
+    fps: prepared.fps,
+    seed: prepared.scene.motion?.seed,
+  });
+  const emphasis = emphasisStateAt({
+    scene: prepared.scene,
+    node,
+    progress,
+    durationSeconds: prepared.durationSeconds,
+  });
+  const parallax = resolveParallaxState({
+    depth: node.depth ?? 0,
+    cameraX: context.camera.x,
+    cameraY: context.camera.y,
+    cameraZoom: context.camera.zoom,
+    parallax: prepared.scene.camera?.parallax,
+  });
+  const position = {
+    x:
+      Number(transform.x ?? 0) * parentWidth +
+      (authored.x + idle.x + emphasis.x) * parentWidth +
+      parallax.x +
+      worldOffsetFor({
+        parent,
+        node,
+        progress,
+        parentWidth,
+      }),
+    y:
+      Number(transform.y ?? 0) * parentHeight +
+      (authored.y + idle.y + emphasis.y) * parentHeight +
+      parallax.y,
+  };
+  const anchor = {
+    x: Number(transform.anchorX ?? 0),
+    y: Number(transform.anchorY ?? 0),
+  };
+  const pivot = {
+    x: Number(node.motion?.pivot?.x ?? anchor.x),
+    y: Number(node.motion?.pivot?.y ?? anchor.y),
+  };
+  const resolvedScale =
+    Number(transform.scale ?? 1) *
+    authored.scale *
+    idle.scale *
+    emphasis.scale *
+    parallax.scale;
+  const resolvedRotation =
+    Number(transform.rotation ?? 0) +
+    authored.rotation +
+    idle.rotation +
+    emphasis.rotation;
+  const nodeMatrix = multiply(
+    translate(position.x - anchor.x * width, position.y - anchor.y * height),
+    multiply(
+      translate(pivot.x * width, pivot.y * height),
+      multiply(
+        rotate(resolvedRotation),
+        multiply(
+          scale(resolvedScale),
+          translate(-pivot.x * width, -pivot.y * height),
+        ),
+      ),
+    ),
+  );
+  const localMatrix = multiply(parentEntry?.localMatrix ?? identity(), nodeMatrix);
+  const corners = [
+    applyMatrix(localMatrix, {x: 0, y: 0}),
+    applyMatrix(localMatrix, {x: width, y: 0}),
+    applyMatrix(localMatrix, {x: width, y: height}),
+    applyMatrix(localMatrix, {x: 0, y: height}),
+  ].map((point) => applyMatrix(context.cameraMatrix, point));
+  const entry = {
+    node,
+    parent,
+    matrix: multiply(context.cameraMatrix, localMatrix),
+    localMatrix,
+    width,
+    height,
+    corners,
+    bounds: {
+      left: Math.min(...corners.map(({x}) => x)),
+      top: Math.min(...corners.map(({y}) => y)),
+      right: Math.max(...corners.map(({x}) => x)),
+      bottom: Math.max(...corners.map(({y}) => y)),
+    },
+    renderPath,
+  };
+  entries.set(node.id, entry);
+  return entry;
+};
+
+export const resolvePreparedNodeAt = ({prepared, nodeId, progress}) => {
+  const descriptor = prepared.descriptors.get(nodeId);
+  if (!descriptor) return null;
+  return resolvePreparedDescriptorAt({
+    prepared,
+    descriptor,
+    progress,
+    context: preparedResolutionContextAt(prepared, progress),
+    entries: new Map(),
+  });
+};
+
+export const resolveSceneNodes = ({scene, video, progress, prepared = null}) => {
+  const activePrepared = prepared ?? prepareSceneResolution({scene, video});
+  const context = preparedResolutionContextAt(activePrepared, progress);
+  const entries = new Map();
+  for (const descriptor of activePrepared.orderedDescriptors) {
+    resolvePreparedDescriptorAt({
+      prepared: activePrepared,
+      descriptor,
+      progress,
+      context,
+      entries,
+    });
+  }
+  return {
+    entries,
+    frame: context.frame,
+    durationSeconds: activePrepared.durationSeconds,
+    camera: context.camera,
   };
 };
 
@@ -1219,11 +1307,15 @@ const inspectTravelFacing = (project, contract) => {
   }
   const from = proofFor(scene, contract.fromProofTimeId);
   const through = proofFor(scene, contract.throughProofTimeId);
-  const initial = resolveSceneNodes({
+  const prepared = prepareSceneResolution({
     scene,
     video: project.video,
+  });
+  const initial = resolvePreparedNodeAt({
+    prepared,
+    nodeId: contract.nodeId,
     progress: from?.at ?? 0,
-  }).entries.get(contract.nodeId);
+  });
   if (
     !from ||
     !through ||
@@ -1257,11 +1349,11 @@ const inspectTravelFacing = (project, contract) => {
   const samples = [];
   for (let frame = fromFrame; frame <= throughFrame; frame += 1) {
     const progress = frame / Math.max(1, scene.durationInFrames - 1);
-    const entry = resolveSceneNodes({
-      scene,
-      video: project.video,
+    const entry = resolvePreparedNodeAt({
+      prepared,
+      nodeId: contract.nodeId,
       progress,
-    }).entries.get(contract.nodeId);
+    });
     if (!entry || entry.node.kind !== 'state-sequence') continue;
     const center = applyMatrix(entry.localMatrix, {
       x: entry.width * 0.5,

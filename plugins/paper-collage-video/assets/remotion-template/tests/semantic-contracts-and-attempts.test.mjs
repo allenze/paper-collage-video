@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {
   closeGenerationAttempt,
+  normalizeAttemptModel,
   readGenerationAttemptEvents,
   reserveGenerationAttempt,
   summarizeGenerationAttempts,
@@ -60,6 +61,32 @@ const STYLE_PROFILE = {
     requiredAssetChecks: ['style-profile-conformant'],
   },
 };
+
+test('provider model aliases normalize to one canonical attempt identity', () => {
+  const provider = {
+    model: 'fallback-model',
+    invocation: {
+      modelValue: 'configured-model',
+      reportedModelAliases: ['reported-alias'],
+    },
+  };
+  assert.equal(
+    normalizeAttemptModel({provider, model: 'configured-model'}),
+    'configured-model',
+  );
+  assert.equal(
+    normalizeAttemptModel({provider, model: 'reported-alias'}),
+    'configured-model',
+  );
+  assert.equal(
+    normalizeAttemptModel({provider, model: null}),
+    'configured-model',
+  );
+  assert.throws(
+    () => normalizeAttemptModel({provider, model: 'different-model'}),
+    /未映射到已确认配置 configured-model/,
+  );
+});
 const manifestFixture = (projectSlug, assets) => ({
   schemaVersion: 4,
   projectSlug,
@@ -392,6 +419,131 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
   }
 });
 
+test('attempt reserve and provenance keep one canonical provider model invariant', async () => {
+  const slug = `attempt-model-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const provider = {
+    id: 'model-provider',
+    adapter: 'host',
+    model: 'fallback-model',
+    invocation: {
+      modelValue: 'configured-model',
+      reportedModelAliases: ['reported-alias'],
+    },
+  };
+  const requestFor = (assetId) => ({
+    schemaVersion: 8,
+    projectSlug: slug,
+    assetId,
+    capability: 'image',
+    ...STYLE_REQUEST,
+    output: `public/projects/${slug}/${assetId}.png`,
+    outputSurface: {mode: 'opaque'},
+    prompt: `Canonical model fixture ${assetId}.`,
+    compositionBinding: {
+      sceneId: 'scene-a',
+      nodeId: assetId,
+      pattern: 'free',
+      outputRole: 'plate',
+      canvas: {width: 16, height: 16},
+      derivation: {method: 'provider-generation'},
+    },
+    semanticBinding: {riskClass: 'decorative', contractIds: []},
+  });
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(publicDirectory, {recursive: true});
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      JSON.stringify({
+        plan: {
+          assetBudget: {maxGeneratedImages: 6},
+          approvedImageBudget: {imageAttemptLimit: 2},
+        },
+      }),
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'assets-manifest.json'),
+      JSON.stringify(manifestFixture(slug, [])),
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'generation-attempts.jsonl'),
+      '',
+    );
+    await assert.rejects(
+      reserveGenerationAttempt({
+        request: requestFor('unreserved'),
+        provider,
+        model: 'different-model',
+      }),
+      /未映射到已确认配置 configured-model/,
+    );
+    assert.equal(
+      (await readGenerationAttemptEvents(slug)).events.length,
+      0,
+    );
+
+    const acceptedRequest = requestFor('accepted');
+    const acceptedOutput = path.join(publicDirectory, 'accepted.png');
+    await sharp({
+      create: {
+        width: 16,
+        height: 16,
+        channels: 3,
+        background: '#886644',
+      },
+    }).png().toFile(acceptedOutput);
+    const acceptedAttempt = await reserveGenerationAttempt({
+      request: acceptedRequest,
+      provider,
+      model: 'reported-alias',
+    });
+    assert.equal(acceptedAttempt.event.model, 'configured-model');
+    const acceptedRecord = await recordAssetProvenance({
+      request: acceptedRequest,
+      output: acceptedOutput,
+      provider,
+      model: 'reported-alias',
+      attemptId: acceptedAttempt.event.attemptId,
+    });
+    assert.equal(acceptedRecord.record.model, 'configured-model');
+
+    const mismatchedRequest = requestFor('mismatched');
+    const mismatchedOutput = path.join(publicDirectory, 'mismatched.png');
+    await sharp({
+      create: {
+        width: 16,
+        height: 16,
+        channels: 3,
+        background: '#668844',
+      },
+    }).png().toFile(mismatchedOutput);
+    const mismatchedAttempt = await reserveGenerationAttempt({
+      request: mismatchedRequest,
+      provider,
+    });
+    await assert.rejects(
+      recordAssetProvenance({
+        request: mismatchedRequest,
+        output: mismatchedOutput,
+        provider,
+        model: 'different-model',
+        attemptId: mismatchedAttempt.event.attemptId,
+      }),
+      /未映射到已确认配置 configured-model/,
+    );
+    const summary = summarizeGenerationAttempts(
+      (await readGenerationAttemptEvents(slug)).events,
+    );
+    assert.equal(summary.byStatus.succeeded, 1);
+    assert.equal(summary.reserved, 1);
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
 test('attempt ledger enforces the narrower human-approved cap instead of the profile ceiling', async () => {
   const slug = `attempt-approved-cap-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
@@ -620,6 +772,16 @@ test('a succeeded closed attempt can recover one provenance record without consu
       output: path.relative(ROOT, output),
       outputSha256: sha256,
     });
+    await assert.rejects(
+      recordAssetProvenance({
+        request,
+        output,
+        provider: {...provider, model: 'changed-model'},
+        attemptId: reserved.event.attemptId,
+        recoverClosedAttempt: true,
+      }),
+      /model fixture.*changed-model.*不匹配/,
+    );
     const recovered = await recordAssetProvenance({
       request,
       output,

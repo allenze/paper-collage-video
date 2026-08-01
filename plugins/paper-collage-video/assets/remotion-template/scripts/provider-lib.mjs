@@ -20,6 +20,7 @@ import {
   generationRequestFingerprint,
   generationAttemptsPath,
   isQuotaConsumingImageRequest,
+  normalizeAttemptModel,
 } from './generation-attempt-lib.mjs';
 import {
   assertObservedKeyPlaneSet,
@@ -391,15 +392,7 @@ export const buildProviderInvocation = ({request, provider, attemptId = null, mo
   };
 };
 
-export const normalizeReportedModel = ({provider, model}) => {
-  const aliases = new Set(provider.invocation?.reportedModelAliases ?? []);
-  const configured = provider.invocation?.modelValue ?? provider.model ?? null;
-  if (!configured) return model ?? null;
-  if (!model || model === configured || aliases.has(model)) return configured ?? model ?? null;
-  throw new Error(
-    `provider 回报的 model ${model} 未映射到已确认配置 ${configured ?? '(none)'}。`,
-  );
-};
+export const normalizeReportedModel = normalizeAttemptModel;
 
 export const assertProviderSelections = (loaded) => {
   assertProviderConfig(loaded);
@@ -1932,8 +1925,31 @@ export const recordAssetProvenance = async ({
     isQuotaConsumingImageRequest(request) &&
     provider.adapter !== 'manual' &&
     !reusedFrom;
-  if (trackedAttempt && !recoverClosedAttempt) {
-    await assertReservedGenerationAttempt({request, provider, attemptId});
+  const canonicalModel = normalizeAttemptModel({
+    provider,
+    model:
+      model ??
+      request.model ??
+      provider.invocation?.modelValue ??
+      provider.model ??
+      null,
+  });
+  let trackedAttemptRecord = null;
+  if (trackedAttempt) {
+    const asserted = recoverClosedAttempt
+      ? await assertRecoverableGenerationAttempt({
+          request,
+          provider,
+          attemptId,
+          model: canonicalModel,
+        })
+      : await assertReservedGenerationAttempt({
+          request,
+          provider,
+          attemptId,
+          model: canonicalModel,
+        });
+    trackedAttemptRecord = asserted.attempt;
   }
   let stat;
   let metadata;
@@ -1979,11 +1995,12 @@ export const recordAssetProvenance = async ({
         request,
         provider,
         attemptId,
+        model: canonicalModel,
         output: path.relative(ROOT, output),
         outputSha256: sha256,
       });
     }
-    const actualModel = model || request.model || provider.model || null;
+    const actualModel = trackedAttemptRecord?.model ?? canonicalModel;
     const recordedAt = new Date().toISOString();
     const requestFingerprint = createRequestFingerprint({
       request,

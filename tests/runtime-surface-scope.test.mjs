@@ -21,7 +21,9 @@ import {
 import {
   createRuntimeBuildManifest,
   createRuntimeSurfaceFingerprint,
+  discoverRuntimeInputClosure,
   RUNTIME_BUILD_INPUTS,
+  RUNTIME_EXPLICIT_INPUTS,
   RUNTIME_SURFACE_INPUTS,
 } from '../scripts/runtime-build-lib.mjs';
 import {collectParallaxDepths} from '../src/parallax.mjs';
@@ -44,6 +46,117 @@ test('runtime build inputs discover every current style card from the catalog', 
     ),
     catalog.styles.map(({image}) => `public/${image}`),
   );
+});
+
+test('runtime build identity closes over every local static module dependency', async () => {
+  const discovered = await discoverRuntimeInputClosure({
+    root: ROOT,
+    roots: RUNTIME_EXPLICIT_INPUTS,
+  });
+  assert.deepEqual(discovered, [
+    'fixtures/editorial-fixture.mjs',
+    'scripts/production-metrics-lib.mjs',
+    'scripts/python-runtime.mjs',
+    'scripts/state-sheet-lib.mjs',
+    'scripts/timeline-continuity-lib.mjs',
+  ]);
+  for (const relative of discovered) {
+    assert.ok(
+      RUNTIME_BUILD_INPUTS.includes(relative),
+      `${relative} must participate in the complete runtime identity`,
+    );
+  }
+});
+
+test('discovered runtime dependencies invalidate only their owning surfaces', async () => {
+  const visualDependencies = [
+    'scripts/state-sheet-lib.mjs',
+    'scripts/timeline-continuity-lib.mjs',
+  ];
+  const operationalDependencies = [
+    'fixtures/editorial-fixture.mjs',
+    'scripts/production-metrics-lib.mjs',
+    'scripts/python-runtime.mjs',
+  ];
+  for (const relative of [...visualDependencies, ...operationalDependencies]) {
+    assert.ok(RUNTIME_BUILD_INPUTS.includes(relative));
+  }
+  for (const relative of visualDependencies) {
+    assert.ok(RUNTIME_SURFACE_INPUTS['final-visual'].includes(relative));
+    assert.ok(RUNTIME_SURFACE_INPUTS['composition-proof'].includes(relative));
+  }
+  assert.ok(
+    RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'scripts/timeline-continuity-lib.mjs',
+    ),
+  );
+  assert.ok(
+    !RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'scripts/state-sheet-lib.mjs',
+    ),
+  );
+  for (const relative of operationalDependencies) {
+    assert.ok(!RUNTIME_SURFACE_INPUTS['final-visual'].includes(relative));
+    assert.ok(!RUNTIME_SURFACE_INPUTS['composition-proof'].includes(relative));
+    assert.ok(!RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(relative));
+  }
+
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'paper-collage-runtime-closure-'),
+  );
+  const fingerprints = async () => ({
+    build: (await createRuntimeBuildManifest({root: directory})).fingerprint,
+    finalVisual: await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    ),
+    compositionProof: await createRuntimeSurfaceFingerprint(
+      'composition-proof',
+      {root: directory},
+    ),
+    audioDelivery: await createRuntimeSurfaceFingerprint(
+      'audio-delivery',
+      {root: directory},
+    ),
+  });
+  try {
+    for (const relative of RUNTIME_BUILD_INPUTS) {
+      const target = path.join(directory, relative);
+      await fs.mkdir(path.dirname(target), {recursive: true});
+      await fs.copyFile(path.join(ROOT, relative), target);
+    }
+    const baseline = await fingerprints();
+    for (const relative of [...visualDependencies, ...operationalDependencies]) {
+      const target = path.join(directory, relative);
+      const original = await fs.readFile(target);
+      await fs.appendFile(target, '\n// runtime closure mutation\n');
+      const changed = await fingerprints();
+      assert.notEqual(changed.build, baseline.build, relative);
+      if (visualDependencies.includes(relative)) {
+        assert.notEqual(changed.finalVisual, baseline.finalVisual, relative);
+        assert.notEqual(
+          changed.compositionProof,
+          baseline.compositionProof,
+          relative,
+        );
+      } else {
+        assert.equal(changed.finalVisual, baseline.finalVisual, relative);
+        assert.equal(
+          changed.compositionProof,
+          baseline.compositionProof,
+          relative,
+        );
+      }
+      if (relative === 'scripts/timeline-continuity-lib.mjs') {
+        assert.notEqual(changed.audioDelivery, baseline.audioDelivery, relative);
+      } else {
+        assert.equal(changed.audioDelivery, baseline.audioDelivery, relative);
+      }
+      await fs.writeFile(target, original);
+    }
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
 });
 
 test('composition-proof runtime surface excludes subtitle and audio-delivery changes', async () => {

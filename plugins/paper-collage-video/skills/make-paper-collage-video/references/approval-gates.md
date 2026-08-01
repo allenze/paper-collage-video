@@ -79,6 +79,15 @@ Technical validation does not prove factual, legal, brand, or editorial readines
 
 1. confirm content, facts, rights, branding, and platform fit;
 2. obtain one explicit authorization for the named destination/action;
-3. perform only that authorized external action.
+3. before acting, record that exact authorization:
+
+   ```bash
+   npm run project:advance -- <slug> approve-publish --note="<destination + action + scope>"
+   ```
+
+4. perform only that authorized external action.
 
 Never infer external authorization from preview approval or the existence of `final.mp4`.
+Local production is already terminal at `complete`; `approve-publish` is an
+optional post-completion audit event, not a stage and not blanket permission for
+another destination or action.

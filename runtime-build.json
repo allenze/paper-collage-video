@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.19.0-dev.1",
-  "fingerprint": "7c1b5771aa4468d395831a75a188141050040e6c8449572145c0b5d0641ca3f4",
+  "fingerprint": "781983dfec7ff2277ee149080f4e6cc097856da6fa0ac017ac44a74cd3803652",
   "surfaces": {
-    "final-visual": "050599a0a5b76505c640f40b6a65a62e3110db8c0a2e173ff49139a99bf5563b",
-    "composition-proof": "d0b1584058049cef14b4f42fc2e0b91fbc6d04bfe10ea5c8e26ebb8ceb434300",
-    "audio-delivery": "a3842165de8a0ed90c3590457d98c592bf816925cd36c0acde2a8b3b38c23cfe"
+    "final-visual": "e6941f00aec5e07d3d563266a08827c024277bc30f2a0e1cf00f6ec4698e688c",
+    "composition-proof": "e073ffefc37d43d4a2a44aed9596e86beb6f8938b4ac47af7988021816693f38",
+    "audio-delivery": "41eea6e56fa7fc53074c860b5c433052f031b1e0b1eed6043c87669940125035"
   },
   "files": {
     "package.json": "47f34718bc3b4fd824e45203b5624a35ee6c8c453f9fe2787468e82ec8e91dce",
@@ -16,7 +16,7 @@
     "schemas/assets-manifest.schema.json": "73f77c395a6a9a68a808e934071b3a34d383686f5dd20913bae132af29a9de3e",
     "schemas/asset-request.schema.json": "67819f503d4dcb88f740c1287c7827924ea511ba469cd53c36220be15c8d4743",
     "schemas/audio-calibration.schema.json": "c0184a36637eb68c4615e329bc32caea20e3d998271a955d582608b0805f5486",
-    "schemas/production.schema.json": "9252e4a20abc7e124d4dc63983afc5d70e29f4d43ba7470e37f8e7354ef846d9",
+    "schemas/production.schema.json": "728205b8d0a84581ac8b9ccac012e6db5393d7ddb93fbdb2832cee5caef601a0",
     "schemas/planning-scenarios.schema.json": "78e892326a4de8a6bd6fd0712579166867bcd1e72eeaefbfb5b6b3c7eafee2ae",
     "schemas/provider-observation.schema.json": "fc129b0f140b365f8225f504e6ee1203d404e43c9c2acc1ccaee4fa850ce9ae7",
     "schemas/project.schema.json": "9727b3102bb781c067ef3634eaffac1f3ab8dba7dedc56e31ea9a2d7fbbd1840",
@@ -62,7 +62,7 @@
     "scripts/assets-ready-seal-lib.mjs": "07b567ea8bf42e289e1f9893dd44328d5ef94add38a451b48cbca5b1a7270c45",
     "scripts/directing-revision-lib.mjs": "6c20a5a967d25acabe83c618eebc3ee47ec8ff64d9b1caeb3f94341cdcfbb8b3",
     "scripts/editorial-system-lib.mjs": "61da256cb6047ae2cf30e45c742b3e2849f8d5b197b1c78e5c0d5b5d0970d10e",
-    "scripts/generation-attempt-lib.mjs": "b878fc8e7e825b852fd83f86541f92b34a0cefcb37075eaa4830146ff4f499ab",
+    "scripts/generation-attempt-lib.mjs": "2d4dde5fc6d483e9b70bef6ae076e2fe43b386ff484364be6caa2d2c43f2584e",
     "scripts/layer-source-plan-lib.mjs": "4b110076e9dc696ce5c464abd593f6af88a75493479dc4d00aa1b34a1d2e7f63",
     "scripts/container-source-plan-lib.mjs": "34e46e70365c114a5ceb9c92899cf40b310b6af814800ee861f5c64593a7f8e6",
     "scripts/layer-stack-proof-lib.mjs": "6fc587dbde552ddc83bc530cf96ae0f42a38e6caa321da68df73302b0ede4112",
@@ -72,7 +72,7 @@
     "scripts/motion-treatment-lib.mjs": "29259ada35ae5542eb745f54c71b0ad7b650513db5014a6e89c4fff4401e4d0a",
     "scripts/observed-key-plane-lib.mjs": "b95c92507c92539b63605dde12df64d16f61c193f6fcbdf576193bff9a85d188",
     "scripts/provider-attempt.mjs": "ff0271376c16225ac77c1dd51613aae5d8cd658e7eeaf941dc6772590c2996c3",
-    "scripts/provider-lib.mjs": "0b226f00e7f696b6b97d102e8499b15b29639ae2369aadc2c1f92660dc8a5770",
+    "scripts/provider-lib.mjs": "a5e7df8e98a7db41736047dd3bbd41852e25f05b96c9cd3d8f85f305eb0562b6",
     "scripts/provider-recover-rejected-source.mjs": "7a41b3c660d192462a9bd43177fcb785733f59b5507d2a7170fc654ba1663253",
     "scripts/project-composition-proof.mjs": "1e2b03c9ed79392060d6353ada8540ad46884de6be9b63d6f89c32ce19cf085d",
     "scripts/project-budget.mjs": "301acd18e38221900c8af44c218784985ca9961e0f978d6d4e95acb7d55183e6",
@@ -97,7 +97,7 @@
     "scripts/world-trajectory-lib.mjs": "d2405337d5f6247d50a335467a41c1676870344df70edbcdc18f32d8cddc1d51",
     "scripts/prepare-phase2-proof.mjs": "bbf4bcc48f7f908c86cc4e9c75d9323ae08167e016265d8f69c9ff126876afc5",
     "scripts/prepare-looping-world-proof.mjs": "2256c1c2d35cfcf35090f6963e49f0c13104ba5e190db51fe2751c5433ca58db",
-    "scripts/production-state.mjs": "8fc3e715d74d56ff6579820bf73e5082d95ada6000b66add7a51ab1c01fc3a45",
+    "scripts/production-state.mjs": "a819f3b0d5116a59da91d3fccb5aa20710ee0747c63c63230eafba98ad1ae8f5",
     "scripts/process-state-sheet.mjs": "54c55885a1c9d8199b728cace6e9853401d1802429c160028441c256e3c5ad2b",
     "scripts/derive-registered-family.mjs": "254cb76b0b4c2ee80f6e5e15e6c2e2bdb7732d0b95f1f179064a14b4d18ee579",
     "scripts/derive-canonical-container.mjs": "521b42f4530c3bba71009a8fad1140674dc500a4a1dec39a91f8ac31edb3ea6c",
@@ -108,11 +108,11 @@
     "scripts/quality-lib.mjs": "8be8136b830f341df497845839b13f02913cb429a14bc29c3c0c59d93e30446e",
     "scripts/render-cache-lib.mjs": "e6be65793efb26af8f2e73c19fced329ad5f570a88b1b02994580ee5a79483b9",
     "scripts/render-status-lib.mjs": "7ae7e4cab43d6e0c743a4196b22a0376c8151a2428e9b3c7e18ce0b73e19fb68",
-    "scripts/runtime-build-lib.mjs": "d09627a647690e7bfaa8854d9d5ef53ea61c4bf3d88abe6a87cee8ef524d3b4e",
+    "scripts/runtime-build-lib.mjs": "a66957eb15acbf00e0b3d4532d03a9d0ebef36b6fe5493bd07518e782f6bd5c4",
     "scripts/semantic-contract-lib.mjs": "07cd4cf1ec35a934337d1d0c78360877a11265453ff24ead699be241fd9e5d63",
     "scripts/remove_chroma_key.py": "a8260a226b51a1311dcc1221365a56e04e66343e2b170096a837cd641a9a53df",
     "scripts/state-sequence-lib.mjs": "983dbc0b76034af0a58280758a018505441f26928da43f7c93ff36ea7cfa99b4",
-    "scripts/spatial-contract-lib.mjs": "7561778b5e3e7368b821006df90d756ad99b4e8fabc12f4bb690f43fb2a8e030",
+    "scripts/spatial-contract-lib.mjs": "1f83ad2dc6a8ce48a8bab97f56ea89718f0a8cf40a8adef223671cffb470aabf",
     "scripts/style-motion-proof.mjs": "dc57c4b95d0587849d925dc7fcb343d5da59b216aa6a584985fbc02e75bd519d",
     "scripts/project-scene-preview.mjs": "970c60489e3c80ea57b2d9033f729d6f82473d5ae1bee229565d3d839ff355b0",
     "scripts/project-stitch-narration.mjs": "021b71701482841a6f62ea4129c17693b34fe7fdc9d68257395601a80bbd3e9f",
@@ -130,7 +130,7 @@
     "scripts/prove-alpha-bands.mjs": "ff8da37b4fc9eeb61276da816f66bcac64fb6d8cbb43f5e35f7ac390f0c859b7",
     "scripts/prove-registered-family.mjs": "97c32eae4089fb2ecc6a662c8f6459d5435859241a213a1dc69fd4bc9e150415",
     "scripts/prove-canonical-container.mjs": "e19d6dca0bf6d7cb355a87739fb3a4e5c4e8817398796b86b406181aed8bda35",
-    "scripts/vox-sample-proof-lib.mjs": "55a625c14ab4cde8b8635cf013dd1c56410c86014fcd6e53b8b38de2129ef1b1",
+    "scripts/vox-sample-proof-lib.mjs": "ff01e70325ed3f3506525a910d2742abecbad1f63c7c0c88c3b52833f1ab2550",
     "fixtures/canonical-container/canonical-container.json": "aa2a02e91c6164bd6eae4feff591226e1c90b5371a3c1404eb34e1621b366447",
     "fixtures/canonical-container/canonical-container-binding.json": "ea6e953a906d2f3a6cfb7dd2bb83b581d74c43be0811bf7b1d66eeb5eb9a1da8",
     "fixtures/canonical-container/canonical-container-intent.json": "2983f33092ed5b86f0b14b69aa0a5f20fe297b6591074202fe883f05b409c17e",
@@ -156,6 +156,11 @@
     "src/stateSequence.ts": "b6186a5c9cad3b8d5d0f6d2303e18b5c66a162e5a2db56030a892c7abe6e2435",
     "src/subtitleSurface.mjs": "e385b71e9f961e7e8ddcda3104222cff1875358e1010114909f7aa491001afc4",
     "src/subtitleSurface.d.mts": "86b17bd83de846e0f17839b23f28a6c5f23d431a7a3cfba32c006c95d6613042",
-    "src/visibilityLifecycle.mjs": "62eeed995de614f56757a3c0be166cd5d29c68787e7bdac0d7df132d9c81934e"
+    "src/visibilityLifecycle.mjs": "62eeed995de614f56757a3c0be166cd5d29c68787e7bdac0d7df132d9c81934e",
+    "fixtures/editorial-fixture.mjs": "4fa9c487cdf451bcf660190973330e34e227008135d07de6944991d0125f5791",
+    "scripts/production-metrics-lib.mjs": "7d0c415e4e48a6f241badc03ebfb1dc9fffba9cab6034f367ae32d235656faa0",
+    "scripts/python-runtime.mjs": "4563a237bf7adac4ad5ee1ae75bccbacb0eb2a82d760012eebfec1bafef7a388",
+    "scripts/state-sheet-lib.mjs": "9f5669f66746f8163f866d8b4c1e4c273db8b4a7f401550a569abf49d17039d2",
+    "scripts/timeline-continuity-lib.mjs": "6746bac0ab1feffcb14fb61dec67f21041f059f62dc32ee78a5cd0488a0c6e09"
   }
 }

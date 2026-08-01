@@ -39,6 +39,28 @@ export const isQuotaConsumingImageRequest = (request) =>
     request.compositionBinding?.derivation?.method,
   );
 
+export const normalizeAttemptModel = ({provider, model}) => {
+  const aliases = new Set(provider.invocation?.reportedModelAliases ?? []);
+  const configured =
+    provider.invocation?.modelValue ?? provider.model ?? null;
+  if (!configured) return model ?? null;
+  if (!model || model === configured || aliases.has(model)) return configured;
+  throw new Error(
+    `provider 回报的 model ${model} 未映射到已确认配置 ${configured}。`,
+  );
+};
+
+const canonicalAttemptModel = ({request, provider, model = null}) =>
+  normalizeAttemptModel({
+    provider,
+    model:
+      model ??
+      request.model ??
+      provider.invocation?.modelValue ??
+      provider.model ??
+      null,
+  });
+
 export const generationAttemptsPath = (slug) =>
   path.join(ROOT, 'projects', slug, 'generation-attempts.jsonl');
 
@@ -168,7 +190,7 @@ export const reserveGenerationAttempt = async ({request, provider, model = null}
       projectSlug: request.projectSlug,
       assetId: request.assetId,
       provider: provider.id,
-      model: model ?? request.model ?? provider.model ?? null,
+      model: canonicalAttemptModel({request, provider, model}),
       requestFingerprint: generationRequestFingerprint(request),
       quotaConsumed: false,
       output: null,
@@ -181,7 +203,12 @@ export const reserveGenerationAttempt = async ({request, provider, model = null}
   });
 };
 
-export const assertReservedGenerationAttempt = async ({request, provider, attemptId}) => {
+export const assertReservedGenerationAttempt = async ({
+  request,
+  provider,
+  attemptId,
+  model = null,
+}) => {
   if (!attemptId) throw new Error('schema-v3 生图必须提供预留的 --attempt-id。');
   const loaded = await readGenerationAttemptEvents(request.projectSlug);
   const attempt = reduceGenerationAttempts(loaded.events).get(attemptId);
@@ -189,6 +216,12 @@ export const assertReservedGenerationAttempt = async ({request, provider, attemp
   if (attempt.status !== 'reserved') throw new Error(`生成尝试 ${attemptId} 已关闭为 ${attempt.status}。`);
   if (attempt.assetId !== request.assetId) throw new Error(`生成尝试 ${attemptId} 不属于资产 ${request.assetId}。`);
   if (attempt.provider !== provider.id) throw new Error(`生成尝试 ${attemptId} 的 provider 不匹配。`);
+  const expectedModel = canonicalAttemptModel({request, provider, model});
+  if (attempt.model !== expectedModel) {
+    throw new Error(
+      `生成尝试 ${attemptId} 的 model ${attempt.model ?? '(none)'} 与当前已确认模型 ${expectedModel ?? '(none)'} 不匹配。`,
+    );
+  }
   if (attempt.requestFingerprint !== generationRequestFingerprint(request)) {
     throw new Error(`生成尝试 ${attemptId} 的请求已变化，请重新预留。`);
   }
@@ -199,6 +232,7 @@ export const assertRecoverableGenerationAttempt = async ({
   request,
   provider,
   attemptId,
+  model = null,
   output = null,
   outputSha256 = null,
 }) => {
@@ -211,6 +245,12 @@ export const assertRecoverableGenerationAttempt = async ({
   }
   if (attempt.assetId !== request.assetId || attempt.provider !== provider.id) {
     throw new Error(`生成尝试 ${attemptId} 的资产或 provider 不匹配。`);
+  }
+  const expectedModel = canonicalAttemptModel({request, provider, model});
+  if (attempt.model !== expectedModel) {
+    throw new Error(
+      `生成尝试 ${attemptId} 的 model ${attempt.model ?? '(none)'} 与当前已确认模型 ${expectedModel ?? '(none)'} 不匹配。`,
+    );
   }
   if (attempt.requestFingerprint !== generationRequestFingerprint(request)) {
     throw new Error(`生成尝试 ${attemptId} 的请求已变化，不能恢复登记。`);

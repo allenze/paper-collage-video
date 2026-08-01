@@ -78,6 +78,12 @@ test('formal VOX proof binds media, v12 inputs, fingerprints, primitives, and th
   const report = build();
   assert.equal(report.status, 'passed');
   assert.equal(report.boundary.frame, 90);
+  assert.deepEqual(report.checks[0], {
+    id: 'project-contract-v12',
+    passed: true,
+    expected: 12,
+    actual: {project: 12, storyboard: 12},
+  });
   assert.equal(report.checks.every(({passed}) => passed), true);
   assert.equal(assertVoxSampleProofPassed(report), report);
 });

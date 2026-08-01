@@ -21,7 +21,7 @@ const STYLE_CATALOG_IMAGE_INPUTS = styleCatalog.styles.map(({image}) => {
   return normalized;
 });
 
-export const RUNTIME_BUILD_INPUTS = [
+export const RUNTIME_EXPLICIT_INPUTS = [
   'package.json',
   'requirements.txt',
   'remotion.config.ts',
@@ -167,6 +167,102 @@ export const RUNTIME_BUILD_INPUTS = [
   'src/visibilityLifecycle.mjs',
 ];
 
+const JAVASCRIPT_MODULE_EXTENSIONS = new Set([
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.mts',
+  '.ts',
+  '.tsx',
+]);
+const LOCAL_IMPORT_PATTERN =
+  /(?:\bimport\s+(?:[^"'();]*?\s+from\s*)?|\bexport\s+(?:[^"']*?\s+from\s*))["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+const LOCAL_IMPORT_RESOLUTION_SUFFIXES = [
+  '',
+  '.mjs',
+  '.js',
+  '.ts',
+  '.tsx',
+  '.json',
+  '/index.mjs',
+  '/index.js',
+  '/index.ts',
+  '/index.tsx',
+];
+
+const relativeRuntimePath = (root, file) =>
+  path.relative(root, file).split(path.sep).join('/');
+
+const resolveLocalRuntimeImport = async ({root, importer, specifier}) => {
+  if (!specifier.startsWith('.')) return null;
+  const normalizedSpecifier = specifier.split(/[?#]/, 1)[0];
+  const unresolved = path.resolve(path.dirname(importer), normalizedSpecifier);
+  const relative = path.relative(root, unresolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(
+      `runtime 本地导入越界：${relativeRuntimePath(root, importer)} -> ${specifier}`,
+    );
+  }
+  for (const suffix of LOCAL_IMPORT_RESOLUTION_SUFFIXES) {
+    const candidate = `${unresolved}${suffix}`;
+    const stat = await fs.stat(candidate).catch(() => null);
+    if (stat?.isFile()) return candidate;
+  }
+  throw new Error(
+    `runtime 本地导入无法解析：${relativeRuntimePath(root, importer)} -> ${specifier}`,
+  );
+};
+
+export const discoverRuntimeInputClosure = async ({
+  root = RUNTIME_ROOT,
+  roots = RUNTIME_EXPLICIT_INPUTS,
+} = {}) => {
+  const explicit = new Set(roots);
+  const discovered = new Set();
+  const visited = new Set();
+  const queue = roots
+    .filter((relative) =>
+      JAVASCRIPT_MODULE_EXTENSIONS.has(path.extname(relative)),
+    )
+    .map((relative) => path.resolve(root, relative));
+  while (queue.length > 0) {
+    const importer = queue.shift();
+    const importerRelative = relativeRuntimePath(root, importer);
+    if (visited.has(importerRelative)) continue;
+    visited.add(importerRelative);
+    const source = await fs.readFile(importer, 'utf8');
+    LOCAL_IMPORT_PATTERN.lastIndex = 0;
+    for (
+      let match = LOCAL_IMPORT_PATTERN.exec(source);
+      match;
+      match = LOCAL_IMPORT_PATTERN.exec(source)
+    ) {
+      const resolved = await resolveLocalRuntimeImport({
+        root,
+        importer,
+        specifier: match[1] ?? match[2],
+      });
+      if (!resolved) continue;
+      const relative = relativeRuntimePath(root, resolved);
+      if (!explicit.has(relative)) discovered.add(relative);
+      if (
+        JAVASCRIPT_MODULE_EXTENSIONS.has(path.extname(relative)) &&
+        !visited.has(relative)
+      ) {
+        queue.push(resolved);
+      }
+    }
+  }
+  return [...discovered].sort();
+};
+
+const RUNTIME_DISCOVERED_INPUTS = await discoverRuntimeInputClosure();
+
+export const RUNTIME_BUILD_INPUTS = [
+  ...RUNTIME_EXPLICIT_INPUTS,
+  ...RUNTIME_DISCOVERED_INPUTS,
+];
+
 const AUDIO_DELIVERY_ONLY_INPUTS = [
   'schemas/audio-calibration.schema.json',
   'scripts/assets-ready-seal-lib.mjs',
@@ -187,6 +283,12 @@ const SUBTITLE_PRESENTATION_INPUTS = [
   'src/subtitleSurface.d.mts',
 ];
 
+const NON_OUTPUT_RUNTIME_INPUTS = [
+  'fixtures/editorial-fixture.mjs',
+  'scripts/production-metrics-lib.mjs',
+  'scripts/python-runtime.mjs',
+];
+
 const AUDIO_DELIVERY_RUNTIME_INPUTS = new Set([
   'package.json',
   'schemas/audio-calibration.schema.json',
@@ -197,16 +299,21 @@ const AUDIO_DELIVERY_RUNTIME_INPUTS = new Set([
   'scripts/project-render.mjs',
   'scripts/render-cache-lib.mjs',
   'scripts/runtime-build-lib.mjs',
+  'scripts/timeline-continuity-lib.mjs',
   'src/sceneTimeline.mjs',
 ]);
 
 export const RUNTIME_SURFACE_INPUTS = {
   'final-visual': RUNTIME_BUILD_INPUTS.filter(
-    (relative) => !AUDIO_DELIVERY_ONLY_INPUTS.includes(relative),
+    (relative) => ![
+      ...AUDIO_DELIVERY_ONLY_INPUTS,
+      ...NON_OUTPUT_RUNTIME_INPUTS,
+    ].includes(relative),
   ),
   'composition-proof': RUNTIME_BUILD_INPUTS.filter((relative) => ![
     ...AUDIO_DELIVERY_ONLY_INPUTS,
     ...SUBTITLE_PRESENTATION_INPUTS,
+    ...NON_OUTPUT_RUNTIME_INPUTS,
   ].includes(relative)),
   'audio-delivery': RUNTIME_BUILD_INPUTS.filter(
     (relative) => AUDIO_DELIVERY_RUNTIME_INPUTS.has(relative),

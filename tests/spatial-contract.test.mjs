@@ -3,8 +3,12 @@ import test from 'node:test';
 import {collectCompositeQualityTargets} from '../scripts/quality-lib.mjs';
 import {
   inspectSpatialContract,
+  prepareSceneResolution,
+  resolvePreparedNodeAt,
+  resolveSceneNodes,
   validateStoryboardSpatialContracts,
 } from '../scripts/spatial-contract-lib.mjs';
+import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
 
 const still = {
   keyframes: [
@@ -567,6 +571,186 @@ test('travel-facing rejects reverse flight and state metadata that faces away fr
       ({id, passed}) => id === 'travel-facing-direction' && !passed,
     ),
   );
+});
+
+test('prepared single-node resolution is equivalent across nested responsive parallax and looping-world motion', () => {
+  const runner = gaitNode({
+    motion: {
+      keyframes: [
+        {at: 0, offsetX: -0.18, offsetY: 0, scale: 0.94},
+        {at: 1, offsetX: 0.22, offsetY: -0.03, scale: 1.06},
+      ],
+    },
+  });
+  runner.depth = 0.35;
+  runner.motion.idle = {
+    preset: 'float',
+    intensity: 0.5,
+    cycleSeconds: 0.7,
+    phase: 0.2,
+  };
+  const world = {
+    id: 'world',
+    kind: 'group',
+    pattern: 'looping-environment',
+    z: 1,
+    coordinateSpace: {width: 1000, height: 1000},
+    transform: transform(),
+    motion: {
+      keyframes: [
+        {at: 0, offsetX: -0.02, offsetY: 0},
+        {at: 1, offsetX: 0.03, offsetY: 0.01},
+      ],
+    },
+    loopingEnvironment: {
+      axis: 'x',
+      groundStripId: 'ground',
+      subjectBindings: [{
+        nodeId: 'runner',
+        role: 'tracked',
+        anchorMode: 'world',
+        nearOcclusion: 'behind-near',
+        proofTimeIds: ['start', 'middle', 'end'],
+      }],
+      seamProofTimeIds: {
+        before: 'start',
+        seam: 'middle',
+        after: 'end',
+      },
+      travel: {
+        direction: 'left',
+        distanceViewports: 2,
+        closedLoop: false,
+        startPhase: 0.1,
+        activeFrom: 0.1,
+        activeUntil: 0.9,
+        easing: 'linear',
+      },
+      speedRange: {far: 0.4, near: 1},
+      overscanPx: 2,
+    },
+    children: [
+      {
+        id: 'ground',
+        kind: 'world-strip',
+        role: 'ground',
+        surfaceRole: 'walkable-ground',
+        src: 'fixtures/spatial/ground.png',
+        z: 0,
+        depth: 0.4,
+        transform: transform(),
+        motion: still,
+      },
+      runner,
+    ],
+  };
+  const outer = {
+    id: 'outer',
+    kind: 'group',
+    pattern: 'free',
+    z: 0,
+    coordinateSpace: {width: 1000, height: 1000},
+    transform: transform({x: 0.04, y: 0.03, width: 0.92, height: 0.9}),
+    motion: {
+      keyframes: [
+        {at: 0, offsetX: 0, offsetY: 0, rotation: -1},
+        {at: 1, offsetX: 0.015, offsetY: 0, rotation: 1.5},
+      ],
+    },
+    children: [
+      world,
+      asset({id: 'unrelated-sibling', x: 0.75, y: 0.1, width: 0.1}),
+    ],
+  };
+  const originalScene = scene({
+    id: 'scene-1',
+    nodes: [outer, asset({id: 'unrelated-root', width: 0.05})],
+    camera: {
+      preset: 'static',
+      intensity: 1,
+      keyframes: [
+        {at: 0, x: -18, y: 4, zoom: 1.01},
+        {at: 1, x: 24, y: -6, zoom: 1.08},
+      ],
+      parallax: {
+        enabled: true,
+        strength: 0.8,
+        focalDepth: 0,
+      },
+    },
+  });
+  originalScene.events = [{
+    id: 'runner-emphasis',
+    at: 0.4,
+    targetId: 'runner',
+    visual: {
+      kind: 'emphasis',
+      action: 'pulse',
+      durationSeconds: 0.8,
+      intensity: 0.7,
+    },
+  }];
+  const project = baseProject([originalScene]);
+  project.video = {width: 800, height: 450, fps: 30};
+  project.editorial.activeProfile = '16:9';
+  project.editorial.responsiveProfiles = [{
+    id: '16:9',
+    width: 800,
+    height: 450,
+    safeArea: {x: 0.05, y: 0.05, width: 0.9, height: 0.9},
+    densityBudget: 10,
+    typographyScale: 1,
+    parallaxScale: 0.75,
+    exclusionZones: [],
+  }];
+  project.editorial.responsivePlans = [{
+    profileId: '16:9',
+    width: 800,
+    height: 450,
+    parallaxScale: 0.75,
+    scenes: [{
+      sceneId: 'scene-1',
+      parallaxScale: 0.75,
+      placements: [
+        {
+          targetId: 'outer',
+          transform: {x: 0.06, y: 0.04, width: 0.88, height: 0.9},
+        },
+        {
+          targetId: 'runner',
+          transform: {x: 0.34, y: 0.42, width: 0.2, height: 0.3},
+        },
+      ],
+    }],
+  }];
+  const executable = applyResponsiveDirectingPlan(project);
+  const executableScene = executable.scenes[0];
+  const prepared = prepareSceneResolution({
+    scene: executableScene,
+    video: executable.video,
+  });
+  assert.ok(
+    prepared.orderedDescriptors.length >
+      prepared.descriptors.get('runner').renderPath.length,
+  );
+  for (const progress of [0, 0.17, 0.43, 0.71, 1]) {
+    const full = resolveSceneNodes({
+      scene: executableScene,
+      video: executable.video,
+      progress,
+      prepared,
+    }).entries.get('runner');
+    const scoped = resolvePreparedNodeAt({
+      prepared,
+      nodeId: 'runner',
+      progress,
+    });
+    assert.ok(
+      [...scoped.localMatrix, ...scoped.matrix].every(Number.isFinite),
+      `progress=${progress}`,
+    );
+    assert.deepEqual(scoped, full, `progress=${progress}`);
+  }
 });
 
 test('storyboard validation and quality target collection carry spatial contracts end to end', async () => {

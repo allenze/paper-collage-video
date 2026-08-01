@@ -18,7 +18,6 @@ export const PRODUCTION_STAGES = [
   'preview',
   'human-review',
   'final-render',
-  'publish-approval',
   'complete',
 ];
 
@@ -86,7 +85,6 @@ const nextActionByStage = {
   preview: '运行 project:preview',
   'human-review': '等待人审预览；确认后记录 approve-preview，或记录 request-preview-revision',
   'final-render': '运行 project:render',
-  'publish-approval': '旧版兼容状态：本地成片已交付；外部发布仍需单独请求',
   complete: '流程已完成；系统仍不得自动发布',
 };
 
@@ -136,10 +134,6 @@ const stageControlByStage = {
     mode: 'auto-continue',
     expectedArtifacts: ['final', 'report', 'contactSheet'],
     nextCommand: (slug) => `npm run project:render -- ${slug}`,
-  },
-  'publish-approval': {
-    mode: 'complete',
-    expectedArtifacts: ['final', 'report', 'contactSheet', 'validationReport'],
   },
   complete: {
     mode: 'complete',
@@ -787,7 +781,7 @@ export const transitionProduction = (current, action, options = {}) => {
     case 'request-preview-revision':
       assertStage(
         state,
-        ['human-review', 'final-render', 'publish-approval', 'complete'],
+        ['human-review', 'final-render', 'complete'],
         action,
       );
       setApproval(state, 'preview', 'changes-requested', at, note);
@@ -798,7 +792,7 @@ export const transitionProduction = (current, action, options = {}) => {
       state.stage = 'asset-production';
       break;
     case 'approve-publish':
-      assertStage(state, ['publish-approval', 'complete'], action);
+      assertStage(state, ['complete'], action);
       assertApproved(state, 'preview', action);
       if (!state.artifacts.final) {
         throw new Error('approve-publish 需要已经成功记录 final.mp4。');

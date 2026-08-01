@@ -44,14 +44,23 @@ try {
   );
   const reportedModel = valueFor('--model');
   const inheritedModel = attempt?.model ?? null;
-  if (reportedModel && inheritedModel && reportedModel !== inheritedModel) {
-    normalizeReportedModel({provider, model: reportedModel});
+  const normalizedReportedModel = reportedModel
+    ? normalizeReportedModel({provider, model: reportedModel})
+    : null;
+  if (
+    normalizedReportedModel &&
+    inheritedModel &&
+    normalizedReportedModel !== inheritedModel
+  ) {
+    throw new Error(
+      `--model ${reportedModel} 与生成尝试继承的 ${inheritedModel} 不一致。`,
+    );
   }
   const recorded = await recordAssetProvenance({
     request: loadedRequest.request,
     output: loadedRequest.output,
     provider,
-    model: inheritedModel ?? normalizeReportedModel({provider, model: reportedModel}),
+    model: inheritedModel ?? normalizedReportedModel,
     externalId: valueFor('--external-id'),
     attemptId,
   });

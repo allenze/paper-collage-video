@@ -38,6 +38,11 @@ Never ask the human to edit machine JSON. Paths in `project.json` are relative t
 
 The combined confirmation is the normal path. Composition proof is machine evidence inside the existing style or asset stage, not a fourth human gate.
 
+`complete` is the only local terminal stage. After a human separately authorizes
+a named external destination/action, `approve-publish` records that exact
+authorization while leaving the stage at `complete`; it is an audit event, not
+an additional stage.
+
 After `request-preview-revision`, a directing-only change uses `project:revise-preview-directing`. It preserves approved concept/style semantics, recompiles the edited authoring fields against the existing motion budget, records `directing-revision.json`, invalidates old render/proof artifacts, and creates execution-sync work items. Concept, factual, provider, or production-profile changes still require their owning approval path.
 
 Those execution-sync work items are delivery gates, not advisory history.

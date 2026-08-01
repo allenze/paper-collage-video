@@ -204,6 +204,14 @@ After preview approval, run `project:render`. A successful final render complete
 
 Do not ask for a publication approval merely to mark local delivery complete. If the human later requests upload, sharing, or publication, verify content/facts/rights/platform suitability and obtain one just-in-time authorization for that external action.
 
+After that authorization and before performing the named external action, record its destination, action, and scope:
+
+```bash
+npm run project:advance -- <slug> approve-publish --note="<destination + action + scope>"
+```
+
+`complete` remains the local lifecycle terminal state; `approve-publish` is an optional post-completion audit event, not another production stage or a reusable authorization for any other destination/action.
+
 ## Keep Turns Lean and Recoverable
 
 - Run `project:resume` once at the start of a new turn or after an interruption; do not pair it with full status or `project:handoff-check`.

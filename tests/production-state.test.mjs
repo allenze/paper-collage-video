@@ -67,6 +67,17 @@ const makeState = (stage) => ({
 });
 
 test('publication is no longer a default human wait stage', () => {
+  assert.deepEqual(PRODUCTION_STAGES, [
+    'capability-review',
+    'brief',
+    'concept-review',
+    'style-review',
+    'asset-production',
+    'preview',
+    'human-review',
+    'final-render',
+    'complete',
+  ]);
   const waitingStages = PRODUCTION_STAGES.filter(
     (stage) => getStageControl(makeState(stage)).mode === 'wait-human',
   );
@@ -82,7 +93,20 @@ test('publication is no longer a default human wait stage', () => {
     'style-review',
     'human-review',
   ]);
-  assert.equal(getStageControl(makeState('publish-approval')).mode, 'complete');
+  assert.throws(
+    () => getStageControl(makeState('publish-approval')),
+    /未知 stage：publish-approval/,
+  );
+  const productionSchema = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, 'schemas', 'production.schema.json'),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(
+    productionSchema.properties.stage.enum,
+    PRODUCTION_STAGES,
+  );
 });
 
 test('automatic stages explicitly prohibit normal turn termination', () => {

@@ -28,7 +28,6 @@
         "preview",
         "human-review",
         "final-render",
-        "publish-approval",
         "complete"
       ]
     },

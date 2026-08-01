@@ -81,6 +81,32 @@ test('plugin manifest points at a complete packaged skill', () => {
   assert.ok(fs.existsSync(path.join(PLUGIN_ROOT, 'LICENSE')));
 });
 
+test('source and packaged skills document publish approval as a post-completion audit command', () => {
+  const command =
+    'npm run project:advance -- <slug> approve-publish --note="<destination + action + scope>"';
+  for (const relative of [
+    'SKILL.md',
+    path.join('references', 'approval-gates.md'),
+  ]) {
+    const source = fs.readFileSync(
+      path.join(ROOT, 'skills', 'make-paper-collage-video', relative),
+      'utf8',
+    );
+    const packaged = fs.readFileSync(
+      path.join(
+        PLUGIN_ROOT,
+        'skills',
+        'make-paper-collage-video',
+        relative,
+      ),
+      'utf8',
+    );
+    assert.equal(packaged, source, relative);
+    assert.ok(source.includes(command), relative);
+    assert.match(source, /post-completion audit event/);
+  }
+});
+
 test('repository and packaged locks exclude the vulnerable fast-uri range', () => {
   assertPatchedFastUri(path.join(ROOT, 'package-lock.json'));
   assertPatchedFastUri(path.join(RUNTIME_ROOT, 'package-lock.json'));
