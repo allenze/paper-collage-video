@@ -14,7 +14,7 @@ Use `provider:select` only for an isolated change or fallback. A provider switch
 
 | Adapter | Use | Execution |
 |---|---|---|
-| `host` | Current Codex tool, skill, model, or app | Invoke, write local output, then `provider:record` |
+| `host` | Current host tool, skill, model, or app (Codex, Claude, etc.) | Invoke, write local output, then `provider:record` |
 | `command` | User CLI/wrapper/private adapter | `provider:run` executes without a shell and records success |
 | `manual` | Authorized supplied or deterministic local asset | Copy/derive output, then `provider:record` |
 

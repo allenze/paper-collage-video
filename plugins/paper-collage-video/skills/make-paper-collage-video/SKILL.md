@@ -9,7 +9,7 @@ Build an editable video while keeping the human in charge of concept, style/voic
 
 ## Start With One Small State Read
 
-1. Treat the current directory as a workspace only when `package.json` exposes `project:new`, `project:resume`, `project:preview`, and `project:render`. Otherwise read [references/setup.md](references/setup.md), bootstrap a writable workspace, and run its doctor. If this Skill was injected from a versioned plugin-cache path that no longer exists, stop and report a stale task snapshot. Do not scan for or silently select the highest cached version; start a new Codex task so the loader formally exposes the installed version.
+1. Treat the current directory as a workspace only when `package.json` exposes `project:new`, `project:resume`, `project:preview`, and `project:render`. Otherwise read [references/setup.md](references/setup.md), bootstrap a writable workspace, and run its doctor. If this Skill was injected from a versioned plugin-cache path that no longer exists, stop and report a stale task snapshot. Do not scan for or silently select the highest cached version; start a new host session/task so the loader formally exposes the installed version.
 2. Inspect `git status --short` in Git workspaces and preserve unrelated changes.
 3. For an existing slug, run only:
 
