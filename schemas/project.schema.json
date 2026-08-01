@@ -578,6 +578,58 @@
       },
       "additionalProperties": false
     },
+    "cameraFollow": {
+      "type": "object",
+      "required": [
+        "targetNodeId",
+        "worldNodeId",
+        "framing",
+        "lookAheadSeconds",
+        "smoothingSeconds",
+        "zoom",
+        "worldBounds"
+      ],
+      "properties": {
+        "targetNodeId": {"type": "string", "minLength": 1},
+        "worldNodeId": {"type": "string", "minLength": 1},
+        "framing": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": {
+            "x": {"type": "number", "minimum": 0, "maximum": 1},
+            "y": {"type": "number", "minimum": 0, "maximum": 1}
+          },
+          "additionalProperties": false
+        },
+        "lookAheadSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "smoothingSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "zoom": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 3
+        },
+        "worldBounds": {
+          "type": "object",
+          "required": ["x", "y", "width", "height"],
+          "properties": {
+            "x": {"type": "number"},
+            "y": {"type": "number"},
+            "width": {"type": "number", "exclusiveMinimum": 0},
+            "height": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "scene": {
       "type": "object",
       "required": ["id", "label", "eyebrow", "tailSeconds", "motion", "composition", "camera", "narration", "subtitles", "events"],
@@ -606,6 +658,7 @@
             "preset": {"enum": ["push", "pull", "pan-left", "pan-right", "static"]},
             "intensity": {"type": "number", "minimum": 0, "maximum": 3},
             "keyframes": {"type": "array", "minItems": 2, "items": {"type": "object"}},
+            "follow": {"$ref": "#/$defs/cameraFollow"},
             "parallax": {
               "type": "object",
               "required": ["enabled", "strength", "focalDepth"],

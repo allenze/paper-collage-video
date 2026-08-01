@@ -10,6 +10,12 @@ import {
 } from '../src/worldStrip.mjs';
 import {resolveSequenceState} from './state-sequence-lib.mjs';
 import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
+import {
+  angleDifferenceDegrees,
+  resolveCameraFollowAtFrame,
+  resolvePathMotionAtFrame,
+  samplePathPolyline,
+} from '../src/pathMotion.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -242,14 +248,25 @@ const cameraValueAt = (camera, progress, property, fallback) => {
   );
 };
 
-const cameraStateAt = (scene, progress) => ({
-  x: cameraValueAt(scene.camera, progress, 'x', 0),
-  y: cameraValueAt(scene.camera, progress, 'y', 0),
-  zoom: cameraValueAt(scene.camera, progress, 'zoom', 1),
-});
+const cameraStateAt = (scene, progress, video) => {
+  const frame = Math.round(
+    progress * Math.max(0, scene.durationInFrames - 1),
+  );
+  const followed = resolveCameraFollowAtFrame({
+    scene,
+    video,
+    frame,
+    fps: video.fps,
+  });
+  return followed ?? {
+    x: cameraValueAt(scene.camera, progress, 'x', 0),
+    y: cameraValueAt(scene.camera, progress, 'y', 0),
+    zoom: cameraValueAt(scene.camera, progress, 'zoom', 1),
+  };
+};
 
 const cameraMatrixAt = ({scene, progress, video}) => {
-  const camera = cameraStateAt(scene, progress);
+  const camera = cameraStateAt(scene, progress, video);
   const origin = {x: video.width * 0.5, y: video.height * 0.54};
   return multiply(
     translate(origin.x + camera.x, origin.y + camera.y),
@@ -405,7 +422,7 @@ const preparedResolutionContextAt = (prepared, progress) => {
   const frame = Math.round(
     progress * Math.max(0, prepared.durationInFrames - 1),
   );
-  const camera = cameraStateAt(prepared.scene, progress);
+  const camera = cameraStateAt(prepared.scene, progress, prepared.video);
   return {
     frame,
     camera,
@@ -447,6 +464,14 @@ const resolvePreparedDescriptorAt = ({
   const parent = parentDescriptor?.node ?? null;
   const transform = node.transform ?? {};
   const authored = motionStateAt(node, progress);
+  const pathMotion = resolvePathMotionAtFrame({
+    pathMotion: node.motion?.path,
+    frame: context.frame,
+    durationInFrames: prepared.durationInFrames,
+    fps: prepared.fps,
+    parentWidth,
+    parentHeight,
+  });
   const idle = idleStateAt({
     node,
     frame: context.frame,
@@ -469,7 +494,7 @@ const resolvePreparedDescriptorAt = ({
   const position = {
     x:
       Number(transform.x ?? 0) * parentWidth +
-      (authored.x + idle.x + emphasis.x) * parentWidth +
+      (authored.x + pathMotion.x + idle.x + emphasis.x) * parentWidth +
       parallax.x +
       worldOffsetFor({
         parent,
@@ -479,7 +504,7 @@ const resolvePreparedDescriptorAt = ({
       }),
     y:
       Number(transform.y ?? 0) * parentHeight +
-      (authored.y + idle.y + emphasis.y) * parentHeight +
+      (authored.y + pathMotion.y + idle.y + emphasis.y) * parentHeight +
       parallax.y,
   };
   const anchor = {
@@ -499,6 +524,7 @@ const resolvePreparedDescriptorAt = ({
   const resolvedRotation =
     Number(transform.rotation ?? 0) +
     authored.rotation +
+    pathMotion.rotationDegrees +
     idle.rotation +
     emphasis.rotation;
   const nodeMatrix = multiply(
@@ -526,6 +552,9 @@ const resolvePreparedDescriptorAt = ({
     parent,
     matrix: multiply(context.cameraMatrix, localMatrix),
     localMatrix,
+    pathMotion,
+    parentWidth,
+    parentHeight,
     width,
     height,
     corners,
@@ -1111,8 +1140,8 @@ const inspectContinuity = (project, contract) => {
       toFamily,
     });
   }
-  const fromCamera = cameraStateAt(fromScene, fromProof.at);
-  const toCamera = cameraStateAt(toScene, toProof.at);
+  const fromCamera = cameraStateAt(fromScene, fromProof.at, project.video);
+  const toCamera = cameraStateAt(toScene, toProof.at, project.video);
   const cameraPositionDelta = Math.hypot(
     (fromCamera.x - toCamera.x) / project.video.width,
     (fromCamera.y - toCamera.y) / project.video.height,
@@ -1454,6 +1483,334 @@ const inspectTravelFacing = (project, contract) => {
   };
 };
 
+const directionSectorFor = (degrees) =>
+  Math.round((((degrees % 360) + 360) % 360) / 45) % 8;
+
+const inspectPathLocomotion = (project, contract) => {
+  const timeline = deriveSceneTimeline(project);
+  const scene = timeline.scenes.find(({id}) => id === contract.sceneId);
+  if (!scene) {
+    return {
+      passed: false,
+      checks: [{
+        id: 'path-locomotion-scene-exists',
+        passed: false,
+        expected: contract.sceneId,
+        actual: null,
+      }],
+      measurements: [],
+    };
+  }
+  const from = proofFor(scene, contract.fromProofTimeId);
+  const through = proofFor(scene, contract.throughProofTimeId);
+  const proofIds = [
+    contract.fromProofTimeId,
+    ...(contract.turnProofTimeIds ?? []),
+    contract.throughProofTimeId,
+  ];
+  const proofTimes = proofIds.map((id) => proofFor(scene, id));
+  const prepared = prepareSceneResolution({
+    scene,
+    video: project.video,
+  });
+  const initial = resolvePreparedNodeAt({
+    prepared,
+    nodeId: contract.nodeId,
+    progress: from?.at ?? 0,
+  });
+  const checks = [];
+  if (
+    !from ||
+    !through ||
+    through.at <= from.at ||
+    proofTimes.some((proof) => !proof) ||
+    initial?.node.kind !== 'state-sequence' ||
+    !initial.node.motion?.path
+  ) {
+    checks.push({
+      id: 'path-locomotion-window-resolves',
+      passed: false,
+      expected: {
+        nodeKind: 'state-sequence',
+        path: 'cubic-bezier-2d',
+        orderedProofIds: proofIds,
+      },
+      actual: {
+        nodeKind: initial?.node.kind ?? null,
+        path: initial?.node.motion?.path?.kind ?? null,
+        proofs: proofTimes.map((proof) => proof?.at ?? null),
+      },
+    });
+    return {passed: false, checks, measurements: []};
+  }
+  const fromFrame = Math.round(
+    from.at * Math.max(0, scene.durationInFrames - 1),
+  );
+  const throughFrame = Math.round(
+    through.at * Math.max(0, scene.durationInFrames - 1),
+  );
+  const samples = [];
+  for (let frame = fromFrame; frame <= throughFrame; frame += 1) {
+    const progress = frame / Math.max(1, scene.durationInFrames - 1);
+    const entry = resolvePreparedNodeAt({
+      prepared,
+      nodeId: contract.nodeId,
+      progress,
+    });
+    if (!entry || entry.node.kind !== 'state-sequence') continue;
+    const localCenter = applyMatrix(entry.localMatrix, {
+      x: entry.width * 0.5,
+      y: entry.height * 0.5,
+    });
+    const screenCenter = applyMatrix(entry.matrix, {
+      x: entry.width * 0.5,
+      y: entry.height * 0.5,
+    });
+    const state = resolveSequenceState({node: entry.node, progress});
+    samples.push({
+      frame,
+      progress,
+      x: localCenter.x / project.video.width,
+      y: localCenter.y / project.video.height,
+      screenCenter,
+      path: entry.pathMotion,
+      renderedHeadingDegrees:
+        Math.atan2(entry.localMatrix[1], entry.localMatrix[0]) *
+          180 / Math.PI +
+        initial.node.motion.path.orientation.forwardAngleDegrees,
+      stateId: state?.id ?? null,
+    });
+  }
+  const movingSegments = [];
+  for (let index = 1; index < samples.length; index += 1) {
+    const left = samples[index - 1];
+    const right = samples[index];
+    const dx = right.x - left.x;
+    const dy = right.y - left.y;
+    const pixelDx = dx * project.video.width;
+    const pixelDy = dy * project.video.height;
+    const length =
+      Math.hypot(pixelDx, pixelDy) /
+      Math.max(1, Math.min(project.video.width, project.video.height));
+    if (length <= 1e-7) continue;
+    const headingDegrees = Math.atan2(pixelDy, pixelDx) * 180 / Math.PI;
+    movingSegments.push({
+      frame: right.frame,
+      length,
+      headingDegrees,
+      renderedHeadingDegrees: right.renderedHeadingDegrees,
+      headingErrorDegrees: angleDifferenceDegrees(
+        headingDegrees,
+        right.renderedHeadingDegrees,
+      ),
+      sector: directionSectorFor(headingDegrees),
+    });
+  }
+  const totalTravel = movingSegments.reduce(
+    (sum, segment) => sum + segment.length,
+    0,
+  );
+  const sectors = [...new Set(movingSegments.map(({sector}) => sector))].sort(
+    (left, right) => left - right,
+  );
+  const maximumHeadingError = Math.max(
+    0,
+    ...movingSegments.map(({headingErrorDegrees}) => headingErrorDegrees),
+  );
+  const turnRates = samples.slice(1).map((sample, index) =>
+    angleDifferenceDegrees(
+      samples[index].renderedHeadingDegrees,
+      sample.renderedHeadingDegrees,
+    ) * project.video.fps,
+  );
+  const maximumTurnRate = Math.max(0, ...turnRates);
+  const follow = scene.camera?.follow;
+  const origin = {
+    x: project.video.width * 0.5,
+    y: project.video.height * 0.54,
+  };
+  const coverageSamples = samples.map((sample) => {
+    const camera = cameraStateAt(scene, sample.progress, project.video);
+    const left =
+      (0 - origin.x - camera.x) / camera.zoom + origin.x;
+    const right =
+      (project.video.width - origin.x - camera.x) / camera.zoom + origin.x;
+    const top =
+      (0 - origin.y - camera.y) / camera.zoom + origin.y;
+    const bottom =
+      (project.video.height - origin.y - camera.y) / camera.zoom + origin.y;
+    const viewport = {
+      left: left / project.video.width,
+      right: right / project.video.width,
+      top: top / project.video.height,
+      bottom: bottom / project.video.height,
+    };
+    const bounds = follow?.worldBounds;
+    const covered = Boolean(
+      bounds &&
+      viewport.left >= bounds.x - 1e-6 &&
+      viewport.right <= bounds.x + bounds.width + 1e-6 &&
+      viewport.top >= bounds.y - 1e-6 &&
+      viewport.bottom <= bounds.y + bounds.height + 1e-6
+    );
+    return {frame: sample.frame, viewport, covered};
+  });
+  const gait = inspectGait(project, {
+    ...contract,
+    kind: 'gait',
+  });
+  checks.push(
+    {
+      id: 'path-locomotion-samples-resolve',
+      passed: samples.length >= 2 && movingSegments.length >= 1,
+      expected: 'at least two samples and one moving segment',
+      actual: {
+        samples: samples.length,
+        movingSegments: movingSegments.length,
+      },
+    },
+    {
+      id: 'path-locomotion-travel',
+      passed: totalTravel + 1e-9 >= contract.minimumTravel,
+      expected: contract.minimumTravel,
+      actual: totalTravel,
+    },
+    {
+      id: 'path-locomotion-direction-sectors',
+      passed: sectors.length >= contract.minimumDirectionSectors,
+      expected: contract.minimumDirectionSectors,
+      actual: {count: sectors.length, sectors},
+    },
+    {
+      id: 'path-locomotion-heading',
+      passed:
+        movingSegments.length > 0 &&
+        maximumHeadingError <= contract.maximumHeadingErrorDegrees + 1e-6,
+      expected: {maximumHeadingErrorDegrees: contract.maximumHeadingErrorDegrees},
+      actual: {maximumHeadingErrorDegrees: maximumHeadingError},
+    },
+    {
+      id: 'path-locomotion-turn-rate',
+      passed:
+        maximumTurnRate <= contract.maximumTurnDegreesPerSecond + 1e-6,
+      expected: {
+        maximumTurnDegreesPerSecond: contract.maximumTurnDegreesPerSecond,
+      },
+      actual: {maximumTurnDegreesPerSecond: maximumTurnRate},
+    },
+    {
+      id: 'path-locomotion-camera-binding',
+      passed:
+        !contract.requireCameraFollow ||
+        (
+          follow?.targetNodeId === contract.nodeId &&
+          follow?.worldNodeId === contract.worldNodeId
+        ),
+      expected: contract.requireCameraFollow
+        ? {
+            targetNodeId: contract.nodeId,
+            worldNodeId: contract.worldNodeId,
+          }
+        : 'camera follow optional',
+      actual: follow ?? null,
+    },
+    {
+      id: 'path-locomotion-camera-coverage',
+      passed:
+        !contract.requireCameraFollow ||
+        (
+          coverageSamples.length > 0 &&
+          coverageSamples.every(({covered}) => covered)
+        ),
+      expected: 'camera viewport remains inside declared world bounds',
+      actual: {
+        failedFrames: coverageSamples
+          .filter(({covered}) => !covered)
+          .map(({frame}) => frame),
+      },
+    },
+    ...gait.checks,
+  );
+
+  const descriptor = prepared.descriptors.get(contract.nodeId);
+  const pathPolyline = samplePathPolyline(
+    initial.node.motion.path,
+    97,
+    descriptor.parentWidth,
+    descriptor.parentHeight,
+  );
+  const measurements = proofTimes.map((proof) => {
+    const frame = Math.round(
+      proof.at * Math.max(0, scene.durationInFrames - 1),
+    );
+    const progress = frame / Math.max(1, scene.durationInFrames - 1);
+    const entry = resolvePreparedNodeAt({
+      prepared,
+      nodeId: contract.nodeId,
+      progress,
+    });
+    const cameraMatrix = cameraMatrixAt({
+      scene,
+      progress,
+      video: project.video,
+    });
+    const parentEntry = descriptor.parentDescriptor
+      ? resolvePreparedNodeAt({
+          prepared,
+          nodeId: descriptor.parentDescriptor.node.id,
+          progress,
+        })
+      : null;
+    const parentMatrix = parentEntry?.localMatrix ?? identity();
+    const pathPoints = pathPolyline.map((point) =>
+      applyMatrix(
+        cameraMatrix,
+        applyMatrix(parentMatrix, {
+          x:
+            (initial.node.transform.x + point.x) *
+            descriptor.parentWidth,
+          y:
+            (initial.node.transform.y + point.y) *
+            descriptor.parentHeight,
+        }),
+      ),
+    );
+    const center = entry
+      ? applyMatrix(entry.matrix, {
+          x: entry.width * 0.5,
+          y: entry.height * 0.5,
+        })
+      : null;
+    return {
+      sceneId: scene.id,
+      proofTimeId: proof.id,
+      frame,
+      center,
+      startCenter: pathPoints[0],
+      endCenter: pathPoints.at(-1),
+      pathPoints,
+      headingDegrees: entry
+        ? Math.atan2(entry.localMatrix[1], entry.localMatrix[0]) *
+            180 / Math.PI +
+          initial.node.motion.path.orientation.forwardAngleDegrees
+        : null,
+      rotationDegrees: entry
+        ? Math.atan2(entry.localMatrix[1], entry.localMatrix[0]) *
+          180 / Math.PI
+        : null,
+      totalTravel,
+      directionSectors: sectors,
+      maximumHeadingErrorDegrees: maximumHeadingError,
+      maximumTurnDegreesPerSecond: maximumTurnRate,
+    };
+  });
+  return {
+    passed: checks.every(({passed}) => passed),
+    checks,
+    measurements,
+  };
+};
+
 export const inspectSpatialContract = async (
   project,
   contract,
@@ -1479,12 +1836,15 @@ export const inspectSpatialContract = async (
   if (contract.kind === 'travel-facing') {
     return inspectTravelFacing(executableProject, contract);
   }
+  if (contract.kind === 'path-locomotion') {
+    return inspectPathLocomotion(executableProject, contract);
+  }
   return {
     passed: false,
     checks: [{
       id: 'spatial-contract-kind',
       passed: false,
-      expected: ['grounding', 'continuity', 'gait', 'travel-facing'],
+      expected: ['grounding', 'continuity', 'gait', 'travel-facing', 'path-locomotion'],
       actual: contract.kind ?? null,
     }],
     measurements: [],
@@ -1572,7 +1932,8 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
     if (
       contract.kind === 'grounding' ||
       contract.kind === 'gait' ||
-      contract.kind === 'travel-facing'
+      contract.kind === 'travel-facing' ||
+      contract.kind === 'path-locomotion'
     ) {
       const scene = sceneById.get(contract.sceneId)?.scene;
       if (!scene) {
@@ -1588,7 +1949,13 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
       );
       const referenced = contract.kind === 'grounding'
         ? contract.proofTimeIds
-        : [contract.fromProofTimeId, contract.throughProofTimeId];
+        : contract.kind === 'path-locomotion'
+          ? [
+              contract.fromProofTimeId,
+              ...(contract.turnProofTimeIds ?? []),
+              contract.throughProofTimeId,
+            ]
+          : [contract.fromProofTimeId, contract.throughProofTimeId];
       for (const proofTimeId of referenced ?? []) {
         if (!proofIds.has(proofTimeId)) {
           issues.push({
@@ -1646,6 +2013,46 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
                 location,
               });
             }
+          }
+        }
+      }
+      if (contract.kind === 'path-locomotion') {
+        const sequence = scene.compositionPlan?.stateSequences?.find(
+          ({nodeId}) => nodeId === contract.nodeId,
+        );
+        const pathMotion = scene.compositionPlan?.pathMotions?.find(
+          ({nodeId}) => nodeId === contract.nodeId,
+        );
+        if (!sequence || !pathMotion) {
+          issues.push({
+            code: 'storyboard-path-locomotion-plan',
+            message: `二维路径契约 ${contract.id} 必须同时引用编译后的 path motion 与 state-sequence。`,
+            location,
+          });
+        } else {
+          const knownStateIds = new Set(sequence.states.map(({id}) => id));
+          if (
+            !contract.stateIds.every((stateId) => knownStateIds.has(stateId)) ||
+            !['loop', 'ping-pong'].includes(sequence.playback.mode)
+          ) {
+            issues.push({
+              code: 'storyboard-path-locomotion-cycle',
+              message: `二维路径契约 ${contract.id} 必须绑定当前循环状态家族中的至少两个状态。`,
+              location,
+            });
+          }
+          if (
+            contract.requireCameraFollow &&
+            (
+              pathMotion.cameraFollow?.targetNodeId !== contract.nodeId ||
+              pathMotion.cameraFollow?.worldNodeId !== contract.worldNodeId
+            )
+          ) {
+            issues.push({
+              code: 'storyboard-path-locomotion-camera',
+              message: `二维路径契约 ${contract.id} 的镜头跟随必须绑定同一目标和世界节点。`,
+              location,
+            });
           }
         }
       }
@@ -1723,6 +2130,22 @@ export const validateStoryboardSpatialContracts = (storyboard) => {
         });
       }
     }
+    for (const pathMotion of scene.compositionPlan?.pathMotions ?? []) {
+      if (
+        !contracts.some(
+          (contract) =>
+            contract.kind === 'path-locomotion' &&
+            contract.sceneId === scene.id &&
+            contract.nodeId === pathMotion.nodeId,
+        )
+      ) {
+        issues.push({
+          code: 'storyboard-path-locomotion-required',
+          message: `镜头 ${scene.id} 的二维路径角色 ${pathMotion.nodeId} 必须声明 path-locomotion 空间契约。`,
+          location: 'spatialContracts',
+        });
+      }
+    }
   }
   return issues;
 };
@@ -1745,6 +2168,9 @@ export const summarizeSpatialContracts = (project) => ({
     project.spatialContracts?.filter(({kind}) => kind === 'gait').length ?? 0,
   travelFacing:
     project.spatialContracts?.filter(({kind}) => kind === 'travel-facing')
+      .length ?? 0,
+  pathLocomotion:
+    project.spatialContracts?.filter(({kind}) => kind === 'path-locomotion')
       .length ?? 0,
 });
 
@@ -1786,13 +2212,30 @@ export const spatialContractDebugOverlay = ({
     measurement?.startCenter && measurement?.endCenter
       ? `<line x1="${measurement.startCenter.x}" y1="${measurement.startCenter.y}" x2="${measurement.endCenter.x}" y2="${measurement.endCenter.y}" stroke="${color}" stroke-width="8" marker-end="url(#travel-arrow)"/><circle cx="${measurement.center?.x ?? measurement.startCenter.x}" cy="${measurement.center?.y ?? measurement.startCenter.y}" r="12" fill="${color}"/>`
       : '';
+  const pathPolyline = measurement?.pathPoints?.length
+    ? `<polyline points="${measurement.pathPoints.map(({x, y}) => `${x},${y}`).join(' ')}" fill="none" stroke="#64d2ff" stroke-width="7" stroke-dasharray="18 12"/><circle cx="${measurement.center?.x ?? measurement.pathPoints[0].x}" cy="${measurement.center?.y ?? measurement.pathPoints[0].y}" r="14" fill="${color}"/>`
+    : '';
+  const headingLine =
+    measurement?.center &&
+    Number.isFinite(measurement.headingDegrees)
+      ? (() => {
+          const radians = measurement.headingDegrees * Math.PI / 180;
+          const length = Math.min(width, height) * 0.1;
+          return `<line x1="${measurement.center.x}" y1="${measurement.center.y}" x2="${measurement.center.x + Math.cos(radians) * length}" y2="${measurement.center.y + Math.sin(radians) * length}" stroke="#ffd60a" stroke-width="7" marker-end="url(#heading-arrow)"/>`;
+        })()
+      : '';
   return Buffer.from(`
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs><marker id="travel-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="${color}"/></marker></defs>
+      <defs>
+        <marker id="travel-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="${color}"/></marker>
+        <marker id="heading-arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#ffd60a"/></marker>
+      </defs>
       ${zones}
       ${surface ? `<polyline points="${surface}" fill="none" stroke="#64d2ff" stroke-width="7"/>` : ''}
       ${anchor}
       ${travelArrow}
+      ${pathPolyline}
+      ${headingLine}
       <rect x="16" y="16" width="${Math.min(width - 32, 1040)}" height="54" rx="10" fill="rgba(0,0,0,.78)" stroke="${color}" stroke-width="3"/>
       <text x="34" y="52" fill="white" font-size="25" font-family="sans-serif">${escapeXml(`${proof.contractId} · ${proof.kind} · ${proof.passed ? 'PASS' : 'FAIL'}`)}</text>
     </svg>

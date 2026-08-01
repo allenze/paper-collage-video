@@ -296,7 +296,8 @@ export const validateMotionDirection = (
         treatment.changeClass === 'camera-change' ||
         treatment.changeClass === 'depth-parallax' ||
         treatment.motion?.preset === 'camera' ||
-        treatment.motion?.preset === 'parallax-camera',
+        treatment.motion?.preset === 'parallax-camera' ||
+        treatment.motion?.cameraFollow,
     );
     totalCameraTreatments += cameraTreatments.length;
     const ambientTreatments = treatmentEntries.filter(
@@ -469,14 +470,18 @@ const sceneCoverage = (scene) => {
       (treatment) => treatment.motion?.kind === 'state-sequence',
     ),
     continuousTreatmentIds: treatmentIds(
-      (treatment) => treatment.motion?.kind === 'continuous-transform',
+      (treatment) =>
+        ['continuous-transform', 'path-locomotion'].includes(
+          treatment.motion?.kind,
+        ),
     ),
     cameraTreatmentIds: treatmentIds(
       (treatment) =>
         treatment.changeClass === 'camera-change' ||
         treatment.changeClass === 'depth-parallax' ||
         treatment.motion?.preset === 'camera' ||
-        treatment.motion?.preset === 'parallax-camera',
+        treatment.motion?.preset === 'parallax-camera' ||
+        treatment.motion?.cameraFollow,
     ),
     ambientTreatmentIds: treatmentIds(
       (treatment) =>

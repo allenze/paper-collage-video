@@ -167,6 +167,11 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'signed-travel-direction-correct',
   'travel-facing-readable',
   'travel-monotonic-clean',
+  'path-travel-clean',
+  'path-heading-readable',
+  'turn-continuity-clean',
+  'camera-follow-coverage-clean',
+  'locomotion-cycle-bound',
   'canonical-frame-unique',
   'clean-plate-clear',
   'interior-state-aligned',
@@ -251,6 +256,14 @@ const COMPOSITE_PROFILES = {
     'travel-monotonic-clean',
     'final-composition-readable',
   ],
+  'spatial-path-locomotion': [
+    'path-travel-clean',
+    'path-heading-readable',
+    'turn-continuity-clean',
+    'camera-follow-coverage-clean',
+    'locomotion-cycle-bound',
+    'final-composition-readable',
+  ],
 };
 
 const requiredChecksForSpatialContract = (contract) => {
@@ -262,6 +275,9 @@ const requiredChecksForSpatialContract = (contract) => {
   }
   if (contract.kind === 'travel-facing') {
     return COMPOSITE_PROFILES['spatial-travel-facing'];
+  }
+  if (contract.kind === 'path-locomotion') {
+    return COMPOSITE_PROFILES['spatial-path-locomotion'];
   }
   return [
     ...COMPOSITE_PROFILES['spatial-grounding'],
@@ -1128,12 +1144,15 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
           nodeId: contract.subjectNodeId,
           proofTimeIds: contract.proofTimeIds,
         }]
-      : contract.kind === 'gait' || contract.kind === 'travel-facing'
+      : ['gait', 'travel-facing', 'path-locomotion'].includes(contract.kind)
         ? [{
             sceneId: contract.sceneId,
             nodeId: contract.nodeId,
             proofTimeIds: [
               contract.fromProofTimeId,
+              ...(contract.kind === 'path-locomotion'
+                ? contract.turnProofTimeIds
+                : []),
               contract.throughProofTimeId,
             ],
           }]
@@ -1158,8 +1177,16 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
             contract.frontOcclusion?.nodeId,
           ].filter(Boolean),
         }]
-      : contract.kind === 'gait' || contract.kind === 'travel-facing'
-        ? [{sceneId: contract.sceneId, nodeIds: [contract.nodeId]}]
+      : ['gait', 'travel-facing', 'path-locomotion'].includes(contract.kind)
+        ? [{
+            sceneId: contract.sceneId,
+            nodeIds: [
+              contract.nodeId,
+              ...(contract.kind === 'path-locomotion'
+                ? [contract.worldNodeId]
+                : []),
+            ],
+          }]
         : [
             {
               sceneId: contract.from.sceneId,

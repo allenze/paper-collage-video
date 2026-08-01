@@ -19,6 +19,7 @@ import {
   compileMotionContract,
   validateCompiledMotionContract,
 } from './motion-contract-lib.mjs';
+import {validatePathMotion} from '../src/pathMotion.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -37,8 +38,9 @@ export const CHANGE_CLASSES = [
   'depth-layer-separation',
   'decorative-field',
   'world-travel',
+  'path-travel',
 ];
-export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field'];
+export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field', 'path-locomotion'];
 export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'traverse', 'sway', 'parallax-camera', 'scroll-world-x'];
 export const STATE_FACINGS = ['left', 'right', 'front', 'back', 'neutral'];
 export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'rise-drift', 'burst', 'orbit'];
@@ -204,6 +206,10 @@ const routeForChangeClass = {
     composition: 'looping-environment',
     proof: true,
   },
+  'path-travel': {
+    motion: 'path-locomotion',
+    proof: true,
+  },
 };
 
 const addIssue = (issues, code, message, location) =>
@@ -212,6 +218,7 @@ const addIssue = (issues, code, message, location) =>
 export const treatmentRiskScore = (treatment) =>
   (RISK_SCORE[treatment?.semanticRisk] ?? 0) * 10 +
   (treatment?.motion?.kind === 'state-sequence' ? 5 : 0) +
+  (treatment?.motion?.kind === 'path-locomotion' ? 6 : 0) +
   (treatment?.composition?.pattern === 'registered-depth-stack' ? 6 : 0) +
   (treatment?.composition?.pattern === 'registered-environment' ? 4 : 0) +
   (treatment?.composition?.pattern === 'looping-environment' ? 5 : 0) +
@@ -251,6 +258,11 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
     coverage.push('motion:physical-rise');
   }
   if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
+  if (treatment.motion?.kind === 'path-locomotion') {
+    coverage.push('motion:path-locomotion');
+    coverage.push('proof:path-locomotion');
+    if (treatment.motion.cameraFollow) coverage.push('camera:path-follow');
+  }
   if (treatment.motion?.kind === 'motif-field') coverage.push('motion:motif-field');
   if (treatment.graphic?.role === 'visual-sfx') coverage.push('graphic:visual-sfx');
   if (treatment.motion?.preset === 'scroll-world-x') {
@@ -417,7 +429,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (!CONTINUOUS_PRESETS.includes(motion.preset)) {
       addIssue(issues, 'treatment-motion-preset', `未知 continuous preset：${motion.preset}`, `${location}.motion.preset`);
     }
-    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
+    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', 'path', 'cameraFollow', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'continuous-transform 不得夹带 state-sequence 字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'state-sequence') {
@@ -470,6 +482,75 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (motion.preset !== undefined) {
       addIssue(issues, 'treatment-motion-mixed', 'state-sequence 不得声明 continuous preset。', `${location}.motion.preset`);
     }
+    if (motion.path !== undefined || motion.cameraFollow !== undefined) {
+      addIssue(issues, 'treatment-motion-mixed', 'state-sequence 的二维路径必须由同目标的独立 path-locomotion treatment 声明。', `${location}.motion`);
+    }
+  } else if (motion.kind === 'path-locomotion') {
+    for (const issue of validatePathMotion(motion.path)) {
+      addIssue(
+        issues,
+        issue.code,
+        issue.message,
+        `${location}.motion.${issue.location}`,
+      );
+    }
+    if (!Object.hasOwn(motion, 'cameraFollow')) {
+      addIssue(
+        issues,
+        'treatment-path-camera-decision',
+        'path-locomotion 必须显式声明 cameraFollow（对象或 null）。',
+        `${location}.motion.cameraFollow`,
+      );
+    }
+    if (
+      motion.cameraFollow !== null &&
+      (
+        !nonEmpty(motion.cameraFollow?.targetNodeId) ||
+        motion.cameraFollow.targetNodeId !== treatment.targetId ||
+        !nonEmpty(motion.cameraFollow?.worldNodeId)
+      )
+    ) {
+      addIssue(
+        issues,
+        'treatment-path-camera-binding',
+        'cameraFollow 必须跟随当前 path-locomotion target，并声明世界节点。',
+        `${location}.motion.cameraFollow`,
+      );
+    }
+    if (motion.path?.progress?.[0]?.at !== beatAt) {
+      addIssue(
+        issues,
+        'treatment-path-start-time',
+        'path-locomotion 所属 beat.at 必须等于 path.progress 的第一个 at。',
+        `${location}.motion.path.progress[0].at`,
+      );
+    }
+    if (
+      [
+        'preset',
+        'poseFamilyId',
+        'stateId',
+        'facing',
+        'visualChange',
+        'playback',
+        'transition',
+        ...STATE_PLAYBACK_FIELDS,
+        'action',
+        'durationSeconds',
+        'distribution',
+        'count',
+        'cycles',
+        'bounds',
+        'exclusionZones',
+      ].some((key) => motion[key] !== undefined)
+    ) {
+      addIssue(
+        issues,
+        'treatment-path-mixed',
+        'path-locomotion 不得夹带连续 preset、状态序列、显隐或 motif 字段。',
+        `${location}.motion`,
+      );
+    }
   } else if (motion.kind === 'visibility-transition') {
     if (!['show', 'hide'].includes(motion.action)) {
       addIssue(issues, 'treatment-visibility-action', 'visibility-transition.action 必须是 show 或 hide。', `${location}.motion.action`);
@@ -480,7 +561,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (motion.transition === 'cut' ? motion.durationSeconds !== 0 : !(Number.isFinite(motion.durationSeconds) && motion.durationSeconds > 0)) {
       addIssue(issues, 'treatment-visibility-duration', 'cut 时长必须为 0，其他 visibility-transition 时长必须大于 0。', `${location}.motion.durationSeconds`);
     }
-    if (['preset', 'poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
+    if (['preset', 'poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'path', 'cameraFollow', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'visibility-transition 不得夹带连续或状态序列字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'motif-field') {
@@ -520,7 +601,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         }
       }
     }
-    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds'].some((key) => motion[key] !== undefined)) {
+    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds', 'path', 'cameraFollow'].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'motif-field 不得夹带状态或显隐字段。', `${location}.motion`);
     }
   } else if (motion && Object.keys(motion).some((key) => key !== 'kind')) {
@@ -758,6 +839,7 @@ const compileScene = (scene) => {
   const relationships = new Map();
   const stateFamilies = new Map();
   const continuousMotions = [];
+  const pathMotions = new Map();
   const visibilityEvents = [];
   const motifFields = [];
   const graphics = [];
@@ -816,6 +898,31 @@ const compileScene = (scene) => {
           at: beat.at,
           proofTimeId: treatment.proofTimeId ?? null,
         });
+      }
+      if (treatment.motion.kind === 'path-locomotion') {
+        const compiledPath = {
+          id: treatment.id,
+          nodeId: treatment.targetId,
+          path: treatment.motion.path,
+          cameraFollow: treatment.motion.cameraFollow,
+          at: beat.at,
+          proofTimeId: treatment.proofTimeId ?? null,
+        };
+        const prior = pathMotions.get(treatment.targetId);
+        if (
+          prior &&
+          JSON.stringify(prior) !== JSON.stringify(compiledPath)
+        ) {
+          throw new Error(
+            `二维路径 ${scene.id}::${treatment.targetId} 在同一镜头中定义不一致。`,
+          );
+        }
+        if (prior) {
+          throw new Error(
+            `二维路径 ${scene.id}::${treatment.targetId} 只能定义一次。`,
+          );
+        }
+        pathMotions.set(treatment.targetId, compiledPath);
       }
       if (treatment.motion.kind === 'visibility-transition') {
         visibilityEvents.push({
@@ -947,6 +1054,17 @@ const compileScene = (scene) => {
   const highestRisk = [...treatments].sort((left, right) =>
     treatmentRiskScore(right) - treatmentRiskScore(left) || left.id.localeCompare(right.id),
   )[0] ?? null;
+  for (const pathMotion of pathMotions.values()) {
+    if (
+      ![...stateFamilies.values()].some(
+        ({nodeId}) => nodeId === pathMotion.nodeId,
+      )
+    ) {
+      throw new Error(
+        `二维路径 ${scene.id}::${pathMotion.nodeId} 必须与同一目标的 state-sequence 状态家族组合，不能移动冻结单帧。`,
+      );
+    }
+  }
   const compositionPlan = {
     patterns: [...patterns].sort(),
     relationships: [...relationships.values()].sort((left, right) => left.id.localeCompare(right.id)),
@@ -965,6 +1083,9 @@ const compileScene = (scene) => {
       })
       .sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
     continuousMotions: continuousMotions.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
+    pathMotions: [...pathMotions.values()].sort((left, right) =>
+      left.nodeId.localeCompare(right.nodeId),
+    ),
     visibilityEvents: visibilityEvents.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     motifFields: motifFields.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     graphics: graphics.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
@@ -1056,13 +1177,15 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
     }))
     .sort((left, right) => left.poseFamilyId.localeCompare(right.poseFamilyId));
   const uniqueContinuousTargets = new Set(
-    treatments.filter(({motion}) => motion.kind === 'continuous-transform').map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
+    treatments.filter(({motion}) =>
+      ['continuous-transform', 'path-locomotion'].includes(motion.kind),
+    ).map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
   );
   const uniqueLocalMotionTargets = new Set(
     treatments
       .filter(
         ({motion, graphic}) =>
-          ['continuous-transform', 'visibility-transition', 'motif-field'].includes(
+          ['continuous-transform', 'path-locomotion', 'visibility-transition', 'motif-field'].includes(
             motion.kind,
           ) || Boolean(graphic),
       )
@@ -1548,6 +1671,7 @@ export const validateCompiledDirecting = (
 };
 
 const hasVisibleNodeMotion = (node) => {
+  if (node?.motion?.path) return true;
   if (node?.motion?.idle && node.motion.idle.preset !== 'still' && node.motion.idle.intensity > 0) return true;
   const frames = node?.motion?.keyframes ?? [];
   const moves = frames.length >= 2 && ['offsetX', 'offsetY', 'scale', 'rotation', 'opacity'].some((property) => {
@@ -1684,6 +1808,49 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
         'directing-canonical-container-drift',
         `容器机制 ${planned.groupId} 与编译计划不一致。`,
         `${location}.composition.nodes#${planned.groupId}`,
+      );
+    }
+  }
+  for (const planned of storyboardScene?.compositionPlan?.pathMotions ?? []) {
+    const node = nodes.get(planned.nodeId);
+    if (!node) {
+      addIssue(
+        issues,
+        'directing-path-target-missing',
+        `二维路径目标不存在：${planned.nodeId}。`,
+        `${location}.composition.nodes#${planned.nodeId}`,
+      );
+      continue;
+    }
+    if (derivationOnlyNodeIds.has(planned.nodeId)) {
+      addIssue(
+        issues,
+        'directing-derivation-only-target',
+        `二维路径不能由 derivation-only 节点 ${planned.nodeId} 履行。`,
+        `${location}.composition.nodes#${planned.nodeId}`,
+      );
+      continue;
+    }
+    if (
+      node.kind !== 'state-sequence' ||
+      JSON.stringify(node.motion?.path) !== JSON.stringify(planned.path)
+    ) {
+      addIssue(
+        issues,
+        'directing-path-motion-drift',
+        `二维路径 ${planned.nodeId} 与编译计划不一致。`,
+        `${location}.composition.nodes#${planned.nodeId}.motion.path`,
+      );
+    }
+    if (
+      JSON.stringify(scene.camera?.follow ?? null) !==
+      JSON.stringify(planned.cameraFollow)
+    ) {
+      addIssue(
+        issues,
+        'directing-path-camera-drift',
+        `二维路径 ${planned.nodeId} 的 camera follow 与编译计划不一致。`,
+        `${location}.camera.follow`,
       );
     }
   }

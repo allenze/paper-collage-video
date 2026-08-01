@@ -38,6 +38,10 @@ import {
 import {resolveMotifFieldInstances, resolveMotifFieldMotion} from './motifField.mjs';
 import {resolveEmphasisState, resolveIdleState, resolveMotionState, resolveVisibilityState} from './motion';
 import {resolveParallaxState} from './parallax.mjs';
+import {
+  resolveCameraFollowAtFrame,
+  resolvePathMotionAtFrame,
+} from './pathMotion.mjs';
 import {resolveSceneTransitionPresentation} from './sceneTimeline.mjs';
 import {resolveSequenceLayers} from './stateSequence';
 import {SubtitleOverlay} from './SubtitleOverlay';
@@ -128,6 +132,14 @@ const composeNodeTransform = ({
   worldAnchorOffsetX?: number;
 }) => {
   const authored = resolveMotionState(node.motion.keyframes, progress);
+  const pathMotion = resolvePathMotionAtFrame({
+    pathMotion: node.motion.path,
+    frame,
+    durationInFrames: Math.max(1, Math.round(durationSeconds * fps)),
+    fps,
+    parentWidth: parent.width,
+    parentHeight: parent.height,
+  });
   const idle = resolveIdleState({
     idle: node.motion.idle,
     frame,
@@ -158,7 +170,7 @@ const composeNodeTransform = ({
     width,
     height,
     opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * emphasis.opacity * visibility.opacity,
-    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x + worldAnchorOffsetX}px, ${(authored.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
+    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + pathMotion.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x + worldAnchorOffsetX}px, ${(authored.y + pathMotion.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + pathMotion.rotationDegrees + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
   };
 };
 
@@ -919,13 +931,19 @@ const cameraValue = ({frame, durationInFrames, keyframes, property, fallback}: {
 
 export const ReplicaChapterScene = ({scene, narrationVolume, theme, editorial}: {scene: NormalizedProjectScene; narrationVolume: number; theme: ProjectTheme; editorial: EditorialSystem}) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const progress = Math.max(0, Math.min(1, frame / Math.max(1, scene.durationInFrames - 1)));
   const durationSeconds = scene.durationInFrames / fps;
   const cameraFrames = scene.camera.keyframes && scene.camera.keyframes.length >= 2 ? [...scene.camera.keyframes].sort((a, b) => a.at - b.at) : cameraDefaults(scene.camera.preset, scene.camera.intensity);
-  const cameraZoom = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'zoom', fallback: 1});
-  const cameraX = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'x', fallback: 0});
-  const cameraY = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'y', fallback: 0});
+  const followedCamera = resolveCameraFollowAtFrame({
+    scene,
+    video: {width, height},
+    frame,
+    fps,
+  });
+  const cameraZoom = followedCamera?.zoom ?? cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'zoom', fallback: 1});
+  const cameraX = followedCamera?.x ?? cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'x', fallback: 0});
+  const cameraY = followedCamera?.y ?? cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'y', fallback: 0});
   const boundary = resolveSceneTransitionPresentation({transition: scene.enterTransition, frame});
   const surfaceTexture = scene.appearance?.surfaceTexture ?? (
     theme.surface.texture

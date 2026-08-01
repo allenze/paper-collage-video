@@ -56,6 +56,16 @@ checks differ. The content sheet canvas is the registered cell canvas
 multiplied by its declared grid. It is one complete provider root, never one
 request per fill state.
 
+For `path-locomotion`, the route, heading, camera follow, and aspect-ratio
+adaptation are runtime behavior and never image-provider work. Generate only
+the smallest complete registered locomotion family needed for the cycle,
+normally one 2×2 four-phase sheet with one canonical forward axis. Reuse those
+same registered cells at every path heading through tangent rotation. Do not
+request up/down/left/right/diagonal copies unless a real asymmetric semantic
+change makes rotation invalid. This preserves identity and converts eight
+directional variants into one provider root plus deterministic local
+derivatives.
+
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",

@@ -26,6 +26,7 @@ Build an editable video while keeping the human in charge of concept, style/voic
 - Provider discovery, confirmation, change, or output recording: [references/providers.md](references/providers.md)
 - Duration, scenes, rhythmic storyboard, or production-profile planning: [references/story-planning.md](references/story-planning.md)
 - Per-beat animation choice, effect routing, pose families, graphics, or directing budget: [references/motion-directing.md](references/motion-directing.md)
+- Arbitrary 2D subject travel, tangent auto-orientation, bound locomotion loops, or world-bounded camera follow: [references/path-locomotion-2d.md](references/path-locomotion-2d.md)
 - Whole-film action grammar, beat performance roles, motion approval fingerprints, or motion-language-card review: [references/motion-contract-v1.md](references/motion-contract-v1.md)
 - Any rear/subject/front separation, relative layer motion, source package, reveal envelope, or oversized seamless travelling environment: [references/layer-complete-assets.md](references/layer-complete-assets.md)
 - Any rigid vessel/frame with changing internal contents, fill levels, gauges, cavities, duplicated surfaces, or container-state alignment: [references/canonical-containers.md](references/canonical-containers.md)
@@ -66,6 +67,7 @@ At `capability-review`, use the current host model only to prepare a provisional
    - Classify each beat's visible change and author orthogonal `treatments` for motion, persistent visibility, composition relationship, graphic mechanism, semantic risk, importance, and necessity.
    - Before rear/subject/front source generation, read `layer-complete-assets.md`; choose `rigid-locked` or `bounded-relative`; author the stable source package, complete layer roles, depth order, source strategy, and three responsive reveal envelopes. `registered-depth-stack` only for a truly layer-complete finite family — an opaque flat master is never a source for relative member motion.
    - For a tracked subject traveling through a persistent horizontal world, route `world-travel` to `looping-environment` plus `scroll-world-x`; author ordered far/mid/ground/near strip intents and before/seam/after proof times; declare either an `activeFrom` cue or a complete `frozen=true` world lock.
+   - For a state-sequence subject traveling through arbitrary two-dimensional directions in one coherent finite world, read `path-locomotion-2d.md`. Author one independent `path-locomotion` treatment with `changeClass=path-travel`, one matching looping state family, one `path-locomotion` spatial contract, and an explicit `cameraFollow` object or `null`. Never duplicate the route as camera keyframes or generate eight directional pose families when tangent rotation preserves the silhouette.
    - Never hand-author compiler-derived `motionContract`, summaries, fingerprints, source-package totals, style-proof plans, sheet grids, or repeated world copies. Every scene needs at least three ordered beats and three proof moments, including a final state after `at=0.82`. `project:storyboard` rejects motion-language inconsistency, budget overflow, and `profilePromise` under-delivery.
 
    **Canonical containers**
@@ -77,11 +79,12 @@ At `capability-review`, use the current host model only to prepare a provisional
    - Never render dialogue, exposition, or narration as speech balloons in generated images — spoken content belongs to audio plus subtitles. A rare, short, editable `graphic.role=visual-sfx` typography node may reinforce a discrete impact/motion sound only when it binds the same beat's `soundCue`, stays within the Profile's per-scene count/duration range, begins hidden, and has explicit show/emphasis/hide events. Environmental sound (wind, rain, traffic, crowd) stays audio-only — never turn it into persistent decorative words.
 
    **Spatial contracts**
-   - In the same pass, add root `spatialContracts[]` whenever a hero must touch a surface, stay locked while seated, clear subtitles, pass behind/in front of a named layer, preserve a causal setup across adjacent scenes, sustain locomotion through a proof window, or move horizontally while a registered pose is active.
+   - In the same pass, add root `spatialContracts[]` whenever a hero must touch a surface, stay locked while seated, clear subtitles, pass behind/in front of a named layer, preserve a causal setup across adjacent scenes, sustain locomotion through a proof window, move horizontally while a registered pose is active, or follow a curved two-dimensional route.
    - Grounding: binds the real subject anchor (prefer a registered state anchor), explicit support polyline, tolerances, proof ids, optional foreground paint relation, optional subtitle clearance.
    - Continuity: binds adjacent endpoints, world/subject/prop families, framing/camera tolerances, and both scenes' grounding contracts.
    - Gait: the generic locomotion-cadence contract for walking/running/flying/swimming — binds at least two registered states, minimum changes per second, and whether cycling must continue through the window end.
    - `travel-facing`: binds the ordered proof window, signed horizontal direction, minimum travel, exact expected facing, and rationale. Every `traverse`-preset state-sequence target requires one plus a matching `gait` contract for the same scene/node, including intentional reverse or sideways-looking travel — never merely because an in-place pose uses `settle`.
+   - `path-locomotion`: binds one cubic route, start/turn/end proofs, the registered locomotion states and cadence, minimum travel and direction-sector coverage, heading-error and turn-rate limits, plus the exact path/camera/world relation. It replaces separate `travel-facing` and `gait` records for that same route because it proves both inside one contract.
 
 6. If the compiled storyboard preserves the approved scenario's exact state families and registered source packages and stays inside its complete expected-call count, treat the prior card selection as the attributable approval; do not ask again. Write one selection JSON containing `scenarioDecision`, `planDecision`, `budgetDecision`, the compiled `sourcePackageDecision`, and provider selections copied exactly from the approved card, then run:
 
@@ -143,6 +146,7 @@ At `asset-production`:
 
    **Node motion mechanics**
    - Implement the compiled plan exactly: node keyframes use parent-normalized additive `offsetX`/`offsetY`; absolute placement stays in `transform.x`/`transform.y`; only camera keyframes retain pixel `x`/`y`.
+   - A compiled `path-locomotion` target is one `state-sequence` whose `motion.path` alone owns additive `x/y` and path-tangent rotation. Keep ordinary keyframe `offsetX/offsetY/rotation` absent, static rotation at zero, and idle limited to `still|breathe`; bind the independently compiled looping state schedule to the same target. When camera follow is authored, use one oversized top-level world node and let `camera.follow` consume the same resolved path.
    - Continuous treatments need real keyframe/idle motion on the named target: `traverse` needs a large world-relative path, `sway` needs the sway idle primitive plus a bottom-biased motion pivot, `parallax-camera` needs `camera.parallax.enabled=true`, visible camera movement, and at least two distinct node depths.
    - Never lift a subject merely to clear subtitles: its alpha-tight visible bounds must clear the active subtitle exclusion zone while its declared foot/seat anchor still meets the support surface.
 

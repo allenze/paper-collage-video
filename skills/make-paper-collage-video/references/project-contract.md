@@ -129,6 +129,15 @@ full `fingerprint` covers exact execution. Do not restore the superseded
 `motion-contract-v1.md` for approval, revision, runtime, and whole-film quality
 rules.
 
+`node.motion.path` is the first-class finite 2D route primitive. It uses one or
+more parent-normalized cubic Bézier segments, an arc-length progress schedule,
+and path-tangent orientation with a canonical source-forward angle, smoothing,
+and a maximum turn rate. It is valid only on a `state-sequence`; ordinary
+keyframes may not compete for x/y/rotation, static rotation remains zero, and
+idle is restricted to `still|breathe`. Geometry resolves against physical
+parent width/height so 16:9, 9:16, and 1:1 preserve truthful tangent heading.
+Read `path-locomotion-2d.md` for authoring and proof.
+
 A top-level `supported-subject` or `registered-depth-stack` group may explicitly
 declare `renderParticipation=derivation-only` when it exists only to bind a
 registered technical source family. The renderer omits that complete subtree;
@@ -188,6 +197,13 @@ its exact rear/subject/front children own strictly increasing depth and may have
 bounded relative motion because their complete source package has been proven
 against responsive reveal envelopes.
 
+`camera.follow` is the optional camera half of path locomotion. It binds one
+top-level path target and one top-level oversized world node, normalized
+framing, look-ahead, smoothing, zoom, and normalized world bounds. Runtime
+samples the target's exact resolved path and clamps the camera viewport inside
+that world. It is mutually exclusive with camera keyframes and must not be
+approximated by duplicating the subject route.
+
 `motif-field` is a first-class decorative node. It owns reviewed motif sources, fixed seed, bounded count, distribution, internal motion preset/cycles, base size, variation ranges, required normalized `bounds`, and explicit rectangle/ellipse `exclusionZones`. Runtime placement uses bounded deterministic rejection with motif-footprint clearance, so title, face, and explanatory-data zones are reproducibly protected. One field expands at most 64 instances; all fields in one scene may total at most 192. `fall-drift`, `rise-drift`, and `burst` hide their wrap point, while `drift` and `orbit` close geometrically; `cycles` affects every preset. `rise-drift` computes a deterministic monotonically upward bottom-to-top lifecycle with slight expansion. Configuration, exclusions, source files, and loop proof are fingerprinted. A motif field is not a semantic crowd, identity family, or substitute for generated pose states.
 
 `world-strip` is valid only as a direct child of `looping-environment`. One
@@ -224,7 +240,7 @@ chase must never reverse: it samples every authored `offsetX` keyframe between i
 proofs, permits a final zero-motion hold, and rejects any backward segment.
 
 Root `spatialContracts[]` is the executable spatial-truth layer shared by the
-Storyboard and Project. It has four kinds:
+Storyboard and Project. It has five kinds:
 
 - `grounding` binds one scene, subject, support, at least two proof ids, a
   normalized or registered state anchor, an explicit support polyline, gap and
@@ -250,6 +266,13 @@ Storyboard and Project. It has four kinds:
   have this contract plus a matching `gait` contract for the same scene and
   node, so legal metadata alone cannot approve a backward-facing or frozen
   moving character. An in-place `settle` does not require a travel contract.
+- `path-locomotion` binds one state-sequence and coherent world, ordered
+  start/turn/end proofs, requested locomotion states and cadence, minimum
+  physical travel and 8-sector direction coverage, heading-error and turn-rate
+  ceilings, and optional required camera follow. It samples every frame and
+  proves route, tangent, turn, state loop, camera binding, and viewport/world
+  coverage together; do not add redundant `travel-facing` or `gait` contracts
+  for the same 2D path.
 
 `project:storyboard` copies the array into `project.json`; project validation
 rejects drift. The directing fingerprint, composition-proof target, runtime
@@ -351,7 +374,7 @@ before/at/after frames.
   pose-sheet grids. `project:storyboard` deterministically compiles those
   derived fields and default transition recipes, then rejects drift.
 - Scene id, blueprint, compiled `compositionPlan`, proof ids/times/assertions/stateAssertions, and beat ids must match the approved storyboard. Beat-bound, treatment-bound, and state-bound proof intent is immutable.
-- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue, optional terminal `activeUntil` lock, or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; when `activeUntil` is present the completed phase remains locked thereafter, otherwise the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence; a terminally locked travelling world must provide both its ordinary world-motion evidence and `world-lock-clean`. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled generic graphic target must exist as the declared editable node. A compiled `role=visual-sfx` graphic must be editable typography with exact text, start hidden, bind the same beat and discrete `soundCue`, and execute synchronized `fade-scale` show, declared emphasis, and `fade-scale` hide around its Profile-bounded duration. Every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
+- A compiled continuous target must exist and have visible keyframe/idle motion. `parallax-camera` additionally requires enabled camera parallax and a real depth spread. `scroll-world-x` instead requires one matching `looping-environment` whose axis, direction, distance, speed bounds, ground/tracked ids, seam proof ids, start phase, optional normalized `activeFrom` cue, optional terminal `activeUntil` lock, or `frozen=true` lock, and ordered strip roles/depths exactly match the compiler-owned plan. Before `activeFrom`, the world phase is held; when `activeUntil` is present the completed phase remains locked thereafter, otherwise the full authored travel completes by scene end. A frozen world holds phase throughout and must provide `world-lock-clean` evidence; a terminally locked travelling world must provide both its ordinary world-motion evidence and `world-lock-clean`. A compiled path target must exist as one matching `state-sequence` with exact `motion.path`, independent compiled loop playback, explicit camera-follow decision, and one matching `path-locomotion` spatial contract; ordinary x/y/rotation keyframes are forbidden on that target. A compiled `motif-field` target must exist with the exact preset, distribution, count, cycles, bounds, and exclusions. A compiled visibility target must have a matching persistent event and truthful initial state; a compiled generic graphic target must exist as the declared editable node. A compiled `role=visual-sfx` graphic must be editable typography with exact text, start hidden, bind the same beat and discrete `soundCue`, and execute synchronized `fade-scale` show, declared emphasis, and `fade-scale` hide around its Profile-bounded duration. Every compiled state family must exist as one matching `state-sequence` node including its resolved playback plan.
 - Each scene has establish, action/peak, and final proof moments; final remains at or after `0.82` and proofs stay outside scene-boundary intervals.
 - A final state assertion must resolve to one fully opaque state, remain outside any state crossfade for at least that transition duration, and preserve the asserted state through the scene end.
 - Every node keyframe path starts at `0`, ends at `1`, and authors at least one of `offsetX`, `offsetY`, `scale`, `rotation`, or `opacity`; legacy node-keyframe `x`/`y` is invalid rather than ambiguously interpreted.

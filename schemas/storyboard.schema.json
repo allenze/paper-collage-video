@@ -283,12 +283,12 @@
         "targetId": {"type": "string", "minLength": 1},
         "importance": {"enum": ["hero", "supporting", "ambient"]},
         "necessity": {"enum": ["required", "enhancement"]},
-        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold", "visibility-change", "depth-parallax", "depth-layer-separation", "decorative-field", "world-travel"]},
+        "changeClass": {"enum": ["ambient-motion", "camera-change", "pose-change", "prop-state-change", "contact-change", "shared-boundary", "graphic-emphasis", "mechanism-state", "static-hold", "visibility-change", "depth-parallax", "depth-layer-separation", "decorative-field", "world-travel", "path-travel"]},
         "motion": {
           "type": "object",
           "required": ["kind"],
           "properties": {
-            "kind": {"enum": ["static", "continuous-transform", "state-sequence", "visibility-transition", "motif-field"]},
+            "kind": {"enum": ["static", "continuous-transform", "state-sequence", "visibility-transition", "motif-field", "path-locomotion"]},
             "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera", "scroll-world-x", "fall-drift", "rise-drift", "burst", "orbit"]},
             "poseFamilyId": {"type": "string", "minLength": 1},
             "stateId": {"type": "string", "minLength": 1},
@@ -310,6 +310,15 @@
               "uniqueItems": true,
               "items": {"type": "string", "minLength": 1}
             },
+            "path": {
+              "$ref": "composition.schema.json#/$defs/pathMotion"
+            },
+            "cameraFollow": {
+              "oneOf": [
+                {"type": "null"},
+                {"$ref": "project.schema.json#/$defs/cameraFollow"}
+              ]
+            },
             "bounds": {"$ref": "#/$defs/normalizedRectangle"},
             "exclusionZones": {
               "type": "array",
@@ -321,6 +330,10 @@
             {
               "if": {"properties": {"kind": {"const": "state-sequence"}}},
               "then": {"required": ["facing"]}
+            },
+            {
+              "if": {"properties": {"kind": {"const": "path-locomotion"}}},
+              "then": {"required": ["path", "cameraFollow"]}
             }
           ],
           "additionalProperties": false
@@ -464,7 +477,7 @@
     },
     "compositionPlan": {
       "type": "object",
-      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "visibilityEvents", "motifFields", "graphics", "layerStacks", "loopingEnvironments", "canonicalContainers"],
+      "required": ["patterns", "relationships", "stateSequences", "continuousMotions", "pathMotions", "visibilityEvents", "motifFields", "graphics", "layerStacks", "loopingEnvironments", "canonicalContainers"],
       "properties": {
         "patterns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "canonical-container"]}},
         "relationships": {
@@ -484,6 +497,7 @@
         },
         "stateSequences": {"type": "array", "items": {"$ref": "#/$defs/stateSequence"}},
         "continuousMotions": {"type": "array", "items": {"$ref": "#/$defs/continuousMotion"}},
+        "pathMotions": {"type": "array", "items": {"$ref": "#/$defs/pathMotionPlan"}},
         "visibilityEvents": {"type": "array", "items": {"$ref": "#/$defs/visibilityEvent"}},
         "motifFields": {"type": "array", "items": {"$ref": "#/$defs/motifFieldPlan"}},
         "graphics": {"type": "array", "items": {"$ref": "#/$defs/graphicPlan"}},
@@ -717,6 +731,36 @@
         "preset": {"enum": ["breathe", "float", "drift", "bounce", "pulse", "camera", "settle", "traverse", "sway", "parallax-camera", "scroll-world-x"]},
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    },
+    "pathMotionPlan": {
+      "type": "object",
+      "required": [
+        "id",
+        "nodeId",
+        "path",
+        "cameraFollow",
+        "at",
+        "proofTimeId"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "nodeId": {"type": "string", "minLength": 1},
+        "path": {"$ref": "composition.schema.json#/$defs/pathMotion"},
+        "cameraFollow": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "project.schema.json#/$defs/cameraFollow"}
+          ]
+        },
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "proofTimeId": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        }
       },
       "additionalProperties": false
     },

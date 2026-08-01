@@ -495,6 +495,7 @@
         "relationships": [],
         "stateSequences": [],
         "continuousMotions": [],
+        "pathMotions": [],
         "visibilityEvents": [
           {
             "id": "show-traveler",
@@ -514,7 +515,7 @@
         "canonicalContainers": []
       },
       "directing": {
-        "fingerprint": "e10856d631e0c53619126af07f0c0402548ea1333639c2a1a7dc568ec2e860a7",
+        "fingerprint": "a6b601980d443e3560db0f557867b2390f9f0e167240fd4a61577842e8fc7bec",
         "treatmentCount": 3,
         "riskScore": 13,
         "highestRiskTreatmentId": "show-traveler"
@@ -647,7 +648,7 @@
           "targetId": "traveler",
           "proofTimeId": "proof-action",
           "riskScore": 13,
-          "directingFingerprint": "e10856d631e0c53619126af07f0c0402548ea1333639c2a1a7dc568ec2e860a7",
+          "directingFingerprint": "a6b601980d443e3560db0f557867b2390f9f0e167240fd4a61577842e8fc7bec",
           "sourceFamilyKey": "target:traveler",
           "coverage": [
             "baseline:representative"
@@ -658,8 +659,8 @@
         "target:traveler"
       ],
       "motionContractFingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320",
-      "fingerprint": "256fa1a824c14d6341e27a6f9bcf658daf2472c96aa41ed92cd43c9256599151"
+      "fingerprint": "01164240c0b5acbd95c15afb7f1537fd0a40b332c442231129560ec336525eec"
     },
-    "fingerprint": "6a63c50a247248463422375b3f9e1406fc9daa0ae5ca199fe8a95d2211d4a72c"
+    "fingerprint": "dc5aaf681e20c03f9ca2d86d8e48a9968be81a5502f9b31746e380cbd43cff04"
   }
 }

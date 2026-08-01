@@ -33,6 +33,7 @@ import {
   validateSceneTransitionSequence,
 } from '../src/sceneTimeline.mjs';
 import {validateParallaxRig} from '../src/parallax.mjs';
+import {validateCameraFollow} from '../src/pathMotion.mjs';
 import {validateVisibilityLifecycle} from '../src/visibilityLifecycle.mjs';
 import {assessTimelineContinuity} from './timeline-continuity-lib.mjs';
 import {
@@ -1007,6 +1008,17 @@ export const validateProject = async (project, options = {}) => {
     });
     for (const issue of compositionResult.issues) {
       add(issue.level, issue.code, issue.message, issue.location);
+    }
+    for (const issue of validateCameraFollow({
+      scene,
+      video: project.video,
+    })) {
+      add(
+        'error',
+        issue.code,
+        issue.message,
+        `${sceneLocation}.${issue.location}`,
+      );
     }
 
     const actualPatterns = new Set(

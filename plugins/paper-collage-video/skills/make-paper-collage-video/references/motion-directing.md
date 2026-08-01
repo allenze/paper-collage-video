@@ -31,6 +31,7 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `depth-parallax` | `continuous-transform` with `parallax-camera` on `scene-camera` | camera-coupled paper planes at authored depth |
 | `depth-layer-separation` | `registered-depth-stack` with `bounded-relative` | complete rear plate, complete subject, and complete front overlay move within reviewed reveal envelopes; a full-silhouette subject may additionally use a proved `subjectTravelEnvelope` |
 | `world-travel` | `looping-environment` with `scroll-world-x` | tracked vehicle remains readable while seamless mountains, trees, road, and near vegetation cross multiple horizontal wraps |
+| `path-travel` | `motion.kind=path-locomotion` plus a separate looping `state-sequence` on the same target | swimmer, flyer, or runner follows a cubic 2D route, turns with its tangent, and keeps cycling inside one coherent world |
 | `pose-change` | `state-sequence` | hand moves from chest to pointing at a board |
 | `prop-state-change` | `state-sequence` | page turns, cards change, book lowers |
 | `contact-change` | `supported-subject` | person stands on a boat, book remains in hand |
@@ -41,8 +42,8 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `decorative-field` | `motion.kind=motif-field` | bounded petals, dots, fragments, confetti, diagram accents |
 
 A treatment has orthogonal dimensions. Motion (`static`, continuous transform,
-state sequence, persistent visibility transition, or deterministic motif
-field), composition (`free`, supported subject, registered depth stack, or
+state sequence, path locomotion, persistent visibility transition, or
+deterministic motif field), composition (`free`, supported subject, registered depth stack, or
 registered environment), graphic mechanism, and semantic risk can coexist. A
 pointing child standing on a boat is both a state sequence and a supported
 subject; do not collapse it into one exclusive effect label.
@@ -141,6 +142,15 @@ moving character whose locomotion frames are not cycling. An intentional
 backward or sideways-looking performance remains possible only by declaring
 the differing expected facing and rationale explicitly. Do not classify an
 in-place `settle` as travel merely because it has local pose motion.
+
+Use `path-locomotion` instead when the same state-sequence must travel through
+arbitrary 2D headings. Read `path-locomotion-2d.md`. Author the path and looping
+state family as separate treatments on one target. The path owns arc-length
+position and tangent orientation; the state family owns cadence. One
+`path-locomotion` spatial contract proves eight-sector coverage as requested,
+heading error, turn continuity, gait cadence, and the optional
+camera/world binding. Do not also author `travel-facing`, duplicate x/y/rotation
+keyframes, or bake a second copy of the path into the camera.
 
 Use continuous preset `traverse` for a subject whose world-relative path must be
 materially larger than camera drift; runtime validation requires a normalized

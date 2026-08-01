@@ -30,10 +30,35 @@ export type IdleMotion = {
   phase?: number;
 };
 
+export type PathPoint = {x: number; y: number};
+
+export type PathMotion = {
+  kind: 'cubic-bezier-2d';
+  coordinateSpace: 'parent-normalized';
+  start: PathPoint;
+  segments: Array<{
+    control1: PathPoint;
+    control2: PathPoint;
+    end: PathPoint;
+  }>;
+  progress: Array<{
+    at: number;
+    distance: number;
+    ease?: MotionEase;
+  }>;
+  orientation: {
+    mode: 'path-tangent';
+    forwardAngleDegrees: number;
+    smoothingSeconds: number;
+    maximumTurnDegreesPerSecond: number;
+  };
+};
+
 export type NodeMotion = {
   keyframes: MotionKeyframe[];
   idle?: IdleMotion;
   pivot?: {x: number; y: number};
+  path?: PathMotion;
 };
 
 export type NodeVisibility = {
@@ -864,10 +889,20 @@ export type SubtitleCue = {fromSeconds: number; toSeconds: number; text: string}
 export type NormalizedSubtitleCue = {from: number; to: number; text: string};
 
 export type CameraKeyframe = {at: number; x?: number; y?: number; zoom?: number};
+export type CameraFollow = {
+  targetNodeId: string;
+  worldNodeId: string;
+  framing: {x: number; y: number};
+  lookAheadSeconds: number;
+  smoothingSeconds: number;
+  zoom: number;
+  worldBounds: {x: number; y: number; width: number; height: number};
+};
 export type SceneCamera = {
   preset: 'push' | 'pull' | 'pan-left' | 'pan-right' | 'static';
   intensity: number;
   keyframes?: CameraKeyframe[];
+  follow?: CameraFollow;
   parallax?: {
     enabled: boolean;
     strength: number;
@@ -1106,6 +1141,24 @@ export type SpatialContract =
       expectedFacing: 'left' | 'right' | 'front' | 'back' | 'neutral';
       minimumTravel: number;
       rationale: string;
+    }
+  | {
+      id: string;
+      kind: 'path-locomotion';
+      sceneId: string;
+      nodeId: string;
+      worldNodeId: string;
+      fromProofTimeId: string;
+      throughProofTimeId: string;
+      turnProofTimeIds: string[];
+      stateIds: string[];
+      minimumChangesPerSecond: number;
+      continueThroughWindowEnd: boolean;
+      minimumTravel: number;
+      minimumDirectionSectors: number;
+      maximumHeadingErrorDegrees: number;
+      maximumTurnDegreesPerSecond: number;
+      requireCameraFollow: boolean;
     };
 
 export type PaperCollageProject = {

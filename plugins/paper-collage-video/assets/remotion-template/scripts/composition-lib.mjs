@@ -31,6 +31,10 @@ import {
   resolveWorldStripTileGeometry,
   validateClosedWorldStripLoop,
 } from '../src/worldStrip.mjs';
+import {
+  samplePathPolyline,
+  validatePathMotion,
+} from '../src/pathMotion.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -67,6 +71,9 @@ const LAYER_ROLES = ['support-rear', 'subject', 'support-front'];
 const RESPONSIVE_LAYER_PROFILES = ['16:9', '9:16', '1:1'];
 const maximumAuthoredMotion = (motion = {}) => {
   const keyframes = motion.keyframes ?? [];
+  const pathPoints = motion.path
+    ? samplePathPolyline(motion.path, 129)
+    : [];
   const idle = motion.idle;
   const idleIntensity = idle?.intensity ?? 0;
   const idleMaximum = {
@@ -98,9 +105,11 @@ const maximumAuthoredMotion = (motion = {}) => {
   return {
     x:
       Math.max(0, ...keyframes.map(({offsetX = 0}) => Math.abs(offsetX))) +
+      Math.max(0, ...pathPoints.map(({x = 0}) => Math.abs(x))) +
       idleMaximum.x,
     y:
       Math.max(0, ...keyframes.map(({offsetY = 0}) => Math.abs(offsetY))) +
+      Math.max(0, ...pathPoints.map(({y = 0}) => Math.abs(y))) +
       idleMaximum.y,
     scale:
       Math.max(
@@ -330,6 +339,58 @@ export const validateCompositionStructure = ({
       );
     }
     validateMotionKeyframes(node.motion?.keyframes, `${nodeLocation}.motion.keyframes`, add);
+    if (node.motion?.path) {
+      for (const issue of validatePathMotion(node.motion.path)) {
+        add(
+          'error',
+          issue.code,
+          issue.message,
+          `${nodeLocation}.motion.${issue.location}`,
+        );
+      }
+      if (node.kind !== 'state-sequence') {
+        add(
+          'error',
+          'composition-path-state-sequence',
+          'path locomotion 必须由 state-sequence 节点执行，不能移动冻结单帧。',
+          `${nodeLocation}.motion.path`,
+        );
+      }
+      if (
+        (node.motion.keyframes ?? []).some(
+          (keyframe) =>
+            keyframe.offsetX !== undefined ||
+            keyframe.offsetY !== undefined ||
+            keyframe.rotation !== undefined,
+        )
+      ) {
+        add(
+          'error',
+          'composition-path-keyframe-conflict',
+          'path locomotion 已拥有二维位置与朝向；普通关键帧不得再次声明 offsetX、offsetY 或 rotation。',
+          `${nodeLocation}.motion.keyframes`,
+        );
+      }
+      if (
+        node.motion.idle &&
+        !['still', 'breathe'].includes(node.motion.idle.preset)
+      ) {
+        add(
+          'error',
+          'composition-path-idle-conflict',
+          'path locomotion 目标的 idle 只能使用 still 或 breathe，避免额外位置/旋转漂移。',
+          `${nodeLocation}.motion.idle`,
+        );
+      }
+      if ((node.transform?.rotation ?? 0) !== 0) {
+        add(
+          'error',
+          'composition-path-transform-rotation',
+          'path locomotion 的静态 transform.rotation 必须为 0；素材前向请使用 orientation.forwardAngleDegrees。',
+          `${nodeLocation}.transform.rotation`,
+        );
+      }
+    }
     if (node.visibility !== undefined && !['visible', 'hidden'].includes(node.visibility?.initial)) {
       add('error', 'composition-node-visibility', 'visibility.initial 必须是 visible 或 hidden。', `${nodeLocation}.visibility.initial`);
     }

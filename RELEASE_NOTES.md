@@ -1,3 +1,24 @@
+# Paper Collage Video 0.19.0-dev.2
+
+Paper Collage Video 0.19.0-dev.2 adds first-class two-dimensional path
+locomotion for registered limited-animation subjects.
+
+- Storyboard v12 now compiles `path-travel` into an explicit
+  `path-locomotion` plan, separate from the subject's looping
+  `state-sequence`.
+- Runtime cubic Bézier travel uses physical-pixel arc length, tangent
+  auto-orientation, angle unwrapping, smoothing, and bounded turn rate across
+  16:9, 9:16, and 1:1.
+- Optional `camera.follow` consumes the same path and stays clamped inside one
+  declared coherent world surface; duplicated camera paths and background
+  swaps are rejected.
+- The new `path-locomotion` spatial contract proves travel, direction sectors,
+  heading error, turn continuity, gait cadence, camera binding, and viewport
+  coverage with start/turn/end evidence.
+- A zero-provider three-profile Remotion fixture and final encode provide
+  executable visual proof, while provider guidance reuses one registered
+  locomotion sheet at every heading.
+
 # Paper Collage Video 0.19.0-dev.1
 
 Paper Collage Video 0.19.0-dev.1 removes the paper-only runtime assumption and

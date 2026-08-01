@@ -1102,3 +1102,139 @@ test('motion proof moments cannot be hidden inside scene boundary transitions', 
   assert.equal(proofOverlapsTransition({at: 0.08, enterTransitionFrames: 12, exitTransitionFrames: 0, durationInFrames: 300}), false);
   assert.equal(proofOverlapsTransition({at: 0.95, enterTransitionFrames: 0, exitTransitionFrames: 30, durationInFrames: 300}), true);
 });
+
+test('path locomotion compiles as an orthogonal route bound to one looping state family and camera follow', () => {
+  const authored = authoredStoryboard();
+  const path = {
+    kind: 'cubic-bezier-2d',
+    coordinateSpace: 'parent-normalized',
+    start: {x: -0.3, y: 0},
+    segments: [{
+      control1: {x: -0.12, y: -0.2},
+      control2: {x: 0.12, y: 0.2},
+      end: {x: 0.3, y: 0},
+    }],
+    progress: [
+      {at: 0, distance: 0, ease: 'ease-in-out'},
+      {at: 1, distance: 1, ease: 'ease-in-out'},
+    ],
+    orientation: {
+      mode: 'path-tangent',
+      forwardAngleDegrees: 0,
+      smoothingSeconds: 0.08,
+      maximumTurnDegreesPerSecond: 240,
+    },
+  };
+  const stateTreatment = ({id, stateId, visualChange, proofTimeId}) => ({
+    id,
+    targetId: 'tadpoles',
+    importance: 'supporting',
+    necessity: 'required',
+    changeClass: 'pose-change',
+    motion: {
+      kind: 'state-sequence',
+      poseFamilyId: 'tadpole-swim',
+      stateId,
+      facing: 'neutral',
+      visualChange,
+      playback: 'loop',
+      transition: 'cut',
+      cycles: 8,
+    },
+    composition: {pattern: 'free'},
+    graphic: null,
+    semanticRisk: 'identity',
+    proofTimeId,
+    rationale: 'Registered tail phases make swimming visible.',
+  });
+  authored.scenes[0].beats[0].treatments.push(
+    stateTreatment({
+      id: 'tail-left-state',
+      stateId: 'tail-left',
+      visualChange: 'Tail bends left.',
+      proofTimeId: 'proof-establish',
+    }),
+    {
+      id: 'tadpole-path',
+      targetId: 'tadpoles',
+      importance: 'supporting',
+      necessity: 'required',
+      changeClass: 'path-travel',
+      motion: {
+        kind: 'path-locomotion',
+        path,
+        cameraFollow: {
+          targetNodeId: 'tadpoles',
+          worldNodeId: 'pond-world',
+          framing: {x: 0.5, y: 0.54},
+          lookAheadSeconds: 0.15,
+          smoothingSeconds: 0.2,
+          zoom: 1,
+          worldBounds: {x: -1, y: -1, width: 3, height: 3},
+        },
+      },
+      composition: {pattern: 'free'},
+      graphic: null,
+      semanticRisk: 'identity',
+      proofTimeId: 'proof-establish',
+      rationale: 'One curved world-space route owns position and heading.',
+    },
+  );
+  authored.scenes[0].beats[1].treatments.push(
+    stateTreatment({
+      id: 'tail-right-state',
+      stateId: 'tail-right',
+      visualChange: 'Tail bends right.',
+      proofTimeId: 'proof-action',
+    }),
+  );
+  authored.spatialContracts = [{
+    id: 'tadpole-path-contract',
+    kind: 'path-locomotion',
+    sceneId: 'scene-01',
+    nodeId: 'tadpoles',
+    worldNodeId: 'pond-world',
+    fromProofTimeId: 'proof-establish',
+    throughProofTimeId: 'proof-final',
+    turnProofTimeIds: ['proof-action'],
+    stateIds: ['tail-left', 'tail-right'],
+    minimumChangesPerSecond: 2,
+    continueThroughWindowEnd: true,
+    minimumTravel: 0.4,
+    minimumDirectionSectors: 2,
+    maximumHeadingErrorDegrees: 20,
+    maximumTurnDegreesPerSecond: 240,
+    requireCameraFollow: true,
+  }];
+
+  const compiled = compileStoryboardDirecting(authored, {plan: plan()});
+  const scene = compiled.scenes[0];
+  assert.equal(scene.compositionPlan.pathMotions.length, 1);
+  assert.deepEqual(scene.compositionPlan.pathMotions[0], {
+    id: 'tadpole-path',
+    nodeId: 'tadpoles',
+    path,
+    cameraFollow: authored.scenes[0].beats[0].treatments[2].motion.cameraFollow,
+    at: 0,
+    proofTimeId: 'proof-establish',
+  });
+  assert.equal(
+    scene.compositionPlan.stateSequences[0].poseFamilyId,
+    'tadpole-swim',
+  );
+  assert.ok(
+    compiled.motionContract.scenes[0].continuousTreatmentIds.includes(
+      'tadpole-path',
+    ),
+  );
+  assert.ok(
+    compiled.motionContract.scenes[0].cameraTreatmentIds.includes(
+      'tadpole-path',
+    ),
+  );
+  assert.ok(
+    compiled.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'motion:path-locomotion',
+    ),
+  );
+});
