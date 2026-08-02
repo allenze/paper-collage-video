@@ -242,9 +242,9 @@
         "strategy": {
           "enum": [
             "single-background",
-            "separate-images",
+            "rigid-master",
             "registered-layer-sheet",
-            "provider-layered-document"
+            "context-preserving-layer-edits"
           ]
         },
         "providerCalls": {"type": "integer", "minimum": 1},

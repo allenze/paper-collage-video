@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "projectSlug": "starter-demo",
   "generatedAt": "2026-01-01T00:00:00.000Z",
-  "fingerprint": "e5f065643afa57c1997b2ee8604523daf784f41bb5f38f746498bdbf8b3d94df",
+  "fingerprint": "2500ffd1ef1b9883b10528270042a8a3a33a050fc71e943ee5d07bbf3870ca2f",
   "basis": {
     "projectSlug": "starter-demo",
-    "visualFingerprint": "5f26bb644660373be67d9aeebd9e785635bbebd78bcf613ed221410af459e35e",
+    "visualFingerprint": "deef5c2344fe0284b6bc1fe00f7d8224ceadbf051e2eaab23feb19d791357489",
     "audioFingerprint": "c745519a468bc8ae09b519eaffa9ece404785618a374f92180b7815ae4d8c717",
     "storyboardFingerprint": "8ebcc6c57f07a2a0bad8a1452a562f847ad3b2fc903be534f2ede3c02d1d1239",
     "validationFingerprint": "0c42fc1295c254a0683a36c319a72154fd8b2d07c06c1e9a2b454f4b8c42b0fd",
-    "qualityFingerprint": "b311391bb23339b42077b741448fcaf563eb693a5dc2d08c4219242b0233dce6",
+    "qualityFingerprint": "4d1b3788b6052219313fc0af78e2a07dff5b0ede46d7c739c6f0db203ff0b56b",
     "subtitleFingerprint": "6b196c02d311c1ac0f7d728263db0259cd1724adade7cc1a61d7ee09cddff52c",
     "subtitleContract": {
       "schemaVersion": 1,

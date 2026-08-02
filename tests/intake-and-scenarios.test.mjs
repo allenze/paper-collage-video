@@ -59,7 +59,7 @@ const makeScene = ({
       strategy: layered ? 'registered-layer-sheet' : 'single-background',
       providerCalls: 1,
       localDerivatives: layered ? 3 : 0,
-      avoidedCalls: layered ? 2 : 0,
+      avoidedCalls: layered ? 3 : 0,
     },
   ],
   parallax,
@@ -447,7 +447,7 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
     [
       [6, 8, 15],
       [10, 12, 38],
-      [17, 19, 81],
+      [17, 19, 97],
     ],
   );
   assert.ok(scenarios.options.every(({plannedFulfillment}) => plannedFulfillment.passed));
@@ -547,6 +547,35 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
   );
 });
 
+test('scenario source packages use the same exact costs as storyboard planning', async () => {
+  const catalog = await loadStyleCatalog({root: ROOT});
+  const intake = confirmIntake({
+    selection: {
+      aspectRatio: '16:9',
+      visualStylePreset: 'hand-drawn-cutout-explainer',
+      parallaxPreference: 'auto',
+    },
+    catalog,
+    at,
+  });
+  const input = makeScenarioInput();
+  const source = input.options[2].scenes[0].sourcePackages[0];
+  source.strategy = 'context-preserving-layer-edits';
+  source.providerCalls = 1;
+  source.localDerivatives = 3;
+  source.avoidedCalls = 0;
+  assert.throws(
+    () =>
+      buildPlanningScenarios({
+        slug: 'source-cost-drift',
+        intake,
+        input,
+        at,
+      }),
+    /providerCalls.*context-preserving-layer-edits/,
+  );
+});
+
 test('a selected one-take scenario raises motion capacity to its exact approved demand', () => {
   const scenarios = {
     fingerprint: 'a'.repeat(64),
@@ -615,7 +644,7 @@ test('a selected one-take scenario raises motion capacity to its exact approved 
     maxContinuousTargets: 8,
   });
   assert.deepEqual(validateCreativePlan(plan, {slug: 'one-take-journey'}), []);
-  assert.equal(plan.assetBudget.maxGeneratedImages, 12);
+  assert.equal(plan.assetBudget.maxGeneratedImages, 14);
   assert.equal(plan.scenarioBinding.expectedProviderImageCalls, 10);
 });
 

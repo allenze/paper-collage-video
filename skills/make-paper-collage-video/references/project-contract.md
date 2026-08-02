@@ -119,6 +119,18 @@ regenerate their equivalent output from the latest contract when needed. There
 is no legacy loader, dual schema, deprecated field, compatibility adapter, or
 version-conditioned renderer branch.
 
+Layer-capable planning and storyboard source-package strategy names and costs
+are identical. `rigid-master` costs one provider call,
+`registered-layer-sheet` costs one and produces three deterministic members,
+while `context-preserving-layer-edits` costs four and produces the same three
+members from full-canvas edits. Planning additionally counts an ordinary
+`single-background` as one call with no derivatives; it is not copied into the
+compiled layer-package decision. The scenario compiler rejects any
+hand-authored provider/local/avoided count that disagrees with these contracts.
+A low-resolution registered sheet is not made acceptable merely because its
+members preserve a complete canvas; viewport-filling members must also retain
+sufficient provider-native pixels at their maximum display scale.
+
 For a scenario-bound plan, the generic scene-count motion budget is only the
 minimum baseline. `project:plan` may raise `maxPoseSheetCalls`,
 `maxStatesPerSheet`, and `maxContinuousTargets` to the exact selected scenario

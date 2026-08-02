@@ -1172,6 +1172,17 @@ const compileScene = (scene) => {
   };
 };
 
+export const stateSheetGridForCount = (stateCount) => {
+  if (!Number.isInteger(stateCount) || stateCount < 1 || stateCount > 12) {
+    throw new Error('状态母版网格只支持 1..12 个状态。');
+  }
+  if (stateCount <= 4) return {columns: 2, rows: 2};
+  if (stateCount <= 6) return {columns: 3, rows: 2};
+  if (stateCount <= 8) return {columns: 4, rows: 2};
+  if (stateCount <= 9) return {columns: 3, rows: 3};
+  return {columns: 4, rows: 3};
+};
+
 export const summarizeDirectingDemand = (scenes, motionBudget) => {
   const treatments = scenes.flatMap((scene) =>
     scene.beats.flatMap((beat) => beat.treatments.map((treatment) => ({
@@ -1224,9 +1235,7 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
       stateFacings: [...family.stateFacings.entries()]
         .map(([stateId, facing]) => ({stateId, facing}))
         .sort((left, right) => left.stateId.localeCompare(right.stateId)),
-      grid: family.stateIds.size <= 4
-        ? {columns: 2, rows: 2}
-        : {columns: 3, rows: 2},
+      grid: stateSheetGridForCount(family.stateIds.size),
       providerCalls: 1,
       repairPolicy: 'masked-edit-complete-sheet',
     }))

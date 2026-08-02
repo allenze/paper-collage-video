@@ -192,7 +192,7 @@ Creative Plan v4 gives each production profile two planning ceilings:
 - `motionBudget`: pose-sheet calls, cells per sheet, and continuous-motion targets.
 
 For a one-scene project the default hard ceilings are draft `4+2=6`, balanced
-`4+4=8`, and full-depth `6+6=12` image attempts. Full-depth reserves two
+`4+4=8`, and full-depth `6+8=14` image attempts. Full-depth reserves two
 independent pose-sheet families in a one-scene film when two recurring hero
 identities need real alternate states; never combine unrelated identities into
 one sheet to fit a scene-count heuristic. The profile ceiling is not
@@ -215,7 +215,10 @@ When reducing cost or complexity, remove in this order:
 Never turn a `required` pose or prop change into rotation, scaling, or a static hold merely to fit the profile. If required families exceed the approved profile, the storyboard is invalid: raise the profile or reduce story scope at the existing concept gate.
 
 All related states for one identity/prop family stay on one provider-generated
-sheet. The compiler chooses 2×2 for up to four states and 3×2 for five or six
+sheet. The compiler chooses 2×2 for up to four states, 3×2 for five or six,
+4×2 for seven or eight, 3×3 for nine, and 4×3 for ten through twelve. Every
+compiled grid must have at least as many cells as the approved family has
+states; a full sheet may contain empty cells, but it may never silently omit
 states. Empty cells are preferable to unrelated identities. Layer source
 packages and pose sheets have separate compiled accounting but share the same
 hard ceiling. Recovery is deterministic local reprocessing, then a masked edit

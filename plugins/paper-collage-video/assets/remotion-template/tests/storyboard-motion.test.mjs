@@ -7,7 +7,11 @@ import {
   validateStoryboard,
 } from '../scripts/storyboard-lib.mjs';
 import {buildCreativePlan} from '../scripts/creative-plan-lib.mjs';
-import {selectStyleProofTarget, validateDirectingExecution} from '../scripts/motion-treatment-lib.mjs';
+import {
+  selectStyleProofTarget,
+  stateSheetGridForCount,
+  validateDirectingExecution,
+} from '../scripts/motion-treatment-lib.mjs';
 import {
   proofOverlapsTransition,
   stateSequenceMatchesStoryboardPlan,
@@ -45,6 +49,20 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
   semanticRisk: 'decorative',
   proofTimeId,
   rationale: 'A still hold keeps this beat readable.',
+});
+
+test('state-sheet grids always provide enough cells through the 12-state ceiling', () => {
+  assert.deepEqual(stateSheetGridForCount(1), {columns: 2, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(4), {columns: 2, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(5), {columns: 3, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(6), {columns: 3, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(7), {columns: 4, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(8), {columns: 4, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(9), {columns: 3, rows: 3});
+  assert.deepEqual(stateSheetGridForCount(10), {columns: 4, rows: 3});
+  assert.deepEqual(stateSheetGridForCount(12), {columns: 4, rows: 3});
+  assert.throws(() => stateSheetGridForCount(0), /1\.\.12/);
+  assert.throws(() => stateSheetGridForCount(13), /1\.\.12/);
 });
 
 const authoredStoryboard = () => ({

@@ -88,7 +88,10 @@ export const deriveAssetBudget = (productionProfile, sceneCount) => {
     {
       draft: 2,
       balanced: 4,
-      'full-depth': 6,
+      // Full-depth can require one complete reference plus three full-canvas
+      // context-preserving layer edits. Keep enough structural reserve for a
+      // one-take hero environment without forcing a low-resolution 2x2 sheet.
+      'full-depth': 8,
     }[productionProfile] * sceneCount;
   return {
     ...budget,
@@ -686,6 +689,43 @@ export const buildCreativePlan = ({
   };
   assertCreativePlanReady(plan, {slug});
   return plan;
+};
+
+export const resetUnconfirmedCreativePlan = (
+  plan,
+  {slug = plan?.slug ?? null, at = new Date().toISOString()} = {},
+) => {
+  if (
+    plan?.schemaVersion !== 4 ||
+    plan?.status !== 'resolved' ||
+    plan?.slug !== slug ||
+    !PRODUCTION_PROFILES.includes(plan?.productionProfile)
+  ) {
+    throw new Error('只能重置同项目、schema v4 的 resolved Creative Plan。');
+  }
+  if (plan.approvedImageBudget !== null) {
+    throw new Error('已批准图片预算的 Creative Plan 不能重置。');
+  }
+  const pending = {
+    schemaVersion: 4,
+    slug,
+    status: 'pending',
+    inputMode: plan.inputMode,
+    productionProfile: plan.productionProfile,
+    requested: plan.requested,
+    resolved: null,
+    assetBudget: null,
+    motionBudget: null,
+    approvedImageBudget: null,
+    updatedAt: at,
+  };
+  const issues = validateCreativePlan(pending, {slug});
+  if (issues.length > 0) {
+    throw new Error(
+      issues.map(({location, message}) => `${location}: ${message}`).join('\n'),
+    );
+  }
+  return pending;
 };
 
 export const assessCreativePlanTimeline = (plan, timeline) => {

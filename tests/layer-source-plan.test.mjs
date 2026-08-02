@@ -193,8 +193,8 @@ test('v3 production profiles reserve explicit layer-package attempts without aut
       },
       {
         baseImageAttempts: 6,
-        layerPackageAttemptReserve: 6,
-        maxGeneratedImages: 12,
+        layerPackageAttemptReserve: 8,
+        maxGeneratedImages: 14,
       },
     ],
   );
