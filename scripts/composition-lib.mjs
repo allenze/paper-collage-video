@@ -31,6 +31,7 @@ import {
   resolveWorldStripTileGeometry,
   validateClosedWorldStripLoop,
 } from '../src/worldStrip.mjs';
+import {resolvePathMotionAtFrame} from '../src/pathMotion.mjs';
 import {
   samplePathPolyline,
   validatePathMotion,
@@ -361,13 +362,14 @@ export const validateCompositionStructure = ({
           (keyframe) =>
             keyframe.offsetX !== undefined ||
             keyframe.offsetY !== undefined ||
+            keyframe.scale !== undefined ||
             keyframe.rotation !== undefined,
         )
       ) {
         add(
           'error',
           'composition-path-keyframe-conflict',
-          'path locomotion 已拥有二维位置与朝向；普通关键帧不得再次声明 offsetX、offsetY 或 rotation。',
+          'path locomotion 已拥有三维位置、透视尺寸与朝向；普通关键帧不得再次声明 offsetX、offsetY、scale 或 rotation。',
           `${nodeLocation}.motion.keyframes`,
         );
       }
@@ -549,10 +551,45 @@ export const validateCompositionStructure = ({
         if (node.states[0]?.at !== 0) add('error', 'composition-sequence-start', '状态序列必须从 at=0 开始。', `${nodeLocation}.states[0].at`);
         const coverage = collectSequenceProofCoverage({node, proofTimes});
         for (const state of node.states) {
-          if (!coverage.has(state.id)) add('error', 'composition-sequence-proof-coverage', `状态 ${state.id} 缺少 proofTime.stateAssertions 证明。`, `${nodeLocation}.states`);
+          if (!node.pathViewBinding && !coverage.has(state.id)) {
+            add('error', 'composition-sequence-proof-coverage', `状态 ${state.id} 缺少 proofTime.stateAssertions 证明。`, `${nodeLocation}.states`);
+          }
         }
       }
       if (!['once', 'loop', 'ping-pong'].includes(node.playback?.mode) || !(Number.isInteger(node.playback?.cycles) && node.playback.cycles > 0)) add('error', 'composition-sequence-playback', 'state-sequence playback 必须声明有效 mode 与正整数 cycles。', `${nodeLocation}.playback`);
+      if (node.pathViewBinding !== undefined) {
+        const binding = node.pathViewBinding;
+        const groups = [
+          ['planarStateIds', binding?.planarStateIds],
+          ['towardStateIds', binding?.towardStateIds],
+          ['awayStateIds', binding?.awayStateIds],
+        ];
+        const allIds = groups.flatMap(([, ids]) => Array.isArray(ids) ? ids : []);
+        const knownIds = new Set((node.states ?? []).map(({id}) => id));
+        if (
+          !finite(binding?.depthVelocityThreshold) ||
+          binding.depthVelocityThreshold <= 0 ||
+          !finite(binding?.transitionWidth) ||
+          binding.transitionWidth < 0 ||
+          binding.transitionWidth > binding.depthVelocityThreshold
+        ) {
+          add('error', 'composition-path-view-threshold', 'pathViewBinding 必须声明正 depthVelocityThreshold，且 transitionWidth 位于 0..threshold。', `${nodeLocation}.pathViewBinding`);
+        }
+        for (const [field, ids] of groups) {
+          if (!Array.isArray(ids) || ids.length < 2 || new Set(ids).size !== ids.length) {
+            add('error', 'composition-path-view-group', `${field} 必须包含至少两个不重复循环状态。`, `${nodeLocation}.pathViewBinding.${field}`);
+          }
+          for (const id of ids ?? []) {
+            if (!knownIds.has(id)) add('error', 'composition-path-view-state', `pathViewBinding 状态 ${id} 不存在。`, `${nodeLocation}.pathViewBinding.${field}`);
+          }
+        }
+        if (new Set(allIds).size !== allIds.length) {
+          add('error', 'composition-path-view-overlap', 'planar/toward/away 状态组不得互相重叠。', `${nodeLocation}.pathViewBinding`);
+        }
+        if (node.motion?.path?.kind !== 'cubic-bezier-3d') {
+          add('error', 'composition-path-view-motion', 'pathViewBinding 只能绑定 cubic-bezier-3d 路径。', `${nodeLocation}.motion.path`);
+        }
+      }
       if (node.playback?.mode === 'once' && node.playback.cycles !== 1) add('error', 'composition-sequence-once-cycles', 'once playback 的 cycles 必须为 1。', `${nodeLocation}.playback.cycles`);
       const hasActiveFrom = node.playback?.activeFrom !== undefined;
       const hasActiveUntil = node.playback?.activeUntil !== undefined || node.playback?.holdStateId !== undefined;
@@ -1683,6 +1720,7 @@ export const validateCompositionStructure = ({
       `${location}.nodes`,
     );
   }
+  const proofFps = video.fps ?? 30;
   for (const proof of proofTimes) {
     for (const assertion of proof.stateAssertions ?? []) {
       const entry = sequences.find(({node}) => node.id === assertion.nodeId);
@@ -1700,9 +1738,31 @@ export const validateCompositionStructure = ({
         continue;
       }
       if (!entry.node.states.some(({id}) => id === assertion.stateId)) add('error', 'composition-sequence-proof-state', `证明 ${proof.id} 引用了不存在的状态 ${assertion.stateId}。`, `${location}.proofTimes#${proof.id}`);
-      const resolved = resolveSequenceState({node: entry.node, progress: proof.at});
+      const parentWidth = entry.parent?.coordinateSpace?.width ?? video.width;
+      const parentHeight = entry.parent?.coordinateSpace?.height ?? video.height;
+      const pathAtProof = resolvePathMotionAtFrame({
+        pathMotion: entry.node.motion?.path,
+        frame: Math.round(
+          proof.at * Math.max(1, Math.round(durationSeconds * proofFps) - 1),
+        ),
+        durationInFrames: Math.max(1, Math.round(durationSeconds * proofFps)),
+        fps: proofFps,
+        parentWidth,
+        parentHeight,
+      });
+      const pathDepthVelocity = pathAtProof.depthVelocity ?? 0;
+      const resolved = resolveSequenceState({
+        node: entry.node,
+        progress: proof.at,
+        pathDepthVelocity,
+      });
       if (resolved?.id !== assertion.stateId) add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${assertion.stateId}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
-      const layersAtProof = resolveSequenceLayers({node: entry.node, progress: proof.at, durationSeconds});
+      const layersAtProof = resolveSequenceLayers({
+        node: entry.node,
+        progress: proof.at,
+        durationSeconds,
+        pathDepthVelocity,
+      });
       if (entry.node.transition.type === 'crossfade' && layersAtProof.length > 1) add('error', 'composition-sequence-proof-transition', `证明 ${proof.id} 落在 ${resolved?.id ?? 'none'} 的交叉淡化中，此时状态尚未完全可见。`, `${location}.proofTimes#${proof.id}`);
       if (proof.kind === 'final') {
         const stabilitySpan = entry.node.transition.type === 'crossfade'
@@ -1715,7 +1775,23 @@ export const validateCompositionStructure = ({
           1,
         ])];
         const stable = samplePoints.every((progress) => {
-          const layers = resolveSequenceLayers({node: entry.node, progress, durationSeconds});
+          const frame = Math.round(
+            progress * Math.max(1, Math.round(durationSeconds * proofFps) - 1),
+          );
+          const pathAtSample = resolvePathMotionAtFrame({
+            pathMotion: entry.node.motion?.path,
+            frame,
+            durationInFrames: Math.max(1, Math.round(durationSeconds * proofFps)),
+            fps: proofFps,
+            parentWidth,
+            parentHeight,
+          });
+          const layers = resolveSequenceLayers({
+            node: entry.node,
+            progress,
+            durationSeconds,
+            pathDepthVelocity: pathAtSample.depthVelocity ?? 0,
+          });
           return layers.length === 1 && layers[0].id === assertion.stateId && Math.abs(layers[0].opacity - 1) < 1e-6;
         });
         if (!stable) add('error', 'composition-sequence-final-unstable', `最终证明 ${proof.id} 的状态 ${assertion.stateId} 必须避开交叉淡化，并稳定保持到镜头结束。`, `${location}.proofTimes#${proof.id}`);

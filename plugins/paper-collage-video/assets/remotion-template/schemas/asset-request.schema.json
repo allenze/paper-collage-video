@@ -418,10 +418,11 @@
         },
         "generationFamily": {
           "type": "object",
-          "required": ["familyId", "memberIds", "referenceAssetIds"],
+          "required": ["familyId", "identityMemberIds", "referenceAssetIds"],
           "properties": {
             "familyId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
-            "memberIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}},
+            "identityMemberIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}},
+            "stateMemberIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}},
             "referenceAssetIds": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}}
           },
           "additionalProperties": false

@@ -88,11 +88,16 @@ Keep `generationFamily` independent from `compositionBinding`. A full-frame `fre
   "contractIds": ["recurring-cast"],
   "generationFamily": {
     "familyId": "cast-family-01",
-    "memberIds": ["elder-scholar", "young-engineer"],
+    "identityMemberIds": ["elder-scholar", "young-engineer"],
     "referenceAssetIds": ["cast-reference-sheet"]
   }
 }
 ```
+
+`identityMemberIds` names only recurring identities governed by the bound
+identity contracts. A multi-state sheet additionally declares
+`stateMemberIds` for its complete pose/state cells; do not merge identity and
+state ids into one ambiguous member list.
 
 ## Mechanism Contract
 

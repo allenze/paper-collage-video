@@ -238,5 +238,7 @@ await writeJson(
 );
 
 console.log('✓ three-profile preview acceptance passed');
-console.log('✓ path, heading, turn, gait, and camera technical checks passed');
+console.log(
+  '✓ path, depth projection/order, heading, turn, gait, and camera technical checks passed',
+);
 console.log(`✓ final accepted: ${path.relative(ROOT, finalFile)}`);

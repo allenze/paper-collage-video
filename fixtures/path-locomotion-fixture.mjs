@@ -48,29 +48,29 @@ export const PATH_LOCOMOTION_PROFILES = Object.freeze([
 ]);
 
 export const PATH_LOCOMOTION_PATH = Object.freeze({
-  kind: 'cubic-bezier-2d',
-  coordinateSpace: 'parent-normalized',
-  start: {x: 0, y: -0.4},
+  kind: 'cubic-bezier-3d',
+  coordinateSpace: 'parent-normalized-depth',
+  start: {x: 0, y: -0.4, z: -0.6},
   segments: [
     {
-      control1: {x: 0.22, y: -0.4},
-      control2: {x: 0.4, y: -0.22},
-      end: {x: 0.4, y: 0},
+      control1: {x: 0.22, y: -0.4, z: -0.6},
+      control2: {x: 0.4, y: -0.22, z: 0.6},
+      end: {x: 0.4, y: 0, z: 0.6},
     },
     {
-      control1: {x: 0.4, y: 0.22},
-      control2: {x: 0.22, y: 0.4},
-      end: {x: 0, y: 0.4},
+      control1: {x: 0.4, y: 0.22, z: 0.6},
+      control2: {x: 0.22, y: 0.4, z: -0.2},
+      end: {x: 0, y: 0.4, z: -0.2},
     },
     {
-      control1: {x: -0.22, y: 0.4},
-      control2: {x: -0.4, y: 0.22},
-      end: {x: -0.4, y: 0},
+      control1: {x: -0.22, y: 0.4, z: -0.2},
+      control2: {x: -0.4, y: 0.22, z: 0.7},
+      end: {x: -0.4, y: 0, z: 0.7},
     },
     {
-      control1: {x: -0.4, y: -0.22},
-      control2: {x: -0.22, y: -0.4},
-      end: {x: 0, y: -0.4},
+      control1: {x: -0.4, y: -0.22, z: 0.7},
+      control2: {x: -0.22, y: -0.4, z: -0.6},
+      end: {x: 0, y: -0.4, z: -0.6},
     },
   ],
   progress: [
@@ -83,6 +83,16 @@ export const PATH_LOCOMOTION_PATH = Object.freeze({
     forwardAngleDegrees: 0,
     smoothingSeconds: 0.06,
     maximumTurnDegreesPerSecond: 150,
+  },
+  projection: {
+    depthDistanceScale: 0.65,
+    farScale: 0.62,
+    nearScale: 1.42,
+    farOpacity: 0.68,
+    nearOpacity: 1,
+    farBlurPx: 2.4,
+    nearBlurPx: 0,
+    depthOrderSpan: 40,
   },
 });
 
@@ -109,6 +119,9 @@ const pathContract = () => ({
   minimumChangesPerSecond: 3,
   continueThroughWindowEnd: true,
   minimumTravel: 2,
+  minimumDepthTravel: 2,
+  minimumProjectionScaleDelta: 0.4,
+  requiredDepthDirections: ['toward-camera', 'away-camera'],
   minimumDirectionSectors: 8,
   maximumHeadingErrorDegrees: 18,
   maximumTurnDegreesPerSecond: 150,
@@ -503,7 +516,7 @@ export const createPathLocomotionProject = ({
     spatialContracts: [pathContract()],
     scenes: [{
       id: PATH_LOCOMOTION_SCENE_ID,
-      label: '2D PATH\nLOCOMOTION',
+      label: '3D PATH\nLOCOMOTION',
       eyebrow: 'ENGINEERING PROOF',
       tailSeconds: 0,
       appearance: {
@@ -574,7 +587,7 @@ export const createPathLocomotionProject = ({
               rotation: 0,
             },
             motion: {
-              ...stillMotion(),
+              keyframes: [{at: 0, opacity: 1}, {at: 1, opacity: 1}],
               path: structuredClone(PATH_LOCOMOTION_PATH),
             },
           },

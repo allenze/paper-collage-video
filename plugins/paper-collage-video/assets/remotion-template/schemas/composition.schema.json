@@ -14,10 +14,11 @@
     },
     "pathPoint": {
       "type": "object",
-      "required": ["x", "y"],
+      "required": ["x", "y", "z"],
       "properties": {
         "x": {"type": "number"},
-        "y": {"type": "number"}
+        "y": {"type": "number"},
+        "z": {"type": "number", "minimum": -1, "maximum": 1}
       },
       "additionalProperties": false
     },
@@ -69,6 +70,38 @@
       },
       "additionalProperties": false
     },
+    "pathProjection": {
+      "type": "object",
+      "required": [
+        "depthDistanceScale",
+        "farScale",
+        "nearScale",
+        "farOpacity",
+        "nearOpacity",
+        "farBlurPx",
+        "nearBlurPx",
+        "depthOrderSpan"
+      ],
+      "properties": {
+        "depthDistanceScale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 4
+        },
+        "farScale": {"type": "number", "exclusiveMinimum": 0, "maximum": 4},
+        "nearScale": {"type": "number", "exclusiveMinimum": 0, "maximum": 4},
+        "farOpacity": {"type": "number", "minimum": 0.2, "maximum": 1},
+        "nearOpacity": {"type": "number", "minimum": 0.2, "maximum": 1},
+        "farBlurPx": {"type": "number", "minimum": 0, "maximum": 20},
+        "nearBlurPx": {"type": "number", "minimum": 0, "maximum": 20},
+        "depthOrderSpan": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "additionalProperties": false
+    },
     "pathMotion": {
       "type": "object",
       "required": [
@@ -77,11 +110,12 @@
         "start",
         "segments",
         "progress",
-        "orientation"
+        "orientation",
+        "projection"
       ],
       "properties": {
-        "kind": {"const": "cubic-bezier-2d"},
-        "coordinateSpace": {"const": "parent-normalized"},
+        "kind": {"const": "cubic-bezier-3d"},
+        "coordinateSpace": {"const": "parent-normalized-depth"},
         "start": {"$ref": "#/$defs/pathPoint"},
         "segments": {
           "type": "array",
@@ -95,7 +129,8 @@
           "maxItems": 64,
           "items": {"$ref": "#/$defs/pathProgressKeyframe"}
         },
-        "orientation": {"$ref": "#/$defs/pathOrientation"}
+        "orientation": {"$ref": "#/$defs/pathOrientation"},
+        "projection": {"$ref": "#/$defs/pathProjection"}
       },
       "additionalProperties": false
     },
@@ -571,6 +606,39 @@
       ],
       "additionalProperties": false
     },
+    "pathViewBinding": {
+      "type": "object",
+      "required": [
+        "depthVelocityThreshold",
+        "transitionWidth",
+        "planarStateIds",
+        "towardStateIds",
+        "awayStateIds"
+      ],
+      "properties": {
+        "depthVelocityThreshold": {"type": "number", "exclusiveMinimum": 0},
+        "transitionWidth": {"type": "number", "minimum": 0},
+        "planarStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "towardStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "awayStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      },
+      "additionalProperties": false
+    },
     "stateSequenceNode": {
       "type": "object",
       "required": ["id", "kind", "assetRole", "poseFamilyId", "registration", "anchorPolicy", "states", "playback", "transition", "z", "transform", "motion"],
@@ -583,6 +651,7 @@
         "anchorPolicy": {"$ref": "#/$defs/stateAnchorPolicy"},
         "states": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/sequenceState"}},
         "playback": {"$ref": "#/$defs/sequencePlayback"},
+        "pathViewBinding": {"$ref": "#/$defs/pathViewBinding"},
         "transition": {"$ref": "#/$defs/sequenceTransition"},
         "z": {"type": "integer"},
         "slot": {"type": "string", "minLength": 1},

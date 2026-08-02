@@ -94,14 +94,14 @@ export const validateRejectedOutputRecoverySpec = (spec) => {
     roles.has('support-front');
   const isStateSheet =
     cells.length >= 2 &&
-    cells.length <= 6 &&
+    cells.length <= 64 &&
     roles.size === 1 &&
     roles.has('state') &&
     cells.every(({stateId}) => typeof stateId === 'string' && stateId.length > 0) &&
     new Set(cells.map(({stateId}) => stateId)).size === cells.length;
   if (!isStandaloneImage && !isLayerSheet && !isStateSheet) {
     errors.push(
-      'cells 必须是单个 image、恰好包含 subject 与 support-front，或包含 2–6 个唯一 stateId 的完整状态表',
+      'cells 必须是单个 image、恰好包含 subject 与 support-front，或包含 2–64 个唯一 stateId 的完整状态表',
     );
   }
   for (const cell of cells) {
@@ -305,6 +305,8 @@ export const inspectRejectedOutputRecovery = async ({
       file: sourceFile,
       rect: recoveryCell.sourceRect,
       requestedKeyColor: requestSurface.keyColor,
+      candidateKeyColor:
+        recoveryCell.observedKeyColorHint ?? requestSurface.keyColor,
     });
     observations.push({
       packageRole: recoveryCell.packageRole,

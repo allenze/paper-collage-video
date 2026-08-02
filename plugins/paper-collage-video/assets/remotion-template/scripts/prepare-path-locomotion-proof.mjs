@@ -353,6 +353,15 @@ for (const profile of PATH_LOCOMOTION_PROFILES) {
     directionSectors: spatialProof.checks.find(
       ({id}) => id === 'path-locomotion-direction-sectors',
     )?.actual,
+    depthTravel: spatialProof.checks.find(
+      ({id}) => id === 'path-locomotion-depth-travel',
+    )?.actual,
+    depthDirections: spatialProof.checks.find(
+      ({id}) => id === 'path-locomotion-depth-directions',
+    )?.actual,
+    projectionScaleDelta: spatialProof.checks.find(
+      ({id}) => id === 'path-locomotion-depth-projection',
+    )?.actual,
     maximumHeadingErrorDegrees: spatialProof.checks.find(
       ({id}) => id === 'path-locomotion-heading',
     )?.actual,
@@ -378,4 +387,6 @@ await writeJson(
 
 console.log(`✓ prepared ${PATH_LOCOMOTION_SLUG}`);
 console.log('✓ provider calls: 0; local deterministic assets: 6');
-console.log('✓ three profiles passed path, heading, turn, gait, and camera checks');
+console.log(
+  '✓ three profiles passed path, depth projection, heading, turn, gait, and camera checks',
+);

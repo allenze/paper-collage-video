@@ -169,8 +169,13 @@ const composeNodeTransform = ({
     top: transform.y * parent.height,
     width,
     height,
-    opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * emphasis.opacity * visibility.opacity,
-    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + pathMotion.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x + worldAnchorOffsetX}px, ${(authored.y + pathMotion.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + pathMotion.rotationDegrees + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
+    opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * emphasis.opacity * visibility.opacity * pathMotion.projectionOpacity,
+    pathFilter: pathMotion.projectionBlurPx > 0
+      ? `blur(${pathMotion.projectionBlurPx}px)`
+      : undefined,
+    depthOrder: pathMotion.depthOrder,
+    pathDepthVelocity: pathMotion.depthVelocity,
+    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + pathMotion.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x + worldAnchorOffsetX}px, ${(authored.y + pathMotion.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale * pathMotion.projectionScale}) rotate(${(transform.rotation ?? 0) + authored.rotation + pathMotion.rotationDegrees + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
   };
 };
 
@@ -216,7 +221,7 @@ const containerStyle = ({
   top: resolved.top,
   width: resolved.width,
   ...(resolved.height === undefined ? {} : {height: resolved.height}),
-  zIndex: renderZ,
+  zIndex: renderZ + resolved.depthOrder,
   opacity: resolved.opacity,
   transform: resolved.css,
   transformOrigin: `${(node.motion.pivot?.x ?? node.transform.anchorX) * 100}% ${(node.motion.pivot?.y ?? node.transform.anchorY) * 100}%`,
@@ -265,7 +270,10 @@ const AssetView = ({
       data-composition-kind="asset"
       style={{
         ...containerStyle({node, resolved, renderZ}),
-        filter: cutout ? subjectSurfaceFilter(surface) : undefined,
+        filter: [
+          cutout ? subjectSurfaceFilter(surface) : null,
+          resolved.pathFilter,
+        ].filter(Boolean).join(' ') || undefined,
         ...clipStyle({node, boundaries}),
       }}
     >
@@ -314,7 +322,12 @@ const StateSequenceView = ({
   worldAnchorOffsetX?: number;
 }) => {
   const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX});
-  const layers = resolveSequenceLayers({node, progress, durationSeconds});
+  const layers = resolveSequenceLayers({
+    node,
+    progress,
+    durationSeconds,
+    pathDepthVelocity: resolved.pathDepthVelocity,
+  });
   const registeredHeight = resolved.height ?? resolved.width * node.registration.canvas.height / node.registration.canvas.width;
   return (
     <div
@@ -325,7 +338,10 @@ const StateSequenceView = ({
       style={{
         ...containerStyle({node, resolved, renderZ}),
         height: registeredHeight,
-        filter: subjectSurfaceFilter(surface),
+        filter: [
+          subjectSurfaceFilter(surface),
+          resolved.pathFilter,
+        ].filter(Boolean).join(' '),
         ...clipStyle({node, boundaries}),
       }}
     >

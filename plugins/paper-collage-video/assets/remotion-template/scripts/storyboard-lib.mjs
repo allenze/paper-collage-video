@@ -320,7 +320,9 @@ export const validateStoryboard = (
         if (!plannedStates.has(stateId)) add('storyboard-proof-state-unknown', `状态证明引用了未知状态 ${stateId}。`, `${location}.proofTimes`);
       }
       for (const stateId of plannedStates) {
-        if (!assertedStates.has(stateId)) add('storyboard-proof-state-coverage', `状态 ${sequence.nodeId}/${stateId} 缺少证明时刻。`, `${location}.proofTimes`);
+        if (!sequence.pathViewBinding && !assertedStates.has(stateId)) {
+          add('storyboard-proof-state-coverage', `状态 ${sequence.nodeId}/${stateId} 缺少证明时刻。`, `${location}.proofTimes`);
+        }
       }
     }
     for (const binding of beatEvidenceBindings) {

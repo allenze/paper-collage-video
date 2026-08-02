@@ -4,8 +4,10 @@ const clamp01 = (value) => clamp(value, 0, 1);
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const pointIsFinite = (point) =>
   point && finite(point.x) && finite(point.y);
+const pathPointIsFinite = (point) =>
+  point && finite(point.x) && finite(point.y) && finite(point.z);
 const EPSILON = 1e-9;
-const GEOMETRY_SAMPLES_PER_SEGMENT = 96;
+const GEOMETRY_SAMPLES_PER_SEGMENT = 256;
 
 const ease = (value, name = 'linear') => {
   const t = clamp01(value);
@@ -27,6 +29,7 @@ const cubicPoint = (start, control1, control2, end, t) => {
   return {
     x: a * start.x + b * control1.x + c * control2.x + d * end.x,
     y: a * start.y + b * control1.y + c * control2.y + d * end.y,
+    z: a * start.z + b * control1.z + c * control2.z + d * end.z,
   };
 };
 
@@ -41,6 +44,10 @@ const cubicDerivative = (start, control1, control2, end, t) => {
       3 * oneMinus ** 2 * (control1.y - start.y) +
       6 * oneMinus * t * (control2.y - control1.y) +
       3 * t ** 2 * (end.y - control2.y),
+    z:
+      3 * oneMinus ** 2 * (control1.z - start.z) +
+      6 * oneMinus * t * (control2.z - control1.z) +
+      3 * t ** 2 * (end.z - control2.z),
   };
 };
 
@@ -71,11 +78,13 @@ const buildGeometry = (
   );
   const scaleX = parentWidth / minimumDimension;
   const scaleY = parentHeight / minimumDimension;
+  const scaleZ = pathMotion.projection.depthDistanceScale;
   const key = cacheKey({
     start: pathMotion.start,
     segments: pathMotion.segments,
     scaleX,
     scaleY,
+    scaleZ,
   });
   const cached = pathCache.get(key);
   if (cached) return cached;
@@ -103,6 +112,7 @@ const buildGeometry = (
         totalLength += Math.hypot(
           (point.x - previousPoint.x) * scaleX,
           (point.y - previousPoint.y) * scaleY,
+          (point.z - previousPoint.z) * scaleZ,
         );
       }
       samples.push({
@@ -116,7 +126,7 @@ const buildGeometry = (
     segmentStart = segment.end;
   }
 
-  const geometry = {samples, totalLength, scaleX, scaleY};
+  const geometry = {samples, totalLength, scaleX, scaleY, scaleZ};
   pathCache.set(key, geometry);
   return geometry;
 };
@@ -174,21 +184,50 @@ const sampleGeometry = (
     segment.end,
     t,
   );
-  if (Math.hypot(tangent.x, tangent.y) < EPSILON) {
+  if (Math.hypot(tangent.x, tangent.y, tangent.z) < EPSILON) {
     const before = geometry.samples[Math.max(0, low - 1)]?.point ?? point;
     const after =
       geometry.samples[Math.min(geometry.samples.length - 1, low + 1)]?.point ??
       point;
-    tangent = {x: after.x - before.x, y: after.y - before.y};
+    tangent = {
+      x: after.x - before.x,
+      y: after.y - before.y,
+      z: after.z - before.z,
+    };
   }
+  const screenTangentLength = Math.hypot(
+    tangent.x * geometry.scaleX,
+    tangent.y * geometry.scaleY,
+  );
   const headingDegrees =
     Math.atan2(
       tangent.y * geometry.scaleY,
       tangent.x * geometry.scaleX,
     ) * 180 / Math.PI;
+  const depthAmount = clamp01((point.z + 1) / 2);
+  const projection = pathMotion.projection;
   return {
     x: point.x,
     y: point.y,
+    z: point.z,
+    depthVelocity: tangent.z,
+    depthDirection:
+      Math.abs(tangent.z) < EPSILON
+        ? 'planar'
+        : tangent.z > 0
+          ? 'toward-camera'
+          : 'away-camera',
+    projectionScale:
+      projection.farScale +
+      (projection.nearScale - projection.farScale) * depthAmount,
+    projectionOpacity:
+      projection.farOpacity +
+      (projection.nearOpacity - projection.farOpacity) * depthAmount,
+    projectionBlurPx:
+      projection.farBlurPx +
+      (projection.nearBlurPx - projection.farBlurPx) * depthAmount,
+    depthOrder: Math.round(point.z * projection.depthOrderSpan),
+    screenTangentLength,
     headingDegrees,
     distance: clamp01(normalizedDistance),
     pathLength: geometry.totalLength,
@@ -249,7 +288,9 @@ const buildFrameTable = ({
       parentHeight,
     );
     let desiredRotation =
-      geometry.headingDegrees - orientation.forwardAngleDegrees;
+      geometry.screenTangentLength < EPSILON && previousDesired !== null
+        ? previousDesired
+        : geometry.headingDegrees - orientation.forwardAngleDegrees;
     if (previousDesired !== null) {
       desiredRotation =
         previousDesired +
@@ -294,6 +335,14 @@ export const resolvePathMotionAtFrame = ({
     return {
       x: 0,
       y: 0,
+      z: 0,
+      depthVelocity: 0,
+      depthDirection: 'planar',
+      projectionScale: 1,
+      projectionOpacity: 1,
+      projectionBlurPx: 0,
+      depthOrder: 0,
+      screenTangentLength: 0,
       rotationDegrees: 0,
       desiredRotationDegrees: 0,
       headingDegrees: 0,
@@ -334,22 +383,26 @@ export const validatePathMotion = (pathMotion) => {
     add('path-motion-object', 'path motion 必须是对象。', 'path');
     return issues;
   }
-  if (pathMotion.kind !== 'cubic-bezier-2d') {
+  if (pathMotion.kind !== 'cubic-bezier-3d') {
     add(
       'path-motion-kind',
-      'path motion.kind 必须是 cubic-bezier-2d。',
+      'path motion.kind 必须是 cubic-bezier-3d。',
       'path.kind',
     );
   }
-  if (pathMotion.coordinateSpace !== 'parent-normalized') {
+  if (pathMotion.coordinateSpace !== 'parent-normalized-depth') {
     add(
       'path-motion-coordinate-space',
-      '二维路径必须使用 parent-normalized 坐标。',
+      '三维路径必须使用 parent-normalized-depth 坐标。',
       'path.coordinateSpace',
     );
   }
-  if (!pointIsFinite(pathMotion.start)) {
-    add('path-motion-start', 'path.start 必须包含有限 x/y。', 'path.start');
+  if (!pathPointIsFinite(pathMotion.start)) {
+    add(
+      'path-motion-start',
+      'path.start 必须包含有限 x/y/z。',
+      'path.start',
+    );
   }
   if (
     !Array.isArray(pathMotion.segments) ||
@@ -364,10 +417,10 @@ export const validatePathMotion = (pathMotion) => {
   } else {
     for (const [index, segment] of pathMotion.segments.entries()) {
       for (const pointName of ['control1', 'control2', 'end']) {
-        if (!pointIsFinite(segment?.[pointName])) {
+        if (!pathPointIsFinite(segment?.[pointName])) {
           add(
             'path-motion-segment-point',
-            `${pointName} 必须包含有限 x/y。`,
+            `${pointName} 必须包含有限 x/y/z。`,
             `path.segments[${index}].${pointName}`,
           );
         }
@@ -458,10 +511,56 @@ export const validatePathMotion = (pathMotion) => {
       'path.orientation',
     );
   }
+  const projection = pathMotion.projection;
+  if (
+    !projection ||
+    !finite(projection.depthDistanceScale) ||
+    projection.depthDistanceScale <= 0 ||
+    projection.depthDistanceScale > 4 ||
+    !finite(projection.farScale) ||
+    !finite(projection.nearScale) ||
+    projection.farScale <= 0 ||
+    projection.nearScale < projection.farScale ||
+    projection.nearScale > 4 ||
+    !finite(projection.farOpacity) ||
+    !finite(projection.nearOpacity) ||
+    projection.farOpacity < 0.2 ||
+    projection.nearOpacity < projection.farOpacity ||
+    projection.nearOpacity > 1 ||
+    !finite(projection.farBlurPx) ||
+    !finite(projection.nearBlurPx) ||
+    projection.farBlurPx < 0 ||
+    projection.farBlurPx > 20 ||
+    projection.nearBlurPx < 0 ||
+    projection.nearBlurPx > projection.farBlurPx ||
+    !Number.isInteger(projection.depthOrderSpan) ||
+    projection.depthOrderSpan < 1 ||
+    projection.depthOrderSpan > 1000
+  ) {
+    add(
+      'path-motion-projection',
+      'projection 必须声明合法的深度距离、远近尺寸、透明度、柔化和动态层级跨度。',
+      'path.projection',
+    );
+  }
+  for (const [index, point] of [
+    pathMotion.start,
+    ...(pathMotion.segments ?? []).flatMap(
+      ({control1, control2, end}) => [control1, control2, end],
+    ),
+  ].entries()) {
+    if (finite(point?.z) && (point.z < -1 || point.z > 1)) {
+      add(
+        'path-motion-depth-range',
+        '路径 z 必须位于 -1..1；-1 为远处，1 为镜头近处。',
+        `path.points[${index}].z`,
+      );
+    }
+  }
   if (issues.length === 0 && buildGeometry(pathMotion).totalLength <= 0.001) {
     add(
       'path-motion-length',
-      '二维路径总长度必须大于 0.001 个父画布单位。',
+      '三维路径总长度必须大于 0.001 个父画布单位。',
       'path.segments',
     );
   }

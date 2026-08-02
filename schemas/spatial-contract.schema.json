@@ -279,6 +279,9 @@
         "minimumChangesPerSecond",
         "continueThroughWindowEnd",
         "minimumTravel",
+        "minimumDepthTravel",
+        "minimumProjectionScaleDelta",
+        "requiredDepthDirections",
         "minimumDirectionSectors",
         "maximumHeadingErrorDegrees",
         "maximumTurnDegreesPerSecond",
@@ -314,6 +317,21 @@
           "type": "number",
           "exclusiveMinimum": 0,
           "maximum": 20
+        },
+        "minimumDepthTravel": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "minimumProjectionScaleDelta": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "requiredDepthDirections": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["toward-camera", "away-camera"]}
         },
         "minimumDirectionSectors": {
           "type": "integer",

@@ -31,7 +31,7 @@ Do not begin with a renderer preset. For each beat, name what visibly changes:
 | `depth-parallax` | `continuous-transform` with `parallax-camera` on `scene-camera` | camera-coupled paper planes at authored depth |
 | `depth-layer-separation` | `registered-depth-stack` with `bounded-relative` | complete rear plate, complete subject, and complete front overlay move within reviewed reveal envelopes; a full-silhouette subject may additionally use a proved `subjectTravelEnvelope` |
 | `world-travel` | `looping-environment` with `scroll-world-x` | tracked vehicle remains readable while seamless mountains, trees, road, and near vegetation cross multiple horizontal wraps |
-| `path-travel` | `motion.kind=path-locomotion` plus a separate looping `state-sequence` on the same target | swimmer, flyer, or runner follows a cubic 2D route, turns with its tangent, and keeps cycling inside one coherent world |
+| `path-travel` | `motion.kind=path-locomotion` plus a separate looping `state-sequence` on the same target | swimmer, flyer, or runner follows a cubic 3D route, turns with its tangent, changes optical depth, and keeps cycling inside one coherent world |
 | `pose-change` | `state-sequence` | hand moves from chest to pointing at a board |
 | `prop-state-change` | `state-sequence` | page turns, cards change, book lowers |
 | `contact-change` | `supported-subject` | person stands on a boat, book remains in hand |
@@ -144,7 +144,7 @@ the differing expected facing and rationale explicitly. Do not classify an
 in-place `settle` as travel merely because it has local pose motion.
 
 Use `path-locomotion` instead when the same state-sequence must travel through
-arbitrary 2D headings. Read `path-locomotion-2d.md`. Author the path and looping
+arbitrary screen headings or optical depth. Read `path-locomotion-3d.md`. Author the path and looping
 state family as separate treatments on one target. The path owns arc-length
 position and tangent orientation; the state family owns cadence. One
 `path-locomotion` spatial contract proves eight-sector coverage as requested,

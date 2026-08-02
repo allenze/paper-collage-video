@@ -260,6 +260,8 @@ const COMPOSITE_PROFILES = {
     'path-travel-clean',
     'path-heading-readable',
     'turn-continuity-clean',
+    'depth-projection-readable',
+    'depth-order-clean',
     'camera-follow-coverage-clean',
     'locomotion-cycle-bound',
     'final-composition-readable',
@@ -810,7 +812,13 @@ const compositionTimingForScene = ({scene, sceneTransitions}) => ({
   sceneTransitions,
 });
 
-export const collectCompositeQualityTargets = async (project, {manifest = null} = {}) => {
+export const collectCompositeQualityTargets = async (
+  project,
+  {
+    manifest = null,
+    allowPendingSemanticEvidenceTargets = false,
+  } = {},
+) => {
   const runtimeSurfaceFingerprint =
     await createRuntimeSurfaceFingerprint('composition-proof');
   const assetManifest = manifest ?? await readManifest(project);
@@ -1320,10 +1328,30 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
   }
   const semanticContracts = await loadSemanticContracts(project.slug);
   if (semanticContracts.document?.status === 'ready' && semanticContracts.issues.length === 0) {
-    const targetIssues = validateSemanticEvidenceTargets(semanticContracts.document, project);
-    if (targetIssues.length) throw new Error(targetIssues.join('\n'));
     const sceneById = new Map((project.scenes ?? []).map((scene) => [scene.id, scene]));
-    for (const contract of semanticContracts.document.contracts) {
+    const semanticTargetIsAvailable = (evidenceTarget) =>
+      evidenceTarget.shots.every((shot) => {
+        const scene = sceneById.get(shot.sceneId);
+        if (!scene) return false;
+        if (!shot.nodeId || shot.nodeId === 'scene') return true;
+        return flattenCompositionNodes(scene.composition?.nodes)
+          .some(({node}) => node.id === shot.nodeId);
+      });
+    const contractsForEvidence = allowPendingSemanticEvidenceTargets
+      ? semanticContracts.document.contracts.map((contract) => ({
+          ...contract,
+          evidenceTargets: contract.evidenceTargets.filter(
+            semanticTargetIsAvailable,
+          ),
+        }))
+      : semanticContracts.document.contracts;
+    const evidenceDocument = {
+      ...semanticContracts.document,
+      contracts: contractsForEvidence,
+    };
+    const targetIssues = validateSemanticEvidenceTargets(evidenceDocument, project);
+    if (targetIssues.length) throw new Error(targetIssues.join('\n'));
+    for (const contract of contractsForEvidence) {
       for (const evidenceTarget of contract.evidenceTargets) {
         const proofShots = evidenceTarget.shots.map((shot) => ({
           sceneId: shot.sceneId,
@@ -1510,7 +1538,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
 };
 
 export const collectStyleProofTargets = async (project, directingTarget) => {
-  const allTargets = (await collectCompositeQualityTargets(project)).filter(
+  const allTargets = (await collectCompositeQualityTargets(project, {
+    allowPendingSemanticEvidenceTargets: true,
+  })).filter(
     ({reviewScope, pattern}) =>
       reviewScope === 'runtime-visible' && pattern !== 'style-target',
   );

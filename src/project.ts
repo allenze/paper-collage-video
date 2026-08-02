@@ -30,11 +30,11 @@ export type IdleMotion = {
   phase?: number;
 };
 
-export type PathPoint = {x: number; y: number};
+export type PathPoint = {x: number; y: number; z: number};
 
 export type PathMotion = {
-  kind: 'cubic-bezier-2d';
-  coordinateSpace: 'parent-normalized';
+  kind: 'cubic-bezier-3d';
+  coordinateSpace: 'parent-normalized-depth';
   start: PathPoint;
   segments: Array<{
     control1: PathPoint;
@@ -51,6 +51,16 @@ export type PathMotion = {
     forwardAngleDegrees: number;
     smoothingSeconds: number;
     maximumTurnDegreesPerSecond: number;
+  };
+  projection: {
+    depthDistanceScale: number;
+    farScale: number;
+    nearScale: number;
+    farOpacity: number;
+    nearOpacity: number;
+    farBlurPx: number;
+    nearBlurPx: number;
+    depthOrderSpan: number;
   };
 };
 
@@ -307,6 +317,14 @@ export type SequenceState = {
   identityReferenceSha256: string;
 };
 
+export type PathViewBinding = {
+  depthVelocityThreshold: number;
+  transitionWidth: number;
+  planarStateIds: string[];
+  towardStateIds: string[];
+  awayStateIds: string[];
+};
+
 export type CompositionStateSequenceNode = {
   id: string;
   kind: 'state-sequence';
@@ -326,6 +344,7 @@ export type CompositionStateSequenceNode = {
     holdStateId?: string;
     activeStateIds?: string[];
   };
+  pathViewBinding?: PathViewBinding;
   transition: {type: 'cut' | 'crossfade'; durationSeconds: number};
   z: number;
   slot?: string;
@@ -1155,6 +1174,9 @@ export type SpatialContract =
       minimumChangesPerSecond: number;
       continueThroughWindowEnd: boolean;
       minimumTravel: number;
+      minimumDepthTravel: number;
+      minimumProjectionScaleDelta: number;
+      requiredDepthDirections: Array<'toward-camera' | 'away-camera'>;
       minimumDirectionSectors: number;
       maximumHeadingErrorDegrees: number;
       maximumTurnDegreesPerSecond: number;

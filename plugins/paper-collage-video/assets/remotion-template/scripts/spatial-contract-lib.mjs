@@ -614,7 +614,11 @@ const resolveAnchor = ({entry, contract, progress}) => {
     });
   }
   if (entry.node.kind !== 'state-sequence') return null;
-  const state = resolveSequenceState({node: entry.node, progress});
+  const state = resolveSequenceState({
+    node: entry.node,
+    progress,
+    pathDepthVelocity: entry.pathMotion?.depthVelocity ?? 0,
+  });
   const anchor = state?.anchors?.find(
     ({id}) => id === contract.subjectAnchor.name,
   );
@@ -752,7 +756,11 @@ const sourceForEntry = (entry, progress) => {
     return entry.node.src;
   }
   if (entry.node.kind === 'state-sequence') {
-    return resolveSequenceState({node: entry.node, progress})?.src ?? null;
+    return resolveSequenceState({
+      node: entry.node,
+      progress,
+      pathDepthVelocity: entry.pathMotion?.depthVelocity ?? 0,
+    })?.src ?? null;
   }
   return null;
 };
@@ -1211,11 +1219,12 @@ const inspectGait = (project, contract) => {
   }
   const from = proofFor(scene, contract.fromProofTimeId);
   const through = proofFor(scene, contract.throughProofTimeId);
-  const entry = resolveSceneNodes({
-    scene,
-    video: project.video,
+  const prepared = prepareSceneResolution({scene, video: project.video});
+  const entry = resolvePreparedNodeAt({
+    prepared,
+    nodeId: contract.nodeId,
     progress: from?.at ?? 0,
-  }).entries.get(contract.nodeId);
+  });
   if (!from || !through || through.at <= from.at || entry?.node.kind !== 'state-sequence') {
     checks.push({
       id: 'gait-window-resolves',
@@ -1251,7 +1260,16 @@ const inspectGait = (project, contract) => {
   const observed = new Set();
   for (let frame = fromFrame; frame <= throughFrame; frame += 1) {
     const progress = frame / Math.max(1, scene.durationInFrames - 1);
-    const state = resolveSequenceState({node, progress});
+    const frameEntry = resolvePreparedNodeAt({
+      prepared,
+      nodeId: contract.nodeId,
+      progress,
+    });
+    const state = resolveSequenceState({
+      node,
+      progress,
+      pathDepthVelocity: frameEntry?.pathMotion?.depthVelocity ?? 0,
+    });
     if (!state) continue;
     observed.add(state.id);
     if (previous !== null && state.id !== previous) {
@@ -1532,7 +1550,7 @@ const inspectPathLocomotion = (project, contract) => {
       passed: false,
       expected: {
         nodeKind: 'state-sequence',
-        path: 'cubic-bezier-2d',
+        path: 'cubic-bezier-3d',
         orderedProofIds: proofIds,
       },
       actual: {
@@ -1558,13 +1576,17 @@ const inspectPathLocomotion = (project, contract) => {
       progress,
     });
     if (!entry || entry.node.kind !== 'state-sequence') continue;
+    const pathAnchor = {
+      x: Number(entry.node.transform?.anchorX ?? 0.5),
+      y: Number(entry.node.transform?.anchorY ?? 0.5),
+    };
     const localCenter = applyMatrix(entry.localMatrix, {
-      x: entry.width * 0.5,
-      y: entry.height * 0.5,
+      x: entry.width * pathAnchor.x,
+      y: entry.height * pathAnchor.y,
     });
     const screenCenter = applyMatrix(entry.matrix, {
-      x: entry.width * 0.5,
-      y: entry.height * 0.5,
+      x: entry.width * pathAnchor.x,
+      y: entry.height * pathAnchor.y,
     });
     const state = resolveSequenceState({node: entry.node, progress});
     samples.push({
@@ -1574,6 +1596,8 @@ const inspectPathLocomotion = (project, contract) => {
       y: localCenter.y / project.video.height,
       screenCenter,
       path: entry.pathMotion,
+      z: entry.pathMotion.z,
+      projectionScale: entry.pathMotion.projectionScale,
       renderedHeadingDegrees:
         Math.atan2(entry.localMatrix[1], entry.localMatrix[0]) *
           180 / Math.PI +
@@ -1593,7 +1617,7 @@ const inspectPathLocomotion = (project, contract) => {
       Math.hypot(pixelDx, pixelDy) /
       Math.max(1, Math.min(project.video.width, project.video.height));
     if (length <= 1e-7) continue;
-    const headingDegrees = Math.atan2(pixelDy, pixelDx) * 180 / Math.PI;
+    const headingDegrees = right.path.headingDegrees;
     movingSegments.push({
       frame: right.frame,
       length,
@@ -1610,6 +1634,27 @@ const inspectPathLocomotion = (project, contract) => {
     (sum, segment) => sum + segment.length,
     0,
   );
+  const depthSegments = samples.slice(1).map((sample, index) => ({
+    frame: sample.frame,
+    delta: sample.z - samples[index].z,
+  }));
+  const totalDepthTravel = depthSegments.reduce(
+    (sum, {delta}) => sum + Math.abs(delta),
+    0,
+  );
+  const depthDirections = [
+    ...new Set(
+      depthSegments.flatMap(({delta}) => {
+        if (Math.abs(delta) <= 1e-7) return [];
+        return [delta > 0 ? 'toward-camera' : 'away-camera'];
+      }),
+    ),
+  ].sort();
+  const projectionScales = samples.map(({projectionScale}) => projectionScale);
+  const projectionScaleDelta =
+    projectionScales.length > 0
+      ? Math.max(...projectionScales) - Math.min(...projectionScales)
+      : 0;
   const sectors = [...new Set(movingSegments.map(({sector}) => sector))].sort(
     (left, right) => left - right,
   );
@@ -1674,6 +1719,30 @@ const inspectPathLocomotion = (project, contract) => {
       passed: totalTravel + 1e-9 >= contract.minimumTravel,
       expected: contract.minimumTravel,
       actual: totalTravel,
+    },
+    {
+      id: 'path-locomotion-depth-travel',
+      passed:
+        totalDepthTravel + 1e-9 >=
+        (contract.minimumDepthTravel ?? 0),
+      expected: contract.minimumDepthTravel ?? 0,
+      actual: totalDepthTravel,
+    },
+    {
+      id: 'path-locomotion-depth-directions',
+      passed: (contract.requiredDepthDirections ?? []).every(
+        (direction) => depthDirections.includes(direction),
+      ),
+      expected: contract.requiredDepthDirections ?? [],
+      actual: depthDirections,
+    },
+    {
+      id: 'path-locomotion-depth-projection',
+      passed:
+        projectionScaleDelta + 1e-9 >=
+        (contract.minimumProjectionScaleDelta ?? 0),
+      expected: contract.minimumProjectionScaleDelta ?? 0,
+      actual: projectionScaleDelta,
     },
     {
       id: 'path-locomotion-direction-sectors',
@@ -1799,6 +1868,10 @@ const inspectPathLocomotion = (project, contract) => {
           180 / Math.PI
         : null,
       totalTravel,
+      totalDepthTravel,
+      depthDirections,
+      projectionScale: entry?.pathMotion?.projectionScale ?? null,
+      projectionScaleDelta,
       directionSectors: sectors,
       maximumHeadingErrorDegrees: maximumHeadingError,
       maximumTurnDegreesPerSecond: maximumTurnRate,

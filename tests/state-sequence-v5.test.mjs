@@ -20,6 +20,11 @@ import {
   validateStateSheetSpec,
 } from '../scripts/state-sheet-lib.mjs';
 import {
+  resolvePathViewWeights,
+  resolveSequenceLayers,
+  resolveSequenceState,
+} from '../scripts/state-sequence-lib.mjs';
+import {
   buildTargetWorldMotionProof,
   resolveTargetViewportSnapshot,
 } from '../scripts/world-motion-proof-lib.mjs';
@@ -45,6 +50,62 @@ const stateContract = (state) => ({
   ...state,
   facing: 'right',
   anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+});
+
+test('3D path velocity selects and smoothly blends planar, toward, and away swim loops', () => {
+  const states = [
+    ['planar-a', 0, 'neutral'],
+    ['planar-b', 0.16, 'neutral'],
+    ['toward-a', 0.32, 'front'],
+    ['toward-b', 0.48, 'front'],
+    ['away-a', 0.64, 'back'],
+    ['away-b', 0.8, 'back'],
+  ].map(([id, at, facing]) => ({id, at, facing}));
+  const node = {
+    states,
+    playback: {mode: 'loop', cycles: 4},
+    transition: {type: 'cut', durationSeconds: 0},
+    pathViewBinding: {
+      depthVelocityThreshold: 0.2,
+      transitionWidth: 0.1,
+      planarStateIds: ['planar-a', 'planar-b'],
+      towardStateIds: ['toward-a', 'toward-b'],
+      awayStateIds: ['away-a', 'away-b'],
+    },
+  };
+  assert.equal(resolveSequenceState({
+    node,
+    progress: 0.1,
+    pathDepthVelocity: 0,
+  }).id, 'planar-a');
+  assert.equal(resolveSequenceState({
+    node,
+    progress: 0.1,
+    pathDepthVelocity: 0.4,
+  }).id, 'toward-a');
+  assert.equal(resolveSequenceState({
+    node,
+    progress: 0.1,
+    pathDepthVelocity: -0.4,
+  }).id, 'away-a');
+
+  const transitionWeights = resolvePathViewWeights({
+    node,
+    pathDepthVelocity: 0.2,
+  });
+  assert.deepEqual(
+    transitionWeights.map(({view}) => view),
+    ['planar', 'toward-camera'],
+  );
+  assert.ok(transitionWeights.every(({weight}) => Math.abs(weight - 0.5) < 1e-9));
+  const layers = resolveSequenceLayers({
+    node,
+    progress: 0.1,
+    durationSeconds: 4,
+    pathDepthVelocity: 0.2,
+  });
+  assert.deepEqual(layers.map(({id}) => id), ['planar-a', 'toward-a']);
+  assert.ok(layers.every(({opacity}) => Math.abs(opacity - 0.5) < 1e-9));
 });
 
 test('horizontal mirror derives opposite facing and registered anchors deterministically', () => {

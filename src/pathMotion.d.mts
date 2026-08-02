@@ -6,6 +6,14 @@ import type {
 export type ResolvedPathMotion = {
   x: number;
   y: number;
+  z: number;
+  depthVelocity: number;
+  depthDirection: 'planar' | 'toward-camera' | 'away-camera';
+  projectionScale: number;
+  projectionOpacity: number;
+  projectionBlurPx: number;
+  depthOrder: number;
+  screenTangentLength: number;
   rotationDegrees: number;
   desiredRotationDegrees: number;
   headingDegrees: number;

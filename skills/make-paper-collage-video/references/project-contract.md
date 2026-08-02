@@ -136,7 +136,7 @@ and a maximum turn rate. It is valid only on a `state-sequence`; ordinary
 keyframes may not compete for x/y/rotation, static rotation remains zero, and
 idle is restricted to `still|breathe`. Geometry resolves against physical
 parent width/height so 16:9, 9:16, and 1:1 preserve truthful tangent heading.
-Read `path-locomotion-2d.md` for authoring and proof.
+Read `path-locomotion-3d.md` for authoring and proof.
 
 A top-level `supported-subject` or `registered-depth-stack` group may explicitly
 declare `renderParticipation=derivation-only` when it exists only to bind a

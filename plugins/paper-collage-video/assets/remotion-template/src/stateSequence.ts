@@ -83,14 +83,94 @@ const normalizeActiveStates = (states: SequenceState[], evenlyDistributed = fals
   return states.map((state) => ({...state, phaseAt: state.at}));
 };
 
-export const resolveSequenceLayers = ({
+const smoothstep = (edge0: number, edge1: number, value: number) => {
+  if (edge1 <= edge0) return value >= edge1 ? 1 : 0;
+  const amount = clamp01((value - edge0) / (edge1 - edge0));
+  return amount * amount * (3 - 2 * amount);
+};
+
+const pathViewWeights = (
+  node: CompositionStateSequenceNode,
+  pathDepthVelocity: number,
+) => {
+  const binding = node.pathViewBinding;
+  if (!binding) return [{stateIds: undefined, weight: 1}];
+  const lower = Math.max(0, binding.depthVelocityThreshold - binding.transitionWidth);
+  const upper = binding.depthVelocityThreshold + binding.transitionWidth;
+  const toward = smoothstep(lower, upper, pathDepthVelocity);
+  const away = smoothstep(lower, upper, -pathDepthVelocity);
+  const planar = Math.max(0, 1 - Math.max(toward, away));
+  return [
+    {stateIds: binding.planarStateIds, weight: planar},
+    {stateIds: binding.towardStateIds, weight: toward},
+    {stateIds: binding.awayStateIds, weight: away},
+  ].filter(({weight}) => weight > 1e-6);
+};
+
+const statesForIds = (
+  node: CompositionStateSequenceNode,
+  stateIds: string[] | undefined,
+) => {
+  if (!stateIds) return activeStatesFor(node);
+  const byId = new Map(node.states.map((state) => [state.id, state]));
+  return stateIds.flatMap((id) => {
+    const state = byId.get(id);
+    return state ? [state] : [];
+  });
+};
+
+const activeLayersForStates = ({
   node,
+  states,
   progress,
   durationSeconds,
 }: {
   node: CompositionStateSequenceNode;
+  states: SequenceState[];
   progress: number;
   durationSeconds: number;
+}) => {
+  const activeFrom = node.playback.activeFrom ?? 0;
+  const activeUntil = node.playback.activeUntil ?? 1;
+  const normalizedStates = normalizeActiveStates(
+    states,
+    Boolean(node.playback.activeStateIds) || Boolean(node.pathViewBinding),
+  );
+  const phase = resolveSequencePhase({...node.playback, progress});
+  let activeIndex = 0;
+  for (const [index, state] of normalizedStates.entries()) {
+    if (state.phaseAt > phase) break;
+    activeIndex = index;
+  }
+  const active = normalizedStates[activeIndex];
+  if (!active) return [];
+  if (node.transition.type === 'cut' || activeIndex === 0) {
+    return [{...active, opacity: 1}];
+  }
+  const activeDurationSeconds = durationSeconds * (activeUntil - activeFrom);
+  const cycleDuration = activeDurationSeconds / Math.max(node.playback.cycles, 1e-9);
+  const phaseDuration = node.playback.mode === 'ping-pong' ? cycleDuration / 2 : cycleDuration;
+  const fadePhase = node.transition.durationSeconds / Math.max(phaseDuration, 1e-9);
+  const amount = clamp01(
+    (phase - active.phaseAt) / Math.max(fadePhase, 1e-9),
+  );
+  if (amount >= 1) return [{...active, opacity: 1}];
+  return [
+    {...normalizedStates[activeIndex - 1], opacity: 1 - amount},
+    {...active, opacity: amount},
+  ];
+};
+
+export const resolveSequenceLayers = ({
+  node,
+  progress,
+  durationSeconds,
+  pathDepthVelocity = 0,
+}: {
+  node: CompositionStateSequenceNode;
+  progress: number;
+  durationSeconds: number;
+  pathDepthVelocity?: number;
 }): ResolvedSequenceLayer[] => {
   const activeFrom = node.playback.activeFrom ?? 0;
   const activeUntil = node.playback.activeUntil ?? 1;
@@ -115,23 +195,13 @@ export const resolveSequenceLayers = ({
       {...active, opacity: fadeProgress},
     ];
   }
-  const states = normalizeActiveStates(activeStatesFor(node), Boolean(node.playback.activeStateIds));
-  const phase = resolveSequencePhase({...node.playback, progress});
-  let activeIndex = 0;
-  for (const [index, state] of states.entries()) {
-    if (state.phaseAt > phase) break;
-    activeIndex = index;
-  }
-  const active = states[activeIndex];
-  if (node.transition.type === 'cut' || activeIndex === 0) return [{...active, opacity: 1}];
-  const activeDurationSeconds = durationSeconds * (activeUntil - activeFrom);
-  const cycleDuration = activeDurationSeconds / Math.max(node.playback.cycles, 1e-9);
-  const phaseDuration = node.playback.mode === 'ping-pong' ? cycleDuration / 2 : cycleDuration;
-  const fadePhase = node.transition.durationSeconds / Math.max(phaseDuration, 1e-9);
-  const amount = clamp01((phase - active.phaseAt) / Math.max(fadePhase, 1e-9));
-  if (amount >= 1) return [{...active, opacity: 1}];
-  return [
-    {...states[activeIndex - 1], opacity: 1 - amount},
-    {...active, opacity: amount},
-  ];
+  return pathViewWeights(node, pathDepthVelocity).flatMap(
+    ({stateIds, weight}) =>
+      activeLayersForStates({
+        node,
+        states: statesForIds(node, stateIds),
+        progress,
+        durationSeconds,
+      }).map((layer) => ({...layer, opacity: layer.opacity * weight})),
+  );
 };

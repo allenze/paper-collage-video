@@ -10,6 +10,7 @@ import {
 } from '../scripts/observed-key-plane-lib.mjs';
 import {
   inspectRejectedOutputRecovery,
+  validateRejectedOutputRecoverySpec,
   writeRejectedOutputRecovery,
 } from '../scripts/rejected-output-recovery-lib.mjs';
 import {
@@ -48,6 +49,57 @@ test('observed key plane accepts a stable provider-native near-key surface', asy
   assert.equal(result.observedKeyColor, '#fa02ce');
   assert.ok(result.metrics.requestedToObservedDistance > 40);
   assert.ok(result.metrics.largestComponentShare > 0.99);
+});
+
+test('explicit recovery hint can seed a flat provider-shifted key plane while preserving requested-color distance', () => {
+  const width = 40;
+  const height = 40;
+  const raw = Buffer.alloc(width * height * 3);
+  for (let offset = 0; offset < raw.length; offset += 3) {
+    raw.set([186, 41, 145], offset);
+  }
+  const withoutHint = inspectRaw(raw, width, height);
+  assert.equal(withoutHint.passed, false);
+  assert.deepEqual(withoutHint.reasons, ['no-request-near-candidates']);
+  const withHint = inspectObservedKeyPlanePixels({
+    data: raw,
+    imageWidth: width,
+    imageHeight: height,
+    channels: 3,
+    requestedKeyColor: '#ff00ff',
+    candidateKeyColor: '#ba2991',
+  });
+  assert.equal(withHint.passed, true, JSON.stringify(withHint, null, 2));
+  assert.equal(withHint.requestedKeyColor, '#ff00ff');
+  assert.equal(withHint.candidateKeyColor, '#ba2991');
+  assert.equal(withHint.observedKeyColor, '#ba2991');
+  assert.ok(withHint.metrics.requestedToObservedDistance > 100);
+});
+
+test('recovery spec accepts a complete dense registered state family', () => {
+  const cells = Array.from({length: 12}, (_, index) => ({
+    packageRole: 'state',
+    stateId: `state-${index + 1}`,
+    sourceRect: {
+      left: index * 4,
+      top: 0,
+      width: 4,
+      height: 4,
+    },
+    keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'},
+    observedKeyColorHint: '#f406ed',
+  }));
+  const validated = validateRejectedOutputRecoverySpec({
+      schemaVersion: 1,
+      projectSlug: 'dense-state-family',
+      attemptId: 'img-123',
+      historicalRequest: 'projects/dense-state-family/request.json',
+      source: {file: 'source.png', sha256: 'a'.repeat(64)},
+      recoveryAssetId: 'dense-state-family',
+      reason: 'complete twelve-state family',
+      cells,
+    });
+  assert.equal(validated.cells.length, 12);
 });
 
 test('observed key plane rejects gradients, checkerboards and multi-cluster surfaces', () => {

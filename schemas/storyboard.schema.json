@@ -300,7 +300,7 @@
             "durationSeconds": {"type": "number", "minimum": 0, "maximum": 2},
             "distribution": {"enum": ["scattered", "grid", "edge"]},
             "count": {"type": "integer", "minimum": 1, "maximum": 64},
-            "cycles": {"type": "number", "exclusiveMinimum": 0, "maximum": 12},
+            "cycles": {"type": "number", "exclusiveMinimum": 0},
             "activeFrom": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
             "activeUntil": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
             "holdStateId": {"type": "string", "minLength": 1},
@@ -309,6 +309,9 @@
               "minItems": 2,
               "uniqueItems": true,
               "items": {"type": "string", "minLength": 1}
+            },
+            "pathViewBinding": {
+              "$ref": "composition.schema.json#/$defs/pathViewBinding"
             },
             "path": {
               "$ref": "composition.schema.json#/$defs/pathMotion"
@@ -329,7 +332,20 @@
           "allOf": [
             {
               "if": {"properties": {"kind": {"const": "state-sequence"}}},
-              "then": {"required": ["facing"]}
+              "then": {
+                "required": ["facing"],
+                "properties": {
+                  "cycles": {"type": "integer", "minimum": 1}
+                }
+              }
+            },
+            {
+              "if": {"properties": {"kind": {"const": "motif-field"}}},
+              "then": {
+                "properties": {
+                  "cycles": {"type": "number", "exclusiveMinimum": 0, "maximum": 12}
+                }
+              }
             },
             {
               "if": {"properties": {"kind": {"const": "path-locomotion"}}},
@@ -718,6 +734,7 @@
           }
         },
         "playback": {"$ref": "#/$defs/statePlaybackPlan"},
+        "pathViewBinding": {"$ref": "composition.schema.json#/$defs/pathViewBinding"},
         "transition": {"enum": ["cut", "crossfade"]}
       },
       "additionalProperties": false

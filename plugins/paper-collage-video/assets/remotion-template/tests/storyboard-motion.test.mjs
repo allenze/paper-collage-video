@@ -1106,13 +1106,13 @@ test('motion proof moments cannot be hidden inside scene boundary transitions', 
 test('path locomotion compiles as an orthogonal route bound to one looping state family and camera follow', () => {
   const authored = authoredStoryboard();
   const path = {
-    kind: 'cubic-bezier-2d',
-    coordinateSpace: 'parent-normalized',
-    start: {x: -0.3, y: 0},
+    kind: 'cubic-bezier-3d',
+    coordinateSpace: 'parent-normalized-depth',
+    start: {x: -0.3, y: 0, z: -0.4},
     segments: [{
-      control1: {x: -0.12, y: -0.2},
-      control2: {x: 0.12, y: 0.2},
-      end: {x: 0.3, y: 0},
+      control1: {x: -0.12, y: -0.2, z: -0.1},
+      control2: {x: 0.12, y: 0.2, z: 0.2},
+      end: {x: 0.3, y: 0, z: 0.5},
     }],
     progress: [
       {at: 0, distance: 0, ease: 'ease-in-out'},
@@ -1123,6 +1123,16 @@ test('path locomotion compiles as an orthogonal route bound to one looping state
       forwardAngleDegrees: 0,
       smoothingSeconds: 0.08,
       maximumTurnDegreesPerSecond: 240,
+    },
+    projection: {
+      depthDistanceScale: 0.65,
+      farScale: 0.68,
+      nearScale: 1.35,
+      farOpacity: 0.7,
+      nearOpacity: 1,
+      farBlurPx: 2,
+      nearBlurPx: 0,
+      depthOrderSpan: 40,
     },
   };
   const stateTreatment = ({id, stateId, visualChange, proofTimeId}) => ({
@@ -1201,6 +1211,9 @@ test('path locomotion compiles as an orthogonal route bound to one looping state
     minimumChangesPerSecond: 2,
     continueThroughWindowEnd: true,
     minimumTravel: 0.4,
+    minimumDepthTravel: 0.6,
+    minimumProjectionScaleDelta: 0.3,
+    requiredDepthDirections: ['toward-camera'],
     minimumDirectionSectors: 2,
     maximumHeadingErrorDegrees: 20,
     maximumTurnDegreesPerSecond: 240,
@@ -1236,5 +1249,74 @@ test('path locomotion compiles as an orthogonal route bound to one looping state
     compiled.directingSummary.styleProofPlan.requiredCoverage.includes(
       'motion:path-locomotion',
     ),
+  );
+});
+
+test('one camera may follow the lead while sibling path swimmers omit camera follow', () => {
+  const sharedPath = {
+    kind: 'cubic-bezier-3d',
+    coordinateSpace: 'parent-normalized-depth',
+    start: {x: -0.2, y: 0, z: 0},
+    segments: [{
+      control1: {x: -0.05, y: -0.1, z: 0},
+      control2: {x: 0.05, y: 0.1, z: 0},
+      end: {x: 0.2, y: 0, z: 0},
+    }],
+    progress: [
+      {at: 0, distance: 0, ease: 'linear'},
+      {at: 1, distance: 1, ease: 'linear'},
+    ],
+    orientation: {
+      mode: 'path-tangent',
+      forwardAngleDegrees: 0,
+      smoothingSeconds: 0.08,
+      maximumTurnDegreesPerSecond: 240,
+    },
+    projection: {
+      depthDistanceScale: 0.65,
+      farScale: 0.68,
+      nearScale: 1.35,
+      farOpacity: 0.7,
+      nearOpacity: 1,
+      farBlurPx: 2,
+      nearBlurPx: 0,
+      depthOrderSpan: 40,
+    },
+  };
+  const follow = {
+    targetNodeId: 'lead',
+    worldNodeId: 'pond-world',
+    framing: {x: 0.5, y: 0.54},
+    lookAheadSeconds: 0.15,
+    smoothingSeconds: 0.2,
+    zoom: 1,
+    worldBounds: {x: -1, y: -1, width: 3, height: 3},
+  };
+  const pathNode = (id) => ({
+    id,
+    kind: 'state-sequence',
+    motion: {path: sharedPath},
+  });
+  const runtimeScene = {
+    camera: {follow},
+    composition: {nodes: [pathNode('lead'), pathNode('follower')]},
+  };
+  const storyboardScene = {
+    compositionPlan: {
+      pathMotions: [
+        {id: 'lead-path', nodeId: 'lead', path: sharedPath, cameraFollow: follow},
+        {
+          id: 'follower-path',
+          nodeId: 'follower',
+          path: sharedPath,
+          cameraFollow: null,
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(
+    validateDirectingExecution({scene: runtimeScene, storyboardScene}),
+    [],
   );
 });

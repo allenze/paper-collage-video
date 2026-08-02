@@ -91,6 +91,53 @@ def validate_ref(
         raise ValueError(rendered)
 
 
+def validate_ref_instance(
+    instance: dict,
+    schema_name: str,
+    fragment: str,
+    label: str,
+) -> None:
+    validator = Draft202012Validator(
+        {
+            "$ref": (
+                f"https://local.paper-collage.dev/{schema_name}"
+                f"#{fragment}"
+            )
+        },
+        registry=registry,
+    )
+    errors = sorted(
+        validator.iter_errors(instance),
+        key=lambda error: list(error.absolute_path),
+    )
+    if errors:
+        rendered = "\n".join(
+            f"{label}:{'/'.join(map(str, error.absolute_path))}: {error.message}"
+            for error in errors
+        )
+        raise ValueError(rendered)
+
+
+def treatment_with_motion(motion: dict) -> dict:
+    return {
+        "id": "schema-cycle-proof",
+        "targetId": "traveler",
+        "importance": "hero",
+        "necessity": "required",
+        "changeClass": (
+            "pose-change"
+            if motion["kind"] == "state-sequence"
+            else "decorative-field"
+        ),
+        "motion": motion,
+        "composition": {"pattern": "free"},
+        "graphic": None,
+        "semanticRisk": "decorative",
+        "proofTimeId": None,
+        "rationale": "Schema proof for primitive-specific cycle bounds.",
+    }
+
+
 try:
     validate(
         PROOF_INPUT_DIRECTORY / "storyboard-authoring.json",
@@ -151,6 +198,64 @@ try:
         "storyboard.schema.json",
         "/$defs/canonicalContainerPlan",
     )
+    validate_ref_instance(
+        treatment_with_motion(
+            {
+                "kind": "state-sequence",
+                "poseFamilyId": "traveler-loop",
+                "stateId": "phase-a",
+                "facing": "neutral",
+                "visualChange": "The registered locomotion phase advances.",
+                "playback": "loop",
+                "transition": "cut",
+                "cycles": 40,
+            }
+        ),
+        "storyboard.schema.json",
+        "/$defs/treatment",
+        "state-sequence-long-cycle-proof",
+    )
+    validate_ref_instance(
+        {
+            "riskClass": "identity-critical",
+            "contractIds": ["recurring-cast"],
+            "generationFamily": {
+                "familyId": "cast-family",
+                "identityMemberIds": ["elder-scholar", "young-engineer"],
+                "stateMemberIds": ["waiting", "welcoming"],
+                "referenceAssetIds": ["cast-reference"],
+            },
+        },
+        "asset-request.schema.json",
+        "/properties/semanticBinding",
+        "identity-generation-family-proof",
+    )
+    motif_overflow = treatment_with_motion(
+        {
+            "kind": "motif-field",
+            "preset": "drift",
+            "distribution": "scattered",
+            "count": 8,
+            "cycles": 13,
+            "bounds": {"x": 0, "y": 0, "width": 1, "height": 1},
+            "exclusionZones": [],
+        }
+    )
+    motif_errors = list(
+        Draft202012Validator(
+            {
+                "$ref": (
+                    "https://local.paper-collage.dev/"
+                    "storyboard.schema.json#/$defs/treatment"
+                )
+            },
+            registry=registry,
+        ).iter_errors(motif_overflow)
+    )
+    if not motif_errors:
+        raise ValueError(
+            "motif-field-cycle-cap-proof: cycles above 12 must be rejected"
+        )
 except (FileNotFoundError, KeyError, ValueError) as error:
     print(f"v12 schema validation failed:\n{error}", file=sys.stderr)
     raise SystemExit(1)
@@ -158,6 +263,7 @@ except (FileNotFoundError, KeyError, ValueError) as error:
 print(
     "✓ v12 authoring, compiled storyboard, three project contracts, "
     "asset manifests, looping-strip derivations, registered-family derivation, "
-    "canonical-container intent/derivation/binding/compiled plan, and rejected-output recovery "
+    "canonical-container intent/derivation/binding/compiled plan, primitive-specific cycle bounds, "
+    "and rejected-output recovery "
     "are schema-valid"
 )

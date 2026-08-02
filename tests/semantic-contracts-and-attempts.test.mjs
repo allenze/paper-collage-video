@@ -19,6 +19,7 @@ import {
 } from '../scripts/provider-lib.mjs';
 import {
   collectCompositeQualityTargets,
+  collectStyleProofTargets,
   prepareQualityReport,
 } from '../scripts/quality-lib.mjs';
 import {
@@ -661,6 +662,113 @@ test('diagram filters fail deterministically and semantic proof targets span sce
     await fs.rm(projectDirectory, {recursive: true, force: true});
     await fs.rm(publicDirectory, {recursive: true, force: true});
     await fs.rm(path.join(ROOT, 'dist', slug), {recursive: true, force: true});
+  }
+});
+
+test('style proof defers semantic evidence for a planned node that is not generated yet', async () => {
+  const slug = `semantic-style-pending-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const scene = {
+    id: 'scene-a',
+    motion: {
+      proofTimes: [{
+        id: 'final',
+        at: 0.9,
+        label: 'Final',
+        kind: 'final',
+        assertions: ['Readable'],
+      }],
+    },
+    composition: {
+      coordinateSpace: {width: 100, height: 100},
+      nodes: [{
+        id: 'existing-subject',
+        kind: 'asset',
+        assetRole: 'character',
+        src: `projects/${slug}/existing.png`,
+        z: 1,
+        transform: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1,
+          anchorX: 0,
+          anchorY: 0,
+        },
+        motion: {keyframes: [{at: 0}, {at: 1}]},
+      }],
+    },
+    events: [],
+  };
+  const project = withCompiledEditorialFixture({
+    slug,
+    quality: {minimumAssetScale: 1},
+    video: {width: 100, height: 100, fps: 30},
+    audio: {narration: {volume: 1}},
+    scenes: [scene],
+    sceneTransitions: [],
+  });
+  const pendingDiagram = {
+    id: 'pending-diagram-contract',
+    kind: 'diagram',
+    title: 'Pending diagram',
+    invariants: ['The final diagram remains legible.'],
+    protectedLayers: ['text', 'icons', 'arrows', 'borders'],
+    forbiddenSvgFeatures: ['feTurbulence', 'feDisplacementMap', 'feBlend'],
+    finalCanvas: {width: 100, height: 100},
+    evidenceTargets: [{
+      id: 'pending-diagram-final',
+      checks: [
+        'diagram-edge-clean',
+        'small-text-legible',
+        'no-procedural-noise-on-semantic-lines',
+      ],
+      shots: [{
+        sceneId: 'scene-a',
+        nodeId: 'pending-diagram',
+        proofTimeIds: ['final'],
+      }],
+    }],
+  };
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.writeFile(
+      path.join(projectDirectory, 'assets-manifest.json'),
+      `${JSON.stringify(manifestFixture(slug, []), null, 2)}\n`,
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'semantic-contracts.json'),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        projectSlug: slug,
+        status: 'ready',
+        contracts: [pendingDiagram],
+      }, null, 2)}\n`,
+    );
+
+    await assert.rejects(
+      () => collectCompositeQualityTargets(project),
+      /pending-diagram/,
+    );
+    const targets = await collectStyleProofTargets(project, {
+      sceneId: 'scene-a',
+      treatmentId: 'existing-subject-style',
+      targetId: 'existing-subject',
+      proofTimeId: 'final',
+      riskScore: 20,
+      directingFingerprint: 'a'.repeat(64),
+      sourceFamilyKey: 'target:existing-subject',
+      coverage: ['style:character'],
+    });
+    assert.ok(
+      targets.every(
+        ({compositeId}) =>
+          compositeId !==
+          'semantic:pending-diagram-contract:pending-diagram-final',
+      ),
+    );
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
   }
 });
 

@@ -33,7 +33,7 @@
     "cells": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 6,
+      "maxItems": 64,
       "items": {
         "type": "object",
         "required": ["packageRole", "sourceRect", "keyPlane"],
@@ -59,6 +59,11 @@
               "policyId": {"const": "flat-v1"}
             },
             "additionalProperties": false
+          },
+          "observedKeyColorHint": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Optional provider-shifted flat-plane color used only to seed deterministic recovery observation; the original requested key color remains recorded."
           }
         },
         "allOf": [

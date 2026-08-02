@@ -15,29 +15,29 @@ import {
 } from '../src/pathMotion.mjs';
 
 const path = {
-  kind: 'cubic-bezier-2d',
-  coordinateSpace: 'parent-normalized',
-  start: {x: 0, y: -0.4},
+  kind: 'cubic-bezier-3d',
+  coordinateSpace: 'parent-normalized-depth',
+  start: {x: 0, y: -0.4, z: -0.6},
   segments: [
     {
-      control1: {x: 0.22, y: -0.4},
-      control2: {x: 0.4, y: -0.22},
-      end: {x: 0.4, y: 0},
+      control1: {x: 0.22, y: -0.4, z: -0.6},
+      control2: {x: 0.4, y: -0.22, z: 0.6},
+      end: {x: 0.4, y: 0, z: 0.6},
     },
     {
-      control1: {x: 0.4, y: 0.22},
-      control2: {x: 0.22, y: 0.4},
-      end: {x: 0, y: 0.4},
+      control1: {x: 0.4, y: 0.22, z: 0.6},
+      control2: {x: 0.22, y: 0.4, z: -0.2},
+      end: {x: 0, y: 0.4, z: -0.2},
     },
     {
-      control1: {x: -0.22, y: 0.4},
-      control2: {x: -0.4, y: 0.22},
-      end: {x: -0.4, y: 0},
+      control1: {x: -0.22, y: 0.4, z: -0.2},
+      control2: {x: -0.4, y: 0.22, z: 0.7},
+      end: {x: -0.4, y: 0, z: 0.7},
     },
     {
-      control1: {x: -0.4, y: -0.22},
-      control2: {x: -0.22, y: -0.4},
-      end: {x: 0, y: -0.4},
+      control1: {x: -0.4, y: -0.22, z: 0.7},
+      control2: {x: -0.22, y: -0.4, z: -0.6},
+      end: {x: 0, y: -0.4, z: -0.6},
     },
   ],
   progress: [
@@ -49,6 +49,16 @@ const path = {
     forwardAngleDegrees: 0,
     smoothingSeconds: 0.04,
     maximumTurnDegreesPerSecond: 120,
+  },
+  projection: {
+    depthDistanceScale: 0.65,
+    farScale: 0.62,
+    nearScale: 1.42,
+    farOpacity: 0.68,
+    nearOpacity: 1,
+    farBlurPx: 2.4,
+    nearBlurPx: 0,
+    depthOrderSpan: 40,
   },
 };
 
@@ -128,7 +138,10 @@ const swimmer = {
     anchorY: 0.5,
     rotation: 0,
   },
-  motion: {...still, path},
+  motion: {
+    keyframes: [{at: 0, opacity: 1}, {at: 1, opacity: 1}],
+    path,
+  },
 };
 
 const proofs = [
@@ -193,6 +206,9 @@ const contract = {
   minimumChangesPerSecond: 3,
   continueThroughWindowEnd: true,
   minimumTravel: 2,
+  minimumDepthTravel: 2,
+  minimumProjectionScaleDelta: 0.4,
+  requiredDepthDirections: ['toward-camera', 'away-camera'],
   minimumDirectionSectors: 8,
   maximumHeadingErrorDegrees: 18,
   maximumTurnDegreesPerSecond: 120,
@@ -226,10 +242,12 @@ test('cubic path uses arc-length progress and bounded tangent orientation', () =
     Math.hypot(
       sample.x - frames[index].x,
       sample.y - frames[index].y,
+      (sample.z - frames[index].z) * path.projection.depthDistanceScale,
     ),
   );
   const nonZero = stepLengths.filter((value) => value > 1e-8);
-  assert.ok(Math.max(...nonZero) / Math.min(...nonZero) < 1.08);
+  const stepRatio = Math.max(...nonZero) / Math.min(...nonZero);
+  assert.ok(stepRatio < 1.08, `3D arc-length step ratio=${stepRatio}`);
   const maximumTurnRate = Math.max(
     ...frames.slice(1).map((sample, index) => {
       let delta = (sample.rotationDegrees - frames[index].rotationDegrees) % 360;
@@ -244,12 +262,12 @@ test('cubic path uses arc-length progress and bounded tangent orientation', () =
 test('path heading and arc length use physical aspect ratio', () => {
   const diagonal = {
     ...path,
-    start: {x: -0.3, y: -0.3},
+    start: {x: -0.3, y: -0.3, z: 0},
     segments: [
       {
-        control1: {x: -0.1, y: -0.1},
-        control2: {x: 0.1, y: 0.1},
-        end: {x: 0.3, y: 0.3},
+        control1: {x: -0.1, y: -0.1, z: 0},
+        control2: {x: 0.1, y: 0.1, z: 0},
+        end: {x: 0.3, y: 0.3, z: 0},
       },
     ],
     orientation: {
@@ -368,6 +386,12 @@ test('path locomotion proves eight directions, continuous turning, gait, and cam
   assert.ok(
     inspection.checks.some(
       ({id, passed}) =>
+        id === 'path-locomotion-depth-projection' && passed,
+    ),
+  );
+  assert.ok(
+    inspection.checks.some(
+      ({id, passed}) =>
         id === 'path-locomotion-camera-coverage' && passed,
     ),
   );
@@ -392,6 +416,47 @@ test('path locomotion proves eight directions, continuous turning, gait, and cam
   });
   assert.ok(followed);
   assert.ok([followed.x, followed.y, followed.zoom].every(Number.isFinite));
+});
+
+test('path locomotion measures a registered body anchor without inventing reversals at eased turns', async () => {
+  const anchored = structuredClone(project);
+  const anchoredScene = anchored.scenes[0];
+  const anchoredSwimmer = anchoredScene.composition.nodes.find(
+    ({id}) => id === 'tadpoles',
+  );
+  anchoredSwimmer.transform.anchorX = 0.62;
+  anchoredSwimmer.states.forEach((state) => {
+    state.anchors = [{id: 'body-center', x: 0.62, y: 0.5}];
+  });
+  anchoredSwimmer.motion.path.progress = [
+    {at: 0, distance: 0, ease: 'ease-in-out'},
+    {at: 0.25, distance: 0.25, ease: 'ease-in-out'},
+    {at: 0.5, distance: 0.5, ease: 'ease-in-out'},
+    {at: 0.75, distance: 0.75, ease: 'ease-in-out'},
+    {at: 1, distance: 1, ease: 'ease-in-out'},
+  ];
+  anchoredScene.camera.parallax = {
+    enabled: true,
+    strength: 0.35,
+    focalDepth: 0,
+  };
+  anchoredSwimmer.depth = 0.4;
+
+  const inspection = await inspectSpatialContract(
+    anchored,
+    anchored.spatialContracts[0],
+  );
+  assert.equal(
+    inspection.passed,
+    true,
+    JSON.stringify(inspection.checks.filter(({passed}) => !passed), null, 2),
+  );
+  assert.ok(
+    inspection.checks.some(
+      ({id, passed}) =>
+        id === 'path-locomotion-heading' && passed,
+    ),
+  );
 });
 
 test('composition validation rejects competing keyframe motion on a path target', () => {

@@ -483,7 +483,36 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
       addIssue(issues, 'treatment-motion-mixed', 'state-sequence 不得声明 continuous preset。', `${location}.motion.preset`);
     }
     if (motion.path !== undefined || motion.cameraFollow !== undefined) {
-      addIssue(issues, 'treatment-motion-mixed', 'state-sequence 的二维路径必须由同目标的独立 path-locomotion treatment 声明。', `${location}.motion`);
+      addIssue(issues, 'treatment-motion-mixed', 'state-sequence 的三维路径必须由同目标的独立 path-locomotion treatment 声明。', `${location}.motion`);
+    }
+    if (motion.pathViewBinding !== undefined) {
+      const binding = motion.pathViewBinding;
+      const groups = [
+        binding?.planarStateIds,
+        binding?.towardStateIds,
+        binding?.awayStateIds,
+      ];
+      const allIds = groups.flatMap((ids) => Array.isArray(ids) ? ids : []);
+      if (
+        !Number.isFinite(binding?.depthVelocityThreshold) ||
+        binding.depthVelocityThreshold <= 0 ||
+        !Number.isFinite(binding?.transitionWidth) ||
+        binding.transitionWidth < 0 ||
+        binding.transitionWidth > binding.depthVelocityThreshold
+      ) {
+        addIssue(issues, 'treatment-path-view-threshold', 'pathViewBinding 必须声明正 depthVelocityThreshold，且 transitionWidth 位于 0..threshold。', `${location}.motion.pathViewBinding`);
+      }
+      if (groups.some((ids) =>
+        !Array.isArray(ids) ||
+        ids.length < 2 ||
+        new Set(ids).size !== ids.length ||
+        ids.some((id) => !nonEmpty(id))
+      )) {
+        addIssue(issues, 'treatment-path-view-group', 'pathViewBinding 的 planar/toward/away 各组都必须包含至少两个不重复状态。', `${location}.motion.pathViewBinding`);
+      }
+      if (new Set(allIds).size !== allIds.length) {
+        addIssue(issues, 'treatment-path-view-overlap', 'pathViewBinding 的三个状态组不得互相重叠。', `${location}.motion.pathViewBinding`);
+      }
     }
   } else if (motion.kind === 'path-locomotion') {
     for (const issue of validatePathMotion(motion.path)) {
@@ -874,11 +903,15 @@ const compileScene = (scene) => {
           poseFamilyId: treatment.motion.poseFamilyId,
           states: [],
           playback: statePlaybackFromMotion(treatment.motion),
+          pathViewBinding: treatment.motion.pathViewBinding,
           transition: treatment.motion.transition,
           necessity: treatment.necessity,
           importance: treatment.importance,
         };
         if (family.transition !== treatment.motion.transition) throw new Error(`状态家族 ${key} 的 transition 必须保持一致。`);
+        if (JSON.stringify(family.pathViewBinding) !== JSON.stringify(treatment.motion.pathViewBinding)) {
+          throw new Error(`状态家族 ${key} 的 pathViewBinding 必须保持一致。`);
+        }
         family.playback = mergeStatePlayback(family.playback, statePlaybackFromMotion(treatment.motion), key);
         family.states.push({
           id: treatment.motion.stateId,
@@ -1063,6 +1096,28 @@ const compileScene = (scene) => {
       throw new Error(
         `二维路径 ${scene.id}::${pathMotion.nodeId} 必须与同一目标的 state-sequence 状态家族组合，不能移动冻结单帧。`,
       );
+    }
+  }
+  for (const family of stateFamilies.values()) {
+    if (!family.pathViewBinding) continue;
+    const pathMotion = pathMotions.get(family.nodeId);
+    if (pathMotion?.path?.kind !== 'cubic-bezier-3d') {
+      throw new Error(
+        `景深视角状态家族 ${scene.id}::${family.nodeId} 必须绑定同目标的 cubic-bezier-3d 路径。`,
+      );
+    }
+    const knownStateIds = new Set(family.states.map(({id}) => id));
+    const viewStateIds = [
+      ...family.pathViewBinding.planarStateIds,
+      ...family.pathViewBinding.towardStateIds,
+      ...family.pathViewBinding.awayStateIds,
+    ];
+    for (const stateId of viewStateIds) {
+      if (!knownStateIds.has(stateId)) {
+        throw new Error(
+          `景深视角状态家族 ${scene.id}::${family.nodeId} 引用了未编排状态 ${stateId}。`,
+        );
+      }
     }
   }
   const compositionPlan = {
@@ -1729,12 +1784,14 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       poseFamilyId: node.poseFamilyId,
       states: node.states?.map(({id, at, facing}) => ({id, at, facing})),
       playback: node.playback,
+      pathViewBinding: node.pathViewBinding,
       transition: node.transition?.type,
     };
     const plannedShape = {
       poseFamilyId: planned.poseFamilyId,
       states: planned.states.map(({id, at, facing}) => ({id, at, facing})),
       playback: planned.playback,
+      pathViewBinding: planned.pathViewBinding,
       transition: planned.transition,
     };
     if (node?.kind !== 'state-sequence' || JSON.stringify(runtimeShape) !== JSON.stringify(plannedShape)) {
@@ -1843,8 +1900,9 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       );
     }
     if (
+      planned.cameraFollow !== null &&
       JSON.stringify(scene.camera?.follow ?? null) !==
-      JSON.stringify(planned.cameraFollow)
+        JSON.stringify(planned.cameraFollow)
     ) {
       addIssue(
         issues,
