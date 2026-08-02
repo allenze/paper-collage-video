@@ -178,6 +178,12 @@ provider output before `provider:record`. A composed flat reference is
 comparison evidence, not a valid pixel source for independently moving layers.
 Masking its visible pixels cannot reconstruct hidden rear or subject content.
 
+For a rejected full-context chroma edit that is at most one pixel short per
+axis, the same no-mutation rule applies: recover the untouched provider output
+as a `recovery-source`, then use observed-key provenance and an explicit
+actual-size placement to create the full registration-canvas derivative. Never
+apply this narrow edge recovery to an opaque clean rear plate or larger drift.
+
 Do not make isolated text-to-image calls for registered members. For two or
 more poses/states of one identity, prefer one `stateSheetBinding` request with
 an explicit grid and the required `preserve-sheet-context` policy, then run

@@ -203,7 +203,8 @@ export const validateRegisteredFamilySpec = (spec) => {
     if (derivation?.keying !== undefined) {
       const keying = derivation.keying;
       if (
-        member?.source?.kind !== 'registered-layer-sheet' ||
+        !['registered-layer-sheet', 'layer-package-member']
+          .includes(member?.source?.kind) ||
         typeof keying !== 'object' ||
         !/^#[0-9a-fA-F]{6}$/.test(keying.keyColor ?? '') ||
         !Number.isFinite(keying.transparentThreshold) ||
@@ -222,7 +223,7 @@ export const validateRegisteredFamilySpec = (spec) => {
         keying.edgePadding < 0 ||
         keying.edgePadding > 32
       ) {
-        errors.push(`${location}.derivation.keying 必须是 registered-layer-sheet 的完整色键参数`);
+        errors.push(`${location}.derivation.keying 必须是分层母版或完整上下文分层成员的完整色键参数`);
       }
     }
     if (derivation?.maskAssetId !== undefined) {
@@ -536,7 +537,11 @@ const sourceImage = async ({
     manifest,
     source.assetId,
     source.kind,
-    {allowRecoverySource: source.kind === 'registered-layer-sheet'},
+    {
+      allowRecoverySource:
+        source.kind === 'registered-layer-sheet' ||
+        source.kind === 'layer-package-member',
+    },
   );
   const file = workspacePath(root, record.file, `${source.kind} source`);
   const actualSha256 = await sha256File(file);
@@ -577,20 +582,104 @@ const sourceImage = async ({
         `layer-package-member ${record.assetId} 必须绑定同一 registration/source master 与完整画布`,
       );
     }
-    if (
-      metadata.width !== registration.canvas.width ||
-      metadata.height !== registration.canvas.height
-    ) {
+    const widthDelta = registration.canvas.width - metadata.width;
+    const heightDelta = registration.canvas.height - metadata.height;
+    const exactCanvas = widthDelta === 0 && heightDelta === 0;
+    const recoverableProviderEdgeDrift =
+      record.lifecycle?.status === 'recovery-source' &&
+      [widthDelta, heightDelta].every((delta) => delta >= 0 && delta <= 1);
+    if (!exactCanvas && !recoverableProviderEdgeDrift) {
       throw new Error(
-        `layer-package-member ${record.assetId} 必须保留完整注册画布`,
+        `layer-package-member ${record.assetId} 必须保留完整注册画布；` +
+        `仅 recovery-source 允许每轴至多短 1 像素并由显式 placement 补齐透明边界`,
       );
+    }
+    const surface = record.request?.outputSurface ?? null;
+    const providerObservation = record.providerObservation?.cells?.find(
+      (candidate) => candidate.packageRole === 'image',
+    ) ?? null;
+    let buffer;
+    let keyingMetadata = null;
+    if (surface?.mode === 'chroma-key') {
+      if (!derivation?.keying) {
+        throw new Error(
+          `layer-package-member ${record.assetId} 的 chroma-key 来源缺少正式 keying 参数`,
+        );
+      }
+      if (
+        record.lifecycle?.status === 'recovery-source' &&
+        (
+          record.providerObservation?.mode !== 'provider-native-observed' ||
+          !providerObservation?.passed ||
+          !providerObservation?.observedKeyColor
+        )
+      ) {
+        throw new Error(
+          `recovery-source ${record.assetId} 缺少通过的完整画布 observed key plane provenance`,
+        );
+      }
+      const effectiveKeyColor =
+        providerObservation?.observedKeyColor ?? surface.keyColor;
+      if (
+        derivation.keying.keyColor.toLowerCase() !==
+        effectiveKeyColor.toLowerCase()
+      ) {
+        throw new Error(
+          `layer-package-member ${record.assetId} 的 keying 颜色必须匹配 ` +
+          `${providerObservation ? 'provider observed key plane' : 'provider request'}`,
+        );
+      }
+      ({buffer, metadata: keyingMetadata} = await chromaKeyCell({
+        input: file,
+        keying: derivation.keying,
+      }));
+      if (providerObservation) {
+        keyingMetadata = {
+          ...keyingMetadata,
+          providerObservation: {
+            requestedKeyColor: providerObservation.requestedKeyColor,
+            observedKeyColor: providerObservation.observedKeyColor,
+            policyFingerprint: providerObservation.policyFingerprint,
+            observationFingerprint:
+              record.providerObservation.observationFingerprint,
+            metrics: providerObservation.metrics,
+          },
+        };
+      }
+    } else if (derivation?.keying) {
+      throw new Error(
+        `layer-package-member ${record.assetId} 的非色键来源不得声明 keying`,
+      );
+    } else {
+      buffer = await sharp(file).ensureAlpha().png().toBuffer();
     }
     return {
       record,
-      buffer: await sharp(file).ensureAlpha().png().toBuffer(),
+      buffer,
       width: metadata.width,
       height: metadata.height,
       sha256: actualSha256,
+      sourceSurface: surface
+        ? {
+            mode: surface.mode,
+            keyColor:
+              providerObservation?.observedKeyColor ??
+              surface.keyColor ??
+              null,
+            tolerance: surface.tolerance ?? null,
+            requestedKeyColor: surface.keyColor ?? null,
+            observedKeyColor:
+              providerObservation?.observedKeyColor ?? null,
+            observationPolicyId:
+              record.providerObservation?.policyId ?? null,
+            observationPolicyFingerprint:
+              providerObservation?.policyFingerprint ?? null,
+            observationFingerprint:
+              record.providerObservation?.observationFingerprint ?? null,
+          }
+        : null,
+      keying: derivation?.keying ?? null,
+      keyingMetadata,
       lineage: {
         kind: 'layer-package-member',
         assetId: record.assetId,

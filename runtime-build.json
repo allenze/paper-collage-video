@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.19.0-dev.2",
-  "fingerprint": "9c76016bb86696b38e35b9fc2fb9c169e55af6a0a33c130b0f2d2e96d7caf4d5",
+  "fingerprint": "317dd8a14133b15878e573fdf3a1362d1ca81d1cef226d54f3cac4ff10b83da5",
   "surfaces": {
-    "final-visual": "e154512b614de8db9ed4b555f374f531061283b38992199b2b14e1bbe52757b7",
-    "composition-proof": "731de9ecd8b72babab20d7edee5cbe7f454001edf9d80cf7ce1860fb224d34a4",
+    "final-visual": "d459e4849aed2e1b5ca3d78fcc73e69b046c9891aeac39d1897cd04e8dee9323",
+    "composition-proof": "f174810042ad29abecbbe23fefdbc79845e006280f50933cdbd8e3259f578317",
     "audio-delivery": "0d288676933c143dadfdc04a2cea3bd938d4583e9f6e9b60b5f14bd10812472b"
   },
   "files": {
@@ -103,7 +103,7 @@
     "scripts/derive-registered-family.mjs": "254cb76b0b4c2ee80f6e5e15e6c2e2bdb7732d0b95f1f179064a14b4d18ee579",
     "scripts/derive-canonical-container.mjs": "521b42f4530c3bba71009a8fad1140674dc500a4a1dec39a91f8ac31edb3ea6c",
     "scripts/derive-looping-strip.mjs": "9608bc9b8e370102849fa842562aa68cc3b5bbac5f3b0c3157b4c9f22e607996",
-    "scripts/registered-family-lib.mjs": "c4d36dd4252977a244e63ae4461e6dc5c997d3600b87697e9b2aa46c0fc82675",
+    "scripts/registered-family-lib.mjs": "d29c94b149d9a153de487c9829b428bbd4d71846023c1730432699f67330e149",
     "scripts/canonical-container-lib.mjs": "f62d774c08c339e19b36137f201991f9af8ed04a354c5f8a632ba6ed371e8cca",
     "scripts/rejected-output-recovery-lib.mjs": "2534b5a75754722a7d7d77b28781de04646a79ac116aae309283a717747419dd",
     "scripts/quality-lib.mjs": "0bccd5c857e2685cea704027c775a9d4d25cdba1d2bebd187af1373ea91d4270",

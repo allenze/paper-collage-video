@@ -28,6 +28,18 @@ Never label a flat opaque master as `bounded-relative`. If a project needs only
 carrier motion, retain it as `rigid-locked`; do not create a false registered
 family by masking visible fragments.
 
+For a host edit that preserves the requested aspect ratio but returns a
+chroma-key `subject` or `support-front` member short by exactly one pixel on
+either canvas edge, do not retry blindly, resize the provider root, or rewrite
+the historical request. Keep the consumed attempt rejected, recover the
+untouched full output with `provider:recover-rejected-source`, and derive the
+registered member with the observed key plane plus an explicit top-left
+`placement` at its actual dimensions. The deterministic registered-family
+derivative may leave only that missing outer pixel transparent over the clean
+rear plate. This recovery is forbidden for an opaque rear plate, for outputs
+larger than the registration canvas, for drift above one pixel per axis, or
+without passing full-canvas observed-key evidence.
+
 This finite-canvas decision is separate from a persistent travelling world.
 When a car, train, or boat stays near the focal corridor while mountains,
 trees, road, or shoreline keep moving beyond the viewport, use

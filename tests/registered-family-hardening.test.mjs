@@ -469,6 +469,199 @@ test('registered family derives provider-native mixed-surface sheets with explic
   }
 });
 
+test('registered family recovers one-pixel provider edge drift for full-context chroma members without resizing', async () => {
+  const fixture = await makeFamilyFixture();
+  try {
+    const {canvas} = fixture.registration;
+    const publicDirectory = path.join(
+      fixture.root,
+      'public',
+      'projects',
+      'family-proof',
+    );
+    const files = {
+      'support-rear': path.join(publicDirectory, 'edit-rear.png'),
+      subject: path.join(publicDirectory, 'edit-subject.png'),
+      'support-front': path.join(publicDirectory, 'edit-front.png'),
+    };
+    await sharp({
+      create: {
+        ...canvas,
+        channels: 4,
+        background: '#d3b986',
+      },
+    }).png().toFile(files['support-rear']);
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="239" height="160">
+        <rect width="239" height="160" fill="#ff00ff"/>
+        <ellipse cx="118" cy="78" rx="34" ry="56" fill="#b56b49"/>
+      </svg>
+    `)).png().toFile(files.subject);
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="240" height="160">
+        <rect width="240" height="160" fill="#ff00ff"/>
+        <path d="M12 116 Q120 86 228 116 V152 H12 Z" fill="#2f733f"/>
+      </svg>
+    `)).png().toFile(files['support-front']);
+
+    const sourcePackageId = 'fixture-context-edits';
+    const memberAssetIds = fixture.spec.members.map(({assetId}) => assetId);
+    const layerBinding = (role) => ({
+      sourcePackageId,
+      pattern: fixture.spec.pattern,
+      motionCapability: 'bounded-relative',
+      sourceStrategy: 'context-preserving-layer-edits',
+      registrationId: fixture.registration.id,
+      sourceMasterAssetId: fixture.registration.sourceMasterAssetId,
+      canvas,
+      packageRole: role,
+      completeness: {
+        'support-rear': 'clean-plate',
+        subject: 'full-silhouette',
+        'support-front': 'full-overlay',
+      }[role],
+      memberAssetIds,
+      referenceAssetIds: [fixture.registration.sourceMasterAssetId],
+      sheetLayout: null,
+      recoveryPolicy: {
+        completeSourceContext: true,
+        localDeterministicFixFirst: true,
+        isolatedMemberGeneration: 'forbidden',
+        providerRepair: 'masked-complete-source-edit',
+        fallback: 'full-source-regeneration',
+      },
+    });
+    const sourceRecords = [];
+    for (const [index, role] of [
+      'support-rear',
+      'subject',
+      'support-front',
+    ].entries()) {
+      const recovery = role === 'subject';
+      sourceRecords.push(await writeImageRecord({
+        root: fixture.root,
+        assetId: `edit-${role}`,
+        file: path.relative(fixture.root, files[role]),
+        adapter: 'host',
+        compositionBinding: {
+          sceneId: 'scene',
+          nodeId: 'rig',
+          pattern: fixture.spec.pattern,
+          registrationId: fixture.registration.id,
+          sourceMasterAssetId: fixture.registration.sourceMasterAssetId,
+          outputRole: role,
+          canvas,
+          derivation: {
+            method: 'provider-edit',
+            parentAssetId: fixture.registration.sourceMasterAssetId,
+          },
+        },
+        extra: {
+          request: {
+            outputSurface: role === 'support-rear'
+              ? {mode: 'opaque'}
+              : {
+                  mode: 'chroma-key',
+                  keyColor: '#ff00ff',
+                  tolerance: 24,
+                },
+            layerPackageBinding: layerBinding(role),
+          },
+          ...(recovery
+            ? {
+                lifecycle: {
+                  status: 'recovery-source',
+                  changedAt: '2026-07-23T00:00:00.000Z',
+                  reason: 'provider returned one pixel less width',
+                  supersededBy: null,
+                },
+                providerObservation: {
+                  schemaVersion: 1,
+                  mode: 'provider-native-observed',
+                  policyId: 'flat-v1',
+                  policyFingerprint: '1'.repeat(64),
+                  observationFingerprint: '2'.repeat(64),
+                  cells: [{
+                    packageRole: 'image',
+                    passed: true,
+                    requestedKeyColor: '#ff00ff',
+                    observedKeyColor: '#ff00ff',
+                    policyFingerprint: '1'.repeat(64),
+                    metrics: {},
+                  }],
+                },
+              }
+            : {}),
+        },
+        index: index + 10,
+      }));
+    }
+    fixture.manifest.assets = [
+      fixture.manifest.assets.find(
+        ({assetId}) => assetId === fixture.registration.sourceMasterAssetId,
+      ),
+      ...sourceRecords,
+    ];
+    fixture.spec.sourcePackageId = sourcePackageId;
+    fixture.spec.sourceStrategy = 'context-preserving-layer-edits';
+    fixture.spec.members = fixture.spec.members.map((member) => ({
+      ...member,
+      source: {
+        kind: 'layer-package-member',
+        assetId: `edit-${member.role}`,
+      },
+      derivation: {
+        ...(member.role === 'subject'
+          ? {
+              placement: {
+                left: 0,
+                top: 0,
+                width: 239,
+                height: 160,
+              },
+            }
+          : {}),
+        ...(['subject', 'support-front'].includes(member.role)
+          ? {
+              keying: {
+                keyColor: '#ff00ff',
+                transparentThreshold: 18,
+                opaqueThreshold: 95,
+                edgeFeather: 0.6,
+                matteErode: 1,
+                edgePadding: 6,
+              },
+            }
+          : {}),
+      },
+    }));
+
+    assert.deepEqual(validateRegisteredFamilySpec(fixture.spec), []);
+    const result = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: fixture.spec,
+      manifest: fixture.manifest,
+      now: '2026-07-23T03:00:00.000Z',
+    });
+    const subject = result.records.find(
+      ({registeredFamilyBinding}) =>
+        registeredFamilyBinding.role === 'subject',
+    );
+    const {data, info} = await sharp(path.join(fixture.root, subject.file))
+      .ensureAlpha()
+      .raw()
+      .toBuffer({resolveWithObject: true});
+    assert.equal(info.width, 240);
+    assert.equal(info.height, 160);
+    assert.equal(data[(80 * info.width + 239) * 4 + 3], 0);
+    assert.ok(data[(80 * info.width + 118) * 4 + 3] > 200);
+    assert.equal(subject.registeredFamilyBinding.derivation.placement.width, 239);
+    assert.equal(subject.registeredFamilyBinding.derivation.outputCanvasPreserved, true);
+  } finally {
+    await fs.rm(fixture.root, {recursive: true, force: true});
+  }
+});
+
 test('registered family rejects an isolated legacy member source', async () => {
   const fixture = await makeFamilyFixture();
   try {
