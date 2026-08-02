@@ -905,13 +905,19 @@ export const validateCompositionStructure = ({
     }
     if (node.stackingContext === 'scene') {
       const transform = node.transform ?? {};
-      const identityTransform =
-        transform.x === 0 &&
-        transform.y === 0 &&
-        transform.width === 1 &&
-        transform.height === 1 &&
-        transform.anchorX === 0 &&
-        transform.anchorY === 0 &&
+      const staticAxisAlignedCarrier =
+        finite(transform.x) &&
+        finite(transform.y) &&
+        finite(transform.width) &&
+        transform.width > 0 &&
+        (transform.height === undefined ||
+          (finite(transform.height) && transform.height > 0)) &&
+        finite(transform.anchorX) &&
+        transform.anchorX >= 0 &&
+        transform.anchorX <= 1 &&
+        finite(transform.anchorY) &&
+        transform.anchorY >= 0 &&
+        transform.anchorY <= 1 &&
         (transform.scale === undefined || transform.scale === 1) &&
         (transform.rotation === undefined || transform.rotation === 0) &&
         (transform.opacity === undefined || transform.opacity === 1);
@@ -937,11 +943,17 @@ export const validateCompositionStructure = ({
           `${nodeLocation}.stackingContext`,
         );
       }
-      if (!identityTransform || !identityMotion || node.visibility !== undefined) {
+      if (
+        !staticAxisAlignedCarrier ||
+        !identityMotion ||
+        node.visibility !== undefined ||
+        node.motion?.idle !== undefined ||
+        node.motion?.path !== undefined
+      ) {
         add(
           'error',
           'composition-scene-stacking-carrier',
-          'scene stacking 组必须使用完整画布 identity transform/motion，且不得声明 visibility；可见运动由成员独立承担。',
+          'scene stacking 组只能使用静态、轴对齐、全不透明的布局载体；不得动画、旋转、缩放、淡入淡出或声明 visibility。',
           nodeLocation,
         );
       }

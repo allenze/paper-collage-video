@@ -1265,6 +1265,7 @@
         "kind": {"const": "group"},
         "pattern": {"$ref": "#/$defs/pattern"},
         "renderParticipation": {"enum": ["visible", "derivation-only"]},
+        "stackingContext": {"enum": ["isolated", "scene"]},
         "z": {"type": "integer"},
         "depth": {"type": "number", "minimum": -1, "maximum": 1},
         "coordinateSpace": {"$ref": "#/$defs/coordinateSpace"},

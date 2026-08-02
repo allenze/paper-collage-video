@@ -218,7 +218,14 @@ changes do not leave an orphaned one- or two-character tail.
   extreme of every responsive reveal envelope, and clean bounded relative
   motion. When `subjectTravelEnvelope` is authored, also inspect all three
   responsive lower-left/upper-right subject-only travel pairs and confirm the
-  subject crosses the world while rear/front remain locally stable.
+  subject crosses the world while rear/front remain locally stable. When
+  `stackingContext=scene`, also inspect the resolved static carrier size and at
+  least one frame for every intended external interleave relation.
+- `semantic-slice-derivative`: full source canvas preserved, current source
+  SHA, exact alpha-component ownership, no component assigned twice or omitted,
+  zero boundary-cut pixels, semantic role matches the visible object, and the
+  final scene demonstrates the declared depth relation rather than only an
+  isolated checkerboard.
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
 - `canonical-container`: source plate/frame/content-sheet hashes and family fingerprint are current; the frame and state sheet contain real transparency; there is exactly one clean-plate/contents/frame child in fixed paint order; all children preserve one registration canvas and have no independent motion; exactly one contents sequence owns the authoritative internal surface; every state has zero pixels outside the shared interior mask and passes center, bottom, fill-deviation, and retention thresholds; the final state passes minimum fill, maximum rim gap, and bottom-band coverage. Inspect the current mask overlay, complete progression, and terminal panel; a separate waterline/fill node cannot pass as decoration.
 - `looping-environment`: every active strip binding matches its manifest derivative; RGB and alpha seams pass at source and render scale; every semantic surface has visible full-span source support; a ground strip has real alpha support at both repeat edges; three-tile stitches are clean; 16:9, 9:16, and 1:1 have zero uncovered pixels at worst phase; far-to-near speed is strictly ordered; measured ground displacement has the authored sign and crosses a real seam; every tracked/participant subject follows its screen/world anchor contract; and requested near-strip occlusion has real higher-z and vertical overlap.

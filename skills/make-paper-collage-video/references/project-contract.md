@@ -149,11 +149,13 @@ completeness, provenance, and derivation integrity.
 
 A top-level visible `registered-depth-stack` may instead declare
 `stackingContext=scene` when an external scene subject must sit between its
-registered planes. This does not loosen registration: the group must keep a
-full-canvas identity transform and motion with no visibility carrier, all three
-members retain the shared registration and reveal envelopes, and their unique
-integer `z` values participate directly in the scene stacking order. Spatial
-contracts remain the authority for required front occlusion.
+registered planes. This does not loosen registration: the group may define one
+static axis-aligned x/y/width/height/anchor layout carrier, but it cannot
+animate, rotate, scale, fade, declare visibility, or create an isolated stacking
+context. All three members retain the shared registration and reveal envelopes,
+are laid out against the carrier's actual pixel dimensions, and use unique
+integer `z` values that participate directly in the scene stacking order.
+Spatial contracts remain the authority for required front occlusion.
 
 `theme` is not free-form authoring after intake: it must equal
 `styleProfile.render.theme`. The schema-v2 Profile owns palette plus a neutral
@@ -300,6 +302,17 @@ patching; do not manually assemble the binding. Re-derivation supersedes earlier
 active records without deleting provenance. Project validation and quality
 targets reject missing, mixed, tight-cropped, incomplete, or role-mismatched
 families.
+
+If one registered family member contains multiple disconnected semantic
+objects that need different scene order, author semantic-slices schema v1 and
+run `assets:derive-semantic-slices`. Each active
+`semantic-slice-derivative` record remains on the full source canvas and binds
+one semantic role to an exact, hash-locked set of alpha-connected components.
+The derivation report must prove that every qualifying source component is
+assigned exactly once, output alpha totals equal source alpha totals, and
+boundary cuts remain zero. A slice may become an independent scene actor or a
+mask input to a refined three-member registered family; it is never a new
+provider result.
 
 Use only these patterns:
 

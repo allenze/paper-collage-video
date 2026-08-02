@@ -207,6 +207,14 @@ test('v10 registered depth stacks require full-canvas ordered layers inside ever
 
   const sceneStack = depthStackGroup();
   sceneStack.stackingContext = 'scene';
+  sceneStack.transform = {
+    x: 0.5,
+    y: 0.5,
+    width: 3,
+    height: 2.5,
+    anchorX: 0.5,
+    anchorY: 0.5,
+  };
   sceneStack.children[0].z = 0;
   sceneStack.children[1].z = 1;
   sceneStack.children[2].z = 4;

@@ -660,15 +660,39 @@ const GroupView = ({
   zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
 }) => {
   if (node.stackingContext === 'scene') {
+    const width = node.transform.width * parent.width;
+    const height =
+      node.transform.height === undefined
+        ? width *
+          node.coordinateSpace.height /
+          node.coordinateSpace.width
+        : node.transform.height * parent.height;
+    const left =
+      node.transform.x * parent.width -
+      node.transform.anchorX * width;
+    const top =
+      node.transform.y * parent.height -
+      node.transform.anchorY * height;
     return (
-      <>
+      <div
+        data-composition-node={node.id}
+        data-composition-kind={node.pattern}
+        data-stacking-context="scene"
+        style={{
+          position: 'absolute',
+          left,
+          top,
+          width,
+          height,
+        }}
+      >
         {[...node.children]
           .sort((left, right) => left.z - right.z)
           .map((child) => (
             <CompositionNodeView
               key={child.id}
               node={child}
-              parent={node.coordinateSpace}
+              parent={{width, height}}
               progress={progress}
               frame={frame}
               fps={fps}
@@ -687,7 +711,7 @@ const GroupView = ({
               zones={zones}
             />
           ))}
-      </>
+      </div>
     );
   }
   const loopingWorld = node.pattern === 'looping-environment';

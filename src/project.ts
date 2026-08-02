@@ -787,10 +787,10 @@ export type CompositionGroupNode = {
     | 'canonical-container';
   renderParticipation?: 'visible' | 'derivation-only';
   /**
-   * `scene` lets a top-level registered depth stack expose its three
-   * full-canvas members to the scene z-order so an external character can sit
-   * between the rear and front planes. The group transform/motion must remain
-   * identity; member transforms own all visible motion.
+   * `scene` lets a top-level registered depth stack expose its registered
+   * members to the scene z-order so external characters can interleave with
+   * them. The group may be a static axis-aligned layout carrier, but it may not
+   * animate, rotate, fade, or create its own isolated stacking context.
    */
   stackingContext?: 'isolated' | 'scene';
   z: number;

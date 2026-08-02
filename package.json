@@ -29,6 +29,7 @@
     "assets:process-sheet": "node scripts/process-character-sheet.mjs",
     "assets:process-state-sheet": "node scripts/process-state-sheet.mjs",
     "assets:derive-registered-family": "node scripts/derive-registered-family.mjs",
+    "assets:derive-semantic-slices": "node scripts/derive-semantic-slices.mjs",
     "assets:derive-canonical-container": "node scripts/derive-canonical-container.mjs",
     "assets:derive-looping-strip": "node scripts/derive-looping-strip.mjs",
     "proof:registered-family": "node scripts/prove-registered-family.mjs",

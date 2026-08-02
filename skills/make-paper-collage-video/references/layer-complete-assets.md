@@ -63,13 +63,30 @@ raise the subject out of contact to fake clearance.
 
 When a top-level visible `registered-depth-stack` must interleave with an
 external scene subject, declare `stackingContext=scene`. Its group transform,
-motion, opacity, and visibility remain identity; each complete registered member
-uses its own unique integer `z`, so the rear and subject planes can remain below
-the external subject while `support-front` paints above it. The renderer keeps
-the shared registration canvas, camera/parallax, reveal-envelope proof, and
-source-family provenance while exposing only the member stacking order to the
-scene. Use this only for a top-level visible depth stack; coupled groups that
-need a moving carrier remain isolated.
+opacity, and visibility must remain static: x/y/width/height/anchors may define
+one axis-aligned layout carrier, but scale stays `1`, rotation stays `0`, opacity
+stays `1`, and no path/idle/visibility animation is allowed. Each complete
+registered member uses its own unique integer `z`, so the rear and subject
+planes can remain below an external subject while `support-front` paints above
+it. The renderer lays every member out against the carrier's actual pixel size
+without creating an intermediate stacking context. It keeps the shared
+registration canvas, camera/parallax, reveal-envelope proof, and source-family
+provenance while exposing only member stacking order to the scene. Use this
+only for a top-level visible depth stack; coupled groups that need a moving
+carrier remain isolated.
+
+When one registered member contains several disconnected semantic paper
+objects that require different scene depths, run
+`assets:derive-semantic-slices` before authoring final consumers. The spec binds
+the active full-canvas source SHA, alpha threshold, minimum component area,
+semantic role, and exact connected-component bounds. Exactly one `remaining`
+slice must receive every unlisted component. Every output preserves the source
+canvas and records a `semanticSliceBinding` with component counts, alpha-pixel
+accounting, zero boundary cuts, source/output hashes, and a deterministic
+fingerprint. Use the outputs as independently ordered animals/elements or as
+full-canvas masks for a refined three-member registered family. This costs zero
+provider calls. Never use loose crop rectangles that cut through alpha or leave
+unassigned source components.
 
 ## Compile the Source Package Before Provider Approval
 

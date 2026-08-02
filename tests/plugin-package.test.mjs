@@ -132,6 +132,10 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/derive-registered-family.mjs',
   );
   assert.equal(
+    packageJson.scripts['assets:derive-semantic-slices'],
+    'node scripts/derive-semantic-slices.mjs',
+  );
+  assert.equal(
     packageJson.scripts['proof:registered-family'],
     'node scripts/prove-registered-family.mjs',
   );
@@ -332,6 +336,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/canonical-container-lib.mjs',
     'scripts/derive-registered-family.mjs',
     'scripts/registered-family-lib.mjs',
+    'scripts/derive-semantic-slices.mjs',
+    'scripts/semantic-slices-lib.mjs',
     'scripts/motion-treatment-lib.mjs',
     'scripts/motion-contract-lib.mjs',
     'scripts/motion-approval-lib.mjs',
@@ -390,6 +396,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/quality-review-contact-sheet.schema.json',
     'schemas/registered-family.schema.json',
     'schemas/registered-family-binding.schema.json',
+    'schemas/semantic-slices.schema.json',
     'schemas/canonical-container.schema.json',
     'schemas/canonical-container-binding.schema.json',
     'schemas/provider-observation.schema.json',
