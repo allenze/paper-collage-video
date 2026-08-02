@@ -440,9 +440,9 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
   if (!plan.motionBudget || typeof plan.motionBudget !== 'object') {
     add('plan-motion-budget-required', 'resolved 计划必须包含 motionBudget。', 'plan.motionBudget');
   } else {
-    let expectedBudget = null;
+    let baselineBudget = null;
     try {
-      expectedBudget = deriveMotionBudget(
+      baselineBudget = deriveMotionBudget(
         plan.productionProfile ?? 'balanced',
         resolved.sceneCount,
       );
@@ -450,14 +450,33 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
       // The profile/scene issue is reported separately.
     }
     if (
-      expectedBudget &&
-      JSON.stringify(plan.motionBudget) !== JSON.stringify(expectedBudget)
+      baselineBudget &&
+      !plan.scenarioBinding &&
+      JSON.stringify(plan.motionBudget) !== JSON.stringify(baselineBudget)
     ) {
       add(
         'plan-motion-budget',
         'plan.motionBudget 必须与 productionProfile 和幕数匹配。',
         'plan.motionBudget',
       );
+    }
+    if (baselineBudget && plan.scenarioBinding) {
+      for (const key of [
+        'maxPoseSheetCalls',
+        'maxStatesPerSheet',
+        'maxContinuousTargets',
+      ]) {
+        if (
+          !Number.isInteger(plan.motionBudget[key]) ||
+          plan.motionBudget[key] < baselineBudget[key]
+        ) {
+          add(
+            'plan-scenario-motion-budget',
+            `scenario-bound plan.motionBudget.${key} 不得低于 ${plan.productionProfile} 档位基线 ${baselineBudget[key]}。`,
+            `plan.motionBudget.${key}`,
+          );
+        }
+      }
     }
   }
   if (

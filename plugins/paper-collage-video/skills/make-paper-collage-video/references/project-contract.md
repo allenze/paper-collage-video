@@ -119,6 +119,14 @@ regenerate their equivalent output from the latest contract when needed. There
 is no legacy loader, dual schema, deprecated field, compatibility adapter, or
 version-conditioned renderer branch.
 
+For a scenario-bound plan, the generic scene-count motion budget is only the
+minimum baseline. `project:plan` may raise `maxPoseSheetCalls`,
+`maxStatesPerSheet`, and `maxContinuousTargets` to the exact selected scenario
+demand, because one continuous shot can contain several independently animated
+identities. This does not authorize extra storyboard content: the selected
+scenario fingerprint, exact family/state/source-package comparison, provider
+estimate, approved attempt cap, and profile hard ceiling remain authoritative.
+
 Storyboard authoring owns one structured `motionDirection` plus one
 `performanceRole` and `proofTimeId` per beat. The compiler owns
 `motionContract`; it binds the Style Profile, per-scene phrase/treatment

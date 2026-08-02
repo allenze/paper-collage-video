@@ -645,8 +645,30 @@ export const buildCreativePlanFromScenario = ({
     rationale: option.rationale,
     at,
   });
+  const families = collectStateFamilies(option.scenes);
+  const fulfillment = summarizeScenarioFulfillment(option);
+  const scenarioMotionBudget = {
+    maxPoseSheetCalls: Math.max(
+      base.motionBudget.maxPoseSheetCalls,
+      families.size,
+    ),
+    maxStatesPerSheet: Math.max(
+      base.motionBudget.maxStatesPerSheet,
+      ...[...families.values()].map(({states}) => states.size),
+    ),
+    maxContinuousTargets: Math.max(
+      base.motionBudget.maxContinuousTargets,
+      fulfillment.minLocalMotionTargets,
+    ),
+  };
   return {
     ...base,
+    // The generic profile budget is a scene-count heuristic. The human-selected
+    // scenario is the exact semantic contract and may legitimately contain more
+    // independently animated identities or motion targets inside one long shot.
+    // Its total provider demand is still bounded by providerEstimate and the
+    // profile hard ceiling below.
+    motionBudget: scenarioMotionBudget,
     storyScope: option.storyScope,
     scenarioBinding: {
       scenarioSetFingerprint: scenarios.fingerprint,

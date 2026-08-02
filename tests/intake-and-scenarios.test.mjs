@@ -478,6 +478,11 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
   assert.deepEqual(validateCreativePlan(plan, {slug: 'gui-tu-sai-pao'}), []);
   assert.equal(plan.storyScope, 'standard');
   assert.equal(plan.scenarioBinding.expectedProviderImageCalls, 10);
+  assert.deepEqual(plan.motionBudget, {
+    maxPoseSheetCalls: 3,
+    maxStatesPerSheet: 4,
+    maxContinuousTargets: 24,
+  });
   assert.deepEqual(
     scenarioDecisionFor(scenarios, 'balanced'),
     {
@@ -540,6 +545,78 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
     () => assertStoryboardMatchesScenario(balanced, missingApology),
     /姿态母版家族|关键动作/,
   );
+});
+
+test('a selected one-take scenario raises motion capacity to its exact approved demand', () => {
+  const scenarios = {
+    fingerprint: 'a'.repeat(64),
+    requested: {durationSeconds: null, sceneCount: 1},
+    options: [
+      {
+        id: 'full-depth',
+        storyScope: 'expanded',
+        durationSeconds: 92,
+        sceneCount: 1,
+        estimatedNarrationSeconds: 82,
+        rationale: 'one continuous journey with several independently animated encounters',
+        fingerprint: 'b'.repeat(64),
+        profilePromise: {
+          minRequiredStateFamilies: 1,
+          minEnhancementStateFamilies: 1,
+          minTotalStates: 8,
+          minLocalMotionTargets: 3,
+          minLayeredScenes: 1,
+          minParallaxScenes: 1,
+          minAmbientScenes: 1,
+        },
+        providerEstimate: {
+          expectedImageCalls: 10,
+          proposedImageAttemptLimit: 11,
+        },
+        scenes: [
+          {
+            id: 'scene-01',
+            stateFamilies: [
+              {
+                id: 'lead-depth-cycle',
+                necessity: 'required',
+                states: Array.from(
+                  {length: 12},
+                  (_, index) => `lead-${index}`,
+                ),
+              },
+              ...Array.from({length: 5}, (_, familyIndex) => ({
+                id: `encounter-${familyIndex}`,
+                necessity: familyIndex === 4 ? 'enhancement' : 'required',
+                states: Array.from(
+                  {length: 4},
+                  (_, stateIndex) => `state-${stateIndex}`,
+                ),
+              })),
+            ],
+            localMotionTargets: Array.from({length: 8}, (_, index) => ({
+              targetId: `target-${index}`,
+              preset: 'translate',
+            })),
+          },
+        ],
+      },
+    ],
+  };
+  const plan = buildCreativePlanFromScenario({
+    slug: 'one-take-journey',
+    scenarios,
+    optionId: 'full-depth',
+    at,
+  });
+  assert.deepEqual(plan.motionBudget, {
+    maxPoseSheetCalls: 6,
+    maxStatesPerSheet: 12,
+    maxContinuousTargets: 8,
+  });
+  assert.deepEqual(validateCreativePlan(plan, {slug: 'one-take-journey'}), []);
+  assert.equal(plan.assetBudget.maxGeneratedImages, 12);
+  assert.equal(plan.scenarioBinding.expectedProviderImageCalls, 10);
 });
 
 test('scenario rejects a key semantic action that is counted but not visibly executed', async () => {

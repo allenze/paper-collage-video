@@ -109,6 +109,16 @@ state-family, total-state, local-motion, layered-scene, parallax-scene, and
 ambient-scene minimums. A `full-depth` plan cannot pass by rendering a
 `draft`-level film.
 
+The generic motion budget shown before scenario authoring is a scene-count
+baseline, not permission to discard approved actions from a long continuous
+shot. After the human selects an exact scenario, `project:plan` raises the
+selected plan's state-family, per-family state, and continuous-target capacities
+to cover that card when necessary. The scenario fingerprint and later
+storyboard-consistency check still prevent unapproved families or targets, while
+the exact provider-call estimate, approved attempt cap, and profile hard ceiling
+remain unchanged. This is especially important for one-take stories that contain
+several independently animated identities inside one scene.
+
 Transforms may express emotion, emphasis, spatial translation, entrances,
 camera movement, and ambient loops. They may not impersonate a changed
 silhouette, limb pose, held prop, contact relation, mechanism state, true
