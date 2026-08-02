@@ -1,10 +1,10 @@
 {
   "schemaVersion": 2,
   "packageVersion": "0.19.0-dev.2",
-  "fingerprint": "64647b2afbac1022658e3b7d805732506e39e1cc118093b37d5d4f189ddb4b7c",
+  "fingerprint": "a1ff72f64990a662157c4feabe2ddeea0504e74d918c1bc4bea5d979bc903966",
   "surfaces": {
-    "final-visual": "9c72ed5e2e1899c87103d3149642027efef010fd8800d0501ba34b7304362905",
-    "composition-proof": "e39a1c518682b05caa8a46b32b9c71dd624e1ed040ac348eb572427b49da9b31",
+    "final-visual": "f05577fbbf126358d1c6314a4e480f30730e8d825e75117b24dea61bd2124738",
+    "composition-proof": "91a50d5b4c4fa09542e6458cf9812e07b9a25ddee2abb52cdebe527967cc62d7",
     "audio-delivery": "0d288676933c143dadfdc04a2cea3bd938d4583e9f6e9b60b5f14bd10812472b"
   },
   "files": {
@@ -72,7 +72,7 @@
     "scripts/motion-treatment-lib.mjs": "9709e8c79d68d5ab414659f0060c22abdcd5b85786a937ef8febf057de6121ce",
     "scripts/observed-key-plane-lib.mjs": "6c371d1413d428ba5840b0967c227db41c775a8db558b2b6f211fc427e37912a",
     "scripts/provider-attempt.mjs": "ff0271376c16225ac77c1dd51613aae5d8cd658e7eeaf941dc6772590c2996c3",
-    "scripts/provider-lib.mjs": "a5e7df8e98a7db41736047dd3bbd41852e25f05b96c9cd3d8f85f305eb0562b6",
+    "scripts/provider-lib.mjs": "3488788fca671968b7cf1ef515cd6b34c85142ef61f21b8cf6bb9962a35a75b8",
     "scripts/provider-recover-rejected-source.mjs": "7a41b3c660d192462a9bd43177fcb785733f59b5507d2a7170fc654ba1663253",
     "scripts/project-composition-proof.mjs": "1e2b03c9ed79392060d6353ada8540ad46884de6be9b63d6f89c32ce19cf085d",
     "scripts/project-budget.mjs": "301acd18e38221900c8af44c218784985ca9961e0f978d6d4e95acb7d55183e6",
@@ -106,7 +106,7 @@
     "scripts/registered-family-lib.mjs": "c4d36dd4252977a244e63ae4461e6dc5c997d3600b87697e9b2aa46c0fc82675",
     "scripts/canonical-container-lib.mjs": "f62d774c08c339e19b36137f201991f9af8ed04a354c5f8a632ba6ed371e8cca",
     "scripts/rejected-output-recovery-lib.mjs": "2534b5a75754722a7d7d77b28781de04646a79ac116aae309283a717747419dd",
-    "scripts/quality-lib.mjs": "79599c630ef7caadb392a93293d419aeb5d6a4472a94e084c5e9d52be80a93b2",
+    "scripts/quality-lib.mjs": "0bccd5c857e2685cea704027c775a9d4d25cdba1d2bebd187af1373ea91d4270",
     "scripts/render-cache-lib.mjs": "e6be65793efb26af8f2e73c19fced329ad5f570a88b1b02994580ee5a79483b9",
     "scripts/render-status-lib.mjs": "7ae7e4cab43d6e0c743a4196b22a0376c8151a2428e9b3c7e18ce0b73e19fb68",
     "scripts/runtime-build-lib.mjs": "109c01e0b62f9ad06b5634372f1f7cffde14935742a2873bd71da1de2231cf84",
@@ -153,7 +153,7 @@
     "src/motion.ts": "4716d73c5a5a6daaef1eeba6eaa919696e1934e2ac00fe7f30e00dd1a6c71add",
     "src/editorialPrimitives.mjs": "7b3bbfaa8ebc841298bb56b5e4b737971ee82c17485b72e79f7ac88f1a3bd11d",
     "src/motifField.mjs": "207432ee877b4664077e83f711af9be39d7847edeb0337925b1a706e35af4ecf",
-    "src/parallax.mjs": "6d43e27ea3d1324245daeb3cbfedd20ad0d1cd3626f68ddf4a8422e723b47d08",
+    "src/parallax.mjs": "36f40eefb06f269c4a77e36d23f7f4c10c9fbbc0f6100ac6faaf3eb14da55dba",
     "src/pathMotion.mjs": "81df97847bc4ca853408eb757d2de48a4c84c79d37c3deb2837689ddb43675e0",
     "src/pathMotion.d.mts": "41a1abcaca17f7cd46772e46dc541101c88a455034653a658fd81d877255baa4",
     "src/worldStrip.mjs": "a85635cc19b29cc21051885a73daebbebb1c51c23986f910178d019abec0950f",

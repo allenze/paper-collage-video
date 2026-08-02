@@ -238,6 +238,20 @@ test('parallax rigs require camera motion and distinct legal depth layers', () =
   });
   assert.ok(invalid.some(({code}) => code === 'parallax-camera-motion'));
   assert.ok(invalid.some(({code}) => code === 'parallax-depth-spread'));
+  assert.ok(
+    !validateParallaxRig({
+      camera: {
+        preset: 'static',
+        intensity: 1,
+        follow: {
+          targetNodeId: 'swimmer',
+          worldNodeId: 'pond-world',
+        },
+        parallax: {enabled: true, strength: 0.8, focalDepth: 0},
+      },
+      composition: {nodes: [asset('back', -1), asset('front', 1)]},
+    }).some(({code}) => code === 'parallax-camera-motion'),
+  );
 
   const depthStack = {
     id: 'depth-stack',

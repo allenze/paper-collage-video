@@ -549,6 +549,8 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
   const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'provider-surface-'));
   const opaque = path.join(directory, 'opaque.png');
   const alpha = path.join(directory, 'alpha.png');
+  const nativeStateSheet = path.join(directory, 'native-state-sheet.png');
+  const wrongAspectStateSheet = path.join(directory, 'wrong-aspect-state-sheet.png');
   const mixedSheet = path.join(directory, 'mixed-sheet.png');
   const checkerSheet = path.join(directory, 'checker-sheet.png');
   const request = {
@@ -580,6 +582,44 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
     );
     await assert.doesNotReject(
       verifyOutputFile(alpha, {...request, outputSurface: {mode: 'alpha'}}),
+    );
+    const stateSheetRequest = {
+      ...request,
+      compositionBinding: {canvas: {width: 32, height: 32}},
+      outputSurface: {
+        mode: 'chroma-key',
+        keyColor: '#ff00ff',
+        tolerance: 8,
+        keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'},
+      },
+      stateSheetBinding: {
+        layout: {columns: 2, rows: 2},
+      },
+    };
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+        <rect width="64" height="64" fill="#ff00ff"/>
+        <circle cx="16" cy="16" r="8" fill="#63a142"/>
+        <circle cx="48" cy="16" r="8" fill="#63a142"/>
+        <circle cx="16" cy="48" r="8" fill="#63a142"/>
+        <circle cx="48" cy="48" r="8" fill="#63a142"/>
+      </svg>
+    `)).png().toFile(nativeStateSheet);
+    await assert.doesNotReject(
+      verifyOutputFile(nativeStateSheet, stateSheetRequest),
+    );
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="48">
+        <rect width="64" height="48" fill="#ff00ff"/>
+        <circle cx="16" cy="12" r="6" fill="#63a142"/>
+        <circle cx="48" cy="12" r="6" fill="#63a142"/>
+        <circle cx="16" cy="36" r="6" fill="#63a142"/>
+        <circle cx="48" cy="36" r="6" fill="#63a142"/>
+      </svg>
+    `)).png().toFile(wrongAspectStateSheet);
+    await assert.rejects(
+      verifyOutputFile(wrongAspectStateSheet, stateSheetRequest),
+      /与请求画布 32x32 不一致/,
     );
     const sheetRequest = {
       ...request,

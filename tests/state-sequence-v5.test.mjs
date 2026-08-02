@@ -10,6 +10,7 @@ import {createRequestFingerprint, inspectStateSheetRecoveryMask, validateAssetRe
 import {
   inspectCompositeTechnical,
   inspectUntargetedSheetCells,
+  proofTimesForStateSequence,
 } from '../scripts/quality-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {
@@ -50,6 +51,75 @@ const stateContract = (state) => ({
   ...state,
   facing: 'right',
   anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
+});
+
+test('path-bound state sequences inherit proof times from their locomotion contract', () => {
+  const scene = {
+    id: 'pond',
+    motion: {
+      proofTimes: [
+        {id: 'start', at: 0.05},
+        {id: 'turn-a', at: 0.3},
+        {id: 'unrelated', at: 0.5},
+        {id: 'turn-b', at: 0.7},
+        {id: 'settle', at: 0.9},
+      ],
+    },
+  };
+  const node = {
+    id: 'tadpole',
+    motion: {path: {kind: 'cubic-bezier-3d'}},
+  };
+  const proofTimes = proofTimesForStateSequence({
+    scene,
+    node,
+    spatialContracts: [{
+      id: 'tadpole-route',
+      kind: 'path-locomotion',
+      sceneId: 'pond',
+      nodeId: 'tadpole',
+      fromProofTimeId: 'start',
+      turnProofTimeIds: ['turn-a', 'turn-b'],
+      throughProofTimeId: 'settle',
+    }],
+  });
+  assert.deepEqual(
+    proofTimes.map(({id}) => id),
+    ['start', 'turn-a', 'turn-b', 'settle'],
+  );
+});
+
+test('authored state assertions take precedence over locomotion proof fallback', () => {
+  const scene = {
+    id: 'pond',
+    motion: {
+      proofTimes: [
+        {id: 'start', at: 0.05},
+        {
+          id: 'authored-state',
+          at: 0.5,
+          stateAssertions: [{nodeId: 'tadpole', stateId: 'toward-camera'}],
+        },
+        {id: 'settle', at: 0.9},
+      ],
+    },
+  };
+  const proofTimes = proofTimesForStateSequence({
+    scene,
+    node: {
+      id: 'tadpole',
+      motion: {path: {kind: 'cubic-bezier-3d'}},
+    },
+    spatialContracts: [{
+      kind: 'path-locomotion',
+      sceneId: 'pond',
+      nodeId: 'tadpole',
+      fromProofTimeId: 'start',
+      turnProofTimeIds: [],
+      throughProofTimeId: 'settle',
+    }],
+  });
+  assert.deepEqual(proofTimes.map(({id}) => id), ['authored-state']);
 });
 
 test('3D path velocity selects and smoothly blends planar, toward, and away swim loops', () => {

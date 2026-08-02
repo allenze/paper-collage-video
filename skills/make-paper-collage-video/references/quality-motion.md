@@ -151,6 +151,12 @@ npm run project:composition-proof -- <slug>
 npm run project:quality -- <slug> prepare
 ```
 
+For a path-bound state sequence, explicit `stateAssertions` remain the authority
+when they exist. When none are authored, quality evidence automatically binds
+the sequence to the matching `path-locomotion` contract's start, turn, and
+through proof times. This keeps continuously cycling, depth-directed locomotion
+reviewable without pretending that one static state owns an entire path phrase.
+
 To deliberately bypass every proof cache layer, append `--force`. The generated report must say `cache.forced=true` and show zero reused frames, composites, and asset evidence.
 
 It also creates `composition-proof/evidence/` alpha masks, checkerboard

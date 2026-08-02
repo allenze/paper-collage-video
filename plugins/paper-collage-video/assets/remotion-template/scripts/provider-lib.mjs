@@ -1661,6 +1661,17 @@ export const verifyOutputFile = async (file, request = null) => {
       const expected = request.compositionBinding.canvas;
       const providerSource =
         request.layerPackageBinding?.sheetLayout?.providerSource ?? null;
+      const stateSheetLayout = request.stateSheetBinding?.layout ?? null;
+      const stateSheetUsesProviderNativeCanvas =
+        stateSheetLayout &&
+        metadata.width >= expected.width &&
+        metadata.height >= expected.height &&
+        metadata.width % stateSheetLayout.columns === 0 &&
+        metadata.height % stateSheetLayout.rows === 0 &&
+        Math.abs(
+          metadata.width / metadata.height -
+          expected.width / expected.height,
+        ) <= 0.002;
       if (
         providerSource?.canvasMode === 'provider-native' &&
         (
@@ -1675,6 +1686,7 @@ export const verifyOutputFile = async (file, request = null) => {
       }
       if (
         providerSource?.canvasMode !== 'provider-native' &&
+        !stateSheetUsesProviderNativeCanvas &&
         (metadata.width !== expected.width || metadata.height !== expected.height)
       ) {
         throw new Error(

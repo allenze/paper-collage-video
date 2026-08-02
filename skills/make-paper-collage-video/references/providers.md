@@ -66,6 +66,15 @@ change makes rotation invalid. This preserves identity and converts eight
 directional variants into one provider root plus deterministic local
 derivatives.
 
+A host image provider may return a larger provider-native canvas for a complete
+state sheet. Record that untouched source when it is at least the requested
+size, preserves the requested aspect ratio, and divides evenly by the declared
+state-sheet rows and columns. The state-sheet processor then uses the actual
+provider canvas for deterministic equal-grid or explicit-rectangle extraction.
+Reject a smaller canvas, a changed aspect ratio, or dimensions that cannot be
+divided into the declared grid. Do not resize the provider root before
+`provider:record`.
+
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",

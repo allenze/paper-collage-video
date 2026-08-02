@@ -189,7 +189,10 @@ One `poseFamilyId` denotes one registered provider state sheet even when a conti
 
 Camera-coupled parallax is a first-class rig. Set
 `camera.parallax={enabled:true,strength,focalDepth}` and assign relevant nodes
-`depth=-1..1`; the renderer composes the global camera once and then adds a
+`depth=-1..1`. A valid `camera.follow` rig counts as visible camera
+movement for parallax validation; do not add a second camera keyframe timeline
+to a followed shot.
+The renderer composes the global camera once and then adds a
 deterministic depth-relative offset/scale to each carrier. A valid rig has
 visible camera translation or zoom and at least two distinct depth levels.
 Coupled `supported-subject` and `registered-environment` children must not

@@ -858,6 +858,36 @@ const compositionTimingForScene = ({scene, sceneTransitions}) => ({
   sceneTransitions,
 });
 
+export const proofTimesForStateSequence = ({
+  scene,
+  node,
+  spatialContracts = [],
+}) => {
+  const sceneProofTimes = scene.motion?.proofTimes ?? [];
+  const assertedProofTimes = sceneProofTimes.filter((proof) =>
+    (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
+  );
+  if (assertedProofTimes.length > 0 || !node.motion?.path) {
+    return assertedProofTimes;
+  }
+  const contractProofIds = new Set(
+    spatialContracts
+      .filter(
+        (contract) =>
+          contract.kind === 'path-locomotion' &&
+          contract.sceneId === scene.id &&
+          contract.nodeId === node.id,
+      )
+      .flatMap((contract) => [
+        contract.fromProofTimeId,
+        ...(contract.turnProofTimeIds ?? []),
+        contract.throughProofTimeId,
+      ])
+      .filter(Boolean),
+  );
+  return sceneProofTimes.filter(({id}) => contractProofIds.has(id));
+};
+
 export const collectCompositeQualityTargets = async (
   project,
   {
@@ -990,9 +1020,11 @@ export const collectCompositeQualityTargets = async (
     }
     for (const {node, parent, renderParticipation} of collectStateSequences(scene.composition)) {
       if (renderParticipation !== 'visible') continue;
-      const proofTimes = (scene.motion?.proofTimes ?? []).filter((proof) =>
-        (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
-      );
+      const proofTimes = proofTimesForStateSequence({
+        scene,
+        node,
+        spatialContracts: project.spatialContracts,
+      });
       const memberHashes = await hashReferencedFiles(node.states.map(({src}) => src));
       const stateRecords = node.states.map((state) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(state.src)))) ?? null);
       const registeredFamilyGroup =
