@@ -57,6 +57,7 @@ test('runtime build identity closes over every local static module dependency', 
     'fixtures/editorial-fixture.mjs',
     'scripts/production-metrics-lib.mjs',
     'scripts/python-runtime.mjs',
+    'scripts/semantic-slices-lib.mjs',
     'scripts/state-sheet-lib.mjs',
     'scripts/timeline-continuity-lib.mjs',
   ]);

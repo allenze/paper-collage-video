@@ -195,6 +195,8 @@ try {
       slug,
       reviews: payload.reviews,
       sourceReportFingerprint: payload.sourceReport.fingerprint,
+      allowPendingSemanticEvidenceTargets:
+        payload.reviewScope === 'style',
     });
     const reviews = payload.reviews;
     await finishLatestMetricSegment({
@@ -247,7 +249,11 @@ try {
       });
     }
   } else {
-    status = await prepareQualityReport(slug, {write: action === 'prepare'});
+    const reviewScope = valueFor('--scope') ?? 'all';
+    status = await prepareQualityReport(slug, {
+      write: action === 'prepare',
+      allowPendingSemanticEvidenceTargets: reviewScope === 'style',
+    });
   }
   const reviewArtifacts = await inspectReviewArtifacts(slug, status);
   if (action === 'scaffold') {

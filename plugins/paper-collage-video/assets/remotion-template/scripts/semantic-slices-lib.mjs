@@ -26,12 +26,14 @@ const workspacePath = (root, input, label) => {
   return resolved;
 };
 
-const activeImageRecord = (manifest, assetId) =>
+const imageSourceRecord = (manifest, sourceSpec) =>
   [...(manifest.assets ?? [])].reverse().find(
     (record) =>
-      record.assetId === assetId &&
+      record.assetId === sourceSpec.assetId &&
       record.capability === 'image' &&
-      record.lifecycle?.status === 'active',
+      (sourceSpec.sourceSha256
+        ? record.sha256 === sourceSpec.sourceSha256
+        : record.lifecycle?.status === 'active'),
   ) ?? null;
 
 const componentKey = ({left, top, width, height}) =>
@@ -95,6 +97,43 @@ const identifyComponents = ({
   );
 };
 
+const publicComponent = ({left, top, width, height, pixelCount}) => ({
+  left,
+  top,
+  width,
+  height,
+  pixelCount,
+});
+
+export const inspectSemanticSliceOutput = async ({file, binding}) => {
+  const {data, info} = await sharp(file)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({resolveWithObject: true});
+  const components = identifyComponents({
+    data,
+    width: info.width,
+    height: info.height,
+    channels: info.channels,
+    alphaThreshold: binding.alphaThreshold,
+    minimumComponentPixels: binding.minimumComponentPixels,
+  }).map(publicComponent);
+  const expectedComponents = binding.components.map(publicComponent);
+  return {
+    passed:
+      JSON.stringify(components) === JSON.stringify(expectedComponents) &&
+      components.reduce((total, component) => total + component.pixelCount, 0) ===
+        binding.outputAlphaPixels,
+    expectedComponents,
+    actualComponents: components,
+    expectedAlphaPixels: binding.outputAlphaPixels,
+    actualAlphaPixels: components.reduce(
+      (total, component) => total + component.pixelCount,
+      0,
+    ),
+  };
+};
+
 export const validateSemanticSlicesSpec = (spec) => {
   const errors = [];
   if (spec?.schemaVersion !== 1) errors.push('schemaVersion 必须为 1');
@@ -115,6 +154,12 @@ export const validateSemanticSlicesSpec = (spec) => {
   for (const [sourceIndex, source] of (spec?.sources ?? []).entries()) {
     if (typeof source?.assetId !== 'string' || source.assetId.trim() === '') {
       errors.push(`sources[${sourceIndex}].assetId 不能为空`);
+    }
+    if (
+      source?.sourceSha256 !== undefined &&
+      !/^[a-f0-9]{64}$/.test(source.sourceSha256)
+    ) {
+      errors.push(`sources[${sourceIndex}].sourceSha256 必须是 SHA-256`);
     }
     const remaining = (source?.slices ?? []).filter(
       ({components}) => components === 'remaining',
@@ -145,9 +190,13 @@ export const validateSemanticSlicesSpec = (spec) => {
 };
 
 const deriveSourceSlices = async ({root, manifest, spec, sourceSpec}) => {
-  const sourceRecord = activeImageRecord(manifest, sourceSpec.assetId);
+  const sourceRecord = imageSourceRecord(manifest, sourceSpec);
   if (!sourceRecord) {
-    throw new Error(`找不到 active image source：${sourceSpec.assetId}`);
+    throw new Error(
+      sourceSpec.sourceSha256
+        ? `找不到指定 SHA-256 的 image source：${sourceSpec.assetId}/${sourceSpec.sourceSha256}`
+        : `找不到 active image source：${sourceSpec.assetId}`,
+    );
   }
   const sourceFile = workspacePath(root, sourceRecord.file, 'semantic slice source');
   const sourceSha256 = sha256Value(await fs.readFile(sourceFile));
@@ -204,24 +253,23 @@ const deriveSourceSlices = async ({root, manifest, spec, sourceSpec}) => {
     if (selected.length === 0) {
       throw new Error(`${slice.assetId} 没有获得任何 alpha 组件`);
     }
-    const mask = Buffer.alloc(info.width * info.height);
+    const selectedPixels = new Uint8Array(info.width * info.height);
     for (const component of selected) {
-      for (const pixel of component.pixels) mask[pixel] = 255;
+      for (const pixel of component.pixels) selectedPixels[pixel] = 1;
     }
-    const outputBuffer = await sharp(data, {
+    const outputData = Buffer.from(data);
+    for (let pixel = 0; pixel < selectedPixels.length; pixel += 1) {
+      if (selectedPixels[pixel] === 0) {
+        outputData[pixel * info.channels + 3] = 0;
+      }
+    }
+    const outputBuffer = await sharp(outputData, {
       raw: {
         width: info.width,
         height: info.height,
         channels: info.channels,
       },
     })
-      .composite([
-        {
-          input: mask,
-          raw: {width: info.width, height: info.height, channels: 1},
-          blend: 'dest-in',
-        },
-      ])
       .png()
       .toBuffer();
     const output = workspacePath(root, slice.output, `${slice.assetId} output`);
@@ -274,13 +322,7 @@ const deriveSourceSlices = async ({root, manifest, spec, sourceSpec}) => {
         semanticRole: slice.semanticRole,
         alphaThreshold: spec.alphaThreshold,
         minimumComponentPixels: spec.minimumComponentPixels,
-        components: selected.map(({left, top, width, height, pixelCount}) => ({
-          left,
-          top,
-          width,
-          height,
-          pixelCount,
-        })),
+        components: selected.map(publicComponent),
         sourceAlphaPixels,
         outputAlphaPixels,
         outputCanvasPreserved: true,

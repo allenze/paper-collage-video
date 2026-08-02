@@ -530,6 +530,7 @@ export const analyzeAlphaTopologyPixels = ({
   data,
   info,
   derivationRegions = [],
+  expectedComponents = [],
   thresholds = DEFAULT_ALPHA_TOPOLOGY_THRESHOLDS,
 }) => {
   const {width, height, channels} = info;
@@ -591,6 +592,24 @@ export const analyzeAlphaTopologyPixels = ({
   const primary = components[0] ?? null;
   const diagonal = Math.hypot(width, height);
   const diagnostics = [];
+  const expectedComponentTolerance = Math.max(
+    2,
+    Math.round(
+      Math.min(width, height) *
+        thresholds.derivationBoundaryToleranceRatio,
+    ),
+  );
+  const matchesExpectedComponent = (component) =>
+    expectedComponents.some((expected) => {
+      const expectedRight = expected.left + expected.width - 1;
+      const expectedBottom = expected.top + expected.height - 1;
+      return (
+        component.left >= expected.left - expectedComponentTolerance &&
+        component.top >= expected.top - expectedComponentTolerance &&
+        component.right <= expectedRight + expectedComponentTolerance &&
+        component.bottom <= expectedBottom + expectedComponentTolerance
+      );
+    });
   if (primary) {
     for (const component of components.slice(1)) {
       const separationRatio =
@@ -599,7 +618,8 @@ export const analyzeAlphaTopologyPixels = ({
         component.pixels >= thresholds.minimumDetachedPixels &&
         component.areaRatio >= thresholds.minimumDetachedAreaRatio &&
         separationRatio >= thresholds.minimumDetachedSeparationRatio &&
-        component.fillRatio >= thresholds.minimumRectangularFillRatio
+        component.fillRatio >= thresholds.minimumRectangularFillRatio &&
+        !matchesExpectedComponent(component)
       ) {
         diagnostics.push({
           id: component.id,
@@ -659,6 +679,7 @@ export const analyzeAlphaTopologyPixels = ({
 export const inspectAlphaTopology = async ({
   file,
   derivationRegions = [],
+  expectedComponents = [],
   thresholds = DEFAULT_ALPHA_TOPOLOGY_THRESHOLDS,
 }) => {
   const metadata = await sharp(file).metadata();
@@ -691,12 +712,15 @@ export const inspectAlphaTopology = async ({
       ...region,
       rect: scaleRect(region.rect, sourceSize, analysisSize),
     })),
+    expectedComponents: expectedComponents.map((component) =>
+      scaleRect(component, sourceSize, analysisSize)),
   });
   return {
     schemaVersion: 1,
     sourceSize,
     analysisSize,
     derivationRegions,
+    expectedComponents,
     ...inspection,
   };
 };

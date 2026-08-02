@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -18,6 +19,7 @@ import {
   validateAssetRequest,
 } from '../scripts/provider-lib.mjs';
 import {
+  COMPOSITE_QUALITY_CHECKS,
   collectCompositeQualityTargets,
   collectStyleProofTargets,
   prepareQualityReport,
@@ -30,6 +32,12 @@ import {
 import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('path locomotion depth checks are registered for quality review', () => {
+  assert.ok(COMPOSITE_QUALITY_CHECKS.includes('depth-projection-readable'));
+  assert.ok(COMPOSITE_QUALITY_CHECKS.includes('depth-order-clean'));
+});
+
 const STYLE_REQUEST = {
   styleProfileBinding: {
     schemaVersion: 1,
@@ -668,6 +676,7 @@ test('diagram filters fail deterministically and semantic proof targets span sce
 test('style proof defers semantic evidence for a planned node that is not generated yet', async () => {
   const slug = `semantic-style-pending-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
   const scene = {
     id: 'scene-a',
     motion: {
@@ -732,6 +741,19 @@ test('style proof defers semantic evidence for a planned node that is not genera
   };
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(publicDirectory, {recursive: true});
+    await sharp({
+      create: {
+        width: 100,
+        height: 100,
+        channels: 4,
+        background: '#806040ff',
+      },
+    }).png().toFile(path.join(publicDirectory, 'existing.png'));
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      `${JSON.stringify(project, null, 2)}\n`,
+    );
     await fs.writeFile(
       path.join(projectDirectory, 'assets-manifest.json'),
       `${JSON.stringify(manifestFixture(slug, []), null, 2)}\n`,
@@ -767,8 +789,31 @@ test('style proof defers semantic evidence for a planned node that is not genera
           'semantic:pending-diagram-contract:pending-diagram-final',
       ),
     );
+    await assert.rejects(
+      () => prepareQualityReport(slug, {write: false}),
+      /pending-diagram/,
+    );
+    await assert.doesNotReject(
+      () => prepareQualityReport(slug, {
+        write: false,
+        allowPendingSemanticEvidenceTargets: true,
+      }),
+    );
+    const stylePrepare = spawnSync(
+      process.execPath,
+      [
+        path.join(ROOT, 'scripts', 'project-quality.mjs'),
+        slug,
+        'prepare',
+        '--scope=style',
+        '--quiet',
+      ],
+      {cwd: ROOT, encoding: 'utf8'},
+    );
+    assert.equal(stylePrepare.status, 0, stylePrepare.stderr);
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(publicDirectory, {recursive: true, force: true});
   }
 });
 

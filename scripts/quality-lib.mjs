@@ -56,6 +56,7 @@ import {
   inspectCanonicalContainerGroupMembers,
 } from './canonical-container-lib.mjs';
 import {inspectStateAnchorRegistration} from './state-sheet-lib.mjs';
+import {inspectSemanticSliceOutput} from './semantic-slices-lib.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -170,6 +171,8 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'path-travel-clean',
   'path-heading-readable',
   'turn-continuity-clean',
+  'depth-projection-readable',
+  'depth-order-clean',
   'camera-follow-coverage-clean',
   'locomotion-cycle-bound',
   'canonical-frame-unique',
@@ -439,6 +442,8 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     requiredChecks,
     reviewScope = 'source-asset',
     semanticBinding = null,
+    semanticSliceBinding = null,
+    alphaTopologyExpectedComponents = [],
     registeredFamilyBinding = null,
     canonicalContainerBinding = null,
     stateSheetBinding = null,
@@ -475,6 +480,13 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       }
       if (assetId) existing.assetId = assetId;
       if (semanticBinding) existing.semanticBinding = semanticBinding;
+      if (semanticSliceBinding) {
+        existing.semanticSliceBinding = semanticSliceBinding;
+      }
+      if (alphaTopologyExpectedComponents.length > 0) {
+        existing.alphaTopologyExpectedComponents =
+          alphaTopologyExpectedComponents;
+      }
       if (registeredFamilyBinding) {
         existing.registeredFamilyBinding = registeredFamilyBinding;
       }
@@ -499,6 +511,8 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       sources: [source],
       reviewScope,
       semanticBinding,
+      semanticSliceBinding,
+      alphaTopologyExpectedComponents,
       registeredFamilyBinding,
       canonicalContainerBinding,
       stateSheetBinding,
@@ -569,11 +583,19 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     }
   }
 
-  const recordsByAssetId = new Map((manifest.assets ?? []).map((record) => [record.assetId, record]));
-  for (const record of activeManifestAssets(manifest)) {
+  const activeRecords = activeManifestAssets(manifest);
+  const recordsByAssetId = new Map(activeRecords.map((record) => [record.assetId, record]));
+  for (const record of activeRecords) {
     if (record.capability !== 'image') continue;
     const semanticBinding = record.semanticBinding ?? record.request?.semanticBinding ?? null;
     const registeredFamilyBinding = record.registeredFamilyBinding ?? null;
+    const registeredFamilyMaskRecord =
+      registeredFamilyBinding?.derivation?.maskAssetId
+        ? recordsByAssetId.get(
+            registeredFamilyBinding.derivation.maskAssetId,
+          ) ?? null
+        : null;
+    const semanticSliceBinding = record.semanticSliceBinding ?? null;
     const canonicalContainerBinding =
       record.canonicalContainerBinding ?? null;
     const boundContracts = (semanticBinding?.contractIds ?? [])
@@ -595,6 +617,11 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       source: `manifest:${record.assetId}`,
       requiredChecks: [...new Set([...(record.request?.quality?.requiredChecks ?? []), ...semanticChecks])],
       semanticBinding,
+      semanticSliceBinding,
+      alphaTopologyExpectedComponents:
+        semanticSliceBinding?.components ??
+        registeredFamilyMaskRecord?.semanticSliceBinding?.components ??
+        [],
       registeredFamilyBinding,
       canonicalContainerBinding,
       stateSheetBinding,
@@ -740,6 +767,7 @@ const inspectTechnicalQuality = async ({asset, project}) => {
     const topology = await inspectAlphaTopology({
       file,
       derivationRegions,
+      expectedComponents: asset.alphaTopologyExpectedComponents,
     });
     checks.push({
       id: 'alpha-topology-clean',
@@ -747,6 +775,24 @@ const inspectTechnicalQuality = async ({asset, project}) => {
       expected:
         'no detached rectangular alpha fragment or hard rectangular derivation boundary',
       actual: topology,
+    });
+  }
+  if (asset.semanticSliceBinding) {
+    const semanticSliceInspection = await inspectSemanticSliceOutput({
+      file,
+      binding: asset.semanticSliceBinding,
+    });
+    checks.push({
+      id: 'semantic-slice-alpha-current',
+      passed: semanticSliceInspection.passed,
+      expected: {
+        components: semanticSliceInspection.expectedComponents,
+        alphaPixels: semanticSliceInspection.expectedAlphaPixels,
+      },
+      actual: {
+        components: semanticSliceInspection.actualComponents,
+        alphaPixels: semanticSliceInspection.actualAlphaPixels,
+      },
     });
   }
   if (asset.semanticBinding?.riskClass === 'diagram-critical' && path.extname(file).toLowerCase() === '.svg') {
@@ -2544,7 +2590,13 @@ const preservedReview = async ({previous, fingerprint, requiredChecks}) => {
   };
 };
 
-export const prepareQualityReport = async (slug, {write = true} = {}) => {
+export const prepareQualityReport = async (
+  slug,
+  {
+    write = true,
+    allowPendingSemanticEvidenceTargets = false,
+  } = {},
+) => {
   const {project} = await loadProject(slug);
   const file = qualityReportPath(slug);
   const existing = (await fileExists(file)) ? await readJson(file) : null;
@@ -2601,7 +2653,10 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const proofReports = [];
   if (await fileExists(proofFile)) proofReports.push(await readJson(proofFile));
   if (await fileExists(styleProofFile)) proofReports.push(await readJson(styleProofFile));
-  const targets = await collectCompositeQualityTargets(project, {manifest});
+  const targets = await collectCompositeQualityTargets(project, {
+    manifest,
+    allowPendingSemanticEvidenceTargets,
+  });
   const inspectedComposites = await Promise.all(targets.map(async (target) => {
     const review = await preservedReview({previous: previousComposites.get(target.compositeId), fingerprint: target.fingerprint, requiredChecks: target.requiredChecks});
     const currentProofReport = proofReports.find((report) =>
@@ -2684,9 +2739,13 @@ export const recordQualityReviews = async ({
   slug,
   reviews,
   sourceReportFingerprint = null,
+  allowPendingSemanticEvidenceTargets = false,
 }) => {
   if (!Array.isArray(reviews) || reviews.length === 0) throw new Error('批量质量记录必须包含至少一项 review。');
-  const prepared = await prepareQualityReport(slug, {write: false});
+  const prepared = await prepareQualityReport(slug, {
+    write: false,
+    allowPendingSemanticEvidenceTargets,
+  });
   if (
     sourceReportFingerprint !== null &&
     sourceReportFingerprint !== prepared.report.reviewSurfaceFingerprint
@@ -3004,7 +3063,9 @@ export const buildQualityReviewScaffold = async ({
   includePassed = false,
   reviewScope = 'all',
 }) => {
-  const status = await prepareQualityReport(slug);
+  const status = await prepareQualityReport(slug, {
+    allowPendingSemanticEvidenceTargets: reviewScope === 'style',
+  });
   const compositionFile = compositionProofReportPath(slug);
   const styleFile = path.join(ROOT, 'dist', slug, 'style-motion-proof.json');
   const [compositionProof, styleProof] = await Promise.all([
@@ -3052,7 +3113,10 @@ export const assertQualityReviewScaffoldCurrent = async ({
   if (!scaffold?.sourceReport?.fingerprint) {
     throw new Error('质量审核 scaffold 缺少 sourceReport.fingerprint。');
   }
-  const prepared = status ?? await prepareQualityReport(slug, {write: false});
+  const prepared = status ?? await prepareQualityReport(slug, {
+    write: false,
+    allowPendingSemanticEvidenceTargets: scaffold.reviewScope === 'style',
+  });
   if (
     scaffold.sourceReport.fingerprint !==
     prepared.report.reviewSurfaceFingerprint

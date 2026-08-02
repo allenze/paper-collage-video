@@ -912,6 +912,15 @@ test('alpha topology rejects detached fragments and hard derivation rectangles',
     await sharp(cropSvg).png().toFile(cropFile);
     const clean = await inspectAlphaTopology({file: cleanFile});
     const fragment = await inspectAlphaTopology({file: fragmentFile});
+    const declaredFragment = await inspectAlphaTopology({
+      file: fragmentFile,
+      expectedComponents: [{
+        left: 272,
+        top: 8,
+        width: 18,
+        height: 28,
+      }],
+    });
     const crop = await inspectAlphaTopology({
       file: cropFile,
       derivationRegions: [{
@@ -924,6 +933,7 @@ test('alpha topology rejects detached fragments and hard derivation rectangles',
     assert.equal(fragment.passed, false);
     assert.ok(fragment.failures.some(({diagnostic}) =>
       diagnostic.classification === 'detached-rectangular-alpha-fragment'));
+    assert.equal(declaredFragment.passed, true);
     assert.equal(crop.passed, false);
     assert.ok(crop.failures.some(({diagnostic}) =>
       diagnostic.classification === 'hard-rectangular-derivation-boundary'));

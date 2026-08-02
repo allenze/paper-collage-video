@@ -345,6 +345,12 @@ export const inspectCharacterPng = async (file) => {
       const chroma = [red - mean, green - mean, blue - mean];
       const chromaMagnitude = Math.hypot(...chroma);
       if (chromaMagnitude < 18) continue;
+      const keyDistance = Math.hypot(
+        red - keyColor[0],
+        green - keyColor[1],
+        blue - keyColor[2],
+      );
+      if (keyDistance > 80) continue;
       const similarity =
         chroma.reduce(
           (total, channel, channelIndex) =>

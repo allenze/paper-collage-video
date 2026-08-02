@@ -1191,3 +1191,26 @@ test('neutral transparent RGB is not mistaken for a chroma key without metadata'
     await fsp.rm(directory, {recursive: true, force: true});
   }
 });
+
+test('key-edge inspection requires both chroma direction and proximity to the declared key', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'paper-key-distance-test-'));
+  const output = path.join(directory, 'distance.png');
+  try {
+    const pixels = Buffer.from([
+      186, 41, 145, 128,
+      112, 38, 84, 128,
+    ]);
+    await sharp(pixels, {raw: {width: 2, height: 1, channels: 4}})
+      .png()
+      .toFile(output);
+    await fsp.writeFile(
+      `${output}.key.json`,
+      `${JSON.stringify({keyColor: '#ba2991'})}\n`,
+    );
+    const inspection = await inspectCharacterPng(output);
+    assert.ok(inspection.keyEdgeRatio > 0.45, inspection);
+    assert.ok(inspection.keyEdgeRatio < 0.55, inspection);
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
+  }
+});

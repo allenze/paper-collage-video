@@ -6,6 +6,7 @@ import test from 'node:test';
 import sharp from 'sharp';
 import {
   deriveSemanticSlices,
+  inspectSemanticSliceOutput,
   validateSemanticSlicesSpec,
 } from '../scripts/semantic-slices-lib.mjs';
 import {assertAssetManifest} from '../scripts/asset-manifest-lib.mjs';
@@ -124,6 +125,13 @@ test('semantic slice derivation preserves the canvas and uniquely assigns alpha 
         semanticSliceBinding.boundaryCutPixels === 0,
     ),
   );
+  for (const record of result.records) {
+    const inspection = await inspectSemanticSliceOutput({
+      file: path.join(root, record.file),
+      binding: record.semanticSliceBinding,
+    });
+    assert.equal(inspection.passed, true);
+  }
   assert.equal(
     assertAssetManifest(result.manifest, 'fixture'),
     result.manifest,
@@ -136,5 +144,61 @@ test('semantic slice derivation rejects stale component geometry', async () => {
   await assert.rejects(
     deriveSemanticSlices({root, manifest, spec}),
     /alpha 拓扑已变化/,
+  );
+});
+
+test('semantic slice derivation can bind an exact preserved source revision', async () => {
+  const {root, manifest, spec} = await fixture();
+  const original = manifest.assets[0];
+  original.lifecycle = {
+    status: 'superseded',
+    changedAt: '2026-08-02T00:00:00.500Z',
+    reason: 'fixture-replaced',
+    supersededBy: '2'.repeat(64),
+  };
+  const replacementFile = path.join(
+    root,
+    'public',
+    'projects',
+    'fixture',
+    'replacement.png',
+  );
+  await sharp({
+    create: {
+      width: 80,
+      height: 50,
+      channels: 4,
+      background: '#557799ff',
+    },
+  }).png().toFile(replacementFile);
+  const replacementBuffer = await fs.readFile(replacementFile);
+  const replacementSha256 = (await import('node:crypto'))
+    .createHash('sha256')
+    .update(replacementBuffer)
+    .digest('hex');
+  manifest.assets.push({
+    ...original,
+    recordId: '2'.repeat(64),
+    file: path.relative(root, replacementFile),
+    sha256: replacementSha256,
+    lifecycle: {
+      status: 'active',
+      changedAt: '2026-08-02T00:00:00.500Z',
+      reason: 'fixture-replacement',
+      supersededBy: null,
+    },
+  });
+  spec.sources[0].sourceSha256 = original.sha256;
+  const result = await deriveSemanticSlices({
+    root,
+    manifest,
+    spec,
+    now: '2026-08-02T00:00:01.000Z',
+  });
+  assert.ok(
+    result.records.every(
+      ({semanticSliceBinding}) =>
+        semanticSliceBinding.sourceSha256 === original.sha256,
+    ),
   );
 });

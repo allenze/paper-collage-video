@@ -366,6 +366,79 @@ test('family-aware proof renders neutral, exploded and three responsive envelope
   }
 });
 
+test('scene-stacked family proof preserves the authored oversized carrier at envelope extremes', async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'scene-carrier-layer-proof-'),
+  );
+  try {
+    const files = new Map();
+    for (const [id, svg] of [
+      ['rear', '<rect width="160" height="90" fill="#d8c598"/>'],
+      ['subject', '<circle cx="80" cy="45" r="18" fill="#8f5f3f"/>'],
+      ['front', '<path d="M0 72 Q80 54 160 72 V90 H0 Z" fill="#536f5f"/>'],
+    ]) {
+      const file = path.join(directory, `${id}.png`);
+      await sharp(Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90">${svg}</svg>`,
+      )).png().toFile(file);
+      files.set(id, file);
+    }
+    const group = {
+      id: 'scene-carrier-stack',
+      registration: {canvas: {width: 160, height: 90}},
+      layerStack: {
+        revealEnvelope: {
+          '16:9': {x: 0.08, y: 0.06, scale: 0.1, rotationDegrees: 2},
+          '9:16': {x: 0.05, y: 0.08, scale: 0.12, rotationDegrees: 2},
+          '1:1': {x: 0.06, y: 0.07, scale: 0.11, rotationDegrees: 2},
+        },
+      },
+      children: [
+        {id: 'rear', kind: 'asset', slot: 'support-rear', depth: -0.7},
+        {id: 'subject', kind: 'asset', slot: 'subject', depth: -0.55},
+        {id: 'front', kind: 'asset', slot: 'support-front', depth: 0.9},
+      ],
+    };
+    const viewportProof = await buildLayerStackProof({
+      group,
+      memberFiles: files,
+      referenceFile: files.get('rear'),
+      directory: path.join(directory, 'viewport'),
+      evidenceId: 'viewport-stack',
+    });
+    assert.equal(viewportProof.passed, false);
+
+    const sceneCarrierGroup = {
+      ...group,
+      stackingContext: 'scene',
+      transform: {
+        x: 0.5,
+        y: 0.5,
+        width: 3,
+        height: 2.5,
+        anchorX: 0.5,
+        anchorY: 0.5,
+      },
+    };
+    const carrierProof = await buildLayerStackProof({
+      group: sceneCarrierGroup,
+      memberFiles: files,
+      referenceFile: files.get('rear'),
+      directory: path.join(directory, 'carrier'),
+      evidenceId: 'scene-carrier-stack',
+    });
+    assert.equal(carrierProof.passed, true);
+    assert.equal(carrierProof.artifacts.envelopeExtremes.length, 3);
+    assert.ok(
+      carrierProof.artifacts.envelopeExtremes.every(
+        ({transparentPixels}) => transparentPixels === 0,
+      ),
+    );
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
 test('registered layer sheet proof resolves the reference cell before comparison', async () => {
   const directory = await fs.mkdtemp(
     path.join(os.tmpdir(), 'layer-sheet-reference-'),

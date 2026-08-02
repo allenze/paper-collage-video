@@ -96,7 +96,7 @@ For the style gate, run:
 
 ```bash
 npm run project:style-proof -- <slug> --duration=4
-npm run project:quality -- <slug> prepare
+npm run project:quality -- <slug> prepare --scope=style
 ```
 
 The schema-v7 style report uses `scope=style`, binds the complete
@@ -113,6 +113,14 @@ view, and both reveal-envelope extremes for 16:9, 9:16, and 1:1. These six
 family artifacts must be current and show zero transparent output pixels;
 isolated member motion stress cannot prove hidden content. Record participating
 assets and the representative composite with those paths.
+When the stack uses `stackingContext=scene`, render those extremes through the
+same validated static carrier transform used by the scene. An oversized carrier
+is part of the authored coverage surface; shrinking it back to one viewport in
+the proof creates a false transparent-edge failure.
+The same `--scope=style` must be retained for scaffold, contact-sheet, and
+record-batch. It defers semantic evidence whose planned node has not yet been
+produced, while keeping every currently rendered style target reviewable and
+fingerprint-bound.
 
 ```json
 {
@@ -235,6 +243,22 @@ changes do not leave an orphaned one- or two-character tail.
 - `spatial-contract/gait`: all requested registered locomotion states occur inside the window, measured state changes per second meet the authored minimum, `activeUntil` does not precede the final locomotion proof, and the last active transition is close enough to the window end to reject a terminal freeze. If an exit sequence follows, additionally prove its ordered brake/landing/contact states and the final held contact state.
 - `spatial-contract/travel-facing`: the assembled pre-camera subject path has the authored signed displacement, contains no reverse segment, every active state both declares and visibly exhibits the expected facing, and a matching `gait` contract proves that the moving character is actually cycling locomotion states. Inspect the arrow overlay and both endpoint crops; metadata alone cannot pass the human `travel-facing-readable` check.
 - `spatial-contract/path-locomotion`: the assembled subject travels the required physical screen and optical-depth distance and directions; perspective scale and dynamic depth order visibly follow `z`; rendered rotation stays within the authored heading-error and turn-rate limits; every requested registered locomotion state cycles at the minimum cadence through the proof window; camera follow binds the same target and coherent world; and every sampled viewport stays inside declared world bounds. Inspect start, every named turn/depth reversal, end, the 3D path polyline, depth values, and heading arrows. Human review must pass `path-travel-clean`, `path-heading-readable`, `turn-continuity-clean`, `depth-projection-readable`, `depth-order-clean`, `camera-follow-coverage-clean`, and `locomotion-cycle-bound`.
+- Alpha-topology inspection treats detached components as intentional only when
+  their full-canvas bounds are already declared by a current
+  `semanticSliceBinding`, either on the asset itself or on the registered-family
+  mask that derived it. Undeclared detached rectangular fragments and hard
+  rectangular derivation boundaries still fail deterministically.
+- Semantic alpha-component slices must also reproduce the exact declared
+  component bounds and alpha-pixel counts in the encoded PNG. Provenance counts
+  alone cannot pass `semantic-slice-alpha-current`.
+- When a semantic slice is intentionally derived from a preserved source
+  revision whose asset id was later reused by a registered-family output, bind
+  `sources[].sourceSha256` in `semantic-slices.json`. The derivation must resolve
+  that exact manifest record instead of silently switching to the current
+  active record.
+- Chroma-key edge inspection requires both matching chroma direction and close
+  RGB distance to the declared key color. Paper colors that merely share a hue
+  direction with the key are not counted as key residue.
 
 When a spatial contract is selected by `styleProofPlan`, `project:style-proof`
 runs the same deterministic contract evaluator used by composition proof, stores

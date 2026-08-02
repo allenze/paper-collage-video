@@ -28,6 +28,7 @@
         "required": ["assetId", "slices"],
         "properties": {
           "assetId": {"type": "string", "minLength": 1},
+          "sourceSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "slices": {
             "type": "array",
             "minItems": 2,

@@ -30,7 +30,7 @@
       "compositeId": "event:starter:establish",
       "sceneId": "starter",
       "pattern": "event",
-      "fingerprint": "53674cb5e097dbbe65e69f432ddacbf4a0187cc4b45616c8989565e63b5c6297",
+      "fingerprint": "7d340cda84808547b7ee36a379ce4c76d7c24076093a6a8ba61a41798c0eb80e",
       "proofFrames": [
         {
           "sceneId": "starter",
@@ -53,7 +53,7 @@
       "compositeId": "event:starter:subject-arrives",
       "sceneId": "starter",
       "pattern": "event",
-      "fingerprint": "4ad446ef3e7a8fd12258efa99272d6390657e3105f50f7d01c8d1931b4e4983c",
+      "fingerprint": "15b8a35b192aa5719caddef516599414f10b8150c3456fd4df5b9ba11aa2ae81",
       "proofFrames": [
         {
           "sceneId": "starter",
@@ -76,7 +76,7 @@
       "compositeId": "event:starter:lockup",
       "sceneId": "starter",
       "pattern": "event",
-      "fingerprint": "bee3908b7d5bb8c2b4a2b36669ffb4ea7187d0d15769df3501bc439b52dc1e3f",
+      "fingerprint": "5c4568fefcde2c9d2f3e8b64585a4923ceaa7e07a9409b7a3890a499542a033b",
       "proofFrames": [
         {
           "sceneId": "starter",
@@ -99,7 +99,7 @@
       "compositeId": "style-profile:childrens-picture-book-paper",
       "sceneId": "starter",
       "pattern": "style-target",
-      "fingerprint": "ea55b78b0433fdcdc0406490ca44b016cdf5f056a0f9b7d2ac743de36f0ec599",
+      "fingerprint": "7cb7e08b136634ee03f940acada09e393ba29734da065356fece9ec63270a686",
       "proofFrames": [
         {
           "sceneId": "starter",
@@ -152,7 +152,7 @@
       "compositeId": "motion-contract:whole-film",
       "sceneId": "starter",
       "pattern": "motion-contract",
-      "fingerprint": "38795f0ae699bfd57a71d5ea2ffbb47422225cbae022cc54f7a81d67e65a6a2b",
+      "fingerprint": "a76d8d7e206a446823823975e2d1f77ed7ea5b4f9064ddc9f4e65c906a1dc76b",
       "proofFrames": [
         {
           "sceneId": "starter",

@@ -274,7 +274,10 @@ export const assertStyleProofReady = async (slug) => {
     throw new Error('风格证明没有完整覆盖最高风险导演目标；自由目标也必须提供结构化 composite 证据。');
   }
 
-  const quality = await prepareQualityReport(slug, {write: false});
+  const quality = await prepareQualityReport(slug, {
+    write: false,
+    allowPendingSemanticEvidenceTargets: true,
+  });
   for (const target of provenTargets) {
     const composite = quality.report.composites.find(({compositeId}) => compositeId === target.compositeId);
     if (!target.styleOnly && (!composite || !allPassed(composite.semanticChecks))) {
