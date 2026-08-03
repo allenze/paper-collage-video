@@ -47,6 +47,14 @@ const STYLE_REQUEST = {
   },
 };
 const anchorPolicy = {requiredAnchorIds: ['ground-contact'], maximumDrift: 0.02};
+const defaultStateSheetKeying = {
+  keyColor: '#ff00ff',
+  transparentThreshold: 18,
+  opaqueThreshold: 95,
+  edgeFeather: 0.6,
+  matteErode: 1,
+  edgePadding: 6,
+};
 const stateContract = (state) => ({
   ...state,
   facing: 'right',
@@ -86,6 +94,65 @@ test('path-bound state sequences inherit proof times from their locomotion contr
   assert.deepEqual(
     proofTimes.map(({id}) => id),
     ['start', 'turn-a', 'turn-b', 'settle'],
+  );
+});
+
+test('path companions in one pose family inherit the lead locomotion proof window', () => {
+  const scene = {
+    id: 'pond',
+    motion: {
+      proofTimes: [
+        {id: 'start', at: 0.05},
+        {id: 'turn', at: 0.5},
+        {id: 'settle', at: 0.9},
+      ],
+    },
+    composition: {
+      nodes: [
+        {
+          id: 'lead',
+          kind: 'state-sequence',
+          poseFamilyId: 'tadpole-swim',
+          motion: {path: {kind: 'cubic-bezier-3d'}},
+        },
+        {
+          id: 'follower',
+          kind: 'state-sequence',
+          poseFamilyId: 'tadpole-swim',
+          motion: {path: {kind: 'cubic-bezier-3d'}},
+        },
+        {
+          id: 'unrelated',
+          kind: 'state-sequence',
+          poseFamilyId: 'other-swim',
+          motion: {path: {kind: 'cubic-bezier-3d'}},
+        },
+      ],
+    },
+  };
+  const spatialContracts = [{
+    kind: 'path-locomotion',
+    sceneId: 'pond',
+    nodeId: 'lead',
+    fromProofTimeId: 'start',
+    turnProofTimeIds: ['turn'],
+    throughProofTimeId: 'settle',
+  }];
+  assert.deepEqual(
+    proofTimesForStateSequence({
+      scene,
+      node: scene.composition.nodes[1],
+      spatialContracts,
+    }).map(({id}) => id),
+    ['start', 'turn', 'settle'],
+  );
+  assert.deepEqual(
+    proofTimesForStateSequence({
+      scene,
+      node: scene.composition.nodes[2],
+      spatialContracts,
+    }),
+    [],
   );
 });
 
@@ -212,7 +279,7 @@ test('horizontal mirror derives opposite facing and registered anchors determini
       {...stateContract({id: 'reading', row: 0, column: 0}), orientationTransform: {kind: 'horizontal-mirror', outputFacing: 'right'}},
       stateContract({id: 'pointing', row: 0, column: 1}),
     ],
-    keying: {keyColor: '#ff00ff', matteErode: 1},
+    keying: defaultStateSheetKeying,
   };
   assert.ok(
     validateStateSheetSpec(invalid).some((error) =>
@@ -442,7 +509,7 @@ test('registered sheet processing preserves row-major cells and produces stable 
       {id: 'pointing', row: 1, column: 0},
       {id: 'book-down', row: 1, column: 1},
     ].map(stateContract),
-    keying: {keyColor: 'auto', matteErode: 1},
+    keying: {...defaultStateSheetKeying, keyColor: 'auto'},
   };
   assert.deepEqual(validateStateSheetSpec(spec), []);
   assert.equal(stateOutputName({poseFamilyId: spec.poseFamilyId, stateId: 'book-down'}), 'reader-poses-book-down.png');
@@ -454,6 +521,13 @@ test('registered sheet processing preserves row-major cells and produces stable 
   const invalid = structuredClone(spec);
   invalid.states[2].column = 1;
   assert.ok(validateStateSheetSpec(invalid).length > 0);
+  const invalidKeying = structuredClone(spec);
+  invalidKeying.keying.opaqueThreshold = invalidKeying.keying.transparentThreshold;
+  assert.ok(
+    validateStateSheetSpec(invalidKeying).some((error) =>
+      error.includes('transparentThreshold'),
+    ),
+  );
   const drifted = structuredClone(spec);
   drifted.states[2].anchors[0].x = 0.7;
   assert.ok(validateStateSheetSpec(drifted).some((error) => error.includes('anchor 漂移')));
@@ -593,7 +667,13 @@ test('state sheet processor turns one recorded provider image into registered lo
           outputFacing: 'left',
         },
       })),
-      keying: {keyColor: '#ff00ff', matteErode: 1},
+      keying: {
+        ...defaultStateSheetKeying,
+        transparentThreshold: 22,
+        opaqueThreshold: 121,
+        edgeFeather: 1.25,
+        edgePadding: 4,
+      },
     }, null, 2)}\n`);
     const processed = spawnSync(process.execPath, ['scripts/process-state-sheet.mjs', path.relative(ROOT, specFile)], {cwd: ROOT, encoding: 'utf8'});
     assert.equal(processed.status, 0, processed.stderr);
@@ -611,6 +691,16 @@ test('state sheet processor turns one recorded provider image into registered lo
     assert.equal(report.isolatedCellGenerationUsed, false);
     assert.equal(report.derivedStateCount, 2);
     assert.equal(report.avoidedIndividualCalls, 1);
+    const keyingMetadata = JSON.parse(
+      await fs.readFile(
+        path.join(outputDirectory, 'reader-poses-reading.png.key.json'),
+        'utf8',
+      ),
+    );
+    assert.equal(keyingMetadata.transparentThreshold, 22);
+    assert.equal(keyingMetadata.opaqueThreshold, 121);
+    assert.equal(keyingMetadata.edgeFeather, 1.25);
+    assert.equal(keyingMetadata.transparentRgb.paddingPixels, 4);
     const dimensions = await Promise.all(['reading', 'pointing'].map(async (stateId) => {
       const metadata = await sharp(path.join(outputDirectory, `reader-poses-${stateId}.png`)).metadata();
       return `${metadata.width}x${metadata.height}:${metadata.hasAlpha}`;
@@ -728,7 +818,7 @@ test('explicit registered source rects preserve a full silhouette that crosses a
         {id: 'reading', row: 0, column: 0},
         {id: 'pointing', row: 0, column: 1},
       ].map(stateContract),
-      keying: {keyColor: '#ff00ff', matteErode: 1},
+      keying: defaultStateSheetKeying,
       extraction: {
         mode: 'explicit-source-rects', canvas: {width: 120, height: 100},
         cells: [

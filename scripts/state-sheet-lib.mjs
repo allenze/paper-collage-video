@@ -151,7 +151,29 @@ export const validateStateSheetSpec = (spec) => {
   if (!anchorRegistration.passed) {
     errors.push('逐状态 anchor 漂移超过 anchorPolicy.maximumDrift');
   }
-  if (!nonEmpty(spec?.keying?.keyColor) || !Number.isInteger(spec?.keying?.matteErode) || spec.keying.matteErode < 0 || spec.keying.matteErode > 8) errors.push('keying 无效');
+  const keying = spec?.keying;
+  if (
+    !nonEmpty(keying?.keyColor) ||
+    !Number.isFinite(keying?.transparentThreshold) ||
+    keying.transparentThreshold < 0 ||
+    keying.transparentThreshold > 441.7 ||
+    !Number.isFinite(keying?.opaqueThreshold) ||
+    keying.opaqueThreshold <= keying.transparentThreshold ||
+    keying.opaqueThreshold > 441.7 ||
+    !Number.isFinite(keying?.edgeFeather) ||
+    keying.edgeFeather < 0 ||
+    keying.edgeFeather > 8 ||
+    !Number.isInteger(keying?.matteErode) ||
+    keying.matteErode < 0 ||
+    keying.matteErode > 8 ||
+    !Number.isInteger(keying?.edgePadding) ||
+    keying.edgePadding < 0 ||
+    keying.edgePadding > 32
+  ) {
+    errors.push(
+      'keying 必须声明有效的 keyColor、transparentThreshold、opaqueThreshold、edgeFeather、matteErode 和 edgePadding',
+    );
+  }
   if (spec?.extraction !== undefined) {
     const extraction = spec.extraction;
     if (extraction?.mode !== 'explicit-source-rects') errors.push('extraction.mode 必须为 explicit-source-rects');

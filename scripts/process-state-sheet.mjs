@@ -230,8 +230,11 @@ try {
         observedState?.observedKeyColor ?? spec.keying.keyColor;
       await run(python, [
         'scripts/remove_chroma_key.py', '--input', cell, '--out', output,
-        '--transparent-threshold', '18', '--opaque-threshold', '95', '--edge-feather', '0.6',
+        '--transparent-threshold', String(spec.keying.transparentThreshold),
+        '--opaque-threshold', String(spec.keying.opaqueThreshold),
+        '--edge-feather', String(spec.keying.edgeFeather),
         '--key-color', keyColor, '--matte-erode', String(spec.keying.matteErode),
+        '--edge-padding', String(spec.keying.edgePadding),
         '--metadata', `${output}.key.json`, '--force',
       ]);
       if (observedState) {

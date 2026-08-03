@@ -48,6 +48,7 @@
           "policy",
           "policyFingerprint",
           "requestedKeyColor",
+          "candidateKeyColor",
           "observedKeyColor",
           "rect",
           "metrics",
@@ -62,6 +63,7 @@
           "policy": {"type": "object"},
           "policyFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
           "requestedKeyColor": {"type": "string", "pattern": "^#[0-9a-f]{6}$"},
+          "candidateKeyColor": {"type": "string", "pattern": "^#[0-9a-f]{6}$"},
           "observedKeyColor": {"type": "string", "pattern": "^#[0-9a-f]{6}$"},
           "rect": {
             "type": "object",

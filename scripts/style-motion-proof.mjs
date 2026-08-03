@@ -92,7 +92,9 @@ const findNodeRect = ({scene, nodeId, video}) => {
 };
 
 const findTargetBounds = ({scene, nodeId, video}) =>
-  padEvidenceBounds(findNodeRect({scene, nodeId, video}), video, 32);
+  scene.camera?.follow
+    ? {left: 0, top: 0, width: video.width, height: video.height}
+    : padEvidenceBounds(findNodeRect({scene, nodeId, video}), video, 32);
 
 const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
   const sampleCount = sampleRate * seconds;
@@ -338,9 +340,12 @@ try {
         const fullFrame = renderedFrames.get(`${shot.sceneId}:${proofTimeId}`);
         if (!fullFrame) continue;
         const id = `${safeEvidenceId(target.compositeId)}-${safeEvidenceId(shot.sceneId)}-${safeEvidenceId(proofTimeId)}`;
-        const cropFile = path.join(cropDirectory, `${id}.png`);
-        const debugFile = path.join(debugDirectory, `${id}.png`);
-        await sharp(fullFrame).extract(bounds).png().toFile(cropFile);
+        const cropFile = path.join(cropDirectory, `${id}.jpg`);
+        const debugFile = path.join(debugDirectory, `${id}.jpg`);
+        await sharp(fullFrame)
+          .extract(bounds)
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
+          .toFile(cropFile);
         await sharp(fullFrame)
           .composite([{
             input: target.pattern === 'spatial-contract'
@@ -358,7 +363,7 @@ try {
                   label: `${target.compositeId} · ${proofTimeId}`,
                 }),
           }])
-          .png()
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
           .toFile(debugFile);
         proofFrames.push({
           sceneId: shot.sceneId,

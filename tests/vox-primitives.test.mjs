@@ -402,7 +402,7 @@ test('the no-provider VOX fixture compiles and executes every new primitive', ()
     styleProfile: FIXTURE_STYLE_PROFILE,
   });
   project.motionContract = storyboard.motionContract;
-  assert.equal(project.plan.assetBudget.maxGeneratedImages, 21);
+  assert.equal(project.plan.assetBudget.maxGeneratedImages, 25);
   assert.deepEqual(
     validateSceneTransitionSequence({
       scenes: storyboard.scenes,

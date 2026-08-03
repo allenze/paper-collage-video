@@ -72,6 +72,9 @@ const hashFile = async (file) =>
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
 const findTargetBounds = ({scene, nodeId, video}) => {
+  if (scene.camera?.follow) {
+    return {left: 0, top: 0, width: video.width, height: video.height};
+  }
   let result = null;
   const visit = (nodes, parentRect, parentGroup = null) => {
     for (const node of nodes ?? []) {
@@ -625,9 +628,12 @@ try {
                 video: project.video,
               });
         const safeId = target.compositeId.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
-        const cropFile = path.join(cropDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.png`);
-        const debugFile = path.join(debugDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.png`);
-        await sharp(renderedProof.file).extract(bounds).png().toFile(cropFile);
+        const cropFile = path.join(cropDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.jpg`);
+        const debugFile = path.join(debugDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.jpg`);
+        await sharp(renderedProof.file)
+          .extract(bounds)
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
+          .toFile(cropFile);
         await sharp(renderedProof.file)
           .composite([{
             input: target.pattern === 'spatial-contract'
@@ -645,7 +651,7 @@ try {
                   label: `${target.compositeId} · ${shot.sceneId} · ${proofTimeId}`,
                 }),
           }])
-          .png()
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
           .toFile(debugFile);
         proofFrames.push({
           ...(target.pattern === 'responsive-directing'

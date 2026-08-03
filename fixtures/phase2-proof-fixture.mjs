@@ -963,8 +963,8 @@ export const createPhase2Plan = () => ({
     characterSheets: 2,
     styleSamples: 1,
     baseImageAttempts: 9,
-    layerPackageAttemptReserve: 12,
-    maxGeneratedImages: 21,
+    layerPackageAttemptReserve: 16,
+    maxGeneratedImages: 25,
   },
   motionBudget: {
     maxPoseSheetCalls: 2,
@@ -974,7 +974,7 @@ export const createPhase2Plan = () => ({
   approvedImageBudget: {
     imageAttemptLimit: 1,
     expectedProviderImageCalls: 1,
-    profileHardCeiling: 21,
+    profileHardCeiling: 25,
     approvedAt: PHASE2_PROOF_UPDATED_AT,
   },
   requested: {durationSeconds: 6, sceneCount: 2},

@@ -307,6 +307,38 @@ const assertImageRecord = (
   return record;
 };
 
+const layerPackageSourceRecord = ({
+  manifest,
+  assetId,
+  registration,
+  sourcePackage,
+}) =>
+  [...(manifest.assets ?? [])].reverse().find((record) => {
+    if (
+      record.assetId !== assetId ||
+      record.capability !== 'image' ||
+      !['active', 'recovery-source', 'superseded'].includes(
+        record.lifecycle?.status,
+      ) ||
+      record.adapter === 'registered-family-member'
+    ) {
+      return false;
+    }
+    const binding =
+      record.compositionBinding?.layerPackageBinding ??
+      record.request?.layerPackageBinding;
+    return (
+      binding?.registrationId === registration.id &&
+      binding?.sourceMasterAssetId === registration.sourceMasterAssetId &&
+      binding?.sourcePackageId === sourcePackage.id &&
+      binding?.sourceStrategy === sourcePackage.strategy &&
+      binding?.packageRole === sourcePackage.role &&
+      binding?.completeness === sourcePackage.completeness &&
+      binding?.canvas?.width === registration.canvas.width &&
+      binding?.canvas?.height === registration.canvas.height
+    );
+  }) ?? null;
+
 const workspacePath = (root, input, label) => {
   const resolved = path.resolve(root, input);
   if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
@@ -533,16 +565,26 @@ const sourceImage = async ({
   registration,
   sourcePackage,
 }) => {
-  const record = assertImageRecord(
-    manifest,
-    source.assetId,
-    source.kind,
-    {
-      allowRecoverySource:
-        source.kind === 'registered-layer-sheet' ||
-        source.kind === 'layer-package-member',
-    },
-  );
+  const record = source.kind === 'layer-package-member'
+    ? layerPackageSourceRecord({
+        manifest,
+        assetId: source.assetId,
+        registration,
+        sourcePackage,
+      })
+    : assertImageRecord(
+        manifest,
+        source.assetId,
+        source.kind,
+        {
+          allowRecoverySource: source.kind === 'registered-layer-sheet',
+        },
+      );
+  if (!record) {
+    throw new Error(
+      `${source.kind} 必须指向保留的 provider layer-package image 记录：${source.assetId}`,
+    );
+  }
   const file = workspacePath(root, record.file, `${source.kind} source`);
   const actualSha256 = await sha256File(file);
   if (record.sha256 !== actualSha256) {
@@ -941,16 +983,7 @@ const providerRootsFor = (manifest, derivedMembers) => {
 };
 
 const providerPackageRootsFor = (manifest, spec, derivedMembers) => {
-  if (spec.sourceStrategy === 'registered-layer-sheet') {
-    return providerRootsFor(manifest, derivedMembers);
-  }
-  return (manifest.assets ?? []).filter((record) => {
-    if (record.lifecycle?.status !== 'active') return false;
-    const binding =
-      record.compositionBinding?.layerPackageBinding ??
-      record.request?.layerPackageBinding;
-    return binding?.sourcePackageId === spec.sourcePackageId;
-  });
+  return providerRootsFor(manifest, derivedMembers);
 };
 
 export const deriveRegisteredFamily = async ({

@@ -129,8 +129,8 @@ export const createLoopingWorldPlan = () => ({
     characterSheets: 2,
     styleSamples: 1,
     baseImageAttempts: 6,
-    layerPackageAttemptReserve: 6,
-    maxGeneratedImages: 12,
+    layerPackageAttemptReserve: 8,
+    maxGeneratedImages: 14,
   },
   motionBudget: {
     maxPoseSheetCalls: 2,
@@ -140,7 +140,7 @@ export const createLoopingWorldPlan = () => ({
   approvedImageBudget: {
     imageAttemptLimit: 0,
     expectedProviderImageCalls: 0,
-    profileHardCeiling: 12,
+    profileHardCeiling: 14,
     approvedAt: LOOPING_WORLD_UPDATED_AT,
   },
   requested: {

@@ -870,14 +870,26 @@ export const proofTimesForStateSequence = ({
   if (assertedProofTimes.length > 0 || !node.motion?.path) {
     return assertedProofTimes;
   }
+  const pathContracts = spatialContracts.filter(
+    (contract) =>
+      contract.kind === 'path-locomotion' &&
+      contract.sceneId === scene.id,
+  );
+  const directContracts = pathContracts.filter(
+    (contract) => contract.nodeId === node.id,
+  );
+  const matchingContracts = directContracts.length > 0
+    ? directContracts
+    : pathContracts.filter((contract) => {
+        const contractedNode = findNode(scene, contract.nodeId);
+        return (
+          Boolean(node.poseFamilyId) &&
+          contractedNode?.poseFamilyId === node.poseFamilyId &&
+          Boolean(contractedNode.motion?.path)
+        );
+      });
   const contractProofIds = new Set(
-    spatialContracts
-      .filter(
-        (contract) =>
-          contract.kind === 'path-locomotion' &&
-          contract.sceneId === scene.id &&
-          contract.nodeId === node.id,
-      )
+    matchingContracts
       .flatMap((contract) => [
         contract.fromProofTimeId,
         ...(contract.turnProofTimeIds ?? []),

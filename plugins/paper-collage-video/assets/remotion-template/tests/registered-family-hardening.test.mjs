@@ -657,6 +657,46 @@ test('registered family recovers one-pixel provider edge drift for full-context 
     assert.ok(data[(80 * info.width + 118) * 4 + 3] > 200);
     assert.equal(subject.registeredFamilyBinding.derivation.placement.width, 239);
     assert.equal(subject.registeredFamilyBinding.derivation.outputCanvasPreserved, true);
+
+    const collidingSpec = structuredClone(fixture.spec);
+    collidingSpec.familyId = 'fixture-colliding-family';
+    collidingSpec.members = collidingSpec.members.map((member) => ({
+      ...member,
+      assetId: member.source.assetId,
+      nodeId: `colliding-${member.role}`,
+      output:
+        `public/projects/family-proof/registered/colliding-${member.role}.png`,
+    }));
+    const firstCollision = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: collidingSpec,
+      manifest: result.manifest,
+      now: '2026-07-23T04:00:00.000Z',
+    });
+    const secondCollisionSpec = structuredClone(collidingSpec);
+    secondCollisionSpec.members[0].nodeId = 'colliding-rear-rebound';
+    const secondCollision = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: secondCollisionSpec,
+      manifest: firstCollision.manifest,
+      now: '2026-07-23T05:00:00.000Z',
+    });
+    assert.equal(secondCollision.report.providerImageCalls, 3);
+    assert.equal(
+      secondCollision.records.find(
+        ({registeredFamilyBinding}) =>
+          registeredFamilyBinding.role === 'support-rear',
+      ).registeredFamilyBinding.nodeId,
+      'colliding-rear-rebound',
+    );
+    assert.equal(
+      secondCollision.manifest.assets.filter(
+        ({assetId, lifecycle}) =>
+          assetId === 'edit-support-rear' &&
+          lifecycle.status === 'active',
+      ).length,
+      1,
+    );
   } finally {
     await fs.rm(fixture.root, {recursive: true, force: true});
   }

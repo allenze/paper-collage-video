@@ -73,10 +73,21 @@
     },
     "keying": {
       "type": "object",
-      "required": ["keyColor", "matteErode"],
+      "required": [
+        "keyColor",
+        "transparentThreshold",
+        "opaqueThreshold",
+        "edgeFeather",
+        "matteErode",
+        "edgePadding"
+      ],
       "properties": {
         "keyColor": {"type": "string", "minLength": 1},
-        "matteErode": {"type": "integer", "minimum": 0, "maximum": 8}
+        "transparentThreshold": {"type": "number", "minimum": 0, "maximum": 441.7},
+        "opaqueThreshold": {"type": "number", "exclusiveMinimum": 0, "maximum": 441.7},
+        "edgeFeather": {"type": "number", "minimum": 0, "maximum": 8},
+        "matteErode": {"type": "integer", "minimum": 0, "maximum": 8},
+        "edgePadding": {"type": "integer", "minimum": 0, "maximum": 32}
       },
       "additionalProperties": false
     },
