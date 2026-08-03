@@ -201,8 +201,12 @@ three manifest records. Author one schema-v2 file against
 npm run assets:derive-registered-family -- projects/<slug>/registered-families/<family>.json
 ```
 
-Its source must be the registered layer sheet or the three full-context
-layer-package members from the compiled source strategy. The CLI materializes
+Its source must be the registered layer sheet, the three full-context
+layer-package members from the compiled source strategy, or—for a stateful
+subject only—an active real-alpha `state-sheet-cell` produced from the complete
+registered pose sheet. A state-cell source must declare the exact
+`poseFamilyId`/`stateId` and an explicit placement on the shared family canvas;
+derive one complete rear/subject/front family for every subject state. The CLI materializes
 exactly `support-rear`, `subject`, and `support-front`, keeps the registration
 canvas and top-left origin, validates clean-plate/full-silhouette/full-overlay
 completeness, appends `registered-family-member` provenance, supersedes prior

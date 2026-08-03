@@ -255,6 +255,23 @@ member must:
   parameters, and current key-metadata SHA;
 - remain an active `registered-family-member` manifest record.
 
+When the `subject` is a `state-sequence`, each visual state must keep a complete
+three-member family context. Use a `state-sheet-cell` source for the subject,
+bound to its exact `poseFamilyId` and `stateId`, and give it an explicit
+placement on the shared registration canvas. Derive one complete family per
+state while reusing the same registered support rear/front source package.
+This is deterministic assembly from the existing state sheet and support
+package; it consumes no additional provider call. Tight standalone images,
+unregistered alpha files, and hand-authored manifest aliases are rejected.
+
+If one provider cell contains the complete transparent support silhouette, a
+`support-front` registered-sheet cell may also supply `support-rear` by
+declaring `reuseAsRole: "support-rear"`. The reused rear must use the current
+chroma-key contract and must not declare a clip, so it preserves the complete
+support. The normal front member may derive a clipped occluding edge from that
+same cell. This is preferable to moving an opaque clean-plate rectangle over a
+different environment.
+
 `registered-depth-stack` has exactly three asset children, one per role. Each
 child keeps a full-canvas transform, declares its own depth, and stays within
 the smallest authored reveal limit across the three responsive profiles.

@@ -168,7 +168,7 @@ export const validateRegisteredFamilySpec = (spec) => {
       errors.push(`${location}.output 缺失或重复`);
     }
     if (
-      !['registered-layer-sheet', 'layer-package-member']
+      !['registered-layer-sheet', 'layer-package-member', 'state-sheet-cell']
         .includes(member?.source?.kind) ||
       !nonEmpty(member?.source?.assetId)
     ) {
@@ -176,12 +176,38 @@ export const validateRegisteredFamilySpec = (spec) => {
     }
     if (
       member?.source?.kind === 'registered-layer-sheet' &&
-      member.source.packageRole !== member.role
+      member.source.packageRole !== member.role &&
+      !(
+        member.source.packageRole === 'support-front' &&
+        member.source.reuseAsRole === 'support-rear' &&
+        member.role === 'support-rear' &&
+        member.derivation?.keying !== undefined &&
+        member.derivation?.clip === undefined
+      )
     ) {
-      errors.push(`${location} 的 registered-layer-sheet packageRole 必须与 role 相同`);
+      errors.push(
+        `${location} 的 registered-layer-sheet packageRole 必须与 role 相同；` +
+        '只有完整透明 support-front 单元可显式 reuseAsRole=support-rear，且后层不得裁掉主体。',
+      );
+    }
+    if (
+      member?.source?.kind === 'state-sheet-cell' &&
+      (
+        member.role !== 'subject' ||
+        !nonEmpty(member.source.poseFamilyId) ||
+        !nonEmpty(member.source.stateId)
+      )
+    ) {
+      errors.push(`${location} 的 state-sheet-cell 只能作为 subject，并且必须声明 poseFamilyId/stateId`);
     }
     const derivation = member?.derivation;
     if (!isObject(derivation)) errors.push(`${location}.derivation 必须是对象`);
+    if (
+      member?.source?.kind === 'state-sheet-cell' &&
+      derivation?.placement === undefined
+    ) {
+      errors.push(`${location} 的 state-sheet-cell 必须显式声明完整注册画布 placement`);
+    }
     if (
       derivation?.placement !== undefined &&
       !rectWithin(derivation.placement, registration?.canvas ?? {})
@@ -605,6 +631,49 @@ const sourceImage = async ({
     };
   }
   const metadata = await imageMetadata(file);
+  if (source.kind === 'state-sheet-cell') {
+    if (
+      record.adapter !== 'registered-sheet-cell' ||
+      record.lifecycle?.status !== 'active' ||
+      record.compositionBinding?.pattern !== 'state-sequence' ||
+      record.compositionBinding?.outputRole !== 'registered-state' ||
+      record.stateBinding?.poseFamilyId !== source.poseFamilyId ||
+      record.stateBinding?.stateId !== source.stateId ||
+      record.media?.hasAlpha !== true
+    ) {
+      throw new Error(
+        `state-sheet-cell ${record.assetId} 必须是匹配 poseFamilyId/stateId 的 active real-alpha 注册状态`,
+      );
+    }
+    return {
+      record,
+      buffer: await sharp(file).ensureAlpha().png().toBuffer(),
+      width: metadata.width,
+      height: metadata.height,
+      sha256: actualSha256,
+      sourceSurface: {
+        mode: 'alpha',
+        keyColor: null,
+        tolerance: null,
+        requestedKeyColor: null,
+        observedKeyColor: null,
+        observationPolicyId: null,
+        observationPolicyFingerprint: null,
+        observationFingerprint: null,
+      },
+      keying: null,
+      keyingMetadata: null,
+      lineage: {
+        kind: 'state-sheet-cell',
+        assetId: record.assetId,
+        stateId: record.stateBinding.stateId,
+        sourceSheetAssetId:
+          record.sourceSheetAssetId ??
+          record.stateBinding.sourceMasterAssetId,
+        sourceFamilyFingerprint: record.familyFingerprint ?? null,
+      },
+    };
+  }
   if (source.kind === 'layer-package-member') {
     const binding =
       record.compositionBinding?.layerPackageBinding ??

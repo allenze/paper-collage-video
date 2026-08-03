@@ -159,7 +159,15 @@ inherit those state-review times from the contracted lead in the same scene;
 this does not make the companion another spatial-contract target or duplicate
 the camera/world proof. This keeps continuously cycling, depth-directed
 locomotion reviewable without pretending that one static state owns an entire
-path phrase.
+path phrase. One assertion for a node at one proof time is an exact visible-state
+claim. Multiple assertions for the same node at the same proof time instead form
+a registered-family coverage set: every named state must receive proof coverage,
+while the state resolved at that instant must be one member of the set. They do
+not claim that mutually exclusive states are visible simultaneously.
+The project execution tree may append state assertions for newly realized
+assets at an existing approved proof time. It must preserve every approved
+proof id, time, label, kind, visible assertion, and storyboard state assertion;
+it may not delete or rewrite the approved proof to make validation pass.
 
 To deliberately bypass every proof cache layer, append `--force`. The generated report must say `cache.forced=true` and show zero reused frames, composites, and asset evidence.
 

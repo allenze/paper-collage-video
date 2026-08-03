@@ -187,8 +187,9 @@ export const resolveSequenceLayers = ({
 export const collectSequenceProofCoverage = ({node, proofTimes = []}) => {
   const covered = new Set();
   for (const proof of proofTimes) {
-    const assertion = (proof.stateAssertions ?? []).find(({nodeId}) => nodeId === node.id);
-    if (assertion) covered.add(assertion.stateId);
+    for (const assertion of proof.stateAssertions ?? []) {
+      if (assertion.nodeId === node.id) covered.add(assertion.stateId);
+    }
   }
   return covered;
 };

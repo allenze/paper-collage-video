@@ -890,17 +890,27 @@ export const validateProject = async (project, options = {}) => {
         (proofs?.length !== storyboardScene.proofTimes.length ||
           proofs?.some((proof, index) => {
             const approved = storyboardScene.proofTimes[index];
+            const actualStateAssertions = new Set(
+              (proof.stateAssertions ?? []).map(
+                ({nodeId, stateId}) => `${nodeId}\u0000${stateId}`,
+              ),
+            );
+            const preservesApprovedStateAssertions =
+              (approved.stateAssertions ?? []).every(
+                ({nodeId, stateId}) =>
+                  actualStateAssertions.has(`${nodeId}\u0000${stateId}`),
+              );
             return (
               proof.id !== approved.id ||
               proof.at !== approved.at ||
               proof.label !== approved.label ||
               proof.kind !== approved.kind ||
               JSON.stringify(proof.assertions) !== JSON.stringify(approved.assertions) ||
-              JSON.stringify(proof.stateAssertions ?? []) !== JSON.stringify(approved.stateAssertions ?? [])
+              !preservesApprovedStateAssertions
             );
           }));
       if (proofDrift) {
-        add('error', 'scene-proof-drift', '项目证明时刻必须与已批准故事板完全一致。', `${sceneLocation}.motion.proofTimes`);
+        add('error', 'scene-proof-drift', '项目证明时刻必须保留已批准故事板的时刻、可见断言与全部状态断言；执行树可以在同一证明时刻追加新资产的注册状态覆盖。', `${sceneLocation}.motion.proofTimes`);
       }
     }
     if (scene.durationInFrames <= 0) {

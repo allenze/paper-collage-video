@@ -304,6 +304,21 @@ export const validateCompositionStructure = ({
   if (!Array.isArray(composition.nodes) || composition.nodes.length === 0) add('error', 'composition-nodes', 'composition.nodes 至少需要一个节点。', `${location}.nodes`);
 
   const flat = flattenCompositionNodes(composition.nodes);
+  const pathSequenceCoverageByFamily = new Map();
+  for (const {node} of flat) {
+    if (
+      node.kind !== 'state-sequence' ||
+      node.motion?.path?.kind !== 'cubic-bezier-3d'
+    ) {
+      continue;
+    }
+    const coverage =
+      pathSequenceCoverageByFamily.get(node.poseFamilyId) ?? new Set();
+    for (const stateId of collectSequenceProofCoverage({node, proofTimes})) {
+      coverage.add(stateId);
+    }
+    pathSequenceCoverageByFamily.set(node.poseFamilyId, coverage);
+  }
   const freeNodes = flat.filter(({node, parent}) => parent === null && node.kind !== 'group');
   const nodeIds = new Set();
   const derivationOnlyNodeIds = new Set();
@@ -550,8 +565,16 @@ export const validateCompositionStructure = ({
         }
         if (node.states[0]?.at !== 0) add('error', 'composition-sequence-start', '状态序列必须从 at=0 开始。', `${nodeLocation}.states[0].at`);
         const coverage = collectSequenceProofCoverage({node, proofTimes});
+        const inheritedPathCoverage =
+          node.motion?.path?.kind === 'cubic-bezier-3d'
+            ? pathSequenceCoverageByFamily.get(node.poseFamilyId)
+            : null;
         for (const state of node.states) {
-          if (!node.pathViewBinding && !coverage.has(state.id)) {
+          if (
+            !node.pathViewBinding &&
+            !coverage.has(state.id) &&
+            !inheritedPathCoverage?.has(state.id)
+          ) {
             add('error', 'composition-sequence-proof-coverage', `状态 ${state.id} 缺少 proofTime.stateAssertions 证明。`, `${nodeLocation}.states`);
           }
         }
@@ -1734,6 +1757,13 @@ export const validateCompositionStructure = ({
   }
   const proofFps = video.fps ?? 30;
   for (const proof of proofTimes) {
+    const assertionStateIdsByNode = new Map();
+    for (const assertion of proof.stateAssertions ?? []) {
+      const stateIds = assertionStateIdsByNode.get(assertion.nodeId) ?? [];
+      stateIds.push(assertion.stateId);
+      assertionStateIdsByNode.set(assertion.nodeId, stateIds);
+    }
+    const checkedSequenceNodes = new Set();
     for (const assertion of proof.stateAssertions ?? []) {
       const entry = sequences.find(({node}) => node.id === assertion.nodeId);
       if (!entry) {
@@ -1750,6 +1780,11 @@ export const validateCompositionStructure = ({
         continue;
       }
       if (!entry.node.states.some(({id}) => id === assertion.stateId)) add('error', 'composition-sequence-proof-state', `证明 ${proof.id} 引用了不存在的状态 ${assertion.stateId}。`, `${location}.proofTimes#${proof.id}`);
+      if (checkedSequenceNodes.has(assertion.nodeId)) continue;
+      checkedSequenceNodes.add(assertion.nodeId);
+      const allowedStateIds = [
+        ...new Set(assertionStateIdsByNode.get(assertion.nodeId) ?? []),
+      ];
       const parentWidth = entry.parent?.coordinateSpace?.width ?? video.width;
       const parentHeight = entry.parent?.coordinateSpace?.height ?? video.height;
       const pathAtProof = resolvePathMotionAtFrame({
@@ -1768,7 +1803,12 @@ export const validateCompositionStructure = ({
         progress: proof.at,
         pathDepthVelocity,
       });
-      if (resolved?.id !== assertion.stateId) add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${assertion.stateId}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
+      if (!allowedStateIds.includes(resolved?.id)) {
+        const expectation = allowedStateIds.length === 1
+          ? allowedStateIds[0]
+          : `覆盖集合 [${allowedStateIds.join(', ')}] 中的一种状态`;
+        add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${expectation}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
+      }
       const layersAtProof = resolveSequenceLayers({
         node: entry.node,
         progress: proof.at,
@@ -1804,9 +1844,9 @@ export const validateCompositionStructure = ({
             durationSeconds,
             pathDepthVelocity: pathAtSample.depthVelocity ?? 0,
           });
-          return layers.length === 1 && layers[0].id === assertion.stateId && Math.abs(layers[0].opacity - 1) < 1e-6;
+          return layers.length === 1 && allowedStateIds.includes(layers[0].id) && Math.abs(layers[0].opacity - 1) < 1e-6;
         });
-        if (!stable) add('error', 'composition-sequence-final-unstable', `最终证明 ${proof.id} 的状态 ${assertion.stateId} 必须避开交叉淡化，并稳定保持到镜头结束。`, `${location}.proofTimes#${proof.id}`);
+        if (!stable) add('error', 'composition-sequence-final-unstable', `最终证明 ${proof.id} 的状态集合 [${allowedStateIds.join(', ')}] 必须避开交叉淡化，并稳定保持到镜头结束。`, `${location}.proofTimes#${proof.id}`);
       }
     }
   }

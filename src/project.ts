@@ -177,7 +177,13 @@ export type RegisteredFamilySource =
       assetId: string;
       packageRole: RegisteredFamilyRole;
     }
-  | {kind: 'layer-package-member'; assetId: string};
+  | {kind: 'layer-package-member'; assetId: string}
+  | {
+      kind: 'state-sheet-cell';
+      assetId: string;
+      poseFamilyId: string;
+      stateId: string;
+    };
 
 export type RegisteredFamilyRect = {
   left: number;

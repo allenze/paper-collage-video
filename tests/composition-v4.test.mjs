@@ -303,6 +303,24 @@ test('v5 state sequences resolve discrete poses and require proof coverage', () 
   const wrong = structuredClone(proofTimes);
   wrong[1].stateAssertions[0].stateId = 'pointing';
   assert.ok(validate(node, wrong).issues.some(({code}) => code === 'composition-sequence-proof-mismatch'));
+
+  const compoundCoverage = [{
+    id: 'reader-family-coverage',
+    at: 0.5,
+    stateAssertions: [
+      {nodeId: 'reader', stateId: 'book-open'},
+      {nodeId: 'reader', stateId: 'page-turn'},
+      {nodeId: 'reader', stateId: 'pointing'},
+    ],
+  }];
+  assert.deepEqual(validate(node, compoundCoverage).issues, []);
+  const missingResolvedState = structuredClone(compoundCoverage);
+  missingResolvedState[0].stateAssertions.splice(1, 1);
+  assert.ok(
+    validate(node, missingResolvedState).issues.some(
+      ({code}) => code === 'composition-sequence-proof-mismatch',
+    ),
+  );
 });
 
 test('v5 state sequences can loop during motion and hold a registered contact state', () => {

@@ -326,6 +326,13 @@ active records without deleting provenance. Project validation and quality
 targets reject missing, mixed, tight-cropped, incomplete, or role-mismatched
 families.
 
+A state sequence may occupy the registered `subject` slot only when every state
+has a complete family context. Author each subject from an active
+`state-sheet-cell` with exact pose-family/state identity and explicit placement,
+reuse the same support source package, and derive one three-member family per
+state. Quality resolves each state record to its own family and rejects a
+stateful subject when any rear or front context is missing.
+
 If one registered family member contains multiple disconnected semantic
 objects that need different scene order, author semantic-slices schema v1 and
 run `assets:derive-semantic-slices`. Each active

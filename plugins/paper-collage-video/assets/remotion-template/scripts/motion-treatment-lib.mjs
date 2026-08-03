@@ -1125,7 +1125,18 @@ const compileScene = (scene) => {
     relationships: [...relationships.values()].sort((left, right) => left.id.localeCompare(right.id)),
     stateSequences: [...stateFamilies.values()]
       .map(({necessity, importance, ...family}) => {
-        const states = [...family.states].sort((left, right) => left.at - right.at);
+        const orderedStates = [...family.states].sort(
+          (left, right) => left.at - right.at,
+        );
+        const states =
+          ['loop', 'ping-pong'].includes(family.playback.mode) &&
+          family.playback.activeFrom === undefined &&
+          family.playback.activeStateIds === undefined
+            ? orderedStates.map((state, index) => ({
+                ...state,
+                at: index / orderedStates.length,
+              }))
+            : orderedStates;
         return {
           ...family,
           states,

@@ -340,6 +340,103 @@ test('registered family derives three deterministic full-canvas members and life
   }
 });
 
+test('registered family places an active state-sheet cell as a full-context subject', async () => {
+  const fixture = await makeFamilyFixture();
+  try {
+    const stateFile = path.join(
+      fixture.root,
+      'public',
+      'projects',
+      'family-proof',
+      'frog-waiting.png',
+    );
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="80" height="96">
+        <rect width="80" height="96" fill="transparent"/>
+        <ellipse cx="40" cy="51" rx="28" ry="38" fill="#79a84d"/>
+      </svg>
+    `)).png().toFile(stateFile);
+    const stateRecord = await writeImageRecord({
+      root: fixture.root,
+      assetId: 'frog-waiting',
+      file: path.relative(fixture.root, stateFile),
+      adapter: 'registered-sheet-cell',
+      compositionBinding: {
+        sceneId: 'scene',
+        nodeId: 'frog',
+        pattern: 'state-sequence',
+        registrationId: 'frog-pose-registration',
+        sourceMasterAssetId: 'frog-pose-sheet',
+        outputRole: 'registered-state',
+        canvas: {width: 80, height: 96},
+        derivation: {method: 'crop', parentAssetId: 'frog-pose-sheet'},
+      },
+      extra: {
+        sourceSheetAssetId: 'frog-pose-sheet',
+        familyFingerprint: 'a'.repeat(64),
+        stateBinding: {
+          poseFamilyId: 'frog-reactions',
+          stateId: 'waiting',
+          registrationId: 'frog-pose-registration',
+          sourceMasterAssetId: 'frog-pose-sheet',
+          facing: 'left',
+          anchors: [{id: 'seat-contact', x: 0.5, y: 0.85}],
+          identityReferenceAssetId: 'frog-reference',
+          identityReferenceSha256: 'b'.repeat(64),
+        },
+      },
+      index: 3,
+    });
+    const manifest = structuredClone(fixture.manifest);
+    manifest.assets.push(stateRecord);
+    const spec = structuredClone(fixture.spec);
+    spec.familyId = 'frog-waiting-family';
+    const subject = spec.members.find(({role}) => role === 'subject');
+    subject.source = {
+      kind: 'state-sheet-cell',
+      assetId: 'frog-waiting',
+      poseFamilyId: 'frog-reactions',
+      stateId: 'waiting',
+    };
+    subject.derivation = {
+      placement: {left: 80, top: 40, width: 80, height: 96},
+    };
+
+    assert.deepEqual(validateRegisteredFamilySpec(spec), []);
+    const result = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec,
+      manifest,
+      now: '2026-07-23T03:00:00.000Z',
+    });
+    const derivedSubject = result.records.find(
+      ({registeredFamilyBinding}) =>
+        registeredFamilyBinding.role === 'subject',
+    );
+    assert.equal(
+      derivedSubject.registeredFamilyBinding.source.kind,
+      'state-sheet-cell',
+    );
+    assert.equal(
+      derivedSubject.registeredFamilyBinding.source.stateId,
+      'waiting',
+    );
+    assert.deepEqual(
+      derivedSubject.registeredFamilyBinding.derivation.placement,
+      {left: 80, top: 40, width: 80, height: 96},
+    );
+    assert.equal(
+      assertRegisteredFamilyRecords({
+        records: result.records,
+        registration: fixture.registration,
+      }).passed,
+      true,
+    );
+  } finally {
+    await fs.rm(fixture.root, {recursive: true, force: true});
+  }
+});
+
 test('registered family derives provider-native mixed-surface sheets with explicit rects and chroma provenance', async () => {
   const fixture = await makeFamilyFixture();
   try {
