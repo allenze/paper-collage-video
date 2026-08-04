@@ -9,6 +9,10 @@ Run `npm run provider:status -- <slug> --compact-json`, then verify recorded hos
 Collect text/image/voice selections with the combined scenario/concept decision and run `project:confirm-concept`. The initial aspect/style/parallax intake never selects or authorizes providers. Use project scope unless the human explicitly asks to remember a workspace-wide choice. Never request or store secrets; command providers name environment variables in `requiredEnv`.
 
 Use `provider:select` only for an isolated change or fallback. A provider switch or generated-image budget increase returns to the existing human decision; deterministic derivatives within an approved source family do not.
+After an explicit post-concept budget decision, run
+`npm run project:increase-image-budget -- <slug> --limit=<exact-total-cap> --note=<human-decision>`.
+It is increase-only, audits current used/reserved attempts, preserves the
+original scenario proposal, and cannot exceed the profile hard ceiling.
 
 ## Adapter Types
 
@@ -36,7 +40,13 @@ For host image models without reliable native alpha, chroma key is the default:
 choose a color absent from every cutout (often `#ff00ff` for yellow/green paper),
 require a uniform untextured plane, and require every internal negative space
 to show that same color. Registration rejects baked checkerboards, false alpha,
-unexpected transparency, and missing/unreliable per-cell chroma planes. A free
+unexpected transparency, and missing/unreliable per-cell chroma planes. When a
+host tool nevertheless returns a complete alpha-intended source over a neutral
+baked transparency checkerboard, close the consumed attempt as rejected,
+preserve the raw RGB file, and run `provider:recover-rejected-source --check`
+with `surfaceRecovery.mode=baked-checkerboard-alpha` and
+`policyId=checkerboard-alpha-v1`. Only a deterministic derivative may remove
+that observed surface. A free
 asset names its scene/node/role/canvas. Critical content binds a ready project
 semantic contract. Older request schemas are rejected rather than migrated.
 
@@ -256,8 +266,9 @@ fingerprints. Future rejected records retain the raw output SHA.
 
 `provider:recover-rejected-source` is distinct from `recover-record`. It
 requires a consumed `rejected` attempt, the unchanged historical request and
-raw output, an explicit expected SHA, two keyed cell rectangles, and passing
-observed-plane evidence. `--check` writes nothing. Recording appends one
+raw output, an explicit expected SHA, and either complete keyed cell rectangles
+with passing observed-plane evidence or one complete alpha-intended image with
+passing `checkerboard-alpha-v1` evidence. `--check` writes nothing. Recording appends one
 manifest `recovery-source` record but performs zero provider calls, does not
 reserve budget, does not append/rewrite the ledger, and does not change the
 attempt status. Derivation may consume that full sheet; isolated member

@@ -58,6 +58,10 @@ invalidates all dependent style/proof/render evidence.
   grammar, performance roles, proof bindings, transition intent, locked-static
   exception, or Style Profile returns to this gate.
 - After style approval, produce autonomously within the approved asset budget.
+- A later image-budget increase requires one explicit exact total cap. Record it
+  with `project:increase-image-budget`; the command preserves the original
+  scenario proposal, appends the old/new cap plus used/reserved state and human
+  note, and rejects any value above the current profile hard ceiling.
 - Reuse exact-match assets and deterministic local processing before regeneration.
 - Disclose the compiled source-package strategy, base/reserve/hard ceiling,
   one story-specific style-sample call, proposed exact image-attempt cap,

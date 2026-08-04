@@ -256,7 +256,16 @@ the spec declares the matching `sourceSurface.keyColor` plus deterministic
 `keying` thresholds; the derivation verifies the active source request's
 color-key provenance, produces a real-alpha tile, and records the keying
 metadata hash beside the strip binding. `opaque` remains the default for a
-full far plate. Recovery order is local key/period/crop correction, a masked
+full far plate. A recovery-source with verified
+`baked-checkerboard-alpha/checkerboard-alpha-v1` provenance may be converted
+to real alpha inside this deterministic derivation; its raw provider output
+remains unchanged. Optional `decorativeScatter` crops reviewed source regions
+into independent sprites and applies explicit seeded placements, scales,
+flips, rotations, and bottom anchors before tiling. Optional
+`edgeStabilizationPixels` duplicates only a narrow complete source-edge band
+before mirror tiling when render-scale resampling would otherwise create
+isolated edge spikes; all source and three-profile seam proofs still apply.
+Recovery order is local key/period/crop correction, a masked
 edit with the complete original strip and both edge neighborhoods visible, then
 complete-strip regeneration. Isolated edge generation and runtime crossfade
 seam hiding are invalid.

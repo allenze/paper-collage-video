@@ -12,7 +12,10 @@ import {
 } from '../scripts/looping-strip-lib.mjs';
 import {removeChromaKey} from '../scripts/chroma-key-lib.mjs';
 import {validateTreatment} from '../scripts/motion-treatment-lib.mjs';
-import {inspectStripVisibleSurface} from '../scripts/world-motion-proof-lib.mjs';
+import {
+  evaluateNearLayerRelation,
+  inspectStripVisibleSurface,
+} from '../scripts/world-motion-proof-lib.mjs';
 import {
   inspectWorldStripCoverage,
   resolveWorldStripCopies,
@@ -86,6 +89,17 @@ test('world-strip phase wraps deterministically with gap-free internal copies', 
   });
   assert.ok(end.wraps >= 8);
   assert.ok(end.cameraCompensatedDisplacement < start.cameraCompensatedDisplacement);
+  const rasterCopies = resolveWorldStripCopies({
+    firstCopyX: 0.25,
+    tileWidth: geometry.tileWidth,
+    copyCount: geometry.copyCount,
+  });
+  assert.equal(rasterCopies[0].width, geometry.tileWidth + 2);
+  assert.equal(
+    rasterCopies[1].x,
+    rasterCopies[0].x + geometry.tileWidth,
+    'raster overlap must not change logical world phase',
+  );
   for (let index = 0; index <= 100; index += 1) {
     const frame = resolveWorldStripFrame({
       progress: index / 100,
@@ -369,6 +383,34 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
   );
 });
 
+test('sparse near layers may prove depth order without forcing subject overlap', () => {
+  const base = {
+    nearOcclusion: 'behind-near',
+    subjectZ: 60,
+    nearStripZ: 90,
+    verticalOverlap: 0,
+    hasSubjectGeometry: true,
+    hasNearGeometry: true,
+  };
+  assert.equal(
+    evaluateNearLayerRelation({...base, requireNearOverlap: true}),
+    false,
+  );
+  assert.equal(
+    evaluateNearLayerRelation({...base, requireNearOverlap: false}),
+    true,
+  );
+  assert.equal(
+    evaluateNearLayerRelation({
+      ...base,
+      requireNearOverlap: false,
+      nearStripZ: 40,
+    }),
+    false,
+    'optional overlap must not weaken declared z-order',
+  );
+});
+
 test('world-travel authoring compiles only through looping-environment and scroll-world-x', () => {
   const treatment = {
     id: 'road-travel',
@@ -390,6 +432,7 @@ test('world-travel authoring compiles only through looping-environment and scrol
           role: 'tracked',
           anchorMode: 'screen',
           nearOcclusion: 'above-near',
+          requireNearOverlap: false,
           proofTimeIds: ['proof-before', 'proof-seam', 'proof-after'],
         }],
         seamProofTimeIds: {before: 'proof-before', seam: 'proof-seam', after: 'proof-after'},
@@ -411,6 +454,12 @@ test('world-travel authoring compiles only through looping-environment and scrol
     rationale: 'The tracked car stays readable while a proved world passes behind it.',
   };
   assert.deepEqual(validateTreatment(treatment, {beatAt: 0.5}), []);
+  const invalidOverlap = structuredClone(treatment);
+  invalidOverlap.composition.world.subjectBindings[0].requireNearOverlap = 'no';
+  assert.ok(
+    validateTreatment(invalidOverlap, {beatAt: 0.5})
+      .some(({code}) => code === 'treatment-looping-subject-overlap'),
+  );
   const wrong = structuredClone(treatment);
   wrong.motion.preset = 'drift';
   assert.ok(

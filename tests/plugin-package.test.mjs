@@ -155,6 +155,10 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.equal(packageJson.scripts['project:intake'], 'node scripts/project-intake.mjs');
   assert.equal(packageJson.scripts['project:scenarios'], 'node scripts/project-scenarios.mjs');
   assert.equal(packageJson.scripts['project:budget'], 'node scripts/project-budget.mjs');
+  assert.equal(
+    packageJson.scripts['project:increase-image-budget'],
+    'node scripts/project-increase-image-budget.mjs',
+  );
   assert.equal(packageJson.scripts['project:storyboard'], 'node scripts/project-storyboard.mjs');
   assert.equal(packageJson.scripts['project:revise-preview-directing'], 'node scripts/project-revise-preview-directing.mjs');
   assert.equal(packageJson.scripts['project:asset-lifecycle'], 'node scripts/project-asset-lifecycle.mjs');
@@ -307,6 +311,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/provider-request.mjs',
     'scripts/provider-recover-record.mjs',
     'scripts/provider-recover-rejected-source.mjs',
+    'scripts/checkerboard-alpha-lib.mjs',
+    'scripts/decorative-scatter-lib.mjs',
     'scripts/rejected-output-recovery-lib.mjs',
     'scripts/provider-reuse.mjs',
     'scripts/provider-select.mjs',

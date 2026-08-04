@@ -349,6 +349,33 @@
             }
           ]
         },
+        "imageBudgetRevisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "fromLimit",
+              "toLimit",
+              "usedAtApproval",
+              "reservedAtApproval",
+              "profileHardCeiling",
+              "authorizedAt",
+              "humanNote"
+            ],
+            "properties": {
+              "schemaVersion": {"const": 1},
+              "fromLimit": {"type": "integer", "minimum": 0},
+              "toLimit": {"type": "integer", "minimum": 0},
+              "usedAtApproval": {"type": "integer", "minimum": 0},
+              "reservedAtApproval": {"type": "integer", "minimum": 0},
+              "profileHardCeiling": {"type": "integer", "minimum": 0},
+              "authorizedAt": {"type": "string", "format": "date-time"},
+              "humanNote": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
         "requested": {
           "type": "object",
           "required": ["durationSeconds", "sceneCount"],

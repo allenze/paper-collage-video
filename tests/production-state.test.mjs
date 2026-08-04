@@ -289,6 +289,19 @@ test('assets-ready seal is recorded and invalidated with preview revisions', () 
   assert.equal(revised.artifacts.report, null);
 });
 
+test('image budget increase records a human decision without changing the production stage', () => {
+  const current = makeState('asset-production');
+  const next = transitionProduction(current, 'approve-image-budget-increase', {
+    note: '图片尝试上限 12 → 14；新增两次环境素材调用',
+  });
+  assert.equal(next.stage, 'asset-production');
+  assert.equal(next.history.at(-1).action, 'approve-image-budget-increase');
+  assert.throws(
+    () => transitionProduction(current, 'approve-image-budget-increase'),
+    /必须用 --note 记录人的明确决定/,
+  );
+});
+
 test('assets-ready cannot be asserted without the canonical seal', async () => {
   await assert.rejects(
     () => assertAssetsReadySealCurrent(`missing-seal-${process.pid}`),

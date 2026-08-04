@@ -30,13 +30,22 @@
     },
     "recoveryAssetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "reason": {"type": "string", "minLength": 1},
+    "surfaceRecovery": {
+      "type": "object",
+      "required": ["mode", "policyId"],
+      "properties": {
+        "mode": {"const": "baked-checkerboard-alpha"},
+        "policyId": {"const": "checkerboard-alpha-v1"}
+      },
+      "additionalProperties": false
+    },
     "cells": {
       "type": "array",
       "minItems": 1,
       "maxItems": 64,
       "items": {
         "type": "object",
-        "required": ["packageRole", "sourceRect", "keyPlane"],
+        "required": ["packageRole", "sourceRect"],
         "properties": {
           "packageRole": {"enum": ["image", "subject", "support-front", "state"]},
           "stateId": {"type": "string", "minLength": 1},
@@ -80,5 +89,31 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["surfaceRecovery"]
+      },
+      "then": {
+        "properties": {
+          "cells": {
+            "maxItems": 1,
+            "items": {
+              "properties": {
+                "packageRole": {"const": "image"}
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "cells": {
+            "items": {"required": ["keyPlane"]}
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": false
 }

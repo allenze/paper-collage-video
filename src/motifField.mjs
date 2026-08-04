@@ -143,16 +143,25 @@ export const resolveMotifFieldInstances = (node) => {
   });
 };
 
-export const resolveMotifFieldMotion = ({instance, preset, progress, cycles}) => {
+export const resolveMotifFieldMotion = ({
+  instance,
+  preset,
+  progress,
+  cycles,
+  horizontalAmplitude,
+}) => {
   const phase = wrap01(progress * cycles + instance.phase);
   const wave = Math.sin(phase * TAU);
   const cosine = Math.cos(phase * TAU);
+  const driftAmplitude = horizontalAmplitude ?? (
+    preset === 'drift' ? 0.025 : 0.018
+  );
   switch (preset) {
     case 'rise-drift': {
       const respawnFade = clamp01(Math.min(phase, 1 - phase) / 0.08);
       const absoluteY = 1.08 - phase * 1.16;
       return {
-        x: wave * 0.018,
+        x: wave * driftAmplitude,
         y: absoluteY - instance.y,
         rotation: wave * 5,
         scale: 0.82 + phase * 0.22,
@@ -162,7 +171,7 @@ export const resolveMotifFieldMotion = ({instance, preset, progress, cycles}) =>
     case 'fall-drift': {
       const respawnFade = clamp01(Math.min(phase, 1 - phase) / 0.12);
       return {
-        x: wave * 0.018,
+        x: wave * driftAmplitude,
         y: phase * 0.2 - 0.1,
         rotation: wave * 12,
         scale: 1,
@@ -186,8 +195,29 @@ export const resolveMotifFieldMotion = ({instance, preset, progress, cycles}) =>
       return {x: cosine * 0.035, y: wave * 0.035, rotation: phase * 360, scale: 1, opacity: 1};
     case 'drift':
     default:
-      return {x: wave * 0.025, y: cosine * 0.016, rotation: wave * 7, scale: 1, opacity: 1};
+      return {x: wave * driftAmplitude, y: cosine * 0.016, rotation: wave * 7, scale: 1, opacity: 1};
   }
+};
+
+export const resolveWorldBoundMotifX = ({
+  instanceX,
+  localOffsetX,
+  worldDisplacementPx,
+  viewportWidth,
+  bounds,
+}) => {
+  if (!(Number.isFinite(viewportWidth) && viewportWidth > 0)) {
+    throw new Error('world-bound motif viewportWidth 必须大于 0。');
+  }
+  const normalizedBounds = normalizeBounds(bounds);
+  if (!(Number.isFinite(normalizedBounds.width) && normalizedBounds.width > 0)) {
+    throw new Error('world-bound motif bounds.width 必须大于 0。');
+  }
+  const localX = instanceX - normalizedBounds.x;
+  const displacement = worldDisplacementPx / viewportWidth;
+  return normalizedBounds.x + wrap01(
+    (localX + localOffsetX + displacement) / normalizedBounds.width,
+  ) * normalizedBounds.width;
 };
 
 export const verifyMotifFieldLoop = ({preset, cycles}) => {

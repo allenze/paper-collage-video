@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   assessCreativePlanTimeline,
+  approveImageBudgetIncrease,
   assertApprovedImageBudgetDecision,
   assertConfirmedPlanDecision,
   buildCreativePlan,
@@ -201,6 +202,67 @@ test('human-approved image limit is narrower than the profile ceiling and covers
         directingSummary,
       ),
     /超过 draft profile hard ceiling 6/,
+  );
+});
+
+test('human-approved image budget increases remain bounded and auditable', () => {
+  const base = make({
+    sceneCount: 1,
+    productionProfile: 'full-depth',
+  });
+  const plan = {
+    ...base,
+    scenarioBinding: {
+      scenarioSetFingerprint: 'a'.repeat(64),
+      optionId: 'full-depth',
+      optionFingerprint: 'b'.repeat(64),
+      expectedProviderImageCalls: 5,
+      proposedImageAttemptLimit: 12,
+      selectedAt: at,
+    },
+    storyScope: 'expanded',
+    profilePromise: {
+      minRequiredStateFamilies: 0,
+      minEnhancementStateFamilies: 0,
+      minTotalStates: 0,
+      minLocalMotionTargets: 0,
+      minLayeredScenes: 0,
+      minParallaxScenes: 0,
+      minAmbientScenes: 0,
+    },
+    approvedImageBudget: {
+      imageAttemptLimit: 12,
+      expectedProviderImageCalls: 5,
+      profileHardCeiling: 14,
+      approvedAt: at,
+    },
+  };
+  const result = approveImageBudgetIncrease({
+    plan,
+    imageAttemptLimit: 14,
+    attempts: {used: 12, reserved: 0},
+    humanNote: 'Approve two additional environment attempts',
+    at: '2026-07-18T00:00:00.000Z',
+  });
+  assert.equal(result.plan.approvedImageBudget.imageAttemptLimit, 14);
+  assert.equal(result.plan.imageBudgetRevisions.length, 1);
+  assert.deepEqual(
+    {
+      from: result.revision.fromLimit,
+      to: result.revision.toLimit,
+      used: result.revision.usedAtApproval,
+    },
+    {from: 12, to: 14, used: 12},
+  );
+  assert.throws(
+    () =>
+      approveImageBudgetIncrease({
+        plan,
+        imageAttemptLimit: 15,
+        attempts: {used: 12, reserved: 0},
+        humanNote: 'Too high',
+      }),
+    /超过当前 profile hard ceiling 14/,
   );
 });
 

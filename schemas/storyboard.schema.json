@@ -143,8 +143,8 @@
         "nodeId": {"type": "string", "minLength": 1},
         "role": {"enum": ["tracked", "participant"]},
         "anchorMode": {"enum": ["screen", "world"]},
-        "nearOcclusion": {"enum": ["behind-near", "above-near"]}
-        ,
+        "nearOcclusion": {"enum": ["behind-near", "above-near"]},
+        "requireNearOverlap": {"type": "boolean"},
         "proofTimeIds": {
           "type": "array",
           "minItems": 2,
@@ -327,6 +327,16 @@
               "type": "array",
               "maxItems": 12,
               "items": {"$ref": "#/$defs/motifExclusionZone"}
+            },
+            "worldBinding": {
+              "type": "object",
+              "required": ["worldNodeId", "stripRole", "relativeDriftAmplitude"],
+              "properties": {
+                "worldNodeId": {"type": "string", "minLength": 1},
+                "stripRole": {"enum": ["far", "mid", "ground", "near"]},
+                "relativeDriftAmplitude": {"type": "number", "minimum": 0, "maximum": 0.05}
+              },
+              "additionalProperties": false
             }
           },
           "allOf": [
@@ -796,6 +806,16 @@
           "type": "array",
           "maxItems": 12,
           "items": {"$ref": "#/$defs/motifExclusionZone"}
+        },
+        "worldBinding": {
+          "type": "object",
+          "required": ["worldNodeId", "stripRole", "relativeDriftAmplitude"],
+          "properties": {
+            "worldNodeId": {"type": "string", "minLength": 1},
+            "stripRole": {"enum": ["far", "mid", "ground", "near"]},
+            "relativeDriftAmplitude": {"type": "number", "minimum": 0, "maximum": 0.05}
+          },
+          "additionalProperties": false
         },
         "at": {"type": "number", "minimum": 0, "maximum": 1},
         "proofTimeId": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}

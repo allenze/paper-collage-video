@@ -883,6 +883,25 @@ export const validateCompositionStructure = ({
           }
         }
       }
+      if (node.worldBinding !== undefined) {
+        const binding = node.worldBinding;
+        if (
+          !nonEmpty(binding?.worldNodeId) ||
+          !['far', 'mid', 'ground', 'near'].includes(binding?.stripRole) ||
+          !(
+            finite(binding?.relativeDriftAmplitude) &&
+            binding.relativeDriftAmplitude >= 0 &&
+            binding.relativeDriftAmplitude <= 0.05
+          )
+        ) {
+          add(
+            'error',
+            'composition-motif-world-binding',
+            'motif-field worldBinding 必须声明 worldNodeId、有效 stripRole 与 0..0.05 relativeDriftAmplitude。',
+            `${nodeLocation}.worldBinding`,
+          );
+        }
+      }
       if (!finite(node.transform?.height) || node.transform.height <= 0) {
         add('error', 'composition-motif-height', 'motif-field 必须声明 transform.height。', `${nodeLocation}.transform.height`);
       }
@@ -1359,6 +1378,10 @@ export const validateCompositionStructure = ({
           !['tracked', 'participant'].includes(binding.role) ||
           !['screen', 'world'].includes(binding.anchorMode) ||
           !['behind-near', 'above-near'].includes(binding.nearOcclusion) ||
+          (
+            binding.requireNearOverlap !== undefined &&
+            typeof binding.requireNearOverlap !== 'boolean'
+          ) ||
           !Array.isArray(binding.proofTimeIds) ||
           binding.proofTimeIds.length < 2 ||
           new Set(binding.proofTimeIds).size !== binding.proofTimeIds.length ||
@@ -1368,7 +1391,7 @@ export const validateCompositionStructure = ({
           add(
             'error',
             'composition-looping-subject-binding',
-            '每个 subjectBinding 必须唯一绑定组内 asset/state-sequence，并声明有效 role、anchorMode 与 nearOcclusion。',
+            '每个 subjectBinding 必须唯一绑定组内 asset/state-sequence，并声明有效 role、anchorMode、nearOcclusion 与可选 requireNearOverlap。',
             `${nodeLocation}.loopingEnvironment.subjectBindings[${index}]`,
           );
         }
@@ -1696,6 +1719,32 @@ export const validateCompositionStructure = ({
           `${nodeLocation}.canonicalContainer.terminalStateId`,
         );
       }
+    }
+  }
+  const topLevelWorlds = new Map(
+    flat
+      .filter(({node, parent}) =>
+        parent === null &&
+        node.kind === 'group' &&
+        node.pattern === 'looping-environment'
+      )
+      .map(({node}) => [node.id, node]),
+  );
+  for (const {node} of motifFields) {
+    if (!node.worldBinding) continue;
+    const world = topLevelWorlds.get(node.worldBinding.worldNodeId);
+    const strip = world?.children?.find(
+      (child) =>
+        child.kind === 'world-strip' &&
+        child.role === node.worldBinding.stripRole,
+    );
+    if (!world || !strip) {
+      add(
+        'error',
+        'composition-motif-world-target',
+        `motif-field ${node.id} 必须绑定顶层 looping-environment 中实际存在的 ${node.worldBinding.stripRole} strip。`,
+        `${location}.nodes#${node.id}.worldBinding`,
+      );
     }
   }
   const authoritativeContainerSurfaces = new Map();

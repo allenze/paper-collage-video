@@ -571,6 +571,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         'cycles',
         'bounds',
         'exclusionZones',
+        'worldBinding',
       ].some((key) => motion[key] !== undefined)
     ) {
       addIssue(
@@ -628,6 +629,25 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         if (zone?.padding !== undefined && !(Number.isFinite(zone.padding) && zone.padding >= 0 && zone.padding <= 0.25)) {
           addIssue(issues, 'treatment-motif-exclusion-padding', 'motif 排除区 padding 必须位于 0..0.25。', `${zoneLocation}.padding`);
         }
+      }
+    }
+    if (motion.worldBinding !== undefined) {
+      const binding = motion.worldBinding;
+      if (
+        !nonEmpty(binding?.worldNodeId) ||
+        !['far', 'mid', 'ground', 'near'].includes(binding?.stripRole) ||
+        !(
+          Number.isFinite(binding?.relativeDriftAmplitude) &&
+          binding.relativeDriftAmplitude >= 0 &&
+          binding.relativeDriftAmplitude <= 0.05
+        )
+      ) {
+        addIssue(
+          issues,
+          'treatment-motif-world-binding',
+          'motif-field worldBinding 必须声明 worldNodeId、有效 stripRole 与 0..0.05 relativeDriftAmplitude。',
+          `${location}.motion.worldBinding`,
+        );
       }
     }
     if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds', 'path', 'cameraFollow'].some((key) => motion[key] !== undefined)) {
@@ -756,6 +776,17 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         }
         if (!['behind-near', 'above-near'].includes(subject?.nearOcclusion)) {
           addIssue(issues, 'treatment-looping-subject-occlusion', 'world subject nearOcclusion 无效。', `${location}.composition.world.subjectBindings[${index}].nearOcclusion`);
+        }
+        if (
+          subject?.requireNearOverlap !== undefined &&
+          typeof subject.requireNearOverlap !== 'boolean'
+        ) {
+          addIssue(
+            issues,
+            'treatment-looping-subject-overlap',
+            'world subject requireNearOverlap 必须为布尔值。',
+            `${location}.composition.world.subjectBindings[${index}].requireNearOverlap`,
+          );
         }
         if (
           !Array.isArray(subject?.proofTimeIds) ||
@@ -979,6 +1010,9 @@ const compileScene = (scene) => {
           cycles: treatment.motion.cycles,
           bounds: treatment.motion.bounds,
           exclusionZones: treatment.motion.exclusionZones,
+          ...(treatment.motion.worldBinding
+            ? {worldBinding: treatment.motion.worldBinding}
+            : {}),
           at: beat.at,
           proofTimeId: treatment.proofTimeId ?? null,
         });
@@ -2045,7 +2079,8 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       node.distribution !== planned.distribution ||
       node.count !== planned.count ||
       JSON.stringify(node.bounds) !== JSON.stringify(planned.bounds) ||
-      JSON.stringify(node.exclusionZones) !== JSON.stringify(planned.exclusionZones)
+      JSON.stringify(node.exclusionZones) !== JSON.stringify(planned.exclusionZones) ||
+      JSON.stringify(node.worldBinding ?? null) !== JSON.stringify(planned.worldBinding ?? null)
     ) {
       addIssue(issues, 'directing-motif-drift', `motif-field ${planned.nodeId} 与故事板计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
     }

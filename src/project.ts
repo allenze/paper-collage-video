@@ -827,6 +827,7 @@ export type CompositionGroupNode = {
       role: 'tracked' | 'participant';
       anchorMode: 'screen' | 'world';
       nearOcclusion: 'behind-near' | 'above-near';
+      requireNearOverlap?: boolean;
       proofTimeIds: string[];
     }>;
     seamProofTimeIds: {
@@ -881,6 +882,11 @@ export type CompositionMotifFieldNode = {
     height: number;
     padding?: number;
   }>;
+  worldBinding?: {
+    worldNodeId: string;
+    stripRole: 'far' | 'mid' | 'ground' | 'near';
+    relativeDriftAmplitude: number;
+  };
   z: number;
   depth?: number;
   transform: NodeTransform;
@@ -1334,6 +1340,16 @@ export type PaperCollageProject = {
       profileHardCeiling: number;
       approvedAt: string;
     } | null;
+    imageBudgetRevisions?: Array<{
+      schemaVersion: 1;
+      fromLimit: number;
+      toLimit: number;
+      usedAtApproval: number;
+      reservedAtApproval: number;
+      profileHardCeiling: number;
+      authorizedAt: string;
+      humanNote: string;
+    }>;
     requested: {durationSeconds: number | null; sceneCount: number | null};
     resolved: null | {
       durationSeconds: number;

@@ -199,6 +199,93 @@ export const assertApprovedImageBudgetDecision = (
   };
 };
 
+export const approveImageBudgetIncrease = ({
+  plan,
+  imageAttemptLimit,
+  attempts,
+  humanNote,
+  at = new Date().toISOString(),
+}) => {
+  if (!plan?.approvedImageBudget) {
+    throw new Error('当前 Creative Plan 尚未记录人批准的图片预算。');
+  }
+  const note = String(humanNote ?? '').trim();
+  if (!note) {
+    throw new Error('图片预算增额必须记录人的明确决定。');
+  }
+  if (!Number.isInteger(imageAttemptLimit) || imageAttemptLimit < 0) {
+    throw new Error('新的图片尝试上限必须是非负整数。');
+  }
+  const currentLimit = plan.approvedImageBudget.imageAttemptLimit;
+  if (imageAttemptLimit <= currentLimit) {
+    throw new Error(
+      `图片预算增额必须高于当前上限 ${currentLimit}；收到 ${imageAttemptLimit}。`,
+    );
+  }
+  const profileHardCeiling = plan.assetBudget?.maxGeneratedImages;
+  if (
+    !Number.isInteger(profileHardCeiling) ||
+    imageAttemptLimit > profileHardCeiling
+  ) {
+    throw new Error(
+      `新的图片尝试上限 ${imageAttemptLimit} 超过当前 profile hard ceiling ${profileHardCeiling ?? 'missing'}。`,
+    );
+  }
+  const used = attempts?.used;
+  const reserved = attempts?.reserved;
+  if (
+    !Number.isInteger(used) ||
+    used < 0 ||
+    !Number.isInteger(reserved) ||
+    reserved < 0
+  ) {
+    throw new Error('预算增额需要有效的 generation attempt used/reserved 审计。');
+  }
+  if (imageAttemptLimit < used + reserved) {
+    throw new Error(
+      `新的图片尝试上限 ${imageAttemptLimit} 低于当前 used ${used} + reserved ${reserved}。`,
+    );
+  }
+  const revisions = Array.isArray(plan.imageBudgetRevisions)
+    ? plan.imageBudgetRevisions
+    : [];
+  const latest = revisions.at(-1);
+  if (latest && latest.toLimit !== currentLimit) {
+    throw new Error(
+      `图片预算修订链与当前上限不一致：latest ${latest.toLimit}, current ${currentLimit}。`,
+    );
+  }
+  const revision = {
+    schemaVersion: 1,
+    fromLimit: currentLimit,
+    toLimit: imageAttemptLimit,
+    usedAtApproval: used,
+    reservedAtApproval: reserved,
+    profileHardCeiling,
+    authorizedAt: at,
+    humanNote: note,
+  };
+  const updatedPlan = {
+    ...plan,
+    approvedImageBudget: {
+      ...plan.approvedImageBudget,
+      imageAttemptLimit,
+      approvedAt: at,
+    },
+    imageBudgetRevisions: [...revisions, revision],
+    updatedAt: at,
+  };
+  const issues = validateCreativePlan(updatedPlan, {slug: plan.slug});
+  if (issues.length > 0) {
+    throw new Error(
+      `图片预算增额后的 Creative Plan 无效：${issues
+        .map(({message}) => message)
+        .join('；')}`,
+    );
+  }
+  return {plan: updatedPlan, revision};
+};
+
 const isPositiveNumber = (value) =>
   typeof value === 'number' && Number.isFinite(value) && value > 0;
 
@@ -411,19 +498,33 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
         'plan.approvedImageBudget.profileHardCeiling',
       );
     }
+    const budgetRevisions = Array.isArray(plan.imageBudgetRevisions)
+      ? plan.imageBudgetRevisions
+      : [];
+    const latestBudgetRevision = budgetRevisions.at(-1);
     if (
       plan.approvedImageBudget &&
       plan.scenarioBinding &&
-      (
-        plan.approvedImageBudget.expectedProviderImageCalls !==
-          plan.scenarioBinding.expectedProviderImageCalls ||
-        plan.approvedImageBudget.imageAttemptLimit !==
-          plan.scenarioBinding.proposedImageAttemptLimit
-      )
+      plan.approvedImageBudget.expectedProviderImageCalls !==
+        plan.scenarioBinding.expectedProviderImageCalls
     ) {
       add(
         'plan-approved-scenario-budget-drift',
-        '批准预算必须与人工选择的 scenario expected calls 和 proposed cap 一致。',
+        '批准预算中的 expected calls 必须与人工选择的 scenario 一致。',
+        'plan.approvedImageBudget',
+      );
+    }
+    if (
+      plan.approvedImageBudget &&
+      plan.scenarioBinding &&
+      plan.approvedImageBudget.imageAttemptLimit !==
+        plan.scenarioBinding.proposedImageAttemptLimit &&
+      latestBudgetRevision?.toLimit !==
+        plan.approvedImageBudget.imageAttemptLimit
+    ) {
+      add(
+        'plan-approved-scenario-budget-drift',
+        '批准预算若高于 scenario proposed cap，必须由连续、可审计的图片预算增额记录解释。',
         'plan.approvedImageBudget',
       );
     }
@@ -621,6 +722,128 @@ export const validateCreativePlan = (plan, {slug = null} = {}) => {
       'storyScope 与 profilePromise 只能随 scenarioBinding 一起出现。',
       'plan',
     );
+  }
+  if (plan.imageBudgetRevisions !== undefined) {
+    if (!Array.isArray(plan.imageBudgetRevisions)) {
+      add(
+        'plan-image-budget-revisions',
+        'imageBudgetRevisions 必须是数组。',
+        'plan.imageBudgetRevisions',
+      );
+    } else {
+      let expectedFrom =
+        plan.scenarioBinding?.proposedImageAttemptLimit ??
+        plan.imageBudgetRevisions[0]?.fromLimit ??
+        null;
+      for (const [index, revision] of plan.imageBudgetRevisions.entries()) {
+        const location = `plan.imageBudgetRevisions[${index}]`;
+        if (revision?.schemaVersion !== 1) {
+          add(
+            'plan-image-budget-revision-schema',
+            '预算修订必须使用 schemaVersion 1。',
+            `${location}.schemaVersion`,
+          );
+        }
+        for (const key of [
+          'fromLimit',
+          'toLimit',
+          'usedAtApproval',
+          'reservedAtApproval',
+          'profileHardCeiling',
+        ]) {
+          if (!isNonNegativeInteger(revision?.[key])) {
+            add(
+              'plan-image-budget-revision-number',
+              `${key} 必须是非负整数。`,
+              `${location}.${key}`,
+            );
+          }
+        }
+        if (
+          isNonNegativeInteger(revision?.fromLimit) &&
+          isNonNegativeInteger(revision?.toLimit) &&
+          revision.toLimit <= revision.fromLimit
+        ) {
+          add(
+            'plan-image-budget-revision-increase',
+            '预算修订只能提高图片尝试上限。',
+            location,
+          );
+        }
+        if (expectedFrom !== null && revision?.fromLimit !== expectedFrom) {
+          add(
+            'plan-image-budget-revision-chain',
+            `预算修订 fromLimit 应为 ${expectedFrom}。`,
+            `${location}.fromLimit`,
+          );
+        }
+        if (
+          isNonNegativeInteger(revision?.usedAtApproval) &&
+          isNonNegativeInteger(revision?.reservedAtApproval) &&
+          isNonNegativeInteger(revision?.fromLimit) &&
+          revision.usedAtApproval + revision.reservedAtApproval >
+            revision.fromLimit
+        ) {
+          add(
+            'plan-image-budget-revision-usage',
+            '预算修订时 used + reserved 不能超过原批准上限。',
+            location,
+          );
+        }
+        if (
+          revision?.profileHardCeiling !==
+            plan.assetBudget?.maxGeneratedImages ||
+          revision?.toLimit > revision?.profileHardCeiling
+        ) {
+          add(
+            'plan-image-budget-revision-ceiling',
+            '预算修订必须绑定当前 profile hard ceiling 且不得超限。',
+            location,
+          );
+        }
+        if (!isDateTime(revision?.authorizedAt)) {
+          add(
+            'plan-image-budget-revision-at',
+            '预算修订必须包含有效 authorizedAt。',
+            `${location}.authorizedAt`,
+          );
+        }
+        if (
+          typeof revision?.humanNote !== 'string' ||
+          !revision.humanNote.trim()
+        ) {
+          add(
+            'plan-image-budget-revision-note',
+            '预算修订必须记录人的明确决定。',
+            `${location}.humanNote`,
+          );
+        }
+        expectedFrom = revision?.toLimit ?? expectedFrom;
+      }
+      const latestBudgetRevision = plan.imageBudgetRevisions.at(-1);
+      if (
+        latestBudgetRevision &&
+        plan.approvedImageBudget &&
+        expectedFrom !== plan.approvedImageBudget.imageAttemptLimit
+      ) {
+        add(
+          'plan-image-budget-revision-final',
+          '预算修订链终点必须等于当前批准图片上限。',
+          'plan.imageBudgetRevisions',
+        );
+      }
+      if (
+        latestBudgetRevision &&
+        plan.approvedImageBudget?.approvedAt !==
+          latestBudgetRevision.authorizedAt
+      ) {
+        add(
+          'plan-image-budget-revision-approved-at',
+          '当前批准预算时间必须等于最近一次预算增额授权时间。',
+          'plan.approvedImageBudget.approvedAt',
+        );
+      }
+    }
   }
   if (
     isPositiveNumber(requestedDuration) &&

@@ -18,6 +18,30 @@ const clamp01 = (value) => clamp(value, 0, 1);
 const cleanNumber = (value) => Number(value.toFixed(6));
 const EDITABLE_SHAPE_MINIMUM_SCREEN_OCCUPANCY = 0.00025;
 
+export const evaluateNearLayerRelation = ({
+  nearOcclusion,
+  requireNearOverlap = true,
+  subjectZ,
+  nearStripZ,
+  verticalOverlap,
+  hasSubjectGeometry,
+  hasNearGeometry,
+}) => {
+  const zPassed = nearOcclusion === 'behind-near'
+    ? nearStripZ > subjectZ
+    : subjectZ > nearStripZ;
+  return Boolean(
+    hasSubjectGeometry &&
+    hasNearGeometry &&
+    zPassed &&
+    (
+      nearOcclusion === 'above-near' ||
+      requireNearOverlap === false ||
+      verticalOverlap >= 0.02
+    )
+  );
+};
+
 const ease = (value, name = 'ease-in-out') => {
   const t = clamp01(value);
   if (name === 'linear') return t;
@@ -688,12 +712,11 @@ export const buildLoopingWorldProof = async ({
       0,
       Math.min(subjectBottom, nearBottom) - Math.max(subjectTop, nearTop),
     );
-    const zPassed = binding.nearOcclusion === 'behind-near'
-      ? nearStrip?.z > subject?.z
-      : subject?.z > nearStrip?.z;
+    const requireNearOverlap = binding.requireNearOverlap !== false;
     subjectOcclusions.push({
       nodeId: binding.nodeId,
       requiredRelation: binding.nearOcclusion,
+      requireNearOverlap,
       subjectZ: subject?.z ?? null,
       nearStripZ: nearStrip?.z ?? null,
       subjectVerticalBand: {
@@ -705,13 +728,15 @@ export const buildLoopingWorldProof = async ({
         bottom: cleanNumber(nearBottom),
       },
       verticalOverlap: cleanNumber(verticalOverlap),
-      passed:
-        Boolean(subjectAlpha && nearAlpha && nearStrip) &&
-        zPassed &&
-        (
-          binding.nearOcclusion === 'above-near' ||
-          verticalOverlap >= 0.02
-        ),
+      passed: evaluateNearLayerRelation({
+        nearOcclusion: binding.nearOcclusion,
+        requireNearOverlap,
+        subjectZ: subject?.z,
+        nearStripZ: nearStrip?.z,
+        verticalOverlap,
+        hasSubjectGeometry: Boolean(subjectAlpha),
+        hasNearGeometry: Boolean(nearAlpha && nearStrip),
+      }),
     });
   }
   const trackedSubjectProof = subjectProofs.find(({role}) => role === 'tracked')?.proof ?? null;

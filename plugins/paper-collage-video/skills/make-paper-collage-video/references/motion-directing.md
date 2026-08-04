@@ -82,7 +82,9 @@ Each strip declares its visible surface role: backdrop, scenery,
 walkable-ground, or foreground-occluder. The looping group also owns
 `subjectBindings`: exactly one tracked subject plus any declared participants.
 A subject chooses `anchorMode=screen|world`, its near-layer occlusion relation,
-and the proof moments that must show it. Screen-anchored subjects remain in the
+whether that relation requires real vertical overlap (`requireNearOverlap`,
+default true), and the proof moments that must show it. Sparse low foreground
+may disable overlap while retaining the declared z-order. Screen-anchored subjects remain in the
 focal corridor; world-anchored markers and actors inherit the ground
 displacement. This allows a starter, finish marker, or second racer to belong
 to the same world and lets near strips genuinely occlude selected actors.

@@ -72,6 +72,7 @@ const HUMAN_DECISION_ACTIONS = new Set([
   'request-style-voice-revision',
   'approve-preview',
   'request-preview-revision',
+  'approve-image-budget-increase',
   'approve-publish',
 ]);
 
@@ -790,6 +791,21 @@ export const transitionProduction = (current, action, options = {}) => {
         state.artifacts[key] = null;
       }
       state.stage = 'asset-production';
+      break;
+    case 'approve-image-budget-increase':
+      assertStage(
+        state,
+        [
+          'style-review',
+          'asset-production',
+          'preview',
+          'human-review',
+          'final-render',
+          'complete',
+        ],
+        action,
+      );
+      assertApproved(state, 'concept', action);
       break;
     case 'approve-publish':
       assertStage(state, ['complete'], action);

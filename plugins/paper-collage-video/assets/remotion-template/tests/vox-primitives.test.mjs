@@ -18,6 +18,7 @@ import {
   isPointInsideMotifExclusion,
   resolveMotifFieldInstances,
   resolveMotifFieldMotion,
+  resolveWorldBoundMotifX,
   verifyMotifFieldLoop,
 } from '../src/motifField.mjs';
 import {
@@ -99,6 +100,36 @@ test('motif fields expand deterministically without authoring one node per parti
     collectCompositionVisualSources({nodes: [node]}),
     ['motifs/petal-a.svg', 'motifs/petal-b.svg'],
   );
+});
+
+test('world-bound motif instances wrap with their environment while keeping local drift small', () => {
+  const bounds = {x: 0.1, y: 0.08, width: 0.8, height: 0.68};
+  assert.equal(
+    resolveWorldBoundMotifX({
+      instanceX: 0.2,
+      localOffsetX: 0.004,
+      worldDisplacementPx: -480,
+      viewportWidth: 1920,
+      bounds,
+    }),
+    0.754,
+  );
+  const wrapped = resolveWorldBoundMotifX({
+    instanceX: 0.86,
+    localOffsetX: 0.004,
+    worldDisplacementPx: 240,
+    viewportWidth: 1920,
+    bounds,
+  });
+  assert.ok(wrapped >= bounds.x && wrapped <= bounds.x + bounds.width);
+  const motion = resolveMotifFieldMotion({
+    instance: {phase: 0.1, x: 0.5, y: 0.5},
+    preset: 'rise-drift',
+    progress: 0.2,
+    cycles: 4,
+    horizontalAmplitude: 0.004,
+  });
+  assert.ok(Math.abs(motion.x) <= 0.004 + Number.EPSILON);
 });
 
 test('motif fields enforce bounded density, exclusions, placement, and scene budget', () => {

@@ -65,15 +65,19 @@ try {
     observedKeyColors: result.recovery.observedKeyColors,
     observationFingerprint:
       result.providerObservation.observationFingerprint,
-    cells: result.providerObservation.cells.map((cell) => ({
-      packageRole: cell.packageRole,
-      ...(cell.stateId ? {stateId: cell.stateId} : {}),
-      requestedKeyColor: cell.requestedKeyColor,
-      observedKeyColor: cell.observedKeyColor,
-      metrics: cell.metrics,
-      passed: cell.passed,
-      reasons: cell.reasons,
-    })),
+    ...(result.providerObservation.cells
+      ? {
+        cells: result.providerObservation.cells.map((cell) => ({
+          packageRole: cell.packageRole,
+          ...(cell.stateId ? {stateId: cell.stateId} : {}),
+          requestedKeyColor: cell.requestedKeyColor,
+          observedKeyColor: cell.observedKeyColor,
+          metrics: cell.metrics,
+          passed: cell.passed,
+          reasons: cell.reasons,
+        })),
+      }
+      : {checkerboard: result.providerObservation.checkerboard}),
   }, null, 2));
 } catch (error) {
   console.error(`provider:recover-rejected-source failed: ${error.message}`);

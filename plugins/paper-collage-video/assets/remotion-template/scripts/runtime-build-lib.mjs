@@ -64,6 +64,8 @@ export const RUNTIME_EXPLICIT_INPUTS = [
   'scripts/asset-evidence-lib.mjs',
   'scripts/asset-manifest-lib.mjs',
   'scripts/chroma-key-lib.mjs',
+  'scripts/checkerboard-alpha-lib.mjs',
+  'scripts/decorative-scatter-lib.mjs',
   'scripts/asset-hardening-proof-lib.mjs',
   'scripts/audio-calibration-lib.mjs',
   'scripts/audio-preflight-lib.mjs',

@@ -20,6 +20,11 @@ import {
   validateObservedKeyPlaneDeclaration,
 } from './observed-key-plane-lib.mjs';
 import {createRequestFingerprint} from './provider-lib.mjs';
+import {
+  BAKED_CHECKERBOARD_MODE,
+  BAKED_CHECKERBOARD_POLICY_ID,
+  inspectBakedCheckerboardPixels,
+} from './checkerboard-alpha-lib.mjs';
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -85,6 +90,15 @@ export const validateRejectedOutputRecoverySpec = (spec) => {
     errors.push('source 必须声明 file 与 sha256');
   }
   const cells = spec?.cells ?? [];
+  const bakedCheckerboardRecovery =
+    spec?.surfaceRecovery?.mode === BAKED_CHECKERBOARD_MODE &&
+    spec?.surfaceRecovery?.policyId === BAKED_CHECKERBOARD_POLICY_ID;
+  if (
+    spec?.surfaceRecovery !== undefined &&
+    !bakedCheckerboardRecovery
+  ) {
+    errors.push('surfaceRecovery 必须使用 baked-checkerboard-alpha/checkerboard-alpha-v1');
+  }
   const roles = new Set(cells.map(({packageRole}) => packageRole));
   const isStandaloneImage = cells.length === 1 && roles.has('image');
   const isLayerSheet =
@@ -105,10 +119,12 @@ export const validateRejectedOutputRecoverySpec = (spec) => {
     );
   }
   for (const cell of cells) {
-    try {
-      validateObservedKeyPlaneDeclaration(cell.keyPlane);
-    } catch (error) {
-      errors.push(`${observationLabel(cell) ?? 'unknown'} ${error.message}`);
+    if (!bakedCheckerboardRecovery) {
+      try {
+        validateObservedKeyPlaneDeclaration(cell.keyPlane);
+      } catch (error) {
+        errors.push(`${observationLabel(cell) ?? 'unknown'} ${error.message}`);
+      }
     }
     if (
       !Number.isInteger(cell.sourceRect?.left) ||
@@ -149,6 +165,9 @@ export const inspectRejectedOutputRecovery = async ({
   now = new Date().toISOString(),
 }) => {
   validateRejectedOutputRecoverySpec(spec);
+  const bakedCheckerboardRecovery =
+    spec.surfaceRecovery?.mode === BAKED_CHECKERBOARD_MODE &&
+    spec.surfaceRecovery?.policyId === BAKED_CHECKERBOARD_POLICY_ID;
   const projectDirectory = path.join(root, 'projects', spec.projectSlug);
   const ledgerFile = path.join(projectDirectory, 'generation-attempts.jsonl');
   const manifestFile = path.join(projectDirectory, 'assets-manifest.json');
@@ -192,8 +211,11 @@ export const inspectRejectedOutputRecovery = async ({
     throw new Error('recovery spec 必须复用历史 request 的 projectSlug/assetId');
   }
   if (
-    attempt.output !== spec.source.file ||
-    request.output !== spec.source.file
+    request.output !== spec.source.file ||
+    (
+      attempt.output !== spec.source.file &&
+      !(bakedCheckerboardRecovery && attempt.output === null)
+    )
   ) {
     throw new Error('recovery source 路径与 rejected attempt/request 不一致');
   }
@@ -240,7 +262,39 @@ export const inspectRejectedOutputRecovery = async ({
     }
   }
   const observations = [];
+  let checkerboardObservation = null;
+  if (bakedCheckerboardRecovery) {
+    if (
+      request.outputSurface?.mode !== 'alpha' ||
+      spec.cells.length !== 1 ||
+      spec.cells[0].packageRole !== 'image' ||
+      spec.cells[0].sourceRect.left !== 0 ||
+      spec.cells[0].sourceRect.top !== 0 ||
+      spec.cells[0].sourceRect.width !== media.width ||
+      spec.cells[0].sourceRect.height !== media.height
+    ) {
+      throw new Error(
+        'baked-checkerboard recovery 必须对应完整画布 alpha image request。',
+      );
+    }
+    const pixels = await sharp(sourceFile)
+      .removeAlpha()
+      .raw()
+      .toBuffer({resolveWithObject: true});
+    checkerboardObservation = inspectBakedCheckerboardPixels({
+      data: pixels.data,
+      width: pixels.info.width,
+      height: pixels.info.height,
+      channels: pixels.info.channels,
+    });
+    if (!checkerboardObservation.passed) {
+      throw new Error(
+        `baked-checkerboard recovery 未通过：${checkerboardObservation.reasons.join('、')}`,
+      );
+    }
+  }
   for (const recoveryCell of spec.cells) {
+    if (bakedCheckerboardRecovery) break;
     const requestSurface = ['image', 'state'].includes(recoveryCell.packageRole)
       ? request.outputSurface
       : layoutCells.find(
@@ -314,12 +368,23 @@ export const inspectRejectedOutputRecovery = async ({
       ...observation,
     });
   }
-  assertObservedKeyPlaneSet({observations});
-  const policyFingerprint = observedKeyPlanePolicyFingerprint();
+  if (!bakedCheckerboardRecovery) {
+    assertObservedKeyPlaneSet({observations});
+  }
+  const policyFingerprint = bakedCheckerboardRecovery
+    ? sha256Value({
+        mode: BAKED_CHECKERBOARD_MODE,
+        policyId: BAKED_CHECKERBOARD_POLICY_ID,
+      })
+    : observedKeyPlanePolicyFingerprint();
   const providerObservation = {
     schemaVersion: 1,
-    mode: OBSERVED_KEY_PLANE_MODE,
-    policyId: OBSERVED_KEY_PLANE_POLICY_ID,
+    mode: bakedCheckerboardRecovery
+      ? BAKED_CHECKERBOARD_MODE
+      : OBSERVED_KEY_PLANE_MODE,
+    policyId: bakedCheckerboardRecovery
+      ? BAKED_CHECKERBOARD_POLICY_ID
+      : OBSERVED_KEY_PLANE_POLICY_ID,
     policyFingerprint,
     observationFingerprint: sha256Value({
       policyFingerprint,
@@ -333,7 +398,9 @@ export const inspectRejectedOutputRecovery = async ({
       requestFingerprint: attempt.requestFingerprint,
       output: attempt.output,
     },
-    cells: observations,
+    ...(bakedCheckerboardRecovery
+      ? {checkerboard: checkerboardObservation}
+      : {cells: observations}),
   };
   const requestFingerprint = createRequestFingerprint({
     request,

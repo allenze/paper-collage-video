@@ -7,6 +7,12 @@ import {
   createAssetRecordId,
 } from './asset-manifest-lib.mjs';
 import {removeChromaKey} from './chroma-key-lib.mjs';
+import {
+  BAKED_CHECKERBOARD_MODE,
+  BAKED_CHECKERBOARD_POLICY_ID,
+  removeBakedCheckerboard,
+} from './checkerboard-alpha-lib.mjs';
+import {composeDecorativeScatter} from './decorative-scatter-lib.mjs';
 import {hashCompositionValue} from './composition-lib.mjs';
 import {resolveWorldStripTileGeometry} from '../src/worldStrip.mjs';
 
@@ -77,6 +83,71 @@ const validateChromaKeying = (keying) => {
   return null;
 };
 
+const validateCheckerboardAlpha = (value) => {
+  if (!isObject(value)) return 'baked-checkerboard-alpha 必须声明 checkerboardAlpha';
+  if (
+    !(
+      Number.isFinite(value.transparentDistance) &&
+      value.transparentDistance >= 0 &&
+      value.transparentDistance <= 255
+    )
+  ) {
+    return 'checkerboardAlpha.transparentDistance 必须位于 0..255';
+  }
+  if (
+    !(
+      Number.isFinite(value.opaqueDistance) &&
+      value.opaqueDistance > value.transparentDistance &&
+      value.opaqueDistance <= 255
+    )
+  ) {
+    return 'checkerboardAlpha.opaqueDistance 必须大于 transparentDistance 且不超过 255';
+  }
+  return null;
+};
+
+const validateDecorativeScatter = (scatter) => {
+  if (!isObject(scatter)) return null;
+  if (!Number.isInteger(scatter.seed)) return 'decorativeScatter.seed 必须是整数';
+  if (
+    !Number.isInteger(scatter.canvas?.width) ||
+    scatter.canvas.width < 1 ||
+    !Number.isInteger(scatter.canvas?.height) ||
+    scatter.canvas.height < 1
+  ) {
+    return 'decorativeScatter.canvas 必须是正整数画布';
+  }
+  if (!Array.isArray(scatter.regions) || scatter.regions.length < 1 || scatter.regions.length > 32) {
+    return 'decorativeScatter.regions 必须包含 1..32 个区域';
+  }
+  const ids = new Set();
+  for (const region of scatter.regions) {
+    if (!nonEmpty(region.id) || ids.has(region.id) || !validRect(region)) {
+      return 'decorativeScatter region id 必须唯一且矩形有效';
+    }
+    ids.add(region.id);
+  }
+  if (!Array.isArray(scatter.placements) || scatter.placements.length < 1 || scatter.placements.length > 64) {
+    return 'decorativeScatter.placements 必须包含 1..64 项';
+  }
+  for (const placement of scatter.placements) {
+    if (
+      !ids.has(placement.sourceId) ||
+      ![placement.x, placement.y, placement.scale, placement.rotation, placement.anchorX, placement.anchorY].every(Number.isFinite) ||
+      placement.x < 0 || placement.x > 1 ||
+      placement.y < 0 || placement.y > 1 ||
+      placement.scale <= 0 || placement.scale > 2 ||
+      placement.rotation < -30 || placement.rotation > 30 ||
+      placement.anchorX < 0 || placement.anchorX > 1 ||
+      placement.anchorY < 0 || placement.anchorY > 1 ||
+      typeof placement.flipX !== 'boolean'
+    ) {
+      return 'decorativeScatter placement 必须引用已知区域并声明合法变换与锚点';
+    }
+  }
+  return null;
+};
+
 const validRect = (rect) =>
   isObject(rect) &&
   Number.isInteger(rect.left) &&
@@ -124,6 +195,17 @@ export const validateLoopingStripSpec = (spec) => {
   ) {
     errors.push('alphaFeather 必须声明非零且不覆盖完整条带高度的 topPixels/bottomPixels');
   }
+  if (
+    spec?.edgeStabilizationPixels !== undefined &&
+    !(
+      Number.isInteger(spec.edgeStabilizationPixels) &&
+      spec.edgeStabilizationPixels >= 0 &&
+      spec.edgeStabilizationPixels <= 64 &&
+      spec.edgeStabilizationPixels * 2 < (spec?.canonicalTile?.width ?? 0)
+    )
+  ) {
+    errors.push('edgeStabilizationPixels 必须是 0..64 且小于 canonicalTile 一半宽度的整数');
+  }
   if (!(Number.isInteger(spec?.edgeBandPixels) && spec.edgeBandPixels >= 1 && spec.edgeBandPixels <= 128)) {
     errors.push('edgeBandPixels 必须是 1..128 的整数');
   }
@@ -156,8 +238,8 @@ export const validateLoopingStripSpec = (spec) => {
     errors.push('recoveryPolicy 必须保持完整条带上下文，禁止 isolated edge generation');
   }
   const sourceSurface = sourceSurfaceFor(spec);
-  if (!isObject(sourceSurface) || !['opaque', 'chroma-key'].includes(sourceSurface.mode)) {
-    errors.push('sourceSurface 必须是 opaque 或 chroma-key');
+  if (!isObject(sourceSurface) || !['opaque', 'chroma-key', BAKED_CHECKERBOARD_MODE].includes(sourceSurface.mode)) {
+    errors.push('sourceSurface 必须是 opaque、chroma-key 或 baked-checkerboard-alpha');
   } else if (sourceSurface.mode === 'chroma-key') {
     if (!validKeyColor(sourceSurface.keyColor)) {
       errors.push('chroma-key sourceSurface 必须声明 #RRGGBB keyColor');
@@ -167,9 +249,17 @@ export const validateLoopingStripSpec = (spec) => {
     if (spec?.keying && !sameKeyColor(sourceSurface.keyColor, spec.keying.keyColor)) {
       errors.push('sourceSurface.keyColor 必须与 keying.keyColor 一致');
     }
-  } else if (spec?.keying !== undefined) {
+  } else if (sourceSurface.mode === BAKED_CHECKERBOARD_MODE) {
+    const checkerboardError = validateCheckerboardAlpha(spec?.checkerboardAlpha);
+    if (checkerboardError) errors.push(checkerboardError);
+    if (spec?.keying !== undefined) {
+      errors.push('baked-checkerboard-alpha 不能声明 chroma keying');
+    }
+  } else if (spec?.keying !== undefined || spec?.checkerboardAlpha !== undefined) {
     errors.push('opaque sourceSurface 不能声明 keying');
   }
+  const scatterError = validateDecorativeScatter(spec?.decorativeScatter);
+  if (scatterError) errors.push(scatterError);
   if (typeof spec?.applyToProject !== 'boolean') errors.push('applyToProject 必须是 boolean');
   return errors;
 };
@@ -297,7 +387,43 @@ const applyAlphaFeather = async (input, alphaFeather) => {
 };
 
 const deriveTileBuffer = async ({sourceBuffer, spec}) => {
-  const canonical = await sharp(sourceBuffer).extract(spec.canonicalTile).png().toBuffer();
+  let canonical = await sharp(sourceBuffer).extract(spec.canonicalTile).png().toBuffer();
+  if ((spec.edgeStabilizationPixels ?? 0) > 0) {
+    const pixels = await sharp(canonical)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({resolveWithObject: true});
+    const stabilized = Buffer.from(pixels.data);
+    const band = spec.edgeStabilizationPixels;
+    for (let y = 0; y < pixels.info.height; y += 1) {
+      const leftSource = (y * pixels.info.width + band) * pixels.info.channels;
+      const rightSource =
+        (y * pixels.info.width + pixels.info.width - band - 1) *
+        pixels.info.channels;
+      for (let x = 0; x < band; x += 1) {
+        pixels.data.copy(
+          stabilized,
+          (y * pixels.info.width + x) * pixels.info.channels,
+          leftSource,
+          leftSource + pixels.info.channels,
+        );
+        pixels.data.copy(
+          stabilized,
+          (y * pixels.info.width + pixels.info.width - 1 - x) *
+            pixels.info.channels,
+          rightSource,
+          rightSource + pixels.info.channels,
+        );
+      }
+    }
+    canonical = await sharp(stabilized, {
+      raw: {
+        width: pixels.info.width,
+        height: pixels.info.height,
+        channels: pixels.info.channels,
+      },
+    }).png().toBuffer();
+  }
   const tile = spec.seamStrategy !== 'mirror-crop'
     ? canonical
     : await (async () => {
@@ -432,6 +558,19 @@ export const deriveLoopingStrip = async ({
       `source asset ${spec.sourceAssetId} 必须保留匹配的 provider chroma-key provenance`,
     );
   }
+  if (
+    sourceSurface.mode === BAKED_CHECKERBOARD_MODE &&
+    (
+      sourceRecord.lifecycle?.status !== 'recovery-source' ||
+      sourceRecord.providerObservation?.mode !== BAKED_CHECKERBOARD_MODE ||
+      sourceRecord.providerObservation?.policyId !== BAKED_CHECKERBOARD_POLICY_ID ||
+      sourceRequestSurface?.mode !== 'alpha'
+    )
+  ) {
+    throw new Error(
+      `source asset ${spec.sourceAssetId} 必须保留通过的 baked-checkerboard recovery provenance`,
+    );
+  }
   let sourceBuffer = await fs.readFile(sourceFile);
   let keyingMetadata = null;
   if (sourceSurface.mode === 'chroma-key') {
@@ -439,6 +578,17 @@ export const deriveLoopingStrip = async ({
       input: sourceFile,
       ...spec.keying,
     }));
+  } else if (sourceSurface.mode === BAKED_CHECKERBOARD_MODE) {
+    ({buffer: sourceBuffer, metadata: keyingMetadata} = await removeBakedCheckerboard({
+      input: sourceFile,
+      ...spec.checkerboardAlpha,
+    }));
+  }
+  if (spec.decorativeScatter) {
+    sourceBuffer = await composeDecorativeScatter({
+      source: sourceBuffer,
+      ...spec.decorativeScatter,
+    });
   }
   const sourceMetadata = await sharp(sourceBuffer).metadata();
   if (
@@ -507,6 +657,7 @@ export const deriveLoopingStrip = async ({
     seamStrategy: spec.seamStrategy,
     canonicalTile: spec.canonicalTile,
     alphaFeather: spec.alphaFeather ?? null,
+    edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
     edgeBandPixels: spec.edgeBandPixels,
     thresholds: spec.thresholds,
     renderScaleThresholds,
@@ -515,6 +666,8 @@ export const deriveLoopingStrip = async ({
     recoveryPolicy: spec.recoveryPolicy,
     sourceSurface,
     keying: spec.keying ?? null,
+    checkerboardAlpha: spec.checkerboardAlpha ?? null,
+    decorativeScatter: spec.decorativeScatter ?? null,
   });
   if (
     !sourcePassed ||
@@ -542,7 +695,7 @@ export const deriveLoopingStrip = async ({
   await fs.writeFile(outputFile, tileBuffer);
   const outputSha256 = await sha256File(outputFile);
   const outputMetadata = await sharp(outputFile).metadata();
-  const keyingMetadataFile = sourceSurface.mode === 'chroma-key'
+  const keyingMetadataFile = ['chroma-key', BAKED_CHECKERBOARD_MODE].includes(sourceSurface.mode)
     ? `${outputFile}.key.json`
     : null;
   const keyingRecord = keyingMetadataFile
@@ -551,7 +704,9 @@ export const deriveLoopingStrip = async ({
       sourceAssetId: spec.sourceAssetId,
       sourceSha256,
       sourceSurface,
-      keying: spec.keying,
+      keying: spec.keying ?? null,
+      checkerboardAlpha: spec.checkerboardAlpha ?? null,
+      decorativeScatter: spec.decorativeScatter ?? null,
       outputSha256,
       ...keyingMetadata,
     }
@@ -578,10 +733,13 @@ export const deriveLoopingStrip = async ({
       recordId: sourceRecord.recordId,
       surface: sourceSurface,
       keying: spec.keying ?? null,
+      checkerboardAlpha: spec.checkerboardAlpha ?? null,
+      decorativeScatter: spec.decorativeScatter ?? null,
       keyingMetadataSha256,
     },
     canonicalTile: spec.canonicalTile,
     alphaFeather: spec.alphaFeather ?? null,
+    edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
     output: {
       width: outputMetadata.width,
       height: outputMetadata.height,
@@ -627,9 +785,12 @@ export const deriveLoopingStrip = async ({
       sourceAssetId: spec.sourceAssetId,
       canonicalTile: spec.canonicalTile,
       alphaFeather: spec.alphaFeather ?? null,
+      edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
       seamStrategy: spec.seamStrategy,
       sourceSurface,
       keying: spec.keying ?? null,
+      checkerboardAlpha: spec.checkerboardAlpha ?? null,
+      decorativeScatter: spec.decorativeScatter ?? null,
     },
     compositionBinding: {
       sceneId: spec.sceneId,
@@ -682,6 +843,7 @@ export const deriveLoopingStrip = async ({
       avoidedCalls: 1,
       seamStrategy: spec.seamStrategy,
       alphaFeather: spec.alphaFeather ?? null,
+      edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
       sourceSurface,
       keyingMetadataSha256,
       thresholds: spec.thresholds,
