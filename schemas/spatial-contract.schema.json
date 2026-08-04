@@ -348,6 +348,18 @@
           "exclusiveMinimum": 0,
           "maximum": 1080
         },
+        "screenSafeBand": {
+          "type": "object",
+          "required": ["minX", "maxX", "minY", "maxY", "rationale"],
+          "properties": {
+            "minX": {"type": "number", "minimum": 0, "maximum": 1},
+            "maxX": {"type": "number", "minimum": 0, "maximum": 1},
+            "minY": {"type": "number", "minimum": 0, "maximum": 1},
+            "maxY": {"type": "number", "minimum": 0, "maximum": 1},
+            "rationale": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
         "requireCameraFollow": {"type": "boolean"}
       },
       "additionalProperties": false

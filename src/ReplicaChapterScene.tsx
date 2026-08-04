@@ -639,6 +639,7 @@ const GroupView = ({
   editorial,
   rootNodes,
   zones,
+  worldAnchorOffsetX,
 }: {
   node: CompositionGroupNode;
   parent: CoordinateSpace;
@@ -658,6 +659,7 @@ const GroupView = ({
   editorial: EditorialSystem;
   rootNodes: CompositionNode[];
   zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
+  worldAnchorOffsetX?: number;
 }) => {
   if (node.stackingContext === 'scene') {
     const width = node.transform.width * parent.width;
@@ -731,6 +733,7 @@ const GroupView = ({
       loopingWorld && parallax
         ? {...parallax, enabled: false}
         : parallax,
+    worldAnchorOffsetX,
   });
   const ratio = node.coordinateSpace.height / node.coordinateSpace.width;
   const height = resolved.height ?? resolved.width * ratio;
@@ -870,7 +873,7 @@ const CompositionNodeView = ({
   if (node.kind === 'group' && node.renderParticipation === 'derivation-only') {
     return null;
   }
-  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
+  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones, worldAnchorOffsetX}} />;
   if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
   if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
   if (node.kind === 'typography') {

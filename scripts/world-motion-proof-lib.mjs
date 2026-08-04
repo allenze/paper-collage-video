@@ -139,6 +139,45 @@ const visualIsolationForNode = async (node, progress) => {
       alphaBounds,
     };
   }
+  if (node.kind === 'group') {
+    const bounds = [];
+    for (const child of node.children ?? []) {
+      const isolation = await visualIsolationForNode(child, progress);
+      if (!isolation?.alphaBounds) continue;
+      const width = Number(child.transform?.width ?? 1);
+      const height = Number(child.transform?.height ?? width);
+      const left =
+        Number(child.transform?.x ?? 0) -
+        Number(child.transform?.anchorX ?? 0) * width +
+        isolation.alphaBounds.x * width;
+      const top =
+        Number(child.transform?.y ?? 0) -
+        Number(child.transform?.anchorY ?? 0) * height +
+        isolation.alphaBounds.y * height;
+      bounds.push({
+        left,
+        top,
+        right: left + isolation.alphaBounds.width * width,
+        bottom: top + isolation.alphaBounds.height * height,
+      });
+    }
+    if (bounds.length > 0) {
+      const left = Math.min(...bounds.map((bound) => bound.left));
+      const top = Math.min(...bounds.map((bound) => bound.top));
+      const right = Math.max(...bounds.map((bound) => bound.right));
+      const bottom = Math.max(...bounds.map((bound) => bound.bottom));
+      return {
+        source: `group:${node.id}`,
+        sourceKind: 'composition-group',
+        alphaBounds: {
+          x: left,
+          y: top,
+          width: right - left,
+          height: bottom - top,
+        },
+      };
+    }
+  }
   if (node.kind === 'shape') {
     return {
       source: `shape:${node.shape}`,
@@ -299,7 +338,7 @@ export const buildTargetWorldMotionProof = async ({
   };
 };
 
-const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPixels = 4}) => {
+export const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPixels = 4}) => {
   const file = resolvePublicFile(source);
   if (!(await fileExists(file))) {
     return {
@@ -349,9 +388,15 @@ const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPi
         height: cleanNumber((bottom - top + 1) / info.height),
       };
   const edgeSupportRequired = surfaceRole === 'walkable-ground';
+  const minimumHorizontalVisibleSpanRatio = [
+    'backdrop',
+    'walkable-ground',
+  ].includes(surfaceRole)
+    ? 0.85
+    : 0.25;
   const passed =
     visiblePixelRatio >= 0.002 &&
-    horizontalVisibleSpanRatio >= 0.85 &&
+    horizontalVisibleSpanRatio >= minimumHorizontalVisibleSpanRatio &&
     (
       !edgeSupportRequired ||
       (leftEdgeSupportRatio >= 0.02 && rightEdgeSupportRatio >= 0.02)
@@ -363,7 +408,7 @@ const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPi
     dimensions: {width: info.width, height: info.height},
     thresholds: {
       minimumVisiblePixelRatio: 0.002,
-      minimumHorizontalVisibleSpanRatio: 0.85,
+      minimumHorizontalVisibleSpanRatio,
       minimumGroundEdgeSupportRatio: edgeSupportRequired ? 0.02 : null,
     },
     visiblePixelRatio: cleanNumber(visiblePixelRatio),
@@ -615,18 +660,30 @@ export const buildLoopingWorldProof = async ({
         binding.anchorMode === 'world' ? worldAnchorOffsetAt : () => 0,
     });
     subjectProofs.push({...binding, proof: subjectProof});
-    const subjectAlpha = subject
-      ? await alphaBoundsForSource(sourceForNode(subject, bindingProofs[0].at))
+    const subjectIsolation = subject
+      ? await visualIsolationForNode(subject, bindingProofs[0].at)
       : null;
+    const subjectAlpha = subjectIsolation?.alphaBounds ?? null;
+    const subjectHeight =
+      subject?.transform?.height ??
+      (
+        subject?.kind === 'group'
+          ? Number(subject.transform?.width ?? 1) *
+            Number(subject.coordinateSpace?.height ?? 1) /
+            Number(subject.coordinateSpace?.width ?? 1) *
+            video.width /
+            video.height
+          : 1
+      );
     const subjectTop =
       (subject?.transform?.y ?? 0) -
       (subject?.transform?.anchorY ?? 0) *
-        (subject?.transform?.height ?? 1) +
-      (subjectAlpha?.y ?? 0) * (subject?.transform?.height ?? 1);
+        subjectHeight +
+      (subjectAlpha?.y ?? 0) * subjectHeight;
     const subjectBottom =
       subjectTop +
       (subjectAlpha?.height ?? 0) *
-        (subject?.transform?.height ?? 1);
+        subjectHeight;
     const verticalOverlap = Math.max(
       0,
       Math.min(subjectBottom, nearBottom) - Math.max(subjectTop, nearTop),

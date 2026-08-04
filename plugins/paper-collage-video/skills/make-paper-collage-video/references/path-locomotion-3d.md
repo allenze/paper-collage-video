@@ -86,7 +86,10 @@ inventing a turn.
 ## Coherent World and Camera Follow
 
 Use one oversized top-level world node when the camera must follow the subject.
-The same path target must also be top-level. `camera.follow` binds:
+The path target is normally top-level. Inside a top-level
+`looping-environment`, it may instead be that world's direct
+`role=tracked`, `anchorMode=screen` subject; arbitrary nested or world-anchored
+participants cannot drive the camera. `camera.follow` binds:
 
 - `targetNodeId` to the path target;
 - `worldNodeId` to that one coherent world surface;
@@ -109,6 +112,10 @@ proofs, explicit turn proofs, locomotion state ids, minimum cadence, minimum
 travel, minimum optical-depth travel and projection-scale delta, required
 toward/away directions, direction-sector coverage, maximum heading error,
 maximum turn rate, and whether camera follow is required.
+When a route has a hard visible boundary such as a waterline, ceiling, or
+subtitle corridor, add `screenSafeBand`. The proof applies the complete
+registered node canvas through its resolved scale and rotation at every sampled
+frame, rather than checking only the subject center.
 
 The deterministic evaluator samples every frame and proves:
 
@@ -117,6 +124,8 @@ The deterministic evaluator samples every frame and proves:
 - the required subset of eight direction sectors;
 - rendered heading against measured physical movement;
 - frame-to-frame turn-rate bounds;
+- the complete transformed registration canvas stays inside `screenSafeBand`
+  when one is declared;
 - state-loop cadence and continuation through the window;
 - exact path/camera/world binding;
 - a camera viewport that stays inside the declared world.

@@ -212,6 +212,13 @@ const contract = {
   minimumDirectionSectors: 8,
   maximumHeadingErrorDegrees: 18,
   maximumTurnDegreesPerSecond: 120,
+  screenSafeBand: {
+    minX: 0,
+    maxX: 1,
+    minY: 0,
+    maxY: 1,
+    rationale: 'registered swimmer canvas stays inside the visible water field',
+  },
   requireCameraFollow: true,
 };
 
@@ -395,6 +402,12 @@ test('path locomotion proves eight directions, continuous turning, gait, and cam
         id === 'path-locomotion-camera-coverage' && passed,
     ),
   );
+  assert.ok(
+    inspection.checks.some(
+      ({id, passed}) =>
+        id === 'path-locomotion-screen-safe-band' && passed,
+    ),
+  );
   const overlay = spatialContractDebugOverlay({
     proof: {
       contractId: contract.id,
@@ -416,6 +429,89 @@ test('path locomotion proves eight directions, continuous turning, gait, and cam
   });
   assert.ok(followed);
   assert.ok([followed.x, followed.y, followed.zoom].every(Number.isFinite));
+});
+
+test('path locomotion rejects a transformed registered canvas outside its screen safe band', async () => {
+  const invalidContract = structuredClone(contract);
+  invalidContract.screenSafeBand = {
+    minX: 0.45,
+    maxX: 0.55,
+    minY: 0.45,
+    maxY: 0.55,
+    rationale: 'deliberately too tight',
+  };
+  const inspection = await inspectSpatialContract(project, invalidContract);
+  const safeBand = inspection.checks.find(
+    ({id}) => id === 'path-locomotion-screen-safe-band',
+  );
+  assert.equal(safeBand?.passed, false);
+  assert.ok(safeBand.actual.violationFrames.length > 0);
+});
+
+test('camera follow accepts the tracked screen subject inside a top-level looping world', () => {
+  const nested = structuredClone(scene);
+  const nestedSwimmer = nested.composition.nodes.find(
+    ({id}) => id === 'tadpoles',
+  );
+  nested.composition.nodes = [
+    nested.composition.nodes.find(({id}) => id === 'pond-world'),
+    {
+      id: 'looping-pond',
+      kind: 'group',
+      pattern: 'looping-environment',
+      z: 1,
+      coordinateSpace: {width: 1000, height: 1000},
+      transform: {
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        anchorX: 0,
+        anchorY: 0,
+      },
+      motion: still,
+      loopingEnvironment: {
+        axis: 'x',
+        groundStripId: 'ground',
+        subjectBindings: [{
+          nodeId: 'tadpoles',
+          role: 'tracked',
+          anchorMode: 'screen',
+          nearOcclusion: 'behind-near',
+          proofTimeIds: ['start', 'end'],
+        }],
+        seamProofTimeIds: {
+          before: 'start',
+          seam: 'turn-south',
+          after: 'end',
+        },
+        travel: {
+          direction: 'left',
+          distanceViewports: 2,
+          closedLoop: false,
+          startPhase: 0,
+          activeFrom: 0,
+          activeUntil: 1,
+          easing: 'linear',
+        },
+        speedRange: {far: 0.2, near: 1},
+        overscanPx: 2,
+      },
+      children: [nestedSwimmer],
+    },
+  ];
+  assert.deepEqual(
+    validateCameraFollow({scene: nested, video: project.video}),
+    [],
+  );
+  const invalid = structuredClone(nested);
+  invalid.composition.nodes[1].loopingEnvironment.subjectBindings[0].anchorMode =
+    'world';
+  assert.ok(
+    validateCameraFollow({scene: invalid, video: project.video}).some(
+      ({code}) => code === 'camera-follow-target',
+    ),
+  );
 });
 
 test('path locomotion measures a registered body anchor without inventing reversals at eased turns', async () => {

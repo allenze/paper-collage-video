@@ -444,6 +444,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     semanticBinding = null,
     semanticSliceBinding = null,
     alphaTopologyExpectedComponents = [],
+    alphaTopologyAllowDetachedComponents = false,
     registeredFamilyBinding = null,
     canonicalContainerBinding = null,
     stateSheetBinding = null,
@@ -487,6 +488,9 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
         existing.alphaTopologyExpectedComponents =
           alphaTopologyExpectedComponents;
       }
+      existing.alphaTopologyAllowDetachedComponents =
+        existing.alphaTopologyAllowDetachedComponents ||
+        alphaTopologyAllowDetachedComponents;
       if (registeredFamilyBinding) {
         existing.registeredFamilyBinding = registeredFamilyBinding;
       }
@@ -513,6 +517,7 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       semanticBinding,
       semanticSliceBinding,
       alphaTopologyExpectedComponents,
+      alphaTopologyAllowDetachedComponents,
       registeredFamilyBinding,
       canonicalContainerBinding,
       stateSheetBinding,
@@ -571,6 +576,8 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
         kind: 'environment',
         source: `scene:${scene.id}:node:${node.id}`,
         reviewScope: 'runtime-visible',
+        alphaTopologyAllowDetachedComponents:
+          ['scenery', 'foreground-occluder'].includes(node.surfaceRole),
       });
     }
     for (const {node, renderParticipation} of collectCompositionGroups(scene.composition)) {
@@ -622,6 +629,14 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
         semanticSliceBinding?.components ??
         registeredFamilyMaskRecord?.semanticSliceBinding?.components ??
         [],
+      alphaTopologyAllowDetachedComponents:
+        ['mid', 'near'].includes(record.loopingStripBinding?.role) ||
+        (
+          registeredFamilyBinding?.pattern === 'registered-depth-stack' &&
+          ['subject', 'support-front'].includes(
+            registeredFamilyBinding?.role,
+          )
+        ),
       registeredFamilyBinding,
       canonicalContainerBinding,
       stateSheetBinding,
@@ -768,6 +783,8 @@ const inspectTechnicalQuality = async ({asset, project}) => {
       file,
       derivationRegions,
       expectedComponents: asset.alphaTopologyExpectedComponents,
+      allowDetachedComponents:
+        asset.alphaTopologyAllowDetachedComponents,
     });
     checks.push({
       id: 'alpha-topology-clean',

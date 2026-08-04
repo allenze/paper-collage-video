@@ -570,10 +570,81 @@ export const validatePathMotion = (pathMotion) => {
 const findTopLevelNode = (scene, nodeId) =>
   (scene.composition?.nodes ?? []).find(({id}) => id === nodeId) ?? null;
 
+const findCompositionNodeEntry = ({scene, nodeId, video}) => {
+  let result = null;
+  const visit = (nodes, parentRect, ancestors = []) => {
+    for (const node of nodes ?? []) {
+      const width = Number(node.transform?.width ?? 1) * parentRect.width;
+      const height = node.transform?.height !== undefined
+        ? Number(node.transform.height) * parentRect.height
+        : node.kind === 'group'
+          ? width *
+            Number(node.coordinateSpace?.height ?? 1) /
+            Number(node.coordinateSpace?.width ?? 1) *
+            video.width /
+            video.height
+          : node.kind === 'state-sequence'
+            ? width *
+              Number(node.registration?.canvas?.height ?? 1) /
+              Number(node.registration?.canvas?.width ?? 1) *
+              video.width /
+              video.height
+            : width * video.width / video.height;
+      const rect = {
+        x:
+          parentRect.x +
+          Number(node.transform?.x ?? 0) * parentRect.width -
+          Number(node.transform?.anchorX ?? 0) * width,
+        y:
+          parentRect.y +
+          Number(node.transform?.y ?? 0) * parentRect.height -
+          Number(node.transform?.anchorY ?? 0) * height,
+        width,
+        height,
+      };
+      if (node.id === nodeId) {
+        result = {node, parentRect, rect, ancestors};
+        return;
+      }
+      if (node.kind === 'group') {
+        visit(node.children, rect, [...ancestors, node]);
+        if (result) return;
+      }
+    }
+  };
+  visit(
+    scene.composition?.nodes,
+    {x: 0, y: 0, width: 1, height: 1},
+  );
+  return result;
+};
+
+const isAllowedFollowTarget = (entry) => {
+  if (!entry) return false;
+  if (entry.ancestors.length === 0) return true;
+  if (entry.ancestors.length !== 1) return false;
+  const parent = entry.ancestors[0];
+  const binding = parent.loopingEnvironment?.subjectBindings?.find(
+    ({nodeId}) => nodeId === entry.node.id,
+  );
+  return (
+    parent.pattern === 'looping-environment' &&
+    binding?.role === 'tracked' &&
+    binding.anchorMode === 'screen'
+  );
+};
+
 const cameraFrameTable = ({scene, video, fps}) => {
   const follow = scene.camera?.follow;
-  const target = follow
-    ? findTopLevelNode(scene, follow.targetNodeId)
+  const targetEntry = follow
+    ? findCompositionNodeEntry({
+        scene,
+        nodeId: follow.targetNodeId,
+        video,
+      })
+    : null;
+  const target = isAllowedFollowTarget(targetEntry)
+    ? targetEntry.node
     : null;
   const durationInFrames = scene.durationInFrames;
   const key = cacheKey({
@@ -583,6 +654,7 @@ const cameraFrameTable = ({scene, video, fps}) => {
           id: target.id,
           transform: target.transform,
           path: target.motion?.path,
+          parentRect: targetEntry.parentRect,
         }
       : null,
     video,
@@ -628,12 +700,22 @@ const cameraFrameTable = ({scene, video, fps}) => {
       frame: lookAheadFrame,
       durationInFrames: frameCount,
       fps,
-      parentWidth: video.width,
-      parentHeight: video.height,
+      parentWidth: targetEntry.parentRect.width * video.width,
+      parentHeight: targetEntry.parentRect.height * video.height,
     });
     const targetPoint = {
-      x: (target.transform.x + path.x) * video.width,
-      y: (target.transform.y + path.y) * video.height,
+      x:
+        (
+          targetEntry.parentRect.x +
+          (target.transform.x + path.x) * targetEntry.parentRect.width
+        ) *
+        video.width,
+      y:
+        (
+          targetEntry.parentRect.y +
+          (target.transform.y + path.y) * targetEntry.parentRect.height
+        ) *
+        video.height,
     };
     const desired = {
       x:
@@ -681,12 +763,19 @@ export const validateCameraFollow = ({scene, video}) => {
   const issues = [];
   const add = (code, message, location) =>
     issues.push({code, message, location});
-  const target = findTopLevelNode(scene, follow.targetNodeId);
+  const targetEntry = findCompositionNodeEntry({
+    scene,
+    nodeId: follow.targetNodeId,
+    video,
+  });
+  const target = isAllowedFollowTarget(targetEntry)
+    ? targetEntry.node
+    : null;
   const world = findTopLevelNode(scene, follow.worldNodeId);
   if (!target) {
     add(
       'camera-follow-target',
-      'camera.follow.targetNodeId 必须引用顶层节点。',
+      'camera.follow.targetNodeId 必须引用顶层节点，或顶层 looping-environment 中 role=tracked、anchorMode=screen 的直接主体。',
       'camera.follow.targetNodeId',
     );
   } else if (!target.motion?.path) {

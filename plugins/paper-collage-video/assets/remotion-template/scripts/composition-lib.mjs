@@ -1306,14 +1306,14 @@ export const validateCompositionStructure = ({
         strips.length < 2 ||
         subjectBindings.length < 1 ||
         subjects.length !== subjectBindings.length ||
-        subjects.some(({kind}) => !['asset', 'state-sequence'].includes(kind)) ||
+        subjects.some(({kind}) => !['asset', 'state-sequence', 'group'].includes(kind)) ||
         trackedBindings.length !== 1 ||
         (node.children ?? []).length !== strips.length + subjectBindings.length
       ) {
         add(
           'error',
           'composition-looping-members',
-          'looping-environment 必须只包含至少两个 world-strip 与 subjectBindings 中声明的 asset/state-sequence 主体，且只能有一个 tracked 主体。',
+          'looping-environment 必须只包含至少两个 world-strip 与 subjectBindings 中声明的 asset/state-sequence/group 主体，且只能有一个 tracked 主体。',
           `${nodeLocation}.children`,
         );
       }

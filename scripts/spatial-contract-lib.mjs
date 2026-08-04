@@ -1588,6 +1588,26 @@ const inspectPathLocomotion = (project, contract) => {
       x: entry.width * pathAnchor.x,
       y: entry.height * pathAnchor.y,
     });
+    const screenCorners = [
+      {x: 0, y: 0},
+      {x: entry.width, y: 0},
+      {x: entry.width, y: entry.height},
+      {x: 0, y: entry.height},
+    ].map((point) => applyMatrix(entry.matrix, point));
+    const screenBounds = {
+      minX:
+        Math.min(...screenCorners.map(({x}) => x)) /
+        project.video.width,
+      maxX:
+        Math.max(...screenCorners.map(({x}) => x)) /
+        project.video.width,
+      minY:
+        Math.min(...screenCorners.map(({y}) => y)) /
+        project.video.height,
+      maxY:
+        Math.max(...screenCorners.map(({y}) => y)) /
+        project.video.height,
+    };
     const state = resolveSequenceState({node: entry.node, progress});
     samples.push({
       frame,
@@ -1595,6 +1615,7 @@ const inspectPathLocomotion = (project, contract) => {
       x: localCenter.x / project.video.width,
       y: localCenter.y / project.video.height,
       screenCenter,
+      screenBounds,
       path: entry.pathMotion,
       z: entry.pathMotion.z,
       projectionScale: entry.pathMotion.projectionScale,
@@ -1669,6 +1690,19 @@ const inspectPathLocomotion = (project, contract) => {
     ) * project.video.fps,
   );
   const maximumTurnRate = Math.max(0, ...turnRates);
+  const safeBand = contract.screenSafeBand ?? null;
+  const safeBandValid = !safeBand || (
+    safeBand.minX < safeBand.maxX &&
+    safeBand.minY < safeBand.maxY
+  );
+  const safeBandViolations = safeBand && safeBandValid
+    ? samples.filter(({screenBounds}) =>
+        screenBounds.minX < safeBand.minX - 1e-6 ||
+        screenBounds.maxX > safeBand.maxX + 1e-6 ||
+        screenBounds.minY < safeBand.minY - 1e-6 ||
+        screenBounds.maxY > safeBand.maxY + 1e-6
+      )
+    : [];
   const follow = scene.camera?.follow;
   const origin = {
     x: project.video.width * 0.5,
@@ -1767,6 +1801,23 @@ const inspectPathLocomotion = (project, contract) => {
       },
       actual: {maximumTurnDegreesPerSecond: maximumTurnRate},
     },
+    ...(safeBand
+      ? [{
+          id: 'path-locomotion-screen-safe-band',
+          passed: safeBandValid && safeBandViolations.length === 0,
+          expected: safeBand,
+          actual: {
+            valid: safeBandValid,
+            violationFrames: safeBandViolations.map(({frame}) => frame),
+            minimumObservedY: Math.min(
+              ...samples.map(({screenBounds}) => screenBounds.minY),
+            ),
+            maximumObservedY: Math.max(
+              ...samples.map(({screenBounds}) => screenBounds.maxY),
+            ),
+          },
+        }]
+      : []),
     {
       id: 'path-locomotion-camera-binding',
       passed:
@@ -1875,6 +1926,46 @@ const inspectPathLocomotion = (project, contract) => {
       directionSectors: sectors,
       maximumHeadingErrorDegrees: maximumHeadingError,
       maximumTurnDegreesPerSecond: maximumTurnRate,
+      screenBounds: entry
+        ? {
+            minX:
+              Math.min(
+                ...[
+                  {x: 0, y: 0},
+                  {x: entry.width, y: 0},
+                  {x: entry.width, y: entry.height},
+                  {x: 0, y: entry.height},
+                ].map((point) => applyMatrix(entry.matrix, point).x),
+              ) / project.video.width,
+            maxX:
+              Math.max(
+                ...[
+                  {x: 0, y: 0},
+                  {x: entry.width, y: 0},
+                  {x: entry.width, y: entry.height},
+                  {x: 0, y: entry.height},
+                ].map((point) => applyMatrix(entry.matrix, point).x),
+              ) / project.video.width,
+            minY:
+              Math.min(
+                ...[
+                  {x: 0, y: 0},
+                  {x: entry.width, y: 0},
+                  {x: entry.width, y: entry.height},
+                  {x: 0, y: entry.height},
+                ].map((point) => applyMatrix(entry.matrix, point).y),
+              ) / project.video.height,
+            maxY:
+              Math.max(
+                ...[
+                  {x: 0, y: 0},
+                  {x: entry.width, y: 0},
+                  {x: entry.width, y: entry.height},
+                  {x: 0, y: entry.height},
+                ].map((point) => applyMatrix(entry.matrix, point).y),
+              ) / project.video.height,
+          }
+        : null,
     };
   });
   return {

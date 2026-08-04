@@ -739,6 +739,10 @@ export type LoopingStripBinding = {
     width: number;
     height: number;
   };
+  alphaFeather?: {
+    topPixels: number;
+    bottomPixels: number;
+  } | null;
   output: {
     width: number;
     height: number;
@@ -1186,6 +1190,13 @@ export type SpatialContract =
       minimumDirectionSectors: number;
       maximumHeadingErrorDegrees: number;
       maximumTurnDegreesPerSecond: number;
+      screenSafeBand?: {
+        minX: number;
+        maxX: number;
+        minY: number;
+        maxY: number;
+        rationale: string;
+      };
       requireCameraFollow: boolean;
     };
 

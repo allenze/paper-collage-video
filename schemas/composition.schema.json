@@ -479,6 +479,20 @@
           },
           "additionalProperties": false
         },
+        "alphaFeather": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["topPixels", "bottomPixels"],
+              "properties": {
+                "topPixels": {"type": "integer", "minimum": 0, "maximum": 1024},
+                "bottomPixels": {"type": "integer", "minimum": 0, "maximum": 1024}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
         "output": {
           "type": "object",
           "required": ["width", "height", "hasAlpha"],

@@ -531,6 +531,7 @@ export const analyzeAlphaTopologyPixels = ({
   info,
   derivationRegions = [],
   expectedComponents = [],
+  allowDetachedComponents = false,
   thresholds = DEFAULT_ALPHA_TOPOLOGY_THRESHOLDS,
 }) => {
   const {width, height, channels} = info;
@@ -610,7 +611,7 @@ export const analyzeAlphaTopologyPixels = ({
         component.bottom <= expectedBottom + expectedComponentTolerance
       );
     });
-  if (primary) {
+  if (primary && !allowDetachedComponents) {
     for (const component of components.slice(1)) {
       const separationRatio =
         componentGap(primary, component) / Math.max(1, diagonal);
@@ -680,6 +681,7 @@ export const inspectAlphaTopology = async ({
   file,
   derivationRegions = [],
   expectedComponents = [],
+  allowDetachedComponents = false,
   thresholds = DEFAULT_ALPHA_TOPOLOGY_THRESHOLDS,
 }) => {
   const metadata = await sharp(file).metadata();
@@ -714,6 +716,7 @@ export const inspectAlphaTopology = async ({
     })),
     expectedComponents: expectedComponents.map((component) =>
       scaleRect(component, sourceSize, analysisSize)),
+    allowDetachedComponents,
   });
   return {
     schemaVersion: 1,
@@ -721,6 +724,7 @@ export const inspectAlphaTopology = async ({
     analysisSize,
     derivationRegions,
     expectedComponents,
+    allowDetachedComponents,
     ...inspection,
   };
 };

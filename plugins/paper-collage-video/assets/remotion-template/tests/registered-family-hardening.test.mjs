@@ -1251,6 +1251,10 @@ test('alpha topology rejects detached fragments and hard derivation rectangles',
         height: 28,
       }],
     });
+    const semanticScenery = await inspectAlphaTopology({
+      file: fragmentFile,
+      allowDetachedComponents: true,
+    });
     const crop = await inspectAlphaTopology({
       file: cropFile,
       derivationRegions: [{
@@ -1264,7 +1268,19 @@ test('alpha topology rejects detached fragments and hard derivation rectangles',
     assert.ok(fragment.failures.some(({diagnostic}) =>
       diagnostic.classification === 'detached-rectangular-alpha-fragment'));
     assert.equal(declaredFragment.passed, true);
+    assert.equal(semanticScenery.passed, true);
+    assert.equal(semanticScenery.allowDetachedComponents, true);
     assert.equal(crop.passed, false);
+    const semanticCrop = await inspectAlphaTopology({
+      file: cropFile,
+      derivationRegions: [{
+        id: 'fixture-clip',
+        kind: 'crop-boundary',
+        rect: {left: 60, top: 40, width: 180, height: 120},
+      }],
+      allowDetachedComponents: true,
+    });
+    assert.equal(semanticCrop.passed, false);
     assert.ok(crop.failures.some(({diagnostic}) =>
       diagnostic.classification === 'hard-rectangular-derivation-boundary'));
   } finally {

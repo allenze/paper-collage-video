@@ -223,7 +223,8 @@ bounded relative motion because their complete source package has been proven
 against responsive reveal envelopes.
 
 `camera.follow` is the optional camera half of path locomotion. It binds one
-top-level path target and one top-level oversized world node, normalized
+top-level path target, or the direct tracked screen subject of a top-level
+`looping-environment`, and one top-level oversized world node, normalized
 framing, look-ahead, smoothing, zoom, and normalized world bounds. Runtime
 samples the target's exact resolved path and clamps the camera viewport inside
 that world. It is mutually exclusive with camera keyframes and must not be
@@ -234,10 +235,18 @@ approximated by duplicating the subject route.
 `world-strip` is valid only as a direct child of `looping-environment`. One
 semantic node binds one active deterministic strip derivative, declares a
 visible `surfaceRole`, and lets the renderer own repeated internal copies. The
+derivative may declare a fingerprinted `alphaFeather` with non-overlapping
+top/bottom pixel ramps when one strip must gradually take over from another
+depth layer; the ramp is applied before canonical and render-scale seam proof
+and is preserved in the manifest binding. It is not a generic opacity patch.
+The
 group owns horizontal world travel, ground reference, seam proof ids,
 depth-derived speed range, overscan, start phase, and explicit
 `subjectBindings`. It contains at least two strips, exactly one tracked
-asset/state-sequence, and zero or more participant assets/state-sequences.
+asset/state-sequence/group, and zero or more participant
+assets/state-sequences/groups. A group participant receives the world offset
+on its carrier; its registered support, subject, and front occluder remain
+inside that group rather than becoming independently scrolling nodes.
 Subjects independently choose screen or world anchoring and their relation to
 the near strip. Camera/parallax offsets are folded
 into strip phase and safe internal scale; they must never translate or shrink

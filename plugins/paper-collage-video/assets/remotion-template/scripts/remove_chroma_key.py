@@ -78,6 +78,24 @@ def despill(rgb: np.ndarray, key: np.ndarray, alpha_u8: np.ndarray) -> np.ndarra
     return rgb - strength[:, :, None] * key_direction[None, None, :]
 
 
+def key_plane_distance(rgb: np.ndarray, key: np.ndarray) -> np.ndarray:
+    key_magnitude_squared = float(np.sum(key * key))
+    projection = np.clip(
+        np.sum(rgb * key[None, None, :], axis=2) / key_magnitude_squared,
+        0.0,
+        1.25,
+    )
+    residual = np.linalg.norm(
+        rgb - projection[:, :, None] * key[None, None, :],
+        axis=2,
+    )
+    # Provider shadows are commonly darkened copies of the key hue. Distance
+    # to the key-colour ray removes those shadows, while the darkness floor
+    # keeps genuine near-black ink contours opaque.
+    darkness_penalty = np.maximum(0.0, 0.35 - projection) * 441.7
+    return np.hypot(residual, darkness_penalty)
+
+
 def pad_transparent_rgb(
     rgb: np.ndarray,
     alpha_u8: np.ndarray,
@@ -122,7 +140,7 @@ def main() -> None:
     source = Image.open(args.input).convert("RGB")
     rgb = np.asarray(source, dtype=np.float32)
     key = parse_key_color(args.key_color, rgb)
-    distance = np.linalg.norm(rgb - key, axis=2)
+    distance = key_plane_distance(rgb, key)
     alpha = np.clip(
         (distance - args.transparent_threshold)
         / (args.opaque_threshold - args.transparent_threshold),
@@ -164,6 +182,7 @@ def main() -> None:
                     "opaqueThreshold": args.opaque_threshold,
                     "edgeFeather": args.edge_feather,
                     "matteErode": args.matte_erode,
+                    "distanceMetric": "key-ray-with-darkness-floor-v1",
                     "despill": "key-chroma-edge",
                     "transparentRgb": {
                         "mode": "edge-pad-neutral",

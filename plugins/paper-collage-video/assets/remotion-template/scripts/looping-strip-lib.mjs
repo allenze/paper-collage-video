@@ -88,6 +88,17 @@ const validRect = (rect) =>
   Number.isInteger(rect.height) &&
   rect.height > 0;
 
+const validAlphaFeather = (value, tileHeight) =>
+  isObject(value) &&
+  Number.isInteger(value.topPixels) &&
+  value.topPixels >= 0 &&
+  value.topPixels <= 1024 &&
+  Number.isInteger(value.bottomPixels) &&
+  value.bottomPixels >= 0 &&
+  value.bottomPixels <= 1024 &&
+  value.topPixels + value.bottomPixels > 0 &&
+  value.topPixels + value.bottomPixels < tileHeight;
+
 const resolveInside = (root, input, label) => {
   const resolved = path.resolve(root, input);
   if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
@@ -107,6 +118,12 @@ export const validateLoopingStripSpec = (spec) => {
   if (spec?.axis !== 'x') errors.push('Phase 2.5 只支持 axis=x');
   if (!STRATEGIES.includes(spec?.seamStrategy)) errors.push('seamStrategy 必须是 exact、overlap-crop 或 mirror-crop');
   if (!validRect(spec?.canonicalTile)) errors.push('canonicalTile 必须是正整数像素矩形');
+  if (
+    spec?.alphaFeather !== undefined &&
+    !validAlphaFeather(spec.alphaFeather, spec?.canonicalTile?.height ?? 0)
+  ) {
+    errors.push('alphaFeather 必须声明非零且不覆盖完整条带高度的 topPixels/bottomPixels');
+  }
   if (!(Number.isInteger(spec?.edgeBandPixels) && spec.edgeBandPixels >= 1 && spec.edgeBandPixels <= 128)) {
     errors.push('edgeBandPixels 必须是 1..128 的整数');
   }
@@ -251,25 +268,57 @@ export const inspectHorizontalEdgeAlphaCoverage = async (input, edgeBandPixels) 
   };
 };
 
+const applyAlphaFeather = async (input, alphaFeather) => {
+  if (!alphaFeather) return input;
+  const {data, info} = await sharp(input)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({resolveWithObject: true});
+  for (let y = 0; y < info.height; y += 1) {
+    const topFactor = alphaFeather.topPixels > 0
+      ? Math.min(1, y / alphaFeather.topPixels)
+      : 1;
+    const bottomFactor = alphaFeather.bottomPixels > 0
+      ? Math.min(1, (info.height - 1 - y) / alphaFeather.bottomPixels)
+      : 1;
+    const factor = Math.min(topFactor, bottomFactor);
+    for (let x = 0; x < info.width; x += 1) {
+      const offset = (y * info.width + x) * info.channels + 3;
+      data[offset] = Math.round(data[offset] * factor);
+    }
+  }
+  return sharp(data, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: info.channels,
+    },
+  }).png().toBuffer();
+};
+
 const deriveTileBuffer = async ({sourceBuffer, spec}) => {
   const canonical = await sharp(sourceBuffer).extract(spec.canonicalTile).png().toBuffer();
-  if (spec.seamStrategy !== 'mirror-crop') return canonical;
-  const metadata = await sharp(canonical).metadata();
-  const mirrored = await sharp(canonical).flop().png().toBuffer();
-  return sharp({
-    create: {
-      width: metadata.width * 2,
-      height: metadata.height,
-      channels: 4,
-      background: {r: 0, g: 0, b: 0, alpha: 0},
-    },
-  })
-    .composite([
-      {input: canonical, left: 0, top: 0},
-      {input: mirrored, left: metadata.width, top: 0},
-    ])
-    .png()
-    .toBuffer();
+  const tile = spec.seamStrategy !== 'mirror-crop'
+    ? canonical
+    : await (async () => {
+      const metadata = await sharp(canonical).metadata();
+      const mirrored = await sharp(canonical).flop().png().toBuffer();
+      return sharp({
+        create: {
+          width: metadata.width * 2,
+          height: metadata.height,
+          channels: 4,
+          background: {r: 0, g: 0, b: 0, alpha: 0},
+        },
+      })
+        .composite([
+          {input: canonical, left: 0, top: 0},
+          {input: mirrored, left: metadata.width, top: 0},
+        ])
+        .png()
+        .toBuffer();
+    })();
+  return applyAlphaFeather(tile, spec.alphaFeather);
 };
 
 export const edgeMetricsPass = (metrics, thresholds) =>
@@ -457,6 +506,7 @@ export const deriveLoopingStrip = async ({
     axis: spec.axis,
     seamStrategy: spec.seamStrategy,
     canonicalTile: spec.canonicalTile,
+    alphaFeather: spec.alphaFeather ?? null,
     edgeBandPixels: spec.edgeBandPixels,
     thresholds: spec.thresholds,
     renderScaleThresholds,
@@ -531,6 +581,7 @@ export const deriveLoopingStrip = async ({
       keyingMetadataSha256,
     },
     canonicalTile: spec.canonicalTile,
+    alphaFeather: spec.alphaFeather ?? null,
     output: {
       width: outputMetadata.width,
       height: outputMetadata.height,
@@ -575,6 +626,7 @@ export const deriveLoopingStrip = async ({
       derivation: 'looping-strip',
       sourceAssetId: spec.sourceAssetId,
       canonicalTile: spec.canonicalTile,
+      alphaFeather: spec.alphaFeather ?? null,
       seamStrategy: spec.seamStrategy,
       sourceSurface,
       keying: spec.keying ?? null,
@@ -629,6 +681,7 @@ export const deriveLoopingStrip = async ({
       localDerivatives: 1,
       avoidedCalls: 1,
       seamStrategy: spec.seamStrategy,
+      alphaFeather: spec.alphaFeather ?? null,
       sourceSurface,
       keyingMetadataSha256,
       thresholds: spec.thresholds,

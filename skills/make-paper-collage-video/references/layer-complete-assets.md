@@ -47,7 +47,10 @@ trees, road, or shoreline keep moving beyond the viewport, use
 canonical tile and an infinite logical world; the group owns one tracked
 subject and may own additional declared participants. Each subject explicitly
 chooses screen or ground/world anchoring and its foreground-occlusion
-relationship. Do not enlarge a
+relationship. A participant may be one complete composition group, such as a
+frog plus its registered lily-pad support layers; the renderer applies one
+world offset to the group carrier so its internal contact and occlusion remain
+locked. Do not enlarge a
 `registered-depth-stack` envelope or duplicate image nodes to simulate this.
 
 Every strip must also declare what visible surface it provides. A ground
@@ -55,6 +58,22 @@ derivative is not accepted merely because its rectangular transform reaches the
 bottom: its source alpha must prove full horizontal span and real visible
 support at both repeat edges. Near strips must prove a visible foreground band
 that can actually overlap the declared subjects.
+
+When an opaque lower strip overlaps a complete rear plate at a different
+parallax speed, crop it from the matching registered source coordinates and
+declare `alphaFeather.topPixels` (or `bottomPixels`) on the deterministic
+looping-strip derivative. The derivative fingerprints the feather, proves the
+resulting alpha edges at canonical and render scales, and records it in the
+binding. Do not hide a hard horizontal join by blur, a semitransparent rectangle,
+or a second generated background.
+
+Provider-native key planes may contain shadows that are darker versions of the
+declared chroma colour. Chroma removal must measure distance from the
+key-colour ray with a near-black ink floor, then despill and pad transparent
+RGB. Plain Euclidean distance leaves those shadows as opaque magenta fringes;
+raising the threshold until they disappear can instead erase warm flowers and
+skin tones. Visual proof must composite keyed foregrounds over the actual world
+colour, not only inspect alpha on a checkerboard.
 
 Layer completeness does not by itself prove that a visible subject is standing
 or sitting on the layer. For every hero contact, add a root

@@ -39,6 +39,12 @@ crop provenance exists, it also rejects a mostly filled component whose hard
 edges align with perpendicular derivation boundaries. This check is for
 detached residue and hard crop topology; irregular intentional silhouettes and
 soft shadows remain subject to the existing evidence-backed visual review.
+The detached-fragment heuristic is disabled, while hard derivation-boundary
+checks remain active, for `scenery`/`foreground-occluder` looping strips and
+the subject/front members of a `registered-depth-stack`: those contracts
+explicitly represent multiple disconnected rocks, roots, leaves, or reeds.
+Do not apply that exception to characters, props, ground/backdrop strips, or
+untyped transparent images.
 
 The same inspection runs once at original resolution and again after Lanczos
 scaling to the asset's actual proof/render dimensions. Proof bundles contain
@@ -261,11 +267,12 @@ changes do not leave an orphaned one- or two-character tail.
 - `spatial-contract/gait`: all requested registered locomotion states occur inside the window, measured state changes per second meet the authored minimum, `activeUntil` does not precede the final locomotion proof, and the last active transition is close enough to the window end to reject a terminal freeze. If an exit sequence follows, additionally prove its ordered brake/landing/contact states and the final held contact state.
 - `spatial-contract/travel-facing`: the assembled pre-camera subject path has the authored signed displacement, contains no reverse segment, every active state both declares and visibly exhibits the expected facing, and a matching `gait` contract proves that the moving character is actually cycling locomotion states. Inspect the arrow overlay and both endpoint crops; metadata alone cannot pass the human `travel-facing-readable` check.
 - `spatial-contract/path-locomotion`: the assembled subject travels the required physical screen and optical-depth distance and directions; perspective scale and dynamic depth order visibly follow `z`; rendered rotation stays within the authored heading-error and turn-rate limits; every requested registered locomotion state cycles at the minimum cadence through the proof window; camera follow binds the same target and coherent world; and every sampled viewport stays inside declared world bounds. Inspect start, every named turn/depth reversal, end, the 3D path polyline, depth values, and heading arrows. Human review must pass `path-travel-clean`, `path-heading-readable`, `turn-continuity-clean`, `depth-projection-readable`, `depth-order-clean`, `camera-follow-coverage-clean`, and `locomotion-cycle-bound`.
-- Alpha-topology inspection treats detached components as intentional only when
-  their full-canvas bounds are already declared by a current
-  `semanticSliceBinding`, either on the asset itself or on the registered-family
-  mask that derived it. Undeclared detached rectangular fragments and hard
-  rectangular derivation boundaries still fail deterministically.
+- Alpha-topology inspection treats detached components as intentional when
+  their full-canvas bounds are declared by a current `semanticSliceBinding`, or
+  when the asset is a typed multi-component scenery/foreground strip or a
+  subject/front member of a `registered-depth-stack`. The typed exception
+  suppresses only the detached-fragment heuristic; hard rectangular derivation
+  boundaries still fail deterministically.
 - Semantic alpha-component slices must also reproduce the exact declared
   component bounds and alpha-pixel counts in the encoded PNG. Provenance counts
   alone cannot pass `semantic-slice-alpha-current`.

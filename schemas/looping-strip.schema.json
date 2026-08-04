@@ -29,6 +29,15 @@
       },
       "additionalProperties": false
     },
+    "alphaFeather": {
+      "type": "object",
+      "required": ["topPixels", "bottomPixels"],
+      "properties": {
+        "topPixels": {"type": "integer", "minimum": 0, "maximum": 1024},
+        "bottomPixels": {"type": "integer", "minimum": 0, "maximum": 1024}
+      },
+      "additionalProperties": false
+    },
     "edgeBandPixels": {"type": "integer", "minimum": 1, "maximum": 128},
     "thresholds": {
       "type": "object",
