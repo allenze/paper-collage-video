@@ -265,10 +265,24 @@ flips, rotations, and bottom anchors before tiling. Optional
 `edgeStabilizationPixels` duplicates only a narrow complete source-edge band
 before mirror tiling when render-scale resampling would otherwise create
 isolated edge spikes; all source and three-profile seam proofs still apply.
+Edge equality is necessary but not sufficient: the derivative also scans
+premultiplied-RGBA contrast across the outer tile boundary at source and every
+render scale, because equal border pixels can still form a conspicuous vertical
+rail beside their neighbors. `mirror-crop` additionally proves the internal
+mirror fold. Both locations must pass the same deterministic seam-salience
+policy and remain visible in the three-tile evidence.
 Recovery order is local key/period/crop correction, a masked
 edit with the complete original strip and both edge neighborhoods visible, then
 complete-strip regeneration. Isolated edge generation and runtime crossfade
 seam hiding are invalid.
+
+Before any provider call for a `looping-environment`, run
+`project:world-topology-proof -- <slug>`. It renders provider-free SVG evidence
+from the compiled directing plan and proves one tracked screen subject, ordered
+far/mid/ground/near depth with faster near motion, a real ground role, at least
+one viewport of travel, and ordered before/seam/after moments. The image request
+must carry the exact current proof binding. Storyboard or world-plan drift makes
+that binding stale before quota can be reserved.
 
 `assets:derive-registered-family` consumes only schema-v2 family specs. Every
 member must:

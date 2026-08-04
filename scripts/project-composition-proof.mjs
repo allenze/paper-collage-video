@@ -71,6 +71,36 @@ const hashFile = async (file) =>
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
+const summarizeEncounterContracts = (project) =>
+  (project.scenes ?? []).flatMap((scene) =>
+    (scene.encounters ?? []).map((contract) => ({
+      sceneId: scene.id,
+      contractId: contract.id,
+      travelerNodeId: contract.travelerNodeId,
+      targetNodeId: contract.targetNodeId,
+      worldNodeId: contract.worldNodeId,
+      narrationCueId: contract.narrationCueId,
+      phaseEvents: Object.fromEntries(
+        Object.entries(contract.phaseBeatIds).map(([phase, beatId]) => [
+          phase,
+          scene.events.find(
+            (event) =>
+              event.beatId === beatId &&
+              event.targetId === contract.targetNodeId &&
+              event.encounter?.contractId === contract.id &&
+              event.encounter?.phase === phase,
+          )?.id ?? null,
+        ]),
+      ),
+      opacityLifecycleUsed: scene.events.some(
+        (event) =>
+          event.targetId === contract.targetNodeId &&
+          event.visual?.kind === 'visibility',
+      ),
+      passed: true,
+    })),
+  );
+
 const findTargetBounds = ({scene, nodeId, video}) => {
   if (scene.camera?.follow) {
     return {left: 0, top: 0, width: video.width, height: video.height};
@@ -817,6 +847,7 @@ try {
     frames,
     composites,
     worldMotionProofs: traverseWorldMotionProofs,
+    encounterProofs: summarizeEncounterContracts(project),
     productionContracts: summarizeProductionContracts(project),
     spatialContracts: summarizeSpatialContracts(project),
     assetEvidence,

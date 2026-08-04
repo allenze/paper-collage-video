@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {assertAssetManifest} from './asset-manifest-lib.mjs';
+import {transactAssetManifest} from './asset-manifest-lib.mjs';
 import {
   ROOT,
   fileExists,
@@ -31,14 +31,14 @@ try {
   if (!(await fileExists(manifestFile))) {
     throw new Error('semantic slices 必须指向已有 assets-manifest.json');
   }
-  const manifest = assertAssetManifest(
-    structuredClone(await readJson(manifestFile)),
-    spec.projectSlug,
-  );
-  const result = await deriveSemanticSlices({
-    root: ROOT,
-    spec,
-    manifest,
+  const result = await transactAssetManifest({
+    manifestFile,
+    projectSlug: spec.projectSlug,
+    mutate: (manifest) => deriveSemanticSlices({
+      root: ROOT,
+      spec,
+      manifest,
+    }),
   });
   const reportDirectory = path.join(
     ROOT,
@@ -51,10 +51,7 @@ try {
     `${spec.topologyId}-report.json`,
   );
   await fs.mkdir(reportDirectory, {recursive: true});
-  await Promise.all([
-    writeJson(manifestFile, result.manifest),
-    writeJson(reportFile, result.report),
-  ]);
+  await writeJson(reportFile, result.report);
   console.log(
     `✓ semantic slices ${spec.topologyId}: provider image calls 0，` +
     `local derivatives ${result.records.length}，全部 alpha 组件唯一归属。`,

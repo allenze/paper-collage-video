@@ -1,4 +1,6 @@
 import {createHash} from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 export const ASSET_LIFECYCLE_STATUSES = [
   'active',
@@ -14,6 +16,89 @@ export const createAssetRecordId = ({assetId, requestFingerprint, sha256, record
 
 export const activeManifestAssets = (manifest) =>
   (manifest.assets ?? []).filter(({lifecycle}) => lifecycle?.status === 'active');
+
+const wait = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const readManifestFile = async ({manifestFile, projectSlug, createIfMissing}) => {
+  try {
+    return JSON.parse(await fs.readFile(manifestFile, 'utf8'));
+  } catch (error) {
+    if (error?.code !== 'ENOENT' || !createIfMissing) throw error;
+    return {
+      $schema: '../../schemas/assets-manifest.schema.json',
+      schemaVersion: 4,
+      projectSlug,
+      assets: [],
+    };
+  }
+};
+
+const writeManifestAtomically = async (manifestFile, manifest) => {
+  await fs.mkdir(path.dirname(manifestFile), {recursive: true});
+  const temporary = `${manifestFile}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await fs.writeFile(temporary, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+    await fs.rename(temporary, manifestFile);
+  } finally {
+    await fs.rm(temporary, {force: true}).catch(() => {});
+  }
+};
+
+/**
+ * Serialize the complete read/mutate/validate/write cycle for assets-manifest.json.
+ *
+ * The callback may perform deterministic derivation work while the lock is held.
+ * That is intentional: a derivation that fingerprints the source manifest must
+ * commit against the same snapshot it inspected. Callers return
+ * `{manifest, ...result}`; only `manifest` is persisted.
+ */
+export const transactAssetManifest = async ({
+  manifestFile,
+  projectSlug,
+  createIfMissing = false,
+  mutate,
+}) => {
+  const lockDirectory = `${manifestFile}.lock`;
+  let acquired = false;
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    try {
+      await fs.mkdir(lockDirectory);
+      acquired = true;
+      break;
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+      const stat = await fs.stat(lockDirectory).catch(() => null);
+      if (stat && Date.now() - stat.mtimeMs > 30_000) {
+        await fs.rm(lockDirectory, {recursive: true, force: true});
+        continue;
+      }
+      await wait(50);
+    }
+  }
+  if (!acquired) {
+    throw new Error('assets-manifest.json 正被其他进程更新，请稍后重试。');
+  }
+  const heartbeat = setInterval(() => {
+    const now = new Date();
+    fs.utimes(lockDirectory, now, now).catch(() => {});
+  }, 5_000);
+  heartbeat.unref();
+  try {
+    const current = assertAssetManifest(
+      await readManifestFile({manifestFile, projectSlug, createIfMissing}),
+      projectSlug,
+    );
+    const result = await mutate(structuredClone(current));
+    const nextManifest = result?.manifest ?? result;
+    assertAssetManifest(nextManifest, projectSlug);
+    await writeManifestAtomically(manifestFile, nextManifest);
+    return result;
+  } finally {
+    clearInterval(heartbeat);
+    await fs.rm(lockDirectory, {recursive: true, force: true});
+  }
+};
 
 export const assertAssetManifest = (manifest, projectSlug) => {
   if (manifest?.schemaVersion !== 4) {

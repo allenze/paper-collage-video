@@ -14,7 +14,11 @@ import {
   stateOutputName,
   validateStateSheetSpec,
 } from './state-sheet-lib.mjs';
-import {assertAssetManifest, createAssetRecordId} from './asset-manifest-lib.mjs';
+import {
+  assertAssetManifest,
+  createAssetRecordId,
+  transactAssetManifest,
+} from './asset-manifest-lib.mjs';
 
 const run = (command, args) => new Promise((resolve, reject) => {
   const child = spawn(command, args, {cwd: ROOT, stdio: 'inherit'});
@@ -373,17 +377,37 @@ try {
   });
   const derivedIds = new Set(derived.map(({assetId}) => assetId));
   const replacementByAssetId = new Map(derived.map((record) => [record.assetId, record]));
-  for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
-    derivedIds.has(assetId) && lifecycle?.status === 'active')) {
-    previous.lifecycle = {
-      status: 'superseded',
-      changedAt: recordedAt,
-      reason: 'replaced-by-new-registered-cell',
-      supersededBy: replacementByAssetId.get(previous.assetId).recordId,
-    };
-  }
-  manifest.assets.push(...derived);
-  await writeJson(manifestFile, manifest);
+  await transactAssetManifest({
+    manifestFile,
+    projectSlug: spec.projectSlug,
+    mutate: (latestManifest) => {
+      const currentSource = latestManifest.assets.find(
+        ({assetId, lifecycle}) =>
+          assetId === spec.sourceAssetId &&
+          ['active', 'recovery-source'].includes(lifecycle?.status),
+      );
+      if (
+        !currentSource ||
+        currentSource.recordId !== source.recordId ||
+        currentSource.sha256 !== sourceSha256
+      ) {
+        throw new Error(
+          '状态表派生期间 source asset 已变化；输出未登记，请基于当前 manifest 重试。',
+        );
+      }
+      for (const previous of latestManifest.assets.filter(({assetId, lifecycle}) =>
+        derivedIds.has(assetId) && lifecycle?.status === 'active')) {
+        previous.lifecycle = {
+          status: 'superseded',
+          changedAt: recordedAt,
+          reason: 'replaced-by-new-registered-cell',
+          supersededBy: replacementByAssetId.get(previous.assetId).recordId,
+        };
+      }
+      latestManifest.assets.push(...derived);
+      return latestManifest;
+    },
+  });
   const providerImageCalls = ['host', 'command'].includes(source.adapter) ? 1 : 0;
   const recoveryTargetCount = sourceRecovery?.targetStateIds?.length ?? derived.length;
   await writeJson(path.join(outputDirectory, `${spec.poseFamilyId}-state-sheet-report.json`), {

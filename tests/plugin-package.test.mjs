@@ -144,6 +144,10 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/derive-canonical-container.mjs',
   );
   assert.equal(
+    packageJson.scripts['assets:normalize-provider-source'],
+    'node scripts/normalize-provider-source.mjs',
+  );
+  assert.equal(
     packageJson.scripts['proof:canonical-container'],
     'node scripts/prove-canonical-container.mjs',
   );
@@ -152,6 +156,10 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/prove-alpha-bands.mjs',
   );
   assert.equal(packageJson.scripts['project:plan'], 'node scripts/project-plan.mjs');
+  assert.equal(
+    packageJson.scripts['project:world-topology-proof'],
+    'node scripts/project-world-topology-proof.mjs',
+  );
   assert.equal(packageJson.scripts['project:intake'], 'node scripts/project-intake.mjs');
   assert.equal(packageJson.scripts['project:scenarios'], 'node scripts/project-scenarios.mjs');
   assert.equal(packageJson.scripts['project:budget'], 'node scripts/project-budget.mjs');
@@ -344,6 +352,10 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/registered-family-lib.mjs',
     'scripts/derive-semantic-slices.mjs',
     'scripts/semantic-slices-lib.mjs',
+    'scripts/world-topology-proof-lib.mjs',
+    'scripts/encounter-contract-lib.mjs',
+    'scripts/project-world-topology-proof.mjs',
+    'scripts/normalize-provider-source.mjs',
     'scripts/motion-treatment-lib.mjs',
     'scripts/motion-contract-lib.mjs',
     'scripts/motion-approval-lib.mjs',
@@ -407,6 +419,9 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/canonical-container-binding.schema.json',
     'schemas/provider-observation.schema.json',
     'schemas/rejected-output-recovery.schema.json',
+    'schemas/world-topology-proof.schema.json',
+    'schemas/encounter-contract.schema.json',
+    'schemas/provider-source-normalization.schema.json',
     'templates/project/production.json',
     'templates/project/planning-scenarios.json',
     'templates/project/production-metrics.json',
@@ -423,6 +438,7 @@ test('packaged runtime is lightweight and independent from production projects',
     'fixtures/canonical-container/canonical-container-plan.json',
     'fixtures/phase2-proof-fixture.mjs',
     'tests/canonical-container.test.mjs',
+    'tests/p0-p1-hardening.test.mjs',
     'tests/motion-contract.test.mjs',
     'public/fixtures/vox-phase2-proof/narration-1.wav',
     'public/fixtures/vox-phase2-proof/narration-1.timing.json',

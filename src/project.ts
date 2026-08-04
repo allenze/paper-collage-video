@@ -981,7 +981,30 @@ export type ProjectEvent = {
   targetId: string;
   visual: EventVisual | null;
   proofTimeId?: string;
+  encounter?: {
+    contractId: string;
+    phase: 'enter' | 'approach' | 'answer' | 'exit';
+    narrationCueId?: string;
+  };
   sound?: ProjectSound;
+};
+
+export type EncounterContract = {
+  id: string;
+  travelerNodeId: string;
+  targetNodeId: string;
+  worldNodeId: string;
+  narrationCueId: string;
+  phaseBeatIds: {
+    enter: string;
+    approach: string;
+    answer: string;
+    exit: string;
+  };
+  entryEdge: 'left' | 'right';
+  exitEdge: 'left' | 'right';
+  minimumTravelViewports: number;
+  cueToleranceSeconds: number;
 };
 
 export type SceneBoundaryTransition = {
@@ -1109,6 +1132,7 @@ export type ProjectScene = {
     durationSeconds: number;
     text: string;
   };
+  encounters?: EncounterContract[];
   subtitles: SubtitleCue[];
   events: ProjectEvent[];
 };

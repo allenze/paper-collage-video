@@ -78,6 +78,11 @@ a real held tableau before travel, not a substitute for hiding a moving
 background. Also author
 ordered semantic strip roles, and before/seam/after proof ids. Every
 `world-strip` resolves to at least one viewport width at its authored height.
+The compiled plan must pass `project:world-topology-proof` before any
+environment image call. This provider-free gate proves that the planned
+geometry, depth-speed order, ground, subject anchoring, travel distance, and
+three seam moments are structurally capable of producing the intended shot;
+an attractive generated strip cannot repair a failed topology.
 Each strip declares its visible surface role: backdrop, scenery,
 walkable-ground, or foreground-occluder. The looping group also owns
 `subjectBindings`: exactly one tracked subject plus any declared participants.
@@ -90,6 +95,13 @@ displacement. This allows a starter, finish marker, or second racer to belong
 to the same world and lets near strips genuinely occlude selected actors.
 The renderer expands strip copies internally. Authors never place repeated
 asset nodes.
+
+When a narration cue identifies an encountered world participant, direct the
+interaction as one `scene.encounters[]` contract with four ordered physical
+phases: enter, approach, answer, and exit. Bind the cue only to answer and keep
+the actor world-anchored through the whole lifecycle. Do not schedule several
+possible animals at once and choose by opacity; the cue, target, phase events,
+and actual narration timing must agree.
 
 A deliberately motionless scene uses `motionPolicy=locked-static` plus a human
 rationale and static-only treatments. This may recalculate only the

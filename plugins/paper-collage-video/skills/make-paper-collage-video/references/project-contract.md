@@ -17,6 +17,7 @@ Read this only when creating/changing project files or diagnosing validation/sta
 | `semantic-contracts.json` | Reusable identity, topology, mechanism, diagram, and evidence-target invariants |
 | `generation-attempts.jsonl` | Append-only quota reservation and real provider-attempt outcomes |
 | `assets-manifest.json` | Provider provenance, source families, fingerprints, hashes, and active/superseded/rejected/recovery-source lifecycle |
+| `world-topology-proof.json` | Provider-free current-world structure proof required before any looping-environment image attempt |
 | `quality-report.json` | Hash-bound current asset/composite quality plus non-current asset history |
 | `dist/<slug>/assets-ready-seal.json` | Current project, runtime, storyboard, validation, quality, audio, and subtitle delivery fingerprints required by preview/final rendering |
 | `review.md` | Generated approval summary plus natural-language revision history |
@@ -103,6 +104,14 @@ statistics to the source SHA. A historical rejected output can enter derivation
 only as a `recovery-source` record produced by
 `provider:recover-rejected-source`, never by hand-editing the manifest or
 ledger. Its original attempt stays rejected and consumed.
+
+Every manifest mutation uses the shared transaction helper: acquire the project
+manifest lock, reread the complete current file, mutate and validate the whole
+result, write a same-directory temporary file, then atomically rename it. This
+prevents concurrent provider recording and deterministic derivation from
+silently overwriting one another. A crashed stale lock may be recovered by the
+helper; external code must not bypass the transaction with a stale read/write
+pair.
 
 ## v12 Project, Motion Contract v1, v9 Editorial, Composition, and Boundary Tree
 
@@ -273,6 +282,16 @@ ignores camera offsets while retaining layer order; it must not be used to fake
 a moving world. A frozen travel is mutually exclusive with both active-window
 cues, and its quality review uses `world-lock-clean` rather than
 motion/repetition checks.
+
+`scene.encounters[]` is the executable narration-to-world encounter contract.
+One record binds a tracked traveler, one world-anchored target, the owning
+looping environment, exactly one narration cue, ordered
+`enter`/`approach`/`answer`/`exit` beat ids, travel-consistent entry/exit edges,
+minimum world displacement, and a cue tolerance. The four corresponding
+project events bind the same contract and target; only `answer` binds the cue.
+Validation checks actual narration timing, rejects a cue bound to a different
+animal, and forbids target visibility events so a continuous-world actor cannot
+appear or disappear by opacity teleport.
 
 A root `worlds[]` contract binds every participating scene to one four-role
 source map. Each `far`/`mid`/`ground`/`near` `world-strip` must reuse that

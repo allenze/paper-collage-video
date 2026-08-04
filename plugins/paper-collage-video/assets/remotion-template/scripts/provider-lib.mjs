@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import {
   assertAssetManifest,
   createAssetRecordId,
+  transactAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {ROOT, SLUG_PATTERN, fileExists, probeMedia, readJson, writeJson} from './project-lib.mjs';
 import {
@@ -41,6 +42,7 @@ import {
   canonicalContainerPackageBindingMatchesPlan,
   validateCanonicalContainerIntent,
 } from './container-source-plan-lib.mjs';
+import {assertWorldTopologyBinding} from './world-topology-proof-lib.mjs';
 
 export const PROVIDER_CAPABILITIES = ['text', 'image', 'voice'];
 export const PROVIDER_ADAPTERS = ['host', 'command', 'manual'];
@@ -146,6 +148,8 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     semanticBinding: request.semanticBinding ?? null,
     timingBinding: request.timingBinding ?? null,
     outputSurface: request.outputSurface ?? null,
+    providerSource: request.providerSource ?? null,
+    worldTopologyBinding: request.worldTopologyBinding ?? null,
     providerId,
   };
   return createHash('sha256')
@@ -711,6 +715,59 @@ export const validateAssetRequest = (request) => {
   }
   if (request?.capability === 'image' && !isPlainObject(request.semanticBinding)) {
     errors.push('schema-v8 image request 缺少 semanticBinding');
+  }
+  if (request?.providerSource !== undefined) {
+    const source = request.providerSource;
+    const target = source?.normalization?.targetCanvas;
+    const expected = request.compositionBinding?.canvas;
+    if (request.capability !== 'image') {
+      errors.push('providerSource 只能用于 image request');
+    } else if (
+      !isPlainObject(source) ||
+      source.mode !== 'provider-native' ||
+      !Number.isInteger(source.minimumWidth) ||
+      source.minimumWidth < 2 ||
+      !Number.isInteger(source.minimumHeight) ||
+      source.minimumHeight < 2 ||
+      !Number.isFinite(source.aspectRatioTolerance) ||
+      source.aspectRatioTolerance < 0 ||
+      source.aspectRatioTolerance > 0.1 ||
+      source.normalization?.method !== 'deterministic-resize' ||
+      !Number.isInteger(target?.width) ||
+      target.width < 1 ||
+      !Number.isInteger(target?.height) ||
+      target.height < 1
+    ) {
+      errors.push(
+        'providerSource 必须声明 provider-native 最小画布、宽高比容差和 deterministic-resize 目标。',
+      );
+    } else if (
+      target.width !== expected?.width ||
+      target.height !== expected?.height
+    ) {
+      errors.push(
+        'providerSource.normalization.targetCanvas 必须与 compositionBinding.canvas 一致。',
+      );
+    }
+  }
+  if (
+    request?.capability === 'image' &&
+    request.compositionBinding?.pattern === 'looping-environment'
+  ) {
+    const binding = request.worldTopologyBinding;
+    if (
+      !isPlainObject(binding) ||
+      binding.schemaVersion !== 1 ||
+      !binding.proofId ||
+      !/^[a-f0-9]{64}$/.test(binding.fingerprint ?? '') ||
+      !binding.stripId
+    ) {
+      errors.push(
+        'looping-environment image request 必须绑定通过的 worldTopologyBinding。',
+      );
+    }
+  } else if (request?.worldTopologyBinding !== undefined) {
+    errors.push('worldTopologyBinding 只能用于 looping-environment image request');
   }
   if (request?.capability === 'image') {
     const styleIssues = validateStyleProfileBinding(
@@ -1530,6 +1587,36 @@ export const loadAssetRequest = async (requestInput) => {
       );
     }
   }
+  if (
+    request.capability === 'image' &&
+    request.compositionBinding?.pattern === 'looping-environment'
+  ) {
+    const storyboardFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'storyboard.json',
+    );
+    const reportFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'world-topology-proof.json',
+    );
+    if (
+      !(await fileExists(storyboardFile)) ||
+      !(await fileExists(reportFile))
+    ) {
+      throw new Error(
+        'looping-environment provider request 前必须运行 project:world-topology-proof。',
+      );
+    }
+    assertWorldTopologyBinding({
+      request,
+      storyboard: await readJson(storyboardFile),
+      report: await readJson(reportFile),
+    });
+  }
   if (request.containerPackageBinding) {
     const storyboardFile = path.join(
       ROOT,
@@ -1652,6 +1739,7 @@ export const verifyOutputFile = async (file, request = null) => {
   }
   let metadata = null;
   let keyPlaneObservation = null;
+  let providerSourceObservation = null;
   if (request?.capability === 'image') {
     metadata = await sharp(file).metadata().catch(() => null);
     if (!metadata?.width || !metadata?.height) {
@@ -1659,6 +1747,7 @@ export const verifyOutputFile = async (file, request = null) => {
     }
     if (request.schemaVersion >= 3) {
       const expected = request.compositionBinding.canvas;
+      const providerSourcePolicy = request.providerSource ?? null;
       const providerSource =
         request.layerPackageBinding?.sheetLayout?.providerSource ?? null;
       const stateSheetLayout = request.stateSheetBinding?.layout ?? null;
@@ -1686,12 +1775,47 @@ export const verifyOutputFile = async (file, request = null) => {
       }
       if (
         providerSource?.canvasMode !== 'provider-native' &&
+        providerSourcePolicy?.mode !== 'provider-native' &&
         !stateSheetUsesProviderNativeCanvas &&
         (metadata.width !== expected.width || metadata.height !== expected.height)
       ) {
         throw new Error(
           `provider 图像尺寸 ${metadata.width}x${metadata.height} 与请求画布 ${expected.width}x${expected.height} 不一致。`,
         );
+      }
+      if (providerSourcePolicy?.mode === 'provider-native') {
+        const actualAspect = metadata.width / metadata.height;
+        const targetAspect = expected.width / expected.height;
+        if (
+          metadata.width < providerSourcePolicy.minimumWidth ||
+          metadata.height < providerSourcePolicy.minimumHeight ||
+          Math.abs(actualAspect - targetAspect) >
+            providerSourcePolicy.aspectRatioTolerance
+        ) {
+          throw new Error(
+            `provider 原生画布 ${metadata.width}x${metadata.height} 不满足最小尺寸或宽高比容差；` +
+            `目标 ${expected.width}x${expected.height}，容差 ${providerSourcePolicy.aspectRatioTolerance}。`,
+          );
+        }
+        const observation = {
+          schemaVersion: 1,
+          mode: 'provider-native',
+          rawCanvas: {width: metadata.width, height: metadata.height},
+          targetCanvas: {
+            width: providerSourcePolicy.normalization.targetCanvas.width,
+            height: providerSourcePolicy.normalization.targetCanvas.height,
+          },
+          normalization: 'deterministic-resize',
+          normalizationRequired:
+            metadata.width !== expected.width ||
+            metadata.height !== expected.height,
+        };
+        providerSourceObservation = {
+          ...observation,
+          observationFingerprint: createHash('sha256')
+            .update(JSON.stringify(stableValue(observation)))
+            .digest('hex'),
+        };
       }
     }
     const surface = request.outputSurface;
@@ -1868,7 +1992,12 @@ export const verifyOutputFile = async (file, request = null) => {
       channels: audio.channels ?? null,
     };
   }
-  return {stat, metadata, keyPlaneObservation};
+  return {
+    stat,
+    metadata,
+    keyPlaneObservation,
+    providerSourceObservation,
+  };
 };
 
 const compositionFamilyKey = (asset) => {
@@ -1966,10 +2095,16 @@ export const recordAssetProvenance = async ({
   let stat;
   let metadata;
   let keyPlaneObservation;
+  let providerSourceObservation;
   let sha256;
   try {
     sha256 = createHash('sha256').update(await fs.readFile(output)).digest('hex');
-    ({stat, metadata, keyPlaneObservation} = await verifyOutputFile(output, request));
+    ({
+      stat,
+      metadata,
+      keyPlaneObservation,
+      providerSourceObservation,
+    } = await verifyOutputFile(output, request));
   } catch (error) {
     if (trackedAttempt && !recoverClosedAttempt) {
       await closeGenerationAttempt({
@@ -1987,114 +2122,114 @@ export const recordAssetProvenance = async ({
   const manifestFile = path.join(ROOT, 'projects', request.projectSlug, 'assets-manifest.json');
   let record;
   try {
-    const manifest = (await fileExists(manifestFile))
-      ? await readJson(manifestFile)
-      : {
-          $schema: '../../schemas/assets-manifest.schema.json',
-          schemaVersion: 4,
-          projectSlug: request.projectSlug,
-          assets: [],
-        };
-    assertAssetManifest(manifest, request.projectSlug);
-    if (
-      recoverClosedAttempt &&
-      manifest.assets.some((asset) => asset.attemptId === attemptId)
-    ) {
-      throw new Error(`生成尝试 ${attemptId} 已经存在资产登记，不能重复恢复。`);
-    }
-    if (recoverClosedAttempt) {
-      await assertRecoverableGenerationAttempt({
-        request,
-        provider,
-        attemptId,
-        model: canonicalModel,
-        output: path.relative(ROOT, output),
-        outputSha256: sha256,
-      });
-    }
-    const actualModel = trackedAttemptRecord?.model ?? canonicalModel;
-    const recordedAt = new Date().toISOString();
-    const requestFingerprint = createRequestFingerprint({
-      request,
-      providerId: provider.id,
-      model: actualModel,
-    });
-    const providerObservation = keyPlaneObservation
-      ? {
-          schemaVersion: 1,
-          ...keyPlaneObservation,
-          observationFingerprint: createHash('sha256')
-            .update(JSON.stringify(stableValue({
-              policyFingerprint: keyPlaneObservation.policyFingerprint,
-              sourceSha256: sha256,
-              cells: keyPlaneObservation.cells,
-            })))
-            .digest('hex'),
-          sourceAttempt: {
-            attemptId,
-            status: 'succeeded',
-            quotaConsumed: true,
-            requestFingerprint: generationRequestFingerprint(request),
-            output: path.relative(ROOT, output),
-          },
+    const transaction = await transactAssetManifest({
+      manifestFile,
+      projectSlug: request.projectSlug,
+      createIfMissing: true,
+      mutate: async (manifest) => {
+        if (
+          recoverClosedAttempt &&
+          manifest.assets.some((asset) => asset.attemptId === attemptId)
+        ) {
+          throw new Error(`生成尝试 ${attemptId} 已经存在资产登记，不能重复恢复。`);
         }
-      : null;
-    record = {
-      recordId: createAssetRecordId({
-        assetId: request.assetId,
-        requestFingerprint,
-        sha256,
-        recordedAt,
-      }),
-      assetId: request.assetId,
-      capability: request.capability,
-      file: path.relative(ROOT, output),
-      provider: provider.id,
-      adapter: provider.adapter,
-      tool: provider.tool ?? null,
-      model: actualModel,
-      externalId: externalId || null,
-      attemptId,
-      recoveredFromClosedAttempt: recoverClosedAttempt,
-      requestFingerprint,
-      reusedFrom,
-      sha256,
-      sizeBytes: stat.size,
-      media: metadata
-        ? request.capability === 'image'
-          ? {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false}
-          : metadata
-        : null,
-      recordedAt,
-      request: {...request},
-      compositionBinding: request.compositionBinding ?? null,
-      stateBinding: request.stateBinding ?? null,
-      stateSheetBinding: request.stateSheetBinding ?? null,
-      stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
-      containerPackageBinding:
-        request.containerPackageBinding ?? null,
-      semanticBinding: request.semanticBinding ?? null,
-      providerObservation,
-      familyFingerprint: null,
-      lifecycle: {
-        status: 'active',
-        changedAt: recordedAt,
-        reason: 'recorded',
-        supersededBy: null,
+        if (recoverClosedAttempt) {
+          await assertRecoverableGenerationAttempt({
+            request,
+            provider,
+            attemptId,
+            model: canonicalModel,
+            output: path.relative(ROOT, output),
+            outputSha256: sha256,
+          });
+        }
+        const actualModel = trackedAttemptRecord?.model ?? canonicalModel;
+        const recordedAt = new Date().toISOString();
+        const requestFingerprint = createRequestFingerprint({
+          request,
+          providerId: provider.id,
+          model: actualModel,
+        });
+        const providerObservation = keyPlaneObservation
+          ? {
+              schemaVersion: 1,
+              ...keyPlaneObservation,
+              observationFingerprint: createHash('sha256')
+                .update(JSON.stringify(stableValue({
+                  policyFingerprint: keyPlaneObservation.policyFingerprint,
+                  sourceSha256: sha256,
+                  cells: keyPlaneObservation.cells,
+                })))
+                .digest('hex'),
+              sourceAttempt: {
+                attemptId,
+                status: 'succeeded',
+                quotaConsumed: true,
+                requestFingerprint: generationRequestFingerprint(request),
+                output: path.relative(ROOT, output),
+              },
+            }
+          : null;
+        const nextRecord = {
+          recordId: createAssetRecordId({
+            assetId: request.assetId,
+            requestFingerprint,
+            sha256,
+            recordedAt,
+          }),
+          assetId: request.assetId,
+          capability: request.capability,
+          file: path.relative(ROOT, output),
+          provider: provider.id,
+          adapter: provider.adapter,
+          tool: provider.tool ?? null,
+          model: actualModel,
+          externalId: externalId || null,
+          attemptId,
+          recoveredFromClosedAttempt: recoverClosedAttempt,
+          requestFingerprint,
+          reusedFrom,
+          sha256,
+          sizeBytes: stat.size,
+          media: metadata
+            ? request.capability === 'image'
+              ? {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false}
+              : metadata
+            : null,
+          recordedAt,
+          request: {...request},
+          providerSource: providerSourceObservation,
+          compositionBinding: request.compositionBinding ?? null,
+          stateBinding: request.stateBinding ?? null,
+          stateSheetBinding: request.stateSheetBinding ?? null,
+          stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
+          containerPackageBinding:
+            request.containerPackageBinding ?? null,
+          semanticBinding: request.semanticBinding ?? null,
+          providerObservation,
+          familyFingerprint: null,
+          lifecycle: {
+            status: 'active',
+            changedAt: recordedAt,
+            reason: 'recorded',
+            supersededBy: null,
+          },
+        };
+        for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
+          assetId === request.assetId && lifecycle.status === 'active')) {
+          previous.lifecycle = {
+            status: 'superseded',
+            changedAt: recordedAt,
+            reason: 'replaced-by-new-record',
+            supersededBy: nextRecord.recordId,
+          };
+        }
+        manifest.assets.push(nextRecord);
+        refreshActiveCompositionFamilyFingerprints(manifest);
+        return {manifest, record: nextRecord};
       },
-    };
-    for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
-      assetId === request.assetId && lifecycle.status === 'active')) {
-      previous.lifecycle = {
-        status: 'superseded',
-        changedAt: recordedAt,
-        reason: 'replaced-by-new-record',
-        supersededBy: record.recordId,
-      };
-    }
-    manifest.assets.push(record);
-    refreshActiveCompositionFamilyFingerprints(manifest);
-    await writeJson(manifestFile, manifest);
+    });
+    record = transaction.record;
   } catch (error) {
     if (trackedAttempt && !recoverClosedAttempt) {
       await closeGenerationAttempt({

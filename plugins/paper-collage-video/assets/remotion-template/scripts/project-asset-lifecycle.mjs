@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import {
-  assertAssetManifest,
+  transactAssetManifest,
   transitionAssetLifecycle,
 } from './asset-manifest-lib.mjs';
-import {ROOT, assertSlug, readJson, writeJson} from './project-lib.mjs';
+import {ROOT, assertSlug} from './project-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -20,9 +20,14 @@ try {
     throw new Error('用法：project:asset-lifecycle -- <slug> --asset=<id> --status=<active|rejected|recovery-source> --reason=<具体原因>');
   }
   const manifestFile = path.join(ROOT, 'projects', slug, 'assets-manifest.json');
-  const manifest = assertAssetManifest(await readJson(manifestFile), slug);
-  const record = transitionAssetLifecycle(manifest, assetId, status, {reason});
-  await writeJson(manifestFile, manifest);
+  const {record} = await transactAssetManifest({
+    manifestFile,
+    projectSlug: slug,
+    mutate: (manifest) => ({
+      manifest,
+      record: transitionAssetLifecycle(manifest, assetId, status, {reason}),
+    }),
+  });
   console.log(`✓ 资产生命周期：${record.assetId} -> ${record.lifecycle.status}`);
 } catch (error) {
   console.error(`project:asset-lifecycle failed: ${error.message}`);

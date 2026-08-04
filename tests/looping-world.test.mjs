@@ -503,9 +503,10 @@ test('looping strip derivation accepts a recovery source and proves source/rende
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
         const seamX = x >= width - 4 ? x - (width - 4) : x;
+        const wave = Math.sin((seamX / (width - 4)) * Math.PI * 2);
         const offset = (y * width + x) * 4;
-        pixels[offset] = (seamX * 7 + y * 3) % 255;
-        pixels[offset + 1] = (seamX * 11 + 40) % 255;
+        pixels[offset] = Math.round(128 + wave * 34 + (y % 9));
+        pixels[offset + 1] = Math.round(142 + wave * 26 + (y % 7));
         pixels[offset + 2] = (y * 5 + 90) % 255;
         pixels[offset + 3] = 255;
       }

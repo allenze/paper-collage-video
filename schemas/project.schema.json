@@ -522,6 +522,9 @@
         "targetId": {"type": "string", "minLength": 1},
         "visual": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/visibilityVisual"}, {"$ref": "#/$defs/emphasisVisual"}, {"$ref": "#/$defs/holdVisual"}]},
         "proofTimeId": {"type": "string", "minLength": 1},
+        "encounter": {
+          "$ref": "https://local.paper-collage.dev/encounter-contract.schema.json#/$defs/eventBinding"
+        },
         "sound": {"$ref": "#/$defs/sound"}
       },
       "additionalProperties": false
@@ -710,6 +713,12 @@
             "text": {"type": "string"}
           },
           "additionalProperties": false
+        },
+        "encounters": {
+          "type": "array",
+          "items": {
+            "$ref": "https://local.paper-collage.dev/encounter-contract.schema.json#/$defs/contract"
+          }
         },
         "subtitles": {
           "type": "array",

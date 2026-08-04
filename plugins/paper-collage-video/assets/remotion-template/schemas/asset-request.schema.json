@@ -11,6 +11,48 @@
     "assetId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "capability": {"enum": ["text", "image", "voice"]},
     "output": {"type": "string", "minLength": 1},
+    "providerSource": {
+      "type": "object",
+      "required": ["mode", "minimumWidth", "minimumHeight", "aspectRatioTolerance", "normalization"],
+      "properties": {
+        "mode": {"const": "provider-native"},
+        "minimumWidth": {"type": "integer", "minimum": 2},
+        "minimumHeight": {"type": "integer", "minimum": 2},
+        "aspectRatioTolerance": {"type": "number", "minimum": 0, "maximum": 0.1},
+        "normalization": {
+          "type": "object",
+          "required": ["method", "targetCanvas"],
+          "properties": {
+            "method": {"const": "deterministic-resize"},
+            "targetCanvas": {
+              "type": "object",
+              "required": ["width", "height"],
+              "properties": {
+                "width": {"type": "integer", "minimum": 1},
+                "height": {"type": "integer", "minimum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "worldTopologyBinding": {
+      "type": "object",
+      "required": ["schemaVersion", "proofId", "fingerprint", "stripId"],
+      "properties": {
+        "schemaVersion": {"const": 1},
+        "proofId": {"type": "string", "minLength": 1},
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stripId": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
     "prompt": {"type": "string"},
     "styleProfileBinding": {
       "$ref": "https://local.paper-collage.dev/style-profile.schema.json#/$defs/binding"

@@ -58,6 +58,7 @@ import {
 } from './canonical-container-lib.mjs';
 import {validateProductionContracts} from './world-trajectory-lib.mjs';
 import {validateSpatialContracts} from './spatial-contract-lib.mjs';
+import {validateEncounterExecution} from './encounter-contract-lib.mjs';
 
 const execFileAsync = promisify(execFile);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -965,6 +966,7 @@ export const validateProject = async (project, options = {}) => {
     }
 
     const narrationLocation = `${sceneLocation}.narration`;
+    let narrationTiming = null;
     if (!Number.isFinite(scene.narration?.startSeconds) || scene.narration.startSeconds < 0) {
       add('error', 'narration-start', 'narration.startSeconds 必须是非负秒数。', `${narrationLocation}.startSeconds`);
     }
@@ -992,13 +994,16 @@ export const validateProject = async (project, options = {}) => {
     }
     if (scene.narration?.timingSrc) {
       try {
-        if (!(await fileExists(resolvePublicFile(scene.narration.timingSrc)))) {
+        const timingFile = resolvePublicFile(scene.narration.timingSrc);
+        if (!(await fileExists(timingFile))) {
           add(
             'error',
             'narration-timing-missing',
             `缺少旁白时间戳：${scene.narration.timingSrc}`,
             `${narrationLocation}.timingSrc`,
           );
+        } else {
+          narrationTiming = await readJson(timingFile);
         }
       } catch (error) {
         add('error', 'narration-timing-path', error.message, `${narrationLocation}.timingSrc`);
@@ -1438,6 +1443,21 @@ export const validateProject = async (project, options = {}) => {
         issue.code,
         issue.message,
         `${sceneLocation}.events[${issue.eventIndex}].visual`,
+      );
+    }
+    for (const encounterIssue of validateEncounterExecution({
+      scene,
+      storyboardScene,
+      nodesById,
+      narrationTiming,
+      fps: project.video.fps,
+      location: sceneLocation,
+    })) {
+      add(
+        'error',
+        encounterIssue.code,
+        encounterIssue.message,
+        encounterIssue.location,
       );
     }
 

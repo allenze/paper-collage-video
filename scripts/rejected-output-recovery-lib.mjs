@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import {
   createAssetRecordId,
   assertAssetManifest,
+  transactAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {
   generationRequestFingerprint,
@@ -476,11 +477,28 @@ export const inspectRejectedOutputRecovery = async ({
 };
 
 export const writeRejectedOutputRecovery = async (result) => {
-  await fs.writeFile(
-    result.manifestFile,
-    `${JSON.stringify(result.manifest, null, 2)}\n`,
-    'utf8',
-  );
+  await transactAssetManifest({
+    manifestFile: result.manifestFile,
+    projectSlug: result.record.request.projectSlug,
+    mutate: (manifest) => {
+      if (
+        manifest.assets.some(
+          ({recordId, attemptId}) =>
+            recordId === result.record.recordId ||
+            (
+              attemptId === result.record.attemptId &&
+              result.record.recoveredFromRejectedAttempt === true
+            ),
+        )
+      ) {
+        throw new Error(
+          `recovery-source ${result.record.attemptId} 已经登记，不能重复写入。`,
+        );
+      }
+      manifest.assets.push(result.record);
+      return manifest;
+    },
+  });
   const ledgerSha256After = await sha256File(result.ledgerFile);
   if (ledgerSha256After !== result.ledgerSha256Before) {
     throw new Error('recovery-source 写入期间 rejected ledger 发生变化');

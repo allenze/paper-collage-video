@@ -85,6 +85,24 @@ Reject a smaller canvas, a changed aspect ratio, or dimensions that cannot be
 divided into the declared grid. Do not resize the provider root before
 `provider:record`.
 
+For an ordinary image whose provider-native canvas may differ from the delivery
+canvas, declare root `providerSource.mode=provider-native`, minimum width/height,
+aspect-ratio tolerance, and
+`normalization={method:"deterministic-resize",targetCanvas:{...}}`. Validation
+accepts only a sufficiently large, aspect-compatible native result and records
+the observed raw and target canvases plus an observation fingerprint. Keep that
+provider result byte-for-byte unchanged, then run:
+
+```bash
+npm run assets:normalize-provider-source -- --spec=projects/<slug>/provider-source-normalization/<asset>.json
+```
+
+The command creates an active `provider-source-derivative` with exact target
+dimensions and a SHA-bound normalization record while preserving the raw
+provider source in history. This is a deterministic zero-call derivative, not
+a provider retry and not permission to stretch a wrong-aspect or undersized
+image.
+
 ```json
 {
   "$schema": "../../../schemas/asset-request.schema.json",

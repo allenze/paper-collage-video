@@ -34,6 +34,13 @@ const MIRROR_CROP_RENDER_TOLERANCE = {
   alphaMean: 0.002,
   alphaMaximum: 0.2,
 };
+export const SEAM_SALIENCE_POLICY = {
+  policyId: 'vertical-rail-v1',
+  contrastThreshold: 0.08,
+  meanMaximum: 0.045,
+  p95Maximum: 0.12,
+  verticalCoverageMaximum: 0.35,
+};
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -358,6 +365,101 @@ export const inspectHorizontalEdgeAlphaCoverage = async (input, edgeBandPixels) 
   };
 };
 
+const percentile = (values, quantile) => {
+  if (values.length === 0) return 0;
+  const ordered = [...values].sort((left, right) => left - right);
+  return ordered[Math.min(
+    ordered.length - 1,
+    Math.max(0, Math.ceil(ordered.length * quantile) - 1),
+  )];
+};
+
+/**
+ * Detect a visually salient vertical rail even when both sides of the repeat
+ * are pixel-identical. The seam band is compared with wider neighborhoods on
+ * both sides, using premultiplied RGBA per scanline. A natural localized plant
+ * may affect a few rows; a repeated construction rail spans much of the image.
+ */
+export const inspectVerticalSeamSalience = async (
+  input,
+  {foldX = null, bandPixels = 2, policy = SEAM_SALIENCE_POLICY} = {},
+) => {
+  const {data, width, height, channels} = await rawRgba(input);
+  const band = Math.max(1, Math.min(
+    Math.floor(width / 8),
+    Math.round(bandPixels),
+  ));
+  const sample = (x, y) => {
+    const wrappedX = ((x % width) + width) % width;
+    const offset = (y * width + wrappedX) * channels;
+    const alpha = data[offset + 3] / 255;
+    return [
+      data[offset] * alpha / 255,
+      data[offset + 1] * alpha / 255,
+      data[offset + 2] * alpha / 255,
+      alpha,
+    ];
+  };
+  const regionMean = (from, to, y) => {
+    const total = [0, 0, 0, 0];
+    let count = 0;
+    for (let x = from; x < to; x += 1) {
+      const pixel = sample(x, y);
+      for (let channel = 0; channel < 4; channel += 1) {
+        total[channel] += pixel[channel];
+      }
+      count += 1;
+    }
+    return total.map((value) => value / Math.max(1, count));
+  };
+  const inspectAt = (seamX, kind) => {
+    const contrasts = [];
+    for (let y = 0; y < height; y += 1) {
+      const seam = regionMean(seamX - band, seamX + band, y);
+      const left = regionMean(seamX - band * 4, seamX - band * 2, y);
+      const right = regionMean(seamX + band * 2, seamX + band * 4, y);
+      const neighbor = left.map((value, channel) => (value + right[channel]) / 2);
+      contrasts.push(Math.max(
+        Math.abs(seam[0] - neighbor[0]),
+        Math.abs(seam[1] - neighbor[1]),
+        Math.abs(seam[2] - neighbor[2]),
+        Math.abs(seam[3] - neighbor[3]),
+      ));
+    }
+    const mean = contrasts.reduce((sum, value) => sum + value, 0) /
+      Math.max(1, contrasts.length);
+    const p95 = percentile(contrasts, 0.95);
+    const maximum = Math.max(...contrasts, 0);
+    const verticalCoverage = contrasts.filter(
+      (value) => value >= policy.contrastThreshold,
+    ).length / Math.max(1, contrasts.length);
+    return {
+      kind,
+      x: seamX,
+      bandPixels: band,
+      mean,
+      p95,
+      maximum,
+      verticalCoverage,
+      passed:
+        mean <= policy.meanMaximum + 1e-12 &&
+        p95 <= policy.p95Maximum + 1e-12 &&
+        verticalCoverage <= policy.verticalCoverageMaximum + 1e-12,
+    };
+  };
+  const seams = [inspectAt(0, 'tile-boundary')];
+  if (Number.isFinite(foldX) && foldX > band * 4 && foldX < width - band * 4) {
+    seams.push(inspectAt(Math.round(foldX), 'mirror-fold'));
+  }
+  return {
+    policy,
+    width,
+    height,
+    seams,
+    passed: seams.every(({passed}) => passed),
+  };
+};
+
 const applyAlphaFeather = async (input, alphaFeather) => {
   if (!alphaFeather) return input;
   const {data, info} = await sharp(input)
@@ -618,11 +720,20 @@ export const deriveLoopingStrip = async ({
     spec.role !== 'ground' ||
     sourceEdgeAlphaCoverage.minimum + 1e-12 >= GROUND_MINIMUM_EDGE_ALPHA_COVERAGE;
   const renderScaleThresholds = thresholdsForRenderScale(spec);
+  const sourceSalience = await inspectVerticalSeamSalience(tileBuffer, {
+    foldX: mirrorRight ? tileMetadata.width / 2 : null,
+    bandPixels: Math.min(4, spec.edgeBandPixels),
+  });
   const renderScale = [];
   for (const viewport of spec.proofViewports) {
     const scaled = await sharp(tileBuffer).resize({height: viewport.renderHeight}).png().toBuffer();
     const scaledBand = Math.max(1, Math.round(spec.edgeBandPixels * viewport.renderHeight / tileMetadata.height));
     const metrics = await compareHorizontalEdgeBands(scaled, scaledBand, {mirrorRight});
+    const scaledMetadata = await sharp(scaled).metadata();
+    const seamSalience = await inspectVerticalSeamSalience(scaled, {
+      foldX: mirrorRight ? scaledMetadata.width / 2 : null,
+      bandPixels: Math.min(4, scaledBand),
+    });
     const geometry = resolveWorldStripTileGeometry({
       viewportWidth: viewport.width,
       viewportHeight: viewport.height,
@@ -645,6 +756,8 @@ export const deriveLoopingStrip = async ({
       edgeAlphaCoverage: await inspectHorizontalEdgeAlphaCoverage(scaled, scaledBand),
       thresholds: renderScaleThresholds,
       seamPassed: edgeMetricsPass(metrics, renderScaleThresholds),
+      seamSalience,
+      saliencePassed: seamSalience.passed,
       spanPassed: geometry.viewportSpan + 1e-9 >= spec.minimumViewportSpan,
     });
   }
@@ -668,20 +781,25 @@ export const deriveLoopingStrip = async ({
     keying: spec.keying ?? null,
     checkerboardAlpha: spec.checkerboardAlpha ?? null,
     decorativeScatter: spec.decorativeScatter ?? null,
+    seamSaliencePolicy: SEAM_SALIENCE_POLICY,
   });
   if (
     !sourcePassed ||
+    !sourceSalience.passed ||
     !sourceGroundEdgePassed ||
-    renderScale.some(({seamPassed, spanPassed, edgeAlphaCoverage}) =>
+    renderScale.some(({seamPassed, saliencePassed, spanPassed, edgeAlphaCoverage}) =>
       !seamPassed ||
+      !saliencePassed ||
       !spanPassed ||
       (spec.role === 'ground' && edgeAlphaCoverage.minimum + 1e-12 < GROUND_MINIMUM_EDGE_ALPHA_COVERAGE),
     )
   ) {
     const failed = [
       ...(sourcePassed ? [] : ['source-resolution seam']),
+      ...(sourceSalience.passed ? [] : ['source-resolution seam salience']),
       ...(sourceGroundEdgePassed ? [] : ['source-resolution ground edge alpha coverage']),
       ...renderScale.filter(({seamPassed}) => !seamPassed).map(({profile}) => `${profile} render-scale seam`),
+      ...renderScale.filter(({saliencePassed}) => !saliencePassed).map(({profile}) => `${profile} seam salience`),
       ...renderScale.filter(({spanPassed}) => !spanPassed).map(({profile}) => `${profile} viewport span`),
       ...renderScale
         .filter(({edgeAlphaCoverage}) =>
@@ -848,6 +966,8 @@ export const deriveLoopingStrip = async ({
       keyingMetadataSha256,
       thresholds: spec.thresholds,
       renderScaleThresholds,
+      seamSaliencePolicy: SEAM_SALIENCE_POLICY,
+      sourceSalience,
       sourceMetrics: {
         rgbMean: sourceMetrics.rgbMean,
         rgbMaximum: sourceMetrics.rgbMaximum,

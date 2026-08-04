@@ -46,6 +46,12 @@
           "motionPolicy": {"enum": ["standard", "locked-static"]},
           "staticRationale": {"type": "string", "minLength": 1},
           "estimatedDurationSeconds": {"type": "number", "exclusiveMinimum": 0},
+          "encounters": {
+            "type": "array",
+            "items": {
+              "$ref": "https://local.paper-collage.dev/encounter-contract.schema.json#/$defs/contract"
+            }
+          },
           "beats": {"type": "array", "minItems": 3, "items": {"$ref": "storyboard.schema.json#/$defs/beat"}},
           "proofTimes": {"type": "array", "minItems": 3, "items": {"$ref": "storyboard.schema.json#/$defs/proofTime"}}
         },

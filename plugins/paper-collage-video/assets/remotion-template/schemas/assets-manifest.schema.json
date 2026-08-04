@@ -19,7 +19,7 @@
           "capability": {"enum": ["text", "image", "voice"]},
           "file": {"type": "string"},
           "provider": {"type": "string"},
-          "adapter": {"enum": ["host", "command", "manual", "registered-sheet-cell", "registered-family-member", "semantic-slice-derivative", "looping-strip-derivative", "canonical-container-derivative"]},
+          "adapter": {"enum": ["host", "command", "manual", "registered-sheet-cell", "registered-family-member", "semantic-slice-derivative", "looping-strip-derivative", "canonical-container-derivative", "provider-source-derivative"]},
           "tool": {"type": ["string", "null"]},
           "model": {"type": ["string", "null"]},
           "externalId": {"type": ["string", "null"]},
@@ -42,6 +42,52 @@
           },
           "recordedAt": {"type": "string", "format": "date-time"},
           "request": {"type": "object"},
+          "providerSource": {
+            "oneOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "required": [
+                  "schemaVersion",
+                  "mode",
+                  "rawCanvas",
+                  "targetCanvas",
+                  "normalization",
+                  "normalizationRequired",
+                  "observationFingerprint"
+                ],
+                "properties": {
+                  "schemaVersion": {"const": 1},
+                  "mode": {"const": "provider-native"},
+                  "rawCanvas": {
+                    "type": "object",
+                    "required": ["width", "height"],
+                    "properties": {
+                      "width": {"type": "integer", "minimum": 1},
+                      "height": {"type": "integer", "minimum": 1}
+                    },
+                    "additionalProperties": false
+                  },
+                  "targetCanvas": {
+                    "type": "object",
+                    "required": ["width", "height"],
+                    "properties": {
+                      "width": {"type": "integer", "minimum": 1},
+                      "height": {"type": "integer", "minimum": 1}
+                    },
+                    "additionalProperties": false
+                  },
+                  "normalization": {"const": "deterministic-resize"},
+                  "normalizationRequired": {"type": "boolean"},
+                  "observationFingerprint": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
           "compositionBinding": {"type": ["object", "null"]},
           "stateBinding": {"type": ["object", "null"]},
           "stateSheetBinding": {"type": ["object", "null"]},

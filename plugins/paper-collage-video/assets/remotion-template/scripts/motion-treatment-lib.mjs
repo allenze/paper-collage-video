@@ -20,6 +20,7 @@ import {
   validateCompiledMotionContract,
 } from './motion-contract-lib.mjs';
 import {validatePathMotion} from '../src/pathMotion.mjs';
+import {validateEncounterAuthoring} from './encounter-contract-lib.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -1598,6 +1599,18 @@ export const compileStoryboardDirecting = (
   } catch (cause) {
     const error = new Error(cause.message);
     error.issues = [{code: 'storyboard-compile', message: cause.message, location: 'scenes'}];
+    throw error;
+  }
+  const encounterIssues = scenes.flatMap((scene, index) =>
+    validateEncounterAuthoring(scene, {location: `scenes[${index}]`}),
+  );
+  if (encounterIssues.length > 0) {
+    const error = new Error(
+      encounterIssues
+        .map(({location, message}) => `${location}: ${message}`)
+        .join('\n'),
+    );
+    error.issues = encounterIssues;
     throw error;
   }
   let motionContract;

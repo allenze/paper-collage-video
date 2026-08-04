@@ -461,6 +461,22 @@
                 }
               ]
             },
+            "checkerboardAlpha": {
+              "oneOf": [
+                {"type": "null"},
+                {
+                  "$ref": "https://local.paper-collage.dev/looping-strip.schema.json#/properties/checkerboardAlpha"
+                }
+              ]
+            },
+            "decorativeScatter": {
+              "oneOf": [
+                {"type": "null"},
+                {
+                  "$ref": "https://local.paper-collage.dev/looping-strip.schema.json#/properties/decorativeScatter"
+                }
+              ]
+            },
             "keyingMetadataSha256": {
               "type": ["string", "null"],
               "pattern": "^[a-f0-9]{64}$"
@@ -492,6 +508,9 @@
               "additionalProperties": false
             }
           ]
+        },
+        "edgeStabilizationPixels": {
+          "$ref": "https://local.paper-collage.dev/looping-strip.schema.json#/properties/edgeStabilizationPixels"
         },
         "output": {
           "type": "object",
