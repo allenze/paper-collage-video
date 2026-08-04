@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "packageVersion": "0.19.0",
-  "fingerprint": "1ab31994036d26e7bc17c1fa0bcffd3a13fa6629f7effdb099d391ceb0c99594",
+  "packageVersion": "0.19.1-dev.1",
+  "fingerprint": "530d4a00d53b9059c6c561206fcb78b48422225913e7d03fed7d73cae1329be0",
   "surfaces": {
-    "final-visual": "9b1335034a7e7aafc0d708df147946c0ee8c0567528f59206608ccbde15af536",
-    "composition-proof": "7b160d55dda64e83b1d321df5940cc0f80793c85d6b6cf02643f7a2b198c6cc8",
-    "audio-delivery": "5673a550c7b9c1b3acff6ee8cdb7592958d1f3a7ae9887886a2ef3734d5a71a4"
+    "final-visual": "cc9e498f89202ddf659938e9bff3cda7d6aa45a4a3bd6c6de705b0f6e52b5d0d",
+    "composition-proof": "04d54b1d927b083ff87c714e7ac150a6bf9cece4ad8ca44a50d613f2dfe6969f",
+    "audio-delivery": "508caaea70a4931c2f3d8a11b3f2e1e1ff0e0fba41987ff6a5d6c9d668e1b3f8"
   },
   "files": {
-    "package.json": "64fc47c8b99b2ad589d3685b58d355d003a90a7013c65c4be86a79a7b36adbd3",
+    "package.json": "17801606d55bf08d3e6e0a57ac7a81275372c8cccc787410d5ba4f073fb59331",
     "requirements.txt": "4d94df48a8bb5659d79504208ee8c26ccfff7e28aa0040dc99c7776b10c735c9",
     "remotion.config.ts": "6b513b6e87a709cd00cd60c87329584379057f6927230af1f96559a3409ed728",
     "schemas/composition.schema.json": "17b55178d9227302962d6b6e8abcd49ec511b2f06bd710e50d712bba568c1e55",

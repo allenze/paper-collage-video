@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 将开发版本推进到 `0.19.1-dev.1`，并同步升级 Remotion/CLI `4.0.505`、React/React DOM `19.2.8` 及对应类型包。
+- 更新 `@emnapi/runtime` 锁文件到 `1.11.3`，并将 GitHub Actions 的 Python 设置动作升级到 `actions/setup-python@v7`。
+- 重新生成 source、packaged plugin、starter proof 与 runtime fingerprint，确保依赖变化不会绕过可执行身份和发行包漂移检查。
+
 ## [0.19.0] - 2026-08-04
 
 ### Added
