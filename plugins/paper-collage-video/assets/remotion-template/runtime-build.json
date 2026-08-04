@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "packageVersion": "0.19.0-dev.2",
-  "fingerprint": "e6ea71ef8eb78d641eb9e646052131d1cafefc404e0899e8265077a0c23bbcd7",
+  "packageVersion": "0.19.0",
+  "fingerprint": "1ab31994036d26e7bc17c1fa0bcffd3a13fa6629f7effdb099d391ceb0c99594",
   "surfaces": {
     "final-visual": "9b1335034a7e7aafc0d708df147946c0ee8c0567528f59206608ccbde15af536",
     "composition-proof": "7b160d55dda64e83b1d321df5940cc0f80793c85d6b6cf02643f7a2b198c6cc8",
     "audio-delivery": "5673a550c7b9c1b3acff6ee8cdb7592958d1f3a7ae9887886a2ef3734d5a71a4"
   },
   "files": {
-    "package.json": "96d1fc347928b6c7d7740b88e53b672d624b9d889004fb182cfdb59a82737920",
+    "package.json": "64fc47c8b99b2ad589d3685b58d355d003a90a7013c65c4be86a79a7b36adbd3",
     "requirements.txt": "4d94df48a8bb5659d79504208ee8c26ccfff7e28aa0040dc99c7776b10c735c9",
     "remotion.config.ts": "6b513b6e87a709cd00cd60c87329584379057f6927230af1f96559a3409ed728",
     "schemas/composition.schema.json": "17b55178d9227302962d6b6e8abcd49ec511b2f06bd710e50d712bba568c1e55",

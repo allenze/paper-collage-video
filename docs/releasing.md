@@ -49,8 +49,8 @@ git status --short
 ## 5. Create the Release
 
 ```bash
-git tag -a v0.16.0 -m "Paper Collage Video v0.16.0"
-git push origin v0.16.0
+git tag -a v0.19.0 -m "Paper Collage Video v0.19.0"
+git push origin v0.19.0
 ```
 
 标签会触发 `Publish GitHub Release` 工作流。工作流会从该标签重新验证源码、测试、类型和 Remotion bundle，然后创建正式 Release。生产项目及其预览不再作为发布构建依赖，也不会自动上传媒体、provider 凭据、本机配置或权属未确认的素材。

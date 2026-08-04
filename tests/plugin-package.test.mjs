@@ -20,8 +20,8 @@ const assertPatchedFastUri = (lockFile) => {
   assert.ok(version, `${lockFile} must lock fast-uri`);
   const [major, minor, patch] = version.split('.').map(Number);
   assert.ok(
-    major > 3 || (major === 3 && (minor > 1 || (minor === 1 && patch >= 4))),
-    `${lockFile} locks vulnerable fast-uri ${version}; require >=3.1.4`,
+    major > 3 || (major === 3 && (minor > 1 || (minor === 1 && patch >= 5))),
+    `${lockFile} locks vulnerable fast-uri ${version}; require >=3.1.5`,
   );
 };
 
