@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
+import {fileURLToPath} from 'node:url';
 import {
   assessHandoff,
   formatProduction,
@@ -17,6 +20,8 @@ import {
   transitionWorkItem,
 } from '../scripts/production-state.mjs';
 import {assertAssetsReadySealCurrent} from '../scripts/assets-ready-seal-lib.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const approval = (status = 'pending', note = '') => ({
   status,
@@ -62,6 +67,17 @@ const makeState = (stage) => ({
 });
 
 test('publication is no longer a default human wait stage', () => {
+  assert.deepEqual(PRODUCTION_STAGES, [
+    'capability-review',
+    'brief',
+    'concept-review',
+    'style-review',
+    'asset-production',
+    'preview',
+    'human-review',
+    'final-render',
+    'complete',
+  ]);
   const waitingStages = PRODUCTION_STAGES.filter(
     (stage) => getStageControl(makeState(stage)).mode === 'wait-human',
   );
@@ -77,7 +93,20 @@ test('publication is no longer a default human wait stage', () => {
     'style-review',
     'human-review',
   ]);
-  assert.equal(getStageControl(makeState('publish-approval')).mode, 'complete');
+  assert.throws(
+    () => getStageControl(makeState('publish-approval')),
+    /未知 stage：publish-approval/,
+  );
+  const productionSchema = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, 'schemas', 'production.schema.json'),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(
+    productionSchema.properties.stage.enum,
+    PRODUCTION_STAGES,
+  );
 });
 
 test('automatic stages explicitly prohibit normal turn termination', () => {
@@ -172,6 +201,71 @@ test('assets-ready advances once and becomes an idempotent preview recheck', () 
   assert.throws(() => resolveAssetsReadyMode('style-review'), /只能在/);
 });
 
+test('assets-ready settles validated directing revisions and blocks other unfinished work', () => {
+  const current = makeState('asset-production');
+  current.workItems = [
+    {
+      id: 'directing-revision-scene-02',
+      label: '同步导演重编镜头 scene-02',
+      status: 'pending',
+      updatedAt: current.updatedAt,
+      artifact: 'projects/test-film/directing-revision.json',
+      note: '按新 storyboard 同步 project.json 执行树并重新验证。',
+    },
+  ];
+  const ready = transitionProduction(current, 'assets-ready', {
+    artifacts: {
+      validationReport: 'dist/test-film/validation-report.json',
+      assetsReadySeal: 'dist/test-film/assets-ready-seal.json',
+    },
+    at: '2026-07-23T02:00:00.000Z',
+  });
+  assert.equal(ready.stage, 'preview');
+  assert.equal(ready.workItems[0].status, 'completed');
+  assert.equal(ready.workItems[0].artifact, 'projects/test-film/project.json');
+  assert.match(ready.workItems[0].note, /satisfied-by-assets-ready/);
+  assert.equal(
+    ready.history.some(
+      ({action, note}) =>
+        action === 'work-item-completed' &&
+        note.includes('directing-revision-scene-02'),
+    ),
+    true,
+  );
+
+  const unrelated = makeState('asset-production');
+  unrelated.workItems = [
+    {
+      id: 'narration-01',
+      label: '第一幕旁白',
+      status: 'pending',
+      updatedAt: unrelated.updatedAt,
+      artifact: null,
+      note: '',
+    },
+  ];
+  assert.throws(
+    () => transitionProduction(unrelated, 'assets-ready'),
+    /narration-01\(pending\)/,
+  );
+
+  const blockedRevision = makeState('asset-production');
+  blockedRevision.workItems = [
+    {
+      id: 'directing-revision-scene-02',
+      label: '同步导演重编镜头 scene-02',
+      status: 'blocked',
+      updatedAt: blockedRevision.updatedAt,
+      artifact: 'projects/test-film/directing-revision.json',
+      note: '执行树无法通过验证。',
+    },
+  ];
+  assert.throws(
+    () => transitionProduction(blockedRevision, 'assets-ready'),
+    /directing-revision-scene-02\(blocked\)/,
+  );
+});
+
 test('assets-ready seal is recorded and invalidated with preview revisions', () => {
   const ready = transitionProduction(makeState('asset-production'), 'assets-ready', {
     artifacts: {
@@ -193,6 +287,19 @@ test('assets-ready seal is recorded and invalidated with preview revisions', () 
   assert.equal(revised.artifacts.assetsReadySeal, null);
   assert.equal(revised.artifacts.preview, null);
   assert.equal(revised.artifacts.report, null);
+});
+
+test('image budget increase records a human decision without changing the production stage', () => {
+  const current = makeState('asset-production');
+  const next = transitionProduction(current, 'approve-image-budget-increase', {
+    note: '图片尝试上限 12 → 14；新增两次环境素材调用',
+  });
+  assert.equal(next.stage, 'asset-production');
+  assert.equal(next.history.at(-1).action, 'approve-image-budget-increase');
+  assert.throws(
+    () => transitionProduction(current, 'approve-image-budget-increase'),
+    /必须用 --note 记录人的明确决定/,
+  );
 });
 
 test('assets-ready cannot be asserted without the canonical seal', async () => {
@@ -260,6 +367,62 @@ test('a successful final render completes local delivery without publication app
   });
   assert.equal(publishRecorded.stage, 'complete');
   assert.equal(publishRecorded.approvals.publish.status, 'approved');
+});
+
+test('preview approval and both render modes reject unfinished work items', () => {
+  const review = makeState('human-review');
+  review.artifacts.preview = 'dist/test-film/preview.mp4';
+  review.workItems = [
+    {
+      id: 'directing-revision-scene-02',
+      label: '同步导演重编镜头 scene-02',
+      status: 'pending',
+      updatedAt: review.updatedAt,
+      artifact: 'projects/test-film/directing-revision.json',
+      note: '按新 storyboard 同步 project.json 执行树并重新验证。',
+    },
+  ];
+  assert.throws(
+    () =>
+      transitionProduction(review, 'approve-preview', {
+        note: '预览通过',
+      }),
+    /directing-revision-scene-02\(pending\)/,
+  );
+
+  const preview = makeState('preview');
+  preview.workItems = structuredClone(review.workItems);
+  assert.throws(
+    () =>
+      transitionRender(preview, 'preview', {
+        preview: 'dist/test-film/preview.mp4',
+      }),
+    /render-preview 不能在工作项未完成时继续/,
+  );
+
+  const final = makeState('final-render');
+  final.approvals.preview = approval('approved', '预览通过');
+  final.workItems = structuredClone(review.workItems);
+  assert.throws(
+    () =>
+      transitionRender(final, 'render', {
+        final: 'dist/test-film/final.mp4',
+      }),
+    /render-final 不能在工作项未完成时继续/,
+  );
+});
+
+test('render entrypoint checks the production gate before sync and audio work', () => {
+  const source = fs.readFileSync(
+    path.join(ROOT, 'scripts', 'project-render.mjs'),
+    'utf8',
+  );
+  const gate = source.indexOf('await assertRenderAllowed(slug, mode);');
+  const sync = source.indexOf("await runInherited(process.execPath, ['scripts/project-sync.mjs', slug]);");
+  const audio = source.indexOf("'scripts/project-audio-preflight.mjs'");
+  assert.ok(gate >= 0);
+  assert.ok(sync > gate);
+  assert.ok(audio > gate);
 });
 
 test('a tool-only image result remains an automatic production checkpoint', () => {

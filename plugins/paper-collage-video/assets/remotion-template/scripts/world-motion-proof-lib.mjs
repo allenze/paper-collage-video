@@ -16,6 +16,31 @@ import {resolveSequenceState} from './state-sequence-lib.mjs';
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 const clamp01 = (value) => clamp(value, 0, 1);
 const cleanNumber = (value) => Number(value.toFixed(6));
+const EDITABLE_SHAPE_MINIMUM_SCREEN_OCCUPANCY = 0.00025;
+
+export const evaluateNearLayerRelation = ({
+  nearOcclusion,
+  requireNearOverlap = true,
+  subjectZ,
+  nearStripZ,
+  verticalOverlap,
+  hasSubjectGeometry,
+  hasNearGeometry,
+}) => {
+  const zPassed = nearOcclusion === 'behind-near'
+    ? nearStripZ > subjectZ
+    : subjectZ > nearStripZ;
+  return Boolean(
+    hasSubjectGeometry &&
+    hasNearGeometry &&
+    zPassed &&
+    (
+      nearOcclusion === 'above-near' ||
+      requireNearOverlap === false ||
+      verticalOverlap >= 0.02
+    )
+  );
+};
 
 const ease = (value, name = 'ease-in-out') => {
   const t = clamp01(value);
@@ -128,6 +153,65 @@ const sourceForNode = (node, progress) => {
   return resolveSequenceState({node, progress})?.src ?? null;
 };
 
+const visualIsolationForNode = async (node, progress) => {
+  const source = sourceForNode(node, progress);
+  if (source) {
+    const alphaBounds = await alphaBoundsForSource(source);
+    return {
+      source,
+      sourceKind: 'asset',
+      alphaBounds,
+    };
+  }
+  if (node.kind === 'group') {
+    const bounds = [];
+    for (const child of node.children ?? []) {
+      const isolation = await visualIsolationForNode(child, progress);
+      if (!isolation?.alphaBounds) continue;
+      const width = Number(child.transform?.width ?? 1);
+      const height = Number(child.transform?.height ?? width);
+      const left =
+        Number(child.transform?.x ?? 0) -
+        Number(child.transform?.anchorX ?? 0) * width +
+        isolation.alphaBounds.x * width;
+      const top =
+        Number(child.transform?.y ?? 0) -
+        Number(child.transform?.anchorY ?? 0) * height +
+        isolation.alphaBounds.y * height;
+      bounds.push({
+        left,
+        top,
+        right: left + isolation.alphaBounds.width * width,
+        bottom: top + isolation.alphaBounds.height * height,
+      });
+    }
+    if (bounds.length > 0) {
+      const left = Math.min(...bounds.map((bound) => bound.left));
+      const top = Math.min(...bounds.map((bound) => bound.top));
+      const right = Math.max(...bounds.map((bound) => bound.right));
+      const bottom = Math.max(...bounds.map((bound) => bound.bottom));
+      return {
+        source: `group:${node.id}`,
+        sourceKind: 'composition-group',
+        alphaBounds: {
+          x: left,
+          y: top,
+          width: right - left,
+          height: bottom - top,
+        },
+      };
+    }
+  }
+  if (node.kind === 'shape') {
+    return {
+      source: `shape:${node.shape}`,
+      sourceKind: 'editable-shape',
+      alphaBounds: {x: 0, y: 0, width: 1, height: 1},
+    };
+  }
+  return null;
+};
+
 export const resolveTargetViewportSnapshot = async ({
   scene,
   nodeId,
@@ -137,13 +221,15 @@ export const resolveTargetViewportSnapshot = async ({
 }) => {
   const entry = nodeEntry(scene, nodeId, video);
   if (!entry) throw new Error(`worldMotionProof target 不存在：${nodeId}`);
-  const source = sourceForNode(entry.node, progress);
-  if (!source) throw new Error(`worldMotionProof target ${nodeId} 没有可隔离的视觉来源。`);
-  const alpha = await alphaBoundsForSource(source);
+  const isolation = await visualIsolationForNode(entry.node, progress);
+  if (!isolation) {
+    throw new Error(`worldMotionProof target ${nodeId} 没有可隔离的视觉来源。`);
+  }
+  const {source, sourceKind, alphaBounds: alpha} = isolation;
   if (!alpha) throw new Error(`worldMotionProof target ${nodeId} 来源不存在：${source}`);
   const authored = {
-    x: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'x', 0),
-    y: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'y', 0),
+    x: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'offsetX', 0),
+    y: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'offsetY', 0),
     scale: resolveKeyframeValue(entry.node.motion?.keyframes, progress, 'scale', 1),
   };
   const camera = cameraAt(scene, progress);
@@ -185,6 +271,7 @@ export const resolveTargetViewportSnapshot = async ({
   return {
     progress,
     source,
+    sourceKind,
     alphaBounds: alpha,
     viewportBounds: Object.fromEntries(Object.entries(cameraRect).map(([key, value]) => [key, cleanNumber(value)])),
     centroid: {
@@ -228,6 +315,14 @@ export const buildTargetWorldMotionProof = async ({
   }
   const first = snapshots[0];
   const last = snapshots.at(-1);
+  const effectiveMinimumScreenOccupancy = snapshots.every(
+    ({sourceKind}) => sourceKind === 'editable-shape',
+  )
+    ? Math.min(
+        minimumScreenOccupancy,
+        EDITABLE_SHAPE_MINIMUM_SCREEN_OCCUPANCY,
+      )
+    : minimumScreenOccupancy;
   const displacement = first && last ? {
     x: cleanNumber(
       (last.centroid.x - first.centroid.x) * video.width -
@@ -241,7 +336,7 @@ export const buildTargetWorldMotionProof = async ({
   const readabilityPassed = snapshots.every(
     ({visibleAreaRatio, screenOccupancy}) =>
       visibleAreaRatio >= minimumVisibleAreaRatio &&
-      screenOccupancy >= minimumScreenOccupancy &&
+      screenOccupancy >= effectiveMinimumScreenOccupancy &&
       screenOccupancy <= maximumScreenOccupancy,
   );
   const displacementPixels = Math.hypot(displacement.x, displacement.y);
@@ -253,7 +348,7 @@ export const buildTargetWorldMotionProof = async ({
     targetId: nodeId,
     thresholds: {
       minimumVisibleAreaRatio,
-      minimumScreenOccupancy,
+      minimumScreenOccupancy: effectiveMinimumScreenOccupancy,
       maximumScreenOccupancy,
       minimumDisplacementRatio,
       requireMotion,
@@ -267,7 +362,7 @@ export const buildTargetWorldMotionProof = async ({
   };
 };
 
-const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPixels = 4}) => {
+export const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPixels = 4}) => {
   const file = resolvePublicFile(source);
   if (!(await fileExists(file))) {
     return {
@@ -317,9 +412,15 @@ const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPi
         height: cleanNumber((bottom - top + 1) / info.height),
       };
   const edgeSupportRequired = surfaceRole === 'walkable-ground';
+  const minimumHorizontalVisibleSpanRatio = [
+    'backdrop',
+    'walkable-ground',
+  ].includes(surfaceRole)
+    ? 0.85
+    : 0.25;
   const passed =
     visiblePixelRatio >= 0.002 &&
-    horizontalVisibleSpanRatio >= 0.85 &&
+    horizontalVisibleSpanRatio >= minimumHorizontalVisibleSpanRatio &&
     (
       !edgeSupportRequired ||
       (leftEdgeSupportRatio >= 0.02 && rightEdgeSupportRatio >= 0.02)
@@ -331,7 +432,7 @@ const inspectStripVisibleSurface = async ({source, role, surfaceRole, edgeBandPi
     dimensions: {width: info.width, height: info.height},
     thresholds: {
       minimumVisiblePixelRatio: 0.002,
-      minimumHorizontalVisibleSpanRatio: 0.85,
+      minimumHorizontalVisibleSpanRatio,
       minimumGroundEdgeSupportRatio: edgeSupportRequired ? 0.02 : null,
     },
     visiblePixelRatio: cleanNumber(visiblePixelRatio),
@@ -583,28 +684,39 @@ export const buildLoopingWorldProof = async ({
         binding.anchorMode === 'world' ? worldAnchorOffsetAt : () => 0,
     });
     subjectProofs.push({...binding, proof: subjectProof});
-    const subjectAlpha = subject
-      ? await alphaBoundsForSource(sourceForNode(subject, bindingProofs[0].at))
+    const subjectIsolation = subject
+      ? await visualIsolationForNode(subject, bindingProofs[0].at)
       : null;
+    const subjectAlpha = subjectIsolation?.alphaBounds ?? null;
+    const subjectHeight =
+      subject?.transform?.height ??
+      (
+        subject?.kind === 'group'
+          ? Number(subject.transform?.width ?? 1) *
+            Number(subject.coordinateSpace?.height ?? 1) /
+            Number(subject.coordinateSpace?.width ?? 1) *
+            video.width /
+            video.height
+          : 1
+      );
     const subjectTop =
       (subject?.transform?.y ?? 0) -
       (subject?.transform?.anchorY ?? 0) *
-        (subject?.transform?.height ?? 1) +
-      (subjectAlpha?.y ?? 0) * (subject?.transform?.height ?? 1);
+        subjectHeight +
+      (subjectAlpha?.y ?? 0) * subjectHeight;
     const subjectBottom =
       subjectTop +
       (subjectAlpha?.height ?? 0) *
-        (subject?.transform?.height ?? 1);
+        subjectHeight;
     const verticalOverlap = Math.max(
       0,
       Math.min(subjectBottom, nearBottom) - Math.max(subjectTop, nearTop),
     );
-    const zPassed = binding.nearOcclusion === 'behind-near'
-      ? nearStrip?.z > subject?.z
-      : subject?.z > nearStrip?.z;
+    const requireNearOverlap = binding.requireNearOverlap !== false;
     subjectOcclusions.push({
       nodeId: binding.nodeId,
       requiredRelation: binding.nearOcclusion,
+      requireNearOverlap,
       subjectZ: subject?.z ?? null,
       nearStripZ: nearStrip?.z ?? null,
       subjectVerticalBand: {
@@ -616,13 +728,15 @@ export const buildLoopingWorldProof = async ({
         bottom: cleanNumber(nearBottom),
       },
       verticalOverlap: cleanNumber(verticalOverlap),
-      passed:
-        Boolean(subjectAlpha && nearAlpha && nearStrip) &&
-        zPassed &&
-        (
-          binding.nearOcclusion === 'above-near' ||
-          verticalOverlap >= 0.02
-        ),
+      passed: evaluateNearLayerRelation({
+        nearOcclusion: binding.nearOcclusion,
+        requireNearOverlap,
+        subjectZ: subject?.z,
+        nearStripZ: nearStrip?.z,
+        verticalOverlap,
+        hasSubjectGeometry: Boolean(subjectAlpha),
+        hasNearGeometry: Boolean(nearAlpha && nearStrip),
+      }),
     });
   }
   const trackedSubjectProof = subjectProofs.find(({role}) => role === 'tracked')?.proof ?? null;

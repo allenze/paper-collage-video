@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/storyboard.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 12,
   "slug": "starter-demo",
   "status": "ready",
   "arc": "从空纸面建立分层空间，再让主体进入并稳定成标题画面。",
@@ -10,10 +10,33 @@
       "主体保持在字幕安全区上方",
       "前中后景至少形成两个深度层次"
     ],
-    "motionLanguage": [
-      "先建立空间，再触发主体，最后稳定锁定"
-    ],
     "layerStrategy": "背景承载空间，透明主体承载动作，前景纸片负责压边。"
+  },
+  "motionDirection": {
+    "schemaVersion": 1,
+    "summary": "先建立纸面空间，再让主体完成清晰动作，最后留出可读稳定段。",
+    "pacing": "gentle",
+    "performance": {
+      "grammar": [
+        "establish",
+        "action",
+        "settle"
+      ],
+      "anticipation": "selective",
+      "followThrough": "selective",
+      "poseStrategy": "mixed",
+      "minimumFinalHoldRatio": 0.1
+    },
+    "camera": {
+      "strategy": "motivated"
+    },
+    "transitions": {
+      "strategy": "story-led"
+    },
+    "ambient": {
+      "strategy": "selective"
+    },
+    "styleDeviationRationale": null
   },
   "editorial": {
     "timebase": {
@@ -346,9 +369,10 @@
         {
           "id": "establish",
           "at": 0,
+          "performanceRole": "establish",
           "purpose": "建立空间",
           "visual": "纸面与背景出现",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "proof-establish",
           "treatments": [
             {
@@ -373,9 +397,10 @@
         {
           "id": "subject-arrives",
           "at": 0.5,
+          "performanceRole": "action",
           "purpose": "交付主体",
           "visual": "人物纸片进入中心",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "proof-action",
           "treatments": [
             {
@@ -403,9 +428,10 @@
         {
           "id": "lockup",
           "at": 0.9,
+          "performanceRole": "settle",
           "purpose": "稳定结论",
           "visual": "人物与标题形成锁定构图",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "proof-final",
           "treatments": [
             {
@@ -469,6 +495,7 @@
         "relationships": [],
         "stateSequences": [],
         "continuousMotions": [],
+        "pathMotions": [],
         "visibilityEvents": [
           {
             "id": "show-traveler",
@@ -484,10 +511,11 @@
         "motifFields": [],
         "graphics": [],
         "layerStacks": [],
-        "loopingEnvironments": []
+        "loopingEnvironments": [],
+        "canonicalContainers": []
       },
       "directing": {
-        "fingerprint": "9911e51fe656aa35ee11d56d104c49daba31f1fc17943efafe32cf3285a2bd71",
+        "fingerprint": "a6b601980d443e3560db0f557867b2390f9f0e167240fd4a61577842e8fc7bec",
         "treatmentCount": 3,
         "riskScore": 13,
         "highestRiskTreatmentId": "show-traveler"
@@ -496,6 +524,87 @@
   ],
   "sceneTransitions": [],
   "updatedAt": "2026-01-01T00:00:00.000Z",
+  "motionContract": {
+    "schemaVersion": 1,
+    "direction": {
+      "schemaVersion": 1,
+      "summary": "先建立纸面空间，再让主体完成清晰动作，最后留出可读稳定段。",
+      "pacing": "gentle",
+      "performance": {
+        "grammar": [
+          "establish",
+          "action",
+          "settle"
+        ],
+        "anticipation": "selective",
+        "followThrough": "selective",
+        "poseStrategy": "mixed",
+        "minimumFinalHoldRatio": 0.1
+      },
+      "camera": {
+        "strategy": "motivated"
+      },
+      "transitions": {
+        "strategy": "story-led"
+      },
+      "ambient": {
+        "strategy": "selective"
+      },
+      "styleDeviationRationale": null
+    },
+    "styleProfileBinding": {
+      "id": "childrens-picture-book-paper",
+      "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
+      "pacing": "gentle"
+    },
+    "scenes": [
+      {
+        "sceneId": "starter",
+        "motionPolicy": "standard",
+        "phrases": [
+          {
+            "role": "establish",
+            "beatId": "establish",
+            "at": 0,
+            "proofTimeId": "proof-establish"
+          },
+          {
+            "role": "action",
+            "beatId": "subject-arrives",
+            "at": 0.5,
+            "proofTimeId": "proof-action"
+          },
+          {
+            "role": "settle",
+            "beatId": "lockup",
+            "at": 0.9,
+            "proofTimeId": "proof-final"
+          }
+        ],
+        "heroActionBeatIds": [
+          "subject-arrives"
+        ],
+        "stateSequenceTreatmentIds": [],
+        "continuousTreatmentIds": [],
+        "cameraTreatmentIds": [],
+        "ambientTreatmentIds": [],
+        "finalHoldRatio": 0.1,
+        "exception": null
+      }
+    ],
+    "transitions": [],
+    "editorialFingerprint": "d42157ad921b36c1976ae7b1220dcb4da544af88fe600532426877cd2d1eee61",
+    "requiredCompositeChecks": [
+      "motion-grammar-consistent",
+      "pacing-cadence-consistent",
+      "camera-strategy-consistent",
+      "transition-strategy-consistent",
+      "ambient-strategy-consistent",
+      "sync-anchors-current"
+    ],
+    "approvalFingerprint": "13f317323e6777f5a858bc95a5165b3ced4cbb2efa6e6516de87535affb57a5d",
+    "fingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320"
+  },
   "directingSummary": {
     "profile": "draft",
     "requiredStateFamilies": 0,
@@ -539,7 +648,7 @@
           "targetId": "traveler",
           "proofTimeId": "proof-action",
           "riskScore": 13,
-          "directingFingerprint": "9911e51fe656aa35ee11d56d104c49daba31f1fc17943efafe32cf3285a2bd71",
+          "directingFingerprint": "a6b601980d443e3560db0f557867b2390f9f0e167240fd4a61577842e8fc7bec",
           "sourceFamilyKey": "target:traveler",
           "coverage": [
             "baseline:representative"
@@ -549,8 +658,9 @@
       "sourceFamilyKeys": [
         "target:traveler"
       ],
-      "fingerprint": "55c7c9a6fdb1e1f5e6c50757c8907e3e1cfffd5cb62dd5def90957808c55e656"
+      "motionContractFingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320",
+      "fingerprint": "01164240c0b5acbd95c15afb7f1537fd0a40b332c442231129560ec336525eec"
     },
-    "fingerprint": "879a0088dc58aee152a55c2d78c81f854f9ad823dbfd9b24c3e2ef6d001194ff"
+    "fingerprint": "dc5aaf681e20c03f9ca2d86d8e48a9968be81a5502f9b31746e380cbd43cff04"
   }
 }

@@ -15,6 +15,7 @@ import {
   recordAssetsReadySeal,
   resolveAssetsReadyMode,
 } from './production-state.mjs';
+import {assertMotionApprovalCurrent} from './motion-approval-lib.mjs';
 
 const [slug, ...args] = process.argv.slice(2);
 
@@ -38,9 +39,10 @@ try {
   }
   const {state} = await loadProduction(slug);
   const mode = resolveAssetsReadyMode(state.stage);
+  await assertMotionApprovalCurrent(slug);
   await run('project-sync.mjs', [slug]);
   await run('project-subtitles.mjs', [slug]);
-  await run('project-audio-calibration.mjs', [slug, 'propose']);
+  await run('project-audio-calibration.mjs', [slug, 'run']);
   const {project} = await loadProject(slug);
   const validation = await validateProject(project);
   const reportFile = await writeValidationReport(slug, validation);

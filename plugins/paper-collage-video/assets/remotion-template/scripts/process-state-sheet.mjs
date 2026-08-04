@@ -10,10 +10,15 @@ import {resolvePythonCommand} from './python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
   inspectStateAnchorRegistration,
+  resolveOutputStateRegistration,
   stateOutputName,
   validateStateSheetSpec,
 } from './state-sheet-lib.mjs';
-import {assertAssetManifest, createAssetRecordId} from './asset-manifest-lib.mjs';
+import {
+  assertAssetManifest,
+  createAssetRecordId,
+  transactAssetManifest,
+} from './asset-manifest-lib.mjs';
 
 const run = (command, args) => new Promise((resolve, reject) => {
   const child = spawn(command, args, {cwd: ROOT, stdio: 'inherit'});
@@ -31,6 +36,11 @@ const sha256 = async (file) => createHash('sha256').update(await fs.readFile(fil
 
 const explicitExtractionFor = ({spec, state}) =>
   spec.extraction?.cells.find(({stateId}) => stateId === state.id) ?? null;
+
+const stateObservationFor = ({source, stateId}) =>
+  source.providerObservation?.cells?.find(
+    (cell) => cell.packageRole === 'state' && cell.stateId === stateId,
+  ) ?? null;
 
 const assertExtractionFitsSource = ({cell, sourceMetadata}) => {
   const rect = cell.sourceRect;
@@ -119,8 +129,13 @@ try {
   const manifestFile = path.join(ROOT, 'projects', spec.projectSlug, 'assets-manifest.json');
   const manifest = assertAssetManifest(await readJson(manifestFile), spec.projectSlug);
   const source = manifest.assets.find(({assetId, lifecycle}) =>
-    assetId === spec.sourceAssetId && lifecycle?.status === 'active');
-  if (!source || path.resolve(ROOT, source.file) !== input) throw new Error('sourceAssetId 必须指向 provider 已登记的 sheet input');
+    assetId === spec.sourceAssetId &&
+    ['active', 'recovery-source'].includes(lifecycle?.status));
+  if (!source || path.resolve(ROOT, source.file) !== input) {
+    throw new Error(
+      'sourceAssetId 必须指向 provider 已登记的 active 或 recovery-source sheet input',
+    );
+  }
   const sourceBinding = source.stateSheetBinding ?? source.request?.stateSheetBinding;
   if (!sourceBinding || sourceBinding.poseFamilyId !== spec.poseFamilyId || sourceBinding.layout.columns !== spec.layout.columns || sourceBinding.layout.rows !== spec.layout.rows) throw new Error('state sheet spec 必须匹配 source asset 的 stateSheetBinding');
   const sourceStates = sourceBinding.states?.map(
@@ -132,7 +147,10 @@ try {
       anchors,
     }),
   ) ?? [];
-  if (JSON.stringify(sourceStates) !== JSON.stringify(spec.states)) throw new Error('state sheet spec 必须覆盖 source asset 的完整有序姿态族，不能只处理或替换单格');
+  const specSourceStates = spec.states.map(
+    ({orientationTransform, ...state}) => state,
+  );
+  if (JSON.stringify(sourceStates) !== JSON.stringify(specSourceStates)) throw new Error('state sheet spec 必须覆盖 source asset 的完整有序姿态族，不能只处理或替换单格');
   if (
     sourceBinding.identityReferenceAssetId !== spec.identityReference.assetId ||
     JSON.stringify(sourceBinding.anchorPolicy) !== JSON.stringify(spec.anchorPolicy)
@@ -149,11 +167,31 @@ try {
   }
   const recoveryPolicy = sourceBinding.recoveryPolicy;
   if (recoveryPolicy?.strategy !== 'preserve-sheet-context' || recoveryPolicy.localDeterministicFixFirst !== true || recoveryPolicy.isolatedCellGeneration !== 'forbidden' || recoveryPolicy.fallback !== 'full-sheet-regeneration') throw new Error('source state sheet 缺少 preserve-sheet-context 恢复策略');
+  if (source.lifecycle?.status === 'recovery-source') {
+    const observedStateIds = new Set(
+      (source.providerObservation?.cells ?? [])
+        .filter(
+          ({packageRole, stateId, passed, observedKeyColor}) =>
+            packageRole === 'state' &&
+            typeof stateId === 'string' &&
+            passed === true &&
+            /^#[0-9a-f]{6}$/i.test(observedKeyColor ?? ''),
+        )
+        .map(({stateId}) => stateId),
+    );
+    if (
+      source.providerObservation?.mode !== 'provider-native-observed' ||
+      source.providerObservation?.sourceAttempt?.status !== 'rejected' ||
+      spec.states.some(({id}) => !observedStateIds.has(id)) ||
+      observedStateIds.size !== spec.states.length
+    ) {
+      throw new Error(
+        'recovery-source state sheet 必须携带完整、通过且逐状态绑定的 observed key plane provenance',
+      );
+    }
+  }
   const sourceRecovery = source.stateSheetRecoveryBinding ?? source.request?.stateSheetRecoveryBinding ?? null;
   const sourceMetadata = await sharp(input).metadata();
-  const keyBackground = spec.extraction
-    ? await keyBackgroundFor({input, keyColor: spec.keying.keyColor})
-    : null;
 
   await fs.mkdir(outputDirectory, {recursive: true});
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'paper-collage-state-sheet-'));
@@ -162,13 +200,19 @@ try {
     if (spec.extraction) {
       for (const state of spec.states) {
         const cell = explicitExtractionFor({spec, state});
+        const observedState = stateObservationFor({
+          source,
+          stateId: state.id,
+        });
+        const keyColor =
+          observedState?.observedKeyColor ?? spec.keying.keyColor;
         assertExtractionFitsSource({cell, sourceMetadata});
         await writeExplicitRegisteredCell({
           input,
           destination: path.join(temporary, `${spec.poseFamilyId}-${state.id}-registered-key.png`),
           cell,
           canvas: spec.extraction.canvas,
-          keyBackground,
+          keyBackground: await keyBackgroundFor({input, keyColor}),
         });
       }
     } else {
@@ -182,12 +226,45 @@ try {
         ? path.join(temporary, `${spec.poseFamilyId}-${state.id}-registered-key.png`)
         : path.join(temporary, `${spec.poseFamilyId}-${index + 1}-registered-key.png`);
       const output = path.join(outputDirectory, stateOutputName({poseFamilyId: spec.poseFamilyId, stateId: state.id}));
+      const observedState = stateObservationFor({
+        source,
+        stateId: state.id,
+      });
+      const keyColor =
+        observedState?.observedKeyColor ?? spec.keying.keyColor;
       await run(python, [
         'scripts/remove_chroma_key.py', '--input', cell, '--out', output,
-        '--transparent-threshold', '18', '--opaque-threshold', '95', '--edge-feather', '0.6',
-        '--key-color', spec.keying.keyColor, '--matte-erode', String(spec.keying.matteErode),
+        '--transparent-threshold', String(spec.keying.transparentThreshold),
+        '--opaque-threshold', String(spec.keying.opaqueThreshold),
+        '--edge-feather', String(spec.keying.edgeFeather),
+        '--key-color', keyColor, '--matte-erode', String(spec.keying.matteErode),
+        '--edge-padding', String(spec.keying.edgePadding),
         '--metadata', `${output}.key.json`, '--force',
       ]);
+      if (observedState) {
+        const metadataFile = `${output}.key.json`;
+        const keyingMetadata = await readJson(metadataFile);
+        await writeJson(metadataFile, {
+          ...keyingMetadata,
+          providerObservation: {
+            stateId: state.id,
+            requestedKeyColor: observedState.requestedKeyColor,
+            observedKeyColor: observedState.observedKeyColor,
+            policyFingerprint: observedState.policyFingerprint,
+            observationFingerprint:
+              source.providerObservation.observationFingerprint,
+            metrics: observedState.metrics,
+          },
+        });
+      }
+      if (state.orientationTransform?.kind === 'horizontal-mirror') {
+        const mirrored = path.join(
+          temporary,
+          `${spec.poseFamilyId}-${state.id}-horizontal-mirror.png`,
+        );
+        await sharp(output).flop().png().toFile(mirrored);
+        await fs.copyFile(mirrored, output);
+      }
     }
   } finally {
     await fs.rm(temporary, {recursive: true, force: true});
@@ -204,7 +281,10 @@ try {
   const dimensions = new Set(members.map(({metadata}) => `${metadata.width}x${metadata.height}`));
   if (dimensions.size !== 1) throw new Error(`注册状态格尺寸不一致：${[...dimensions].join(', ')}`);
   const anchorRegistrationProof = inspectStateAnchorRegistration({
-    states: spec.states,
+    states: spec.states.map((state) => ({
+      ...state,
+      ...resolveOutputStateRegistration(state),
+    })),
     anchorPolicy: spec.anchorPolicy,
   });
   if (!anchorRegistrationProof.passed) {
@@ -213,6 +293,7 @@ try {
   const anchorEvidence = new Map();
   for (const member of members) {
     const state = spec.states.find(({id}) => id === member.stateId);
+    const outputRegistration = resolveOutputStateRegistration(state);
     const evidenceFile = path.join(
       outputDirectory,
       `${spec.poseFamilyId}-${member.stateId}-anchors.png`,
@@ -220,7 +301,7 @@ try {
     await writeAnchorOverlay({
       input: path.resolve(ROOT, member.file),
       output: evidenceFile,
-      anchors: state.anchors,
+      anchors: outputRegistration.anchors,
       width: member.metadata.width,
       height: member.metadata.height,
     });
@@ -233,6 +314,7 @@ try {
   const recordedAt = new Date().toISOString();
   const derived = members.map(({stateId, sha256: memberSha256, file, stat, metadata}) => {
     const state = spec.states.find(({id}) => id === stateId);
+    const outputRegistration = resolveOutputStateRegistration(state);
     const assetId = `${spec.poseFamilyId}-${stateId}`;
     const requestFingerprint = createHash('sha256').update(`${source.requestFingerprint}:${stateId}:${familyFingerprint}`).digest('hex');
     return {
@@ -271,6 +353,7 @@ try {
             ? explicitExtractionFor({spec, state}).placement
             : null,
           registrationCanvas: spec.extraction?.canvas ?? null,
+          orientationTransform: state.orientationTransform ?? null,
         },
       },
       stateBinding: {
@@ -278,8 +361,8 @@ try {
         stateId,
         registrationId: spec.registration.id,
         sourceMasterAssetId: spec.registration.sourceMasterAssetId,
-        facing: state.facing,
-        anchors: state.anchors,
+        facing: outputRegistration.facing,
+        anchors: outputRegistration.anchors,
         identityReferenceAssetId: identityReference.assetId,
         identityReferenceSha256: identityReference.sha256,
         anchorEvidence: anchorEvidence.get(stateId),
@@ -294,17 +377,37 @@ try {
   });
   const derivedIds = new Set(derived.map(({assetId}) => assetId));
   const replacementByAssetId = new Map(derived.map((record) => [record.assetId, record]));
-  for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
-    derivedIds.has(assetId) && lifecycle?.status === 'active')) {
-    previous.lifecycle = {
-      status: 'superseded',
-      changedAt: recordedAt,
-      reason: 'replaced-by-new-registered-cell',
-      supersededBy: replacementByAssetId.get(previous.assetId).recordId,
-    };
-  }
-  manifest.assets.push(...derived);
-  await writeJson(manifestFile, manifest);
+  await transactAssetManifest({
+    manifestFile,
+    projectSlug: spec.projectSlug,
+    mutate: (latestManifest) => {
+      const currentSource = latestManifest.assets.find(
+        ({assetId, lifecycle}) =>
+          assetId === spec.sourceAssetId &&
+          ['active', 'recovery-source'].includes(lifecycle?.status),
+      );
+      if (
+        !currentSource ||
+        currentSource.recordId !== source.recordId ||
+        currentSource.sha256 !== sourceSha256
+      ) {
+        throw new Error(
+          '状态表派生期间 source asset 已变化；输出未登记，请基于当前 manifest 重试。',
+        );
+      }
+      for (const previous of latestManifest.assets.filter(({assetId, lifecycle}) =>
+        derivedIds.has(assetId) && lifecycle?.status === 'active')) {
+        previous.lifecycle = {
+          status: 'superseded',
+          changedAt: recordedAt,
+          reason: 'replaced-by-new-registered-cell',
+          supersededBy: replacementByAssetId.get(previous.assetId).recordId,
+        };
+      }
+      latestManifest.assets.push(...derived);
+      return latestManifest;
+    },
+  });
   const providerImageCalls = ['host', 'command'].includes(source.adapter) ? 1 : 0;
   const recoveryTargetCount = sourceRecovery?.targetStateIds?.length ?? derived.length;
   await writeJson(path.join(outputDirectory, `${spec.poseFamilyId}-state-sheet-report.json`), {
@@ -322,8 +425,20 @@ try {
     anchorPolicy: spec.anchorPolicy,
     anchorRegistrationProof,
     providerImageCalls,
-    generationMode: sourceRecovery?.mode ?? 'initial-family-sheet',
+    generationMode: sourceRecovery?.mode ??
+      (source.lifecycle?.status === 'recovery-source'
+        ? 'rejected-output-recovery'
+        : 'initial-family-sheet'),
+    sourceLifecycle: source.lifecycle?.status ?? null,
     recoverySourceSheetAssetId: sourceRecovery?.sourceSheetAssetId ?? null,
+    observedKeyColors: Object.fromEntries(
+      spec.states
+        .map((state) => [
+          state.id,
+          stateObservationFor({source, stateId: state.id})?.observedKeyColor,
+        ])
+        .filter(([, observedKeyColor]) => Boolean(observedKeyColor)),
+    ),
     repairedStateIds: sourceRecovery?.targetStateIds ?? [],
     preservedContextStateCount: sourceRecovery?.mode === 'masked-sheet-edit'
       ? derived.length - recoveryTargetCount

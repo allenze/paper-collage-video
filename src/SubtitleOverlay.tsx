@@ -12,6 +12,7 @@ import type {
 import {
   resolveSubtitleFadeFrames,
   resolveSubtitleLayout,
+  resolveSubtitleTypography,
 } from './subtitleSurface.mjs';
 
 const clamp = {
@@ -50,6 +51,11 @@ export const SubtitleOverlay = ({
     width,
     height,
   });
+  const typography = resolveSubtitleTypography({
+    appearance,
+    theme,
+    scale,
+  });
   return (
     <div
       style={{
@@ -61,16 +67,12 @@ export const SubtitleOverlay = ({
         textAlign: 'center',
         opacity,
         color: appearance?.color ?? theme.subtitle,
-        fontFamily: theme.fontFile
-          ? 'PaperCollageProjectFont, serif'
-          : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif'),
-        fontWeight: 700,
+        fontFamily: typography.fontFamily,
+        fontWeight: typography.fontWeight,
         fontSize: 42 * scale,
         letterSpacing: 2 * scale,
         lineHeight: 1.35,
-        textShadow: appearance?.variant === 'plain'
-          ? '0 2px 8px rgba(0,0,0,.72)'
-          : '0 3px 2px rgba(28,15,10,.9), 0 0 14px rgba(28,15,10,.78)',
+        textShadow: typography.textShadow,
       }}
     >
       <span

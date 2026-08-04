@@ -12,7 +12,7 @@ import {
   readJson,
   writeJson,
 } from './project-lib.mjs';
-import {assertAssetManifest} from './asset-manifest-lib.mjs';
+import {transactAssetManifest} from './asset-manifest-lib.mjs';
 
 const workspacePath = (input, label) => {
   const resolved = path.resolve(ROOT, input);
@@ -37,19 +37,16 @@ try {
   if (!(await fileExists(projectFile)) || !(await fileExists(manifestFile))) {
     throw new Error('registered family 必须指向已有 project.json 与 assets-manifest.json');
   }
-  const [projectInput, manifestInput] = await Promise.all([
-    readJson(projectFile),
-    readJson(manifestFile),
-  ]);
+  const projectInput = await readJson(projectFile);
   const project = structuredClone(projectInput);
-  const manifest = assertAssetManifest(
-    structuredClone(manifestInput),
-    spec.projectSlug,
-  );
-  const result = await deriveRegisteredFamily({
-    root: ROOT,
-    spec,
-    manifest,
+  const result = await transactAssetManifest({
+    manifestFile,
+    projectSlug: spec.projectSlug,
+    mutate: (manifest) => deriveRegisteredFamily({
+      root: ROOT,
+      spec,
+      manifest,
+    }),
   });
   if (spec.applyToProject) {
     applyRegisteredFamilyToProject({
@@ -101,7 +98,6 @@ try {
   };
   await fs.mkdir(reportDirectory, {recursive: true});
   await Promise.all([
-    writeJson(manifestFile, result.manifest),
     ...(spec.applyToProject ? [writeJson(projectFile, project)] : []),
     writeJson(reportFile, {...result.report, compositionFragment}),
   ]);

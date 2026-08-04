@@ -11,6 +11,7 @@ import {
   validateCompositionStructure,
 } from '../scripts/composition-lib.mjs';
 import {
+  collectCompositeQualityTargets,
   prepareQualityReport,
 } from '../scripts/quality-lib.mjs';
 import {
@@ -20,7 +21,9 @@ import {
 import {
   createRuntimeBuildManifest,
   createRuntimeSurfaceFingerprint,
+  discoverRuntimeInputClosure,
   RUNTIME_BUILD_INPUTS,
+  RUNTIME_EXPLICIT_INPUTS,
   RUNTIME_SURFACE_INPUTS,
 } from '../scripts/runtime-build-lib.mjs';
 import {collectParallaxDepths} from '../src/parallax.mjs';
@@ -29,7 +32,157 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sha256File = async (file) =>
   createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
-test('composition-proof runtime surface excludes subtitle-only implementation changes', async () => {
+test('runtime build inputs discover every current style card from the catalog', async () => {
+  const catalog = JSON.parse(
+    await fs.readFile(
+      path.join(ROOT, 'public', 'style-catalog', 'catalog.json'),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(
+    RUNTIME_BUILD_INPUTS.filter((relative) =>
+      relative.startsWith('public/style-catalog/') &&
+      relative.endsWith('.png'),
+    ),
+    catalog.styles.map(({image}) => `public/${image}`),
+  );
+});
+
+test('runtime build identity closes over every local static module dependency', async () => {
+  const discovered = await discoverRuntimeInputClosure({
+    root: ROOT,
+    roots: RUNTIME_EXPLICIT_INPUTS,
+  });
+  assert.deepEqual(discovered, [
+    'fixtures/editorial-fixture.mjs',
+    'scripts/production-metrics-lib.mjs',
+    'scripts/python-runtime.mjs',
+    'scripts/semantic-slices-lib.mjs',
+    'scripts/state-sheet-lib.mjs',
+    'scripts/timeline-continuity-lib.mjs',
+  ]);
+  for (const relative of discovered) {
+    assert.ok(
+      RUNTIME_BUILD_INPUTS.includes(relative),
+      `${relative} must participate in the complete runtime identity`,
+    );
+  }
+});
+
+test('discovered runtime dependencies invalidate only their owning surfaces', async () => {
+  const visualDependencies = [
+    'scripts/state-sheet-lib.mjs',
+    'scripts/timeline-continuity-lib.mjs',
+  ];
+  const operationalDependencies = [
+    'fixtures/editorial-fixture.mjs',
+    'scripts/production-metrics-lib.mjs',
+    'scripts/python-runtime.mjs',
+  ];
+  for (const relative of [...visualDependencies, ...operationalDependencies]) {
+    assert.ok(RUNTIME_BUILD_INPUTS.includes(relative));
+  }
+  for (const relative of visualDependencies) {
+    assert.ok(RUNTIME_SURFACE_INPUTS['final-visual'].includes(relative));
+    assert.ok(RUNTIME_SURFACE_INPUTS['composition-proof'].includes(relative));
+  }
+  assert.ok(
+    RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'scripts/timeline-continuity-lib.mjs',
+    ),
+  );
+  assert.ok(
+    !RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'scripts/state-sheet-lib.mjs',
+    ),
+  );
+  for (const relative of operationalDependencies) {
+    assert.ok(!RUNTIME_SURFACE_INPUTS['final-visual'].includes(relative));
+    assert.ok(!RUNTIME_SURFACE_INPUTS['composition-proof'].includes(relative));
+    assert.ok(!RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(relative));
+  }
+
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'paper-collage-runtime-closure-'),
+  );
+  const fingerprints = async () => ({
+    build: (await createRuntimeBuildManifest({root: directory})).fingerprint,
+    finalVisual: await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    ),
+    compositionProof: await createRuntimeSurfaceFingerprint(
+      'composition-proof',
+      {root: directory},
+    ),
+    audioDelivery: await createRuntimeSurfaceFingerprint(
+      'audio-delivery',
+      {root: directory},
+    ),
+  });
+  try {
+    for (const relative of RUNTIME_BUILD_INPUTS) {
+      const target = path.join(directory, relative);
+      await fs.mkdir(path.dirname(target), {recursive: true});
+      await fs.copyFile(path.join(ROOT, relative), target);
+    }
+    const baseline = await fingerprints();
+    for (const relative of [...visualDependencies, ...operationalDependencies]) {
+      const target = path.join(directory, relative);
+      const original = await fs.readFile(target);
+      await fs.appendFile(target, '\n// runtime closure mutation\n');
+      const changed = await fingerprints();
+      assert.notEqual(changed.build, baseline.build, relative);
+      if (visualDependencies.includes(relative)) {
+        assert.notEqual(changed.finalVisual, baseline.finalVisual, relative);
+        assert.notEqual(
+          changed.compositionProof,
+          baseline.compositionProof,
+          relative,
+        );
+      } else {
+        assert.equal(changed.finalVisual, baseline.finalVisual, relative);
+        assert.equal(
+          changed.compositionProof,
+          baseline.compositionProof,
+          relative,
+        );
+      }
+      if (relative === 'scripts/timeline-continuity-lib.mjs') {
+        assert.notEqual(changed.audioDelivery, baseline.audioDelivery, relative);
+      } else {
+        assert.equal(changed.audioDelivery, baseline.audioDelivery, relative);
+      }
+      await fs.writeFile(target, original);
+    }
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('composition-proof runtime surface excludes subtitle and audio-delivery changes', async () => {
+  assert.ok(
+    RUNTIME_BUILD_INPUTS.includes('fixtures/starter-demo/project.json'),
+    'the default composition props must participate in the complete runtime identity',
+  );
+  for (const entrypoint of ['src/index.ts', 'src/Root.tsx']) {
+    assert.ok(
+      RUNTIME_BUILD_INPUTS.includes(entrypoint),
+      `${entrypoint} must participate in the complete runtime identity`,
+    );
+    assert.ok(
+      RUNTIME_SURFACE_INPUTS['final-visual'].includes(entrypoint),
+      `${entrypoint} must invalidate final visual frames`,
+    );
+    assert.ok(
+      RUNTIME_SURFACE_INPUTS['composition-proof'].includes(entrypoint),
+      `${entrypoint} must invalidate visual composition proof`,
+    );
+    assert.ok(
+      !RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(entrypoint),
+      `${entrypoint} must not invalidate audio delivery`,
+    );
+  }
   assert.ok(
     !RUNTIME_SURFACE_INPUTS['composition-proof'].includes(
       'src/SubtitleOverlay.tsx',
@@ -38,6 +191,35 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
   assert.ok(
     RUNTIME_SURFACE_INPUTS['composition-proof'].includes(
       'src/ReplicaChapterScene.tsx',
+    ),
+  );
+  for (const audioDeliveryFile of [
+    'schemas/audio-calibration.schema.json',
+    'scripts/audio-calibration-lib.mjs',
+    'scripts/audio-preflight-lib.mjs',
+    'scripts/assets-ready-seal-lib.mjs',
+    'scripts/project-assets-ready.mjs',
+    'scripts/project-audio-calibration.mjs',
+    'scripts/project-audio-preflight.mjs',
+    'scripts/project-report.mjs',
+  ]) {
+    assert.ok(
+      !RUNTIME_SURFACE_INPUTS['composition-proof'].includes(audioDeliveryFile),
+      `${audioDeliveryFile} must not invalidate visual composition proof`,
+    );
+    assert.ok(
+      !RUNTIME_SURFACE_INPUTS['final-visual'].includes(audioDeliveryFile),
+      `${audioDeliveryFile} must not invalidate final visual frames`,
+    );
+  }
+  assert.ok(
+    RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'scripts/audio-preflight-lib.mjs',
+    ),
+  );
+  assert.ok(
+    !RUNTIME_SURFACE_INPUTS['audio-delivery'].includes(
+      'src/SubtitleOverlay.tsx',
     ),
   );
   const directory = await fs.mkdtemp(
@@ -54,6 +236,10 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
       'composition-proof',
       {root: directory},
     );
+    const beforeFinalVisual = await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    );
     await fs.appendFile(
       path.join(directory, 'src/SubtitleOverlay.tsx'),
       '\n// subtitle-only fixture change\n',
@@ -66,8 +252,47 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
       'composition-proof',
       {root: directory},
     );
+    const afterSubtitleFinalVisual = await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    );
     assert.notEqual(afterSubtitleBuild.fingerprint, beforeBuild.fingerprint);
     assert.equal(afterSubtitleSurface, beforeSurface);
+    assert.notEqual(afterSubtitleFinalVisual, beforeFinalVisual);
+
+    for (const audioDeliveryFile of [
+      'schemas/audio-calibration.schema.json',
+      'scripts/audio-preflight-lib.mjs',
+    ]) {
+      const beforeAudioDelivery = await createRuntimeSurfaceFingerprint(
+        'audio-delivery',
+        {root: directory},
+      );
+      await fs.appendFile(
+        path.join(directory, audioDeliveryFile),
+        '\n ',
+        'utf8',
+      );
+      const afterAudioBuild = await createRuntimeBuildManifest({
+        root: directory,
+      });
+      const afterAudioSurface = await createRuntimeSurfaceFingerprint(
+        'composition-proof',
+        {root: directory},
+      );
+      const afterAudioFinalVisual = await createRuntimeSurfaceFingerprint(
+        'final-visual',
+        {root: directory},
+      );
+      const afterAudioDelivery = await createRuntimeSurfaceFingerprint(
+        'audio-delivery',
+        {root: directory},
+      );
+      assert.notEqual(afterAudioBuild.fingerprint, beforeBuild.fingerprint);
+      assert.equal(afterAudioSurface, beforeSurface);
+      assert.equal(afterAudioFinalVisual, afterSubtitleFinalVisual);
+      assert.notEqual(afterAudioDelivery, beforeAudioDelivery);
+    }
 
     await fs.appendFile(
       path.join(directory, 'src/ReplicaChapterScene.tsx'),
@@ -78,7 +303,12 @@ test('composition-proof runtime surface excludes subtitle-only implementation ch
       'composition-proof',
       {root: directory},
     );
+    const afterCompositionFinalVisual = await createRuntimeSurfaceFingerprint(
+      'final-visual',
+      {root: directory},
+    );
     assert.notEqual(afterCompositionSurface, beforeSurface);
+    assert.notEqual(afterCompositionFinalVisual, afterSubtitleFinalVisual);
   } finally {
     await fs.rm(directory, {recursive: true, force: true});
   }
@@ -139,6 +369,104 @@ test('composition proof input and fingerprints exclude subtitle-only data', asyn
   assert.notEqual(afterFinal, beforeFinal);
 });
 
+test('composite quality fingerprints ignore subtitle transcript formatting but retain timing', async () => {
+  const project = {
+    slug: 'subtitle-quality-fingerprint-fixture',
+    video: {width: 1920, height: 1080, fps: 30},
+    theme: {texture: null, fontFile: null},
+    sceneTransitions: [],
+    scenes: [{
+      id: 'scene',
+      narration: {
+        startSeconds: 0,
+        durationSeconds: 2,
+        text: '第一句 第二句',
+      },
+      tailSeconds: 0.2,
+      camera: {
+        parallax: {enabled: true, strength: 0.2, focalDepth: 0},
+      },
+      motion: {proofTimes: []},
+      events: [],
+      composition: {
+        coordinateSpace: {width: 1920, height: 1080},
+        nodes: [],
+      },
+      subtitles: [{fromSeconds: 0, toSeconds: 2, text: '第一句 第二句'}],
+    }],
+  };
+  const manifest = {assets: []};
+  const [before] = await collectCompositeQualityTargets(project, {manifest});
+  const formattingChange = structuredClone(project);
+  formattingChange.scenes[0].narration.text = '第一句  第二句';
+  formattingChange.scenes[0].subtitles = [
+    {fromSeconds: 0, toSeconds: 1, text: '第一句'},
+    {fromSeconds: 1.1, toSeconds: 2, text: '第二句'},
+  ];
+  const [afterFormatting] = await collectCompositeQualityTargets(
+    formattingChange,
+    {manifest},
+  );
+  assert.equal(afterFormatting.fingerprint, before.fingerprint);
+
+  const timingChange = structuredClone(formattingChange);
+  timingChange.scenes[0].narration.durationSeconds = 2.5;
+  const [afterTiming] = await collectCompositeQualityTargets(timingChange, {
+    manifest,
+  });
+  assert.notEqual(afterTiming.fingerprint, before.fingerprint);
+});
+
+test('whole-film style composition fingerprints exclude subtitle presentation', async () => {
+  const project = {
+    slug: 'subtitle-style-fingerprint-fixture',
+    video: {width: 1920, height: 1080, fps: 30},
+    theme: {texture: null, fontFile: null},
+    styleProfile: {
+      id: 'fixture-style',
+      quality: {requiredCompositeChecks: ['style-profile-consistent']},
+    },
+    sceneTransitions: [],
+    scenes: [{
+      id: 'scene',
+      appearance: {
+        background: '#ffffff',
+        subtitles: {variant: 'hidden'},
+      },
+      narration: {startSeconds: 0, durationSeconds: 2, text: '字幕'},
+      tailSeconds: 0.2,
+      camera: {preset: 'still', intensity: 0},
+      motion: {proofTimes: []},
+      events: [],
+      composition: {
+        coordinateSpace: {width: 1920, height: 1080},
+        nodes: [],
+      },
+      subtitles: [{fromSeconds: 0, toSeconds: 2, text: '字幕'}],
+    }],
+  };
+  const manifest = {assets: []};
+  const before = (await collectCompositeQualityTargets(project, {manifest}))
+    .find(({compositeId}) => compositeId === 'style-profile:fixture-style');
+  const subtitleChange = structuredClone(project);
+  subtitleChange.scenes[0].appearance.subtitles = {
+    variant: 'boxed',
+    edgeTreatment: 'crisp-outline',
+  };
+  const afterSubtitle = (
+    await collectCompositeQualityTargets(subtitleChange, {manifest})
+  ).find(({compositeId}) => compositeId === 'style-profile:fixture-style');
+  assert.equal(afterSubtitle.fingerprint, before.fingerprint);
+  assert.equal(afterSubtitle.compositionHash, before.compositionHash);
+
+  const compositionChange = structuredClone(subtitleChange);
+  compositionChange.scenes[0].appearance.background = '#eeeeee';
+  const afterComposition = (
+    await collectCompositeQualityTargets(compositionChange, {manifest})
+  ).find(({compositeId}) => compositeId === 'style-profile:fixture-style');
+  assert.notEqual(afterComposition.fingerprint, before.fingerprint);
+});
+
 test('derivation-only registered family passes deterministic checks without human review items', async () => {
   const slug = `derivation-only-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
@@ -168,7 +496,7 @@ test('derivation-only registered family passes deterministic checks without huma
       anchorX: 0,
       anchorY: 0,
     },
-    motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
   });
   try {
     await fs.mkdir(projectDirectory, {recursive: true});
@@ -259,7 +587,7 @@ test('derivation-only registered family passes deterministic checks without huma
       });
     }
     const project = {
-      schemaVersion: 10,
+      schemaVersion: 12,
       slug,
       video: {width: 100, height: 100, fps: 30},
       quality: {minimumAssetScale: 1},
@@ -292,7 +620,7 @@ test('derivation-only registered family passes deterministic checks without huma
               anchorX: 0,
               anchorY: 0,
             },
-            motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+            motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
             registration: {
               id: 'technical-family',
               sourceMasterAssetId: 'technical-master',

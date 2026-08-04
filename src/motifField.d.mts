@@ -49,7 +49,16 @@ export declare const resolveMotifFieldMotion: (input: {
   preset: 'drift' | 'fall-drift' | 'rise-drift' | 'burst' | 'orbit';
   progress: number;
   cycles: number;
+  horizontalAmplitude?: number;
 }) => {x: number; y: number; rotation: number; scale: number; opacity: number};
+
+export declare const resolveWorldBoundMotifX: (input: {
+  instanceX: number;
+  localOffsetX: number;
+  worldDisplacementPx: number;
+  viewportWidth: number;
+  bounds: MotifFieldBounds;
+}) => number;
 
 export declare const verifyMotifFieldLoop: (input: {
   preset: 'drift' | 'fall-drift' | 'rise-drift' | 'burst' | 'orbit';

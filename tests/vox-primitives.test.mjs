@@ -18,6 +18,7 @@ import {
   isPointInsideMotifExclusion,
   resolveMotifFieldInstances,
   resolveMotifFieldMotion,
+  resolveWorldBoundMotifX,
   verifyMotifFieldLoop,
 } from '../src/motifField.mjs';
 import {
@@ -28,9 +29,10 @@ import {
   createEditorialFixture,
   withCompiledEditorialFixture,
 } from '../fixtures/editorial-fixture.mjs';
+import {FIXTURE_STYLE_PROFILE} from '../fixtures/motion-contract-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const still = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]};
+const still = {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]};
 const transform = {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0};
 
 const motifField = (overrides = {}) => ({
@@ -98,6 +100,36 @@ test('motif fields expand deterministically without authoring one node per parti
     collectCompositionVisualSources({nodes: [node]}),
     ['motifs/petal-a.svg', 'motifs/petal-b.svg'],
   );
+});
+
+test('world-bound motif instances wrap with their environment while keeping local drift small', () => {
+  const bounds = {x: 0.1, y: 0.08, width: 0.8, height: 0.68};
+  assert.equal(
+    resolveWorldBoundMotifX({
+      instanceX: 0.2,
+      localOffsetX: 0.004,
+      worldDisplacementPx: -480,
+      viewportWidth: 1920,
+      bounds,
+    }),
+    0.754,
+  );
+  const wrapped = resolveWorldBoundMotifX({
+    instanceX: 0.86,
+    localOffsetX: 0.004,
+    worldDisplacementPx: 240,
+    viewportWidth: 1920,
+    bounds,
+  });
+  assert.ok(wrapped >= bounds.x && wrapped <= bounds.x + bounds.width);
+  const motion = resolveMotifFieldMotion({
+    instance: {phase: 0.1, x: 0.5, y: 0.5},
+    preset: 'rise-drift',
+    progress: 0.2,
+    cycles: 4,
+    horizontalAmplitude: 0.004,
+  });
+  assert.ok(Math.abs(motion.x) <= 0.004 + Number.EPSILON);
 });
 
 test('motif fields enforce bounded density, exclusions, placement, and scene budget', () => {
@@ -237,6 +269,20 @@ test('parallax rigs require camera motion and distinct legal depth layers', () =
   });
   assert.ok(invalid.some(({code}) => code === 'parallax-camera-motion'));
   assert.ok(invalid.some(({code}) => code === 'parallax-depth-spread'));
+  assert.ok(
+    !validateParallaxRig({
+      camera: {
+        preset: 'static',
+        intensity: 1,
+        follow: {
+          targetNodeId: 'swimmer',
+          worldNodeId: 'pond-world',
+        },
+        parallax: {enabled: true, strength: 0.8, focalDepth: 0},
+      },
+      composition: {nodes: [asset('back', -1), asset('front', 1)]},
+    }).some(({code}) => code === 'parallax-camera-motion'),
+  );
 
   const depthStack = {
     id: 'depth-stack',
@@ -382,8 +428,12 @@ test('the no-provider VOX fixture compiles and executes every new primitive', ()
     mediaSha256: '1c14b9f9cc430154dd3a74fc5267a83233f2e04e492444376c27dd956134177f',
     durationSeconds: 6,
   });
-  const storyboard = compileStoryboardDirecting(storyboardInput);
-  assert.equal(project.plan.assetBudget.maxGeneratedImages, 21);
+  const storyboard = compileStoryboardDirecting(storyboardInput, {
+    plan: project.plan,
+    styleProfile: FIXTURE_STYLE_PROFILE,
+  });
+  project.motionContract = storyboard.motionContract;
+  assert.equal(project.plan.assetBudget.maxGeneratedImages, 25);
   assert.deepEqual(
     validateSceneTransitionSequence({
       scenes: storyboard.scenes,

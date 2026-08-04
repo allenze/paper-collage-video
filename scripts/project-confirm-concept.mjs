@@ -101,7 +101,11 @@ try {
       );
     }
   }
-  const storyboard = await assertStoryboardReady(slug, project.plan);
+  const storyboard = await assertStoryboardReady(
+    slug,
+    project.plan,
+    project.styleProfile,
+  );
   if (selectedScenarioOption) {
     assertStoryboardMatchesScenario(
       selectedScenarioOption,

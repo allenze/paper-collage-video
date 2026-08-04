@@ -4,7 +4,7 @@
   "title": "Paper Collage Composition Contract",
   "$defs": {
     "pattern": {
-      "enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "looping-environment"]
+      "enum": ["free", "supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "canonical-container"]
     },
     "emphasisAction": {
       "enum": ["pulse", "stamp", "shake", "lift", "settle", "drop-impact", "carve"]
@@ -12,13 +12,141 @@
     "motionEase": {
       "enum": ["linear", "ease-in", "ease-out", "ease-in-out", "hold"]
     },
+    "pathPoint": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "z": {"type": "number", "minimum": -1, "maximum": 1}
+      },
+      "additionalProperties": false
+    },
+    "cubicBezierPathSegment": {
+      "type": "object",
+      "required": ["control1", "control2", "end"],
+      "properties": {
+        "control1": {"$ref": "#/$defs/pathPoint"},
+        "control2": {"$ref": "#/$defs/pathPoint"},
+        "end": {"$ref": "#/$defs/pathPoint"}
+      },
+      "additionalProperties": false
+    },
+    "pathProgressKeyframe": {
+      "type": "object",
+      "required": ["at", "distance"],
+      "properties": {
+        "at": {"type": "number", "minimum": 0, "maximum": 1},
+        "distance": {"type": "number", "minimum": 0, "maximum": 1},
+        "ease": {"$ref": "#/$defs/motionEase"}
+      },
+      "additionalProperties": false
+    },
+    "pathOrientation": {
+      "type": "object",
+      "required": [
+        "mode",
+        "forwardAngleDegrees",
+        "smoothingSeconds",
+        "maximumTurnDegreesPerSecond"
+      ],
+      "properties": {
+        "mode": {"const": "path-tangent"},
+        "forwardAngleDegrees": {
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360
+        },
+        "smoothingSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maximumTurnDegreesPerSecond": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1080
+        }
+      },
+      "additionalProperties": false
+    },
+    "pathProjection": {
+      "type": "object",
+      "required": [
+        "depthDistanceScale",
+        "farScale",
+        "nearScale",
+        "farOpacity",
+        "nearOpacity",
+        "farBlurPx",
+        "nearBlurPx",
+        "depthOrderSpan"
+      ],
+      "properties": {
+        "depthDistanceScale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 4
+        },
+        "farScale": {"type": "number", "exclusiveMinimum": 0, "maximum": 4},
+        "nearScale": {"type": "number", "exclusiveMinimum": 0, "maximum": 4},
+        "farOpacity": {"type": "number", "minimum": 0.2, "maximum": 1},
+        "nearOpacity": {"type": "number", "minimum": 0.2, "maximum": 1},
+        "farBlurPx": {"type": "number", "minimum": 0, "maximum": 20},
+        "nearBlurPx": {"type": "number", "minimum": 0, "maximum": 20},
+        "depthOrderSpan": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      },
+      "additionalProperties": false
+    },
+    "pathMotion": {
+      "type": "object",
+      "required": [
+        "kind",
+        "coordinateSpace",
+        "start",
+        "segments",
+        "progress",
+        "orientation",
+        "projection"
+      ],
+      "properties": {
+        "kind": {"const": "cubic-bezier-3d"},
+        "coordinateSpace": {"const": "parent-normalized-depth"},
+        "start": {"$ref": "#/$defs/pathPoint"},
+        "segments": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {"$ref": "#/$defs/cubicBezierPathSegment"}
+        },
+        "progress": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/pathProgressKeyframe"}
+        },
+        "orientation": {"$ref": "#/$defs/pathOrientation"},
+        "projection": {"$ref": "#/$defs/pathProjection"}
+      },
+      "additionalProperties": false
+    },
     "motionKeyframe": {
       "type": "object",
       "required": ["at"],
       "properties": {
         "at": {"type": "number", "minimum": 0, "maximum": 1},
-        "x": {"type": "number"},
-        "y": {"type": "number"},
+        "offsetX": {
+          "type": "number",
+          "description": "Additive horizontal offset in parent-normalized coordinates; it is not an absolute canvas position."
+        },
+        "offsetY": {
+          "type": "number",
+          "description": "Additive vertical offset in parent-normalized coordinates; it is not an absolute canvas position."
+        },
         "scale": {"type": "number", "exclusiveMinimum": 0},
         "rotation": {"type": "number"},
         "opacity": {"type": "number", "minimum": 0, "maximum": 1},
@@ -54,7 +182,8 @@
             "y": {"type": "number", "minimum": 0, "maximum": 1}
           },
           "additionalProperties": false
-        }
+        },
+        "path": {"$ref": "#/$defs/pathMotion"}
       },
       "additionalProperties": false
     },
@@ -173,6 +302,85 @@
       },
       "additionalProperties": false
     },
+    "canonicalContainer": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "familyId",
+        "sourcePackageId",
+        "sourceStrategy",
+        "familyFingerprint",
+        "cleanPlateNodeId",
+        "canonicalFrameNodeId",
+        "contentsNodeId",
+        "cleanPlateAssetId",
+        "cleanPlateSha256",
+        "canonicalFrameAssetId",
+        "canonicalFrameSha256",
+        "contentSheetAssetId",
+        "contentSheetSha256",
+        "interiorMaskAssetId",
+        "interiorMaskSha256",
+        "authoritativeSurfaceId",
+        "interiorShape",
+        "alignmentPolicy",
+        "states",
+        "terminalStateId",
+        "terminalPolicy",
+        "recoveryPolicy"
+      ],
+      "properties": {
+        "schemaVersion": {"const": 1},
+        "familyId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "sourcePackageId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "sourceStrategy": {"const": "canonical-frame-with-content-sheet"},
+        "familyFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "cleanPlateNodeId": {"type": "string", "minLength": 1},
+        "canonicalFrameNodeId": {"type": "string", "minLength": 1},
+        "contentsNodeId": {"type": "string", "minLength": 1},
+        "cleanPlateAssetId": {"type": "string", "minLength": 1},
+        "cleanPlateSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "canonicalFrameAssetId": {"type": "string", "minLength": 1},
+        "canonicalFrameSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "contentSheetAssetId": {"type": "string", "minLength": 1},
+        "contentSheetSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "interiorMaskAssetId": {"type": "string", "minLength": 1},
+        "interiorMaskSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "authoritativeSurfaceId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "interiorShape": {
+          "$ref": "https://local.paper-collage.dev/canonical-container.schema.json#/$defs/interiorShape"
+        },
+        "alignmentPolicy": {
+          "$ref": "https://local.paper-collage.dev/canonical-container.schema.json#/properties/alignmentPolicy"
+        },
+        "states": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id", "fillLevel", "assetId", "sha256", "metrics"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "fillLevel": {"type": "number", "minimum": 0, "maximum": 1},
+              "assetId": {"type": "string", "minLength": 1},
+              "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+              "metrics": {
+                "$ref": "https://local.paper-collage.dev/canonical-container-binding.schema.json#/properties/metrics/oneOf/1"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "terminalStateId": {"type": "string", "minLength": 1},
+        "terminalPolicy": {
+          "$ref": "https://local.paper-collage.dev/canonical-container.schema.json#/properties/terminalPolicy"
+        },
+        "recoveryPolicy": {
+          "$ref": "https://local.paper-collage.dev/canonical-container.schema.json#/$defs/recoveryPolicy"
+        }
+      },
+      "additionalProperties": false
+    },
     "assetNode": {
       "type": "object",
       "required": ["id", "kind", "assetRole", "src", "z", "transform", "motion"],
@@ -253,6 +461,22 @@
                 }
               ]
             },
+            "checkerboardAlpha": {
+              "oneOf": [
+                {"type": "null"},
+                {
+                  "$ref": "https://local.paper-collage.dev/looping-strip.schema.json#/properties/checkerboardAlpha"
+                }
+              ]
+            },
+            "decorativeScatter": {
+              "oneOf": [
+                {"type": "null"},
+                {
+                  "$ref": "https://local.paper-collage.dev/looping-strip.schema.json#/properties/decorativeScatter"
+                }
+              ]
+            },
             "keyingMetadataSha256": {
               "type": ["string", "null"],
               "pattern": "^[a-f0-9]{64}$"
@@ -270,6 +494,23 @@
             "height": {"type": "integer", "minimum": 1}
           },
           "additionalProperties": false
+        },
+        "alphaFeather": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": ["topPixels", "bottomPixels"],
+              "properties": {
+                "topPixels": {"type": "integer", "minimum": 0, "maximum": 1024},
+                "bottomPixels": {"type": "integer", "minimum": 0, "maximum": 1024}
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "edgeStabilizationPixels": {
+          "$ref": "https://local.paper-collage.dev/looping-strip.schema.json#/properties/edgeStabilizationPixels"
         },
         "output": {
           "type": "object",
@@ -398,6 +639,39 @@
       ],
       "additionalProperties": false
     },
+    "pathViewBinding": {
+      "type": "object",
+      "required": [
+        "depthVelocityThreshold",
+        "transitionWidth",
+        "planarStateIds",
+        "towardStateIds",
+        "awayStateIds"
+      ],
+      "properties": {
+        "depthVelocityThreshold": {"type": "number", "exclusiveMinimum": 0},
+        "transitionWidth": {"type": "number", "minimum": 0},
+        "planarStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "towardStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "awayStateIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      },
+      "additionalProperties": false
+    },
     "stateSequenceNode": {
       "type": "object",
       "required": ["id", "kind", "assetRole", "poseFamilyId", "registration", "anchorPolicy", "states", "playback", "transition", "z", "transform", "motion"],
@@ -410,6 +684,7 @@
         "anchorPolicy": {"$ref": "#/$defs/stateAnchorPolicy"},
         "states": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/sequenceState"}},
         "playback": {"$ref": "#/$defs/sequencePlayback"},
+        "pathViewBinding": {"$ref": "#/$defs/pathViewBinding"},
         "transition": {"$ref": "#/$defs/sequenceTransition"},
         "z": {"type": "integer"},
         "slot": {"type": "string", "minLength": 1},
@@ -428,6 +703,7 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "kind": {"const": "typography"},
+        "role": {"enum": ["visual-sfx"]},
         "text": {"type": "string"},
         "treatment": {
           "type": "object",
@@ -864,6 +1140,16 @@
           "maxItems": 12,
           "items": {"$ref": "#/$defs/motifExclusionZone"}
         },
+        "worldBinding": {
+          "type": "object",
+          "required": ["worldNodeId", "stripRole", "relativeDriftAmplitude"],
+          "properties": {
+            "worldNodeId": {"type": "string", "minLength": 1},
+            "stripRole": {"enum": ["far", "mid", "ground", "near"]},
+            "relativeDriftAmplitude": {"type": "number", "minimum": 0, "maximum": 0.05}
+          },
+          "additionalProperties": false
+        },
         "z": {"type": "integer"},
         "depth": {"type": "number", "minimum": -1, "maximum": 1},
         "transform": {"$ref": "#/$defs/transform"},
@@ -936,6 +1222,7 @@
               "role": {"enum": ["tracked", "participant"]},
               "anchorMode": {"enum": ["screen", "world"]},
               "nearOcclusion": {"enum": ["behind-near", "above-near"]},
+              "requireNearOverlap": {"type": "boolean"},
               "proofTimeIds": {
                 "type": "array",
                 "minItems": 2,
@@ -1022,6 +1309,7 @@
         "kind": {"const": "group"},
         "pattern": {"$ref": "#/$defs/pattern"},
         "renderParticipation": {"enum": ["visible", "derivation-only"]},
+        "stackingContext": {"enum": ["isolated", "scene"]},
         "z": {"type": "integer"},
         "depth": {"type": "number", "minimum": -1, "maximum": 1},
         "coordinateSpace": {"$ref": "#/$defs/coordinateSpace"},
@@ -1031,6 +1319,7 @@
         "registration": {"$ref": "#/$defs/registration"},
         "layerStack": {"$ref": "#/$defs/layerStack"},
         "loopingEnvironment": {"$ref": "#/$defs/loopingEnvironment"},
+        "canonicalContainer": {"$ref": "#/$defs/canonicalContainer"},
         "support": {"$ref": "#/$defs/support"},
         "boundaries": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/boundary"}},
         "children": {
@@ -1055,6 +1344,10 @@
         {
           "if": {"properties": {"pattern": {"const": "looping-environment"}}},
           "then": {"required": ["loopingEnvironment"]}
+        },
+        {
+          "if": {"properties": {"pattern": {"const": "canonical-container"}}},
+          "then": {"required": ["registration", "canonicalContainer"]}
         }
       ],
       "additionalProperties": false

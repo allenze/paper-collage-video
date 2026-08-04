@@ -7,6 +7,7 @@
     "slug",
     "status",
     "intakeFingerprint",
+    "styleProfileBinding",
     "requested",
     "commonStory",
     "options",
@@ -22,6 +23,27 @@
       "oneOf": [
         {"type": "null"},
         {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      ]
+    },
+    "styleProfileBinding": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["id", "catalogVersion", "profileFingerprint"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            },
+            "catalogVersion": {"type": "string", "minLength": 1},
+            "profileFingerprint": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "requested": {
@@ -220,9 +242,9 @@
         "strategy": {
           "enum": [
             "single-background",
-            "separate-images",
+            "rigid-master",
             "registered-layer-sheet",
-            "provider-layered-document"
+            "context-preserving-layer-edits"
           ]
         },
         "providerCalls": {"type": "integer", "minimum": 1},
@@ -399,6 +421,7 @@
       "then": {
         "properties": {
           "intakeFingerprint": {"type": "null"},
+          "styleProfileBinding": {"type": "null"},
           "commonStory": {"type": "null"},
           "options": {"maxItems": 0},
           "fingerprint": {"type": "null"}
@@ -410,6 +433,7 @@
       "then": {
         "properties": {
           "intakeFingerprint": {"type": "string"},
+          "styleProfileBinding": {"type": "object"},
           "commonStory": {"type": "object"},
           "options": {"minItems": 3, "maxItems": 3},
           "fingerprint": {"type": "string"}

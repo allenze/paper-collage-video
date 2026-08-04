@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {STYLE_IDS} from './style-catalog-lib.mjs';
+import {STYLE_ID_PATTERN} from './style-catalog-lib.mjs';
 
 export const ASPECT_RATIOS = {
   '16:9': {width: 1920, height: 1080, label: '横屏 16:9'},
@@ -26,13 +26,14 @@ const isDateTime = (value) =>
   typeof value === 'string' && Number.isFinite(Date.parse(value));
 
 export const createPendingIntake = ({at = new Date().toISOString()} = {}) => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   status: 'pending',
   aspectRatio: null,
   visualStylePreset: null,
   parallaxPreference: null,
   styleCatalogVersion: null,
   styleCatalogFingerprint: null,
+  styleProfileFingerprint: null,
   confirmedAt: null,
   note: '',
   updatedAt: at,
@@ -45,6 +46,7 @@ export const intakeDecisionFingerprint = (intake) =>
     parallaxPreference: intake.parallaxPreference,
     styleCatalogVersion: intake.styleCatalogVersion,
     styleCatalogFingerprint: intake.styleCatalogFingerprint,
+    styleProfileFingerprint: intake.styleProfileFingerprint,
   }));
 
 export const validateIntake = (intake) => {
@@ -53,7 +55,7 @@ export const validateIntake = (intake) => {
   if (!intake || typeof intake !== 'object' || Array.isArray(intake)) {
     return [{message: '缺少 intake。', location: 'intake'}];
   }
-  if (intake.schemaVersion !== 1) add('intake.schemaVersion 必须为 1。', 'intake.schemaVersion');
+  if (intake.schemaVersion !== 2) add('intake.schemaVersion 必须为 2。', 'intake.schemaVersion');
   if (!['pending', 'confirmed'].includes(intake.status)) {
     add('intake.status 必须为 pending 或 confirmed。', 'intake.status');
   }
@@ -66,6 +68,7 @@ export const validateIntake = (intake) => {
       'parallaxPreference',
       'styleCatalogVersion',
       'styleCatalogFingerprint',
+      'styleProfileFingerprint',
       'confirmedAt',
     ]) {
       if (intake[key] !== null) add(`pending intake 的 ${key} 必须为 null。`, `intake.${key}`);
@@ -75,8 +78,8 @@ export const validateIntake = (intake) => {
   if (!Object.hasOwn(ASPECT_RATIOS, intake.aspectRatio)) {
     add('画幅必须是 16:9 或 9:16。', 'intake.aspectRatio');
   }
-  if (!STYLE_IDS.includes(intake.visualStylePreset)) {
-    add('视觉风格必须来自内置三风格目录。', 'intake.visualStylePreset');
+  if (!STYLE_ID_PATTERN.test(intake.visualStylePreset ?? '')) {
+    add('视觉风格必须是有效的目录风格 id。', 'intake.visualStylePreset');
   }
   if (!Object.hasOwn(PARALLAX_PREFERENCES, intake.parallaxPreference)) {
     add('视差偏好必须是 auto、prefer 或 minimal。', 'intake.parallaxPreference');
@@ -86,6 +89,9 @@ export const validateIntake = (intake) => {
   }
   if (!/^[a-f0-9]{64}$/.test(intake.styleCatalogFingerprint ?? '')) {
     add('必须记录有效 style catalog fingerprint。', 'intake.styleCatalogFingerprint');
+  }
+  if (!/^[a-f0-9]{64}$/.test(intake.styleProfileFingerprint ?? '')) {
+    add('必须记录有效 style profile fingerprint。', 'intake.styleProfileFingerprint');
   }
   if (!isDateTime(intake.confirmedAt)) {
     add('confirmed intake 必须记录 confirmedAt。', 'intake.confirmedAt');
@@ -110,14 +116,21 @@ export const confirmIntake = ({
   catalog,
   at = new Date().toISOString(),
 }) => {
+  const selectedStyle = catalog.styles.find(
+    ({id}) => id === selection.visualStylePreset,
+  );
+  if (!selectedStyle) {
+    throw new Error(`视觉风格不在当前目录中：${selection.visualStylePreset ?? 'missing'}。`);
+  }
   const intake = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: 'confirmed',
     aspectRatio: selection.aspectRatio,
     visualStylePreset: selection.visualStylePreset,
     parallaxPreference: selection.parallaxPreference,
     styleCatalogVersion: catalog.version,
     styleCatalogFingerprint: catalog.fingerprint,
+    styleProfileFingerprint: selectedStyle.profileFingerprint,
     confirmedAt: at,
     note: String(selection.note ?? '').trim(),
     updatedAt: at,

@@ -11,6 +11,18 @@ export const DEFAULT_ALPHA_BAND_THRESHOLDS = Object.freeze({
   rectangleMinimumSeparationRatio: 0.08,
 });
 
+export const DEFAULT_ALPHA_TOPOLOGY_THRESHOLDS = Object.freeze({
+  alphaMinimum: 12,
+  maximumAnalysisDimension: 1024,
+  minimumDetachedPixels: 20,
+  minimumDetachedAreaRatio: 0.00004,
+  minimumDetachedSeparationRatio: 0.015,
+  minimumRectangularFillRatio: 0.68,
+  derivationRectangleFillRatio: 0.82,
+  derivationBoundaryToleranceRatio: 0.012,
+  minimumDerivationComponentAreaRatio: 0.004,
+});
+
 const clamp = (value, minimum, maximum) =>
   Math.max(minimum, Math.min(maximum, value));
 
@@ -461,6 +473,259 @@ export const inspectAlphaBands = async ({
     failureMessage: failures.length > 0
       ? failures.map(({message}) => message).join('; ')
       : null,
+  };
+};
+
+const componentGap = (left, right) => {
+  const horizontal = Math.max(
+    0,
+    left.left - right.right - 1,
+    right.left - left.right - 1,
+  );
+  const vertical = Math.max(
+    0,
+    left.top - right.bottom - 1,
+    right.top - left.bottom - 1,
+  );
+  return Math.hypot(horizontal, vertical);
+};
+
+const componentRect = (component) => ({
+  left: component.left,
+  top: component.top,
+  width: component.right - component.left + 1,
+  height: component.bottom - component.top + 1,
+});
+
+const alignedDerivationEdges = ({
+  component,
+  region,
+  width,
+  height,
+  thresholds,
+}) => {
+  const tolerance = Math.max(
+    2,
+    Math.round(
+      Math.min(width, height) *
+        thresholds.derivationBoundaryToleranceRatio,
+    ),
+  );
+  const rect = componentRect(component);
+  const edges = [
+    ['left', rect.left, region.rect.left],
+    ['top', rect.top, region.rect.top],
+    ['right', rect.left + rect.width, region.rect.left + region.rect.width],
+    ['bottom', rect.top + rect.height, region.rect.top + region.rect.height],
+  ]
+    .filter(([, actual, expected]) => Math.abs(actual - expected) <= tolerance)
+    .map(([edge]) => edge);
+  const perpendicular =
+    (edges.includes('left') || edges.includes('right')) &&
+    (edges.includes('top') || edges.includes('bottom'));
+  return {edges, perpendicular, tolerance};
+};
+
+export const analyzeAlphaTopologyPixels = ({
+  data,
+  info,
+  derivationRegions = [],
+  expectedComponents = [],
+  allowDetachedComponents = false,
+  thresholds = DEFAULT_ALPHA_TOPOLOGY_THRESHOLDS,
+}) => {
+  const {width, height, channels} = info;
+  const pixelCount = width * height;
+  const visited = new Uint8Array(pixelCount);
+  const queue = new Int32Array(pixelCount);
+  const components = [];
+  const alphaAt = (index) => data[index * channels + 3];
+  for (let start = 0; start < pixelCount; start += 1) {
+    if (visited[start] || alphaAt(start) < thresholds.alphaMinimum) continue;
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = start;
+    visited[start] = 1;
+    let pixels = 0;
+    let left = width;
+    let right = -1;
+    let top = height;
+    let bottom = -1;
+    while (head < tail) {
+      const current = queue[head++];
+      const x = current % width;
+      const y = Math.floor(current / width);
+      pixels += 1;
+      left = Math.min(left, x);
+      right = Math.max(right, x);
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+      for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+        const nextY = y + offsetY;
+        if (nextY < 0 || nextY >= height) continue;
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          if (offsetX === 0 && offsetY === 0) continue;
+          const nextX = x + offsetX;
+          if (nextX < 0 || nextX >= width) continue;
+          const next = nextY * width + nextX;
+          if (
+            visited[next] ||
+            alphaAt(next) < thresholds.alphaMinimum
+          ) continue;
+          visited[next] = 1;
+          queue[tail++] = next;
+        }
+      }
+    }
+    const boxPixels = Math.max(1, (right - left + 1) * (bottom - top + 1));
+    components.push({
+      id: `component-${components.length + 1}`,
+      pixels,
+      areaRatio: pixels / Math.max(1, pixelCount),
+      left,
+      top,
+      right,
+      bottom,
+      fillRatio: pixels / boxPixels,
+    });
+  }
+  components.sort((left, right) => right.pixels - left.pixels);
+  const primary = components[0] ?? null;
+  const diagonal = Math.hypot(width, height);
+  const diagnostics = [];
+  const expectedComponentTolerance = Math.max(
+    2,
+    Math.round(
+      Math.min(width, height) *
+        thresholds.derivationBoundaryToleranceRatio,
+    ),
+  );
+  const matchesExpectedComponent = (component) =>
+    expectedComponents.some((expected) => {
+      const expectedRight = expected.left + expected.width - 1;
+      const expectedBottom = expected.top + expected.height - 1;
+      return (
+        component.left >= expected.left - expectedComponentTolerance &&
+        component.top >= expected.top - expectedComponentTolerance &&
+        component.right <= expectedRight + expectedComponentTolerance &&
+        component.bottom <= expectedBottom + expectedComponentTolerance
+      );
+    });
+  if (primary && !allowDetachedComponents) {
+    for (const component of components.slice(1)) {
+      const separationRatio =
+        componentGap(primary, component) / Math.max(1, diagonal);
+      if (
+        component.pixels >= thresholds.minimumDetachedPixels &&
+        component.areaRatio >= thresholds.minimumDetachedAreaRatio &&
+        separationRatio >= thresholds.minimumDetachedSeparationRatio &&
+        component.fillRatio >= thresholds.minimumRectangularFillRatio &&
+        !matchesExpectedComponent(component)
+      ) {
+        diagnostics.push({
+          id: component.id,
+          classification: 'detached-rectangular-alpha-fragment',
+          severity: 'error',
+          separationRatio,
+          component,
+        });
+      }
+    }
+  }
+  for (const component of components) {
+    const rect = componentRect(component);
+    if (
+      component.areaRatio < thresholds.minimumDerivationComponentAreaRatio ||
+      component.fillRatio < thresholds.derivationRectangleFillRatio ||
+      rect.width * rect.height >= pixelCount * 0.98
+    ) continue;
+    for (const region of derivationRegions) {
+      const alignment = alignedDerivationEdges({
+        component,
+        region,
+        width,
+        height,
+        thresholds,
+      });
+      if (!alignment.perpendicular) continue;
+      diagnostics.push({
+        id: `${component.id}:${region.id}`,
+        classification: 'hard-rectangular-derivation-boundary',
+        severity: 'error',
+        component,
+        region,
+        alignment,
+      });
+    }
+  }
+  const failures = diagnostics.map((diagnostic) => ({
+    id: diagnostic.id,
+    message:
+      diagnostic.classification === 'detached-rectangular-alpha-fragment'
+        ? `${diagnostic.id} is a detached rectangular alpha fragment`
+        : `${diagnostic.id} follows a hard rectangular derivation boundary`,
+    diagnostic,
+  }));
+  return {
+    width,
+    height,
+    thresholds,
+    components,
+    diagnostics,
+    failures,
+    passed: failures.length === 0,
+  };
+};
+
+export const inspectAlphaTopology = async ({
+  file,
+  derivationRegions = [],
+  expectedComponents = [],
+  allowDetachedComponents = false,
+  thresholds = DEFAULT_ALPHA_TOPOLOGY_THRESHOLDS,
+}) => {
+  const metadata = await sharp(file).metadata();
+  const scale = Math.min(
+    1,
+    thresholds.maximumAnalysisDimension /
+      Math.max(metadata.width ?? 1, metadata.height ?? 1),
+  );
+  const width = Math.max(1, Math.round((metadata.width ?? 1) * scale));
+  const height = Math.max(1, Math.round((metadata.height ?? 1) * scale));
+  const image = sharp(file).toColourspace('srgb').ensureAlpha();
+  const analyzed = await (
+    scale < 1 ? image.resize(width, height, {fit: 'fill', kernel: 'nearest'}) : image
+  )
+    .raw()
+    .toBuffer({resolveWithObject: true});
+  const sourceSize = {
+    width: metadata.width ?? analyzed.info.width,
+    height: metadata.height ?? analyzed.info.height,
+  };
+  const analysisSize = {
+    width: analyzed.info.width,
+    height: analyzed.info.height,
+  };
+  const inspection = analyzeAlphaTopologyPixels({
+    data: analyzed.data,
+    info: analyzed.info,
+    thresholds,
+    derivationRegions: derivationRegions.map((region) => ({
+      ...region,
+      rect: scaleRect(region.rect, sourceSize, analysisSize),
+    })),
+    expectedComponents: expectedComponents.map((component) =>
+      scaleRect(component, sourceSize, analysisSize)),
+    allowDetachedComponents,
+  });
+  return {
+    schemaVersion: 1,
+    sourceSize,
+    analysisSize,
+    derivationRegions,
+    expectedComponents,
+    allowDetachedComponents,
+    ...inspection,
   };
 };
 

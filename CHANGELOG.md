@@ -4,6 +4,31 @@
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-08-04
+
+### Added
+
+- Project/Storyboard v12 的动态 Style Catalog、可执行 Style Profile v2 与整片 Motion Contract：视觉表面、转场集合、节拍角色、镜头、环境运动和例外都进入可验证、可失效的正式协议。
+- 注册状态主体的三维 Bézier `path-locomotion`：按物理像素弧长采样，支持切线自动朝向、角度展开、平滑与转速上限、景深投影、动态层级、速度驱动的平面/朝向/背向循环，以及绑定同一路径的世界边界相机跟随。
+- 有限世界的 topology proof、连续旅途 encounter contracts、camera-compensated world-motion proof 与跨场景 trajectory/continuity 约束，用确定性证据覆盖进入、接近、回应、离开、转向、远近移动和视口覆盖。
+- `semantic-slices`、provider-native source normalization、baked-checkerboard alpha 恢复、显式 source rectangle 状态表提取，以及完整注册家族/图层/容器的本地派生和来源链。
+- 人工批准图片上限的追加式增额审计、递归 ESM runtime dependency closure，以及 source/package/installed-cache 可比较的完整 runtime identity。
+
+### Changed
+
+- 漫画化视频继续使用普通镜头和转场；对白、说明和旁白保留在音频与字幕中，只有绑定离散音效、显隐生命周期和质量证明的短视觉拟声字进入画面。
+- 路径运动由单一 `path-locomotion` 合同拥有位移、景深、投影、层级和朝向；不再用重复 camera/scale keyframes 或多套方向素材模拟同一路径。
+- Looping world、registered family、semantic depth slices、场景参与者和 provider 请求都必须先通过对应的 authoring、schema、证明、指纹和质量门，不能以项目特例或手工 opacity 堆叠替代。
+- `complete` 保持本地制作终态；`approve-publish` 只在完成后记录一次具体目标、动作和范围，不构成可复用发布授权。
+
+### Fixed
+
+- 修复相机跟随路径与世界运动证明可能使用不同坐标面、嵌套父节点导致路径测量漂移，以及转向处角度跳变或朝向证明不足的问题。
+- 修复 provider reservation/record/recovery 的模型身份可能漂移、已接受注册状态可能因局部修复被改写，以及 observed key plane、透明边缘和 source rectangle 证据不足的问题。
+- 修复持续世界中的注册家族、稀疏前景、场景参与者和 encounter 生命周期可在可见结果与合同之间失配的问题。
+- 移除不可达的旧 `publish-approval` 阶段，并让 runtime 指纹递归覆盖实际加载的本地 ESM 依赖和 Remotion 入口面。
+- 将 Remotion 构建链的传递依赖 `fast-uri` 锁定到修复 CVE-2026-18446 的 `3.1.5`，并把最低安全版本纳入源码与发行包测试。
+
 ## [0.16.0] - 2026-07-27
 
 ### Added
@@ -123,7 +148,8 @@
 - The repository now keeps one complete showcase, `tie-chu-mo-zhen`; older
   production demos and the legacy one-shot composition were removed.
 
-[Unreleased]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.16.0...v0.19.0
 [0.16.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.8.0...v0.16.0
 [0.8.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.6.0...v0.8.0
 [0.6.0]: https://github.com/cyberlesterr/paper-collage-video/compare/v0.5.0...v0.6.0

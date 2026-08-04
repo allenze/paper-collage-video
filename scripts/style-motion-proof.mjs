@@ -8,9 +8,13 @@ import {
   padEvidenceBounds,
   safeEvidenceId,
 } from './asset-evidence-lib.mjs';
-import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
+import {
+  buildLayerStackProof,
+  referenceCellRectForRegisteredSheet,
+} from './layer-stack-proof-lib.mjs';
 import {collectStyleProofTargets} from './quality-lib.mjs';
 import {
+  buildStyleTargetPatternProof,
   styleFingerprintForTarget,
   styleProofReportPath,
 } from './style-proof-lib.mjs';
@@ -22,6 +26,10 @@ import {
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {buildLoopingWorldProof} from './world-motion-proof-lib.mjs';
+import {spatialContractDebugOverlay} from './spatial-contract-lib.mjs';
+import {
+  buildCanonicalContainerProof,
+} from './canonical-container-lib.mjs';
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -44,6 +52,9 @@ const slug = args.find((argument) => !argument.startsWith('--'));
 const valueFor = (name) => args.find((argument) => argument.startsWith(`${name}=`))?.slice(name.length + 1);
 const durationSeconds = Number(valueFor('--duration') ?? 5);
 const STYLE_PROOF_RENDER_SCALE = 0.5;
+const printUsage = () => {
+  console.log('用法：project:style-proof -- <slug> [--duration=<3..5>]');
+};
 
 const debugOverlay = ({width, height, bounds, label}) => Buffer.from(`
   <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
@@ -81,7 +92,9 @@ const findNodeRect = ({scene, nodeId, video}) => {
 };
 
 const findTargetBounds = ({scene, nodeId, video}) =>
-  padEvidenceBounds(findNodeRect({scene, nodeId, video}), video, 32);
+  scene.camera?.follow
+    ? {left: 0, top: 0, width: video.width, height: video.height}
+    : padEvidenceBounds(findNodeRect({scene, nodeId, video}), video, 32);
 
 const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
   const sampleCount = sampleRate * seconds;
@@ -106,6 +119,10 @@ const makeProofTone = ({sampleRate = 48000, seconds = 1} = {}) => {
 };
 
 try {
+  if (args.includes('--help') || args.includes('-h')) {
+    printUsage();
+    process.exit(0);
+  }
   assertSlug(slug);
   if (!Number.isFinite(durationSeconds) || durationSeconds < 3 || durationSeconds > 5) throw new Error('--duration 必须位于 3..5 秒。');
   const [{project}, storyboard] = await Promise.all([loadProject(slug), loadStoryboard(slug)]);
@@ -227,7 +244,7 @@ try {
   );
   const coupledGroups = selectedScenes.flatMap((scene) =>
     collectCompositionGroups(scene.composition)
-      .filter(({node}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(node.pattern))
+      .filter(({node}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(node.pattern))
       .map((entry) => ({...entry, sceneId: scene.id})),
   );
   const stateSequences = selectedScenes.flatMap((scene) =>
@@ -302,12 +319,18 @@ try {
           height: Math.max(1, Math.round(rect.height * STYLE_PROOF_RENDER_SCALE)),
         },
         registeredFamilyBinding: record?.registeredFamilyBinding ?? null,
+        canonicalContainerBinding:
+          record?.canonicalContainerBinding ?? null,
       }),
       sceneId,
     });
   }
   const composites = [];
   for (const target of targets) {
+    const {spatialProof} = await buildStyleTargetPatternProof({
+      project,
+      target,
+    });
     const proofFrames = [];
     const shots = target.proofShots ?? [{sceneId: target.sceneId, nodeId: target.nodeId, proofTimeIds: target.proofTimeIds}];
     for (const shot of shots) {
@@ -317,12 +340,30 @@ try {
         const fullFrame = renderedFrames.get(`${shot.sceneId}:${proofTimeId}`);
         if (!fullFrame) continue;
         const id = `${safeEvidenceId(target.compositeId)}-${safeEvidenceId(shot.sceneId)}-${safeEvidenceId(proofTimeId)}`;
-        const cropFile = path.join(cropDirectory, `${id}.png`);
-        const debugFile = path.join(debugDirectory, `${id}.png`);
-        await sharp(fullFrame).extract(bounds).png().toFile(cropFile);
+        const cropFile = path.join(cropDirectory, `${id}.jpg`);
+        const debugFile = path.join(debugDirectory, `${id}.jpg`);
         await sharp(fullFrame)
-          .composite([{input: debugOverlay({width: project.video.width, height: project.video.height, bounds, label: `${target.compositeId} · ${proofTimeId}`})}])
-          .png()
+          .extract(bounds)
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
+          .toFile(cropFile);
+        await sharp(fullFrame)
+          .composite([{
+            input: target.pattern === 'spatial-contract'
+              ? spatialContractDebugOverlay({
+                  proof: spatialProof,
+                  sceneId: shot.sceneId,
+                  proofTimeId,
+                  width: project.video.width,
+                  height: project.video.height,
+                })
+              : debugOverlay({
+                  width: project.video.width,
+                  height: project.video.height,
+                  bounds,
+                  label: `${target.compositeId} · ${proofTimeId}`,
+                }),
+          }])
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
           .toFile(debugFile);
         proofFrames.push({
           sceneId: shot.sceneId,
@@ -344,11 +385,18 @@ try {
       const referenceRecord = recordsByAssetId.get(
         target.group.registration.sourceMasterAssetId,
       );
+      const referenceFile = referenceRecord?.file
+        ? path.resolve(ROOT, referenceRecord.file)
+        : null;
       const built = await buildLayerStackProof({
         group: target.group,
         memberFiles,
-        referenceFile: referenceRecord?.file
-          ? path.resolve(ROOT, referenceRecord.file)
+        referenceFile,
+        referenceRect: referenceFile
+          ? await referenceCellRectForRegisteredSheet({
+              record: referenceRecord,
+              file: referenceFile,
+            })
           : null,
         directory: evidenceDirectory,
         evidenceId: `${target.sceneId}-${target.nodeId}-layer-stack`,
@@ -402,6 +450,38 @@ try {
         );
       }
     }
+    let canonicalContainerProof = null;
+    if (target.pattern === 'canonical-container') {
+      const built = await buildCanonicalContainerProof({
+        root: ROOT,
+        group: target.group,
+        manifest,
+        directory: evidenceDirectory,
+        evidenceId:
+          `${target.sceneId}-${target.nodeId}-canonical-container`,
+      });
+      canonicalContainerProof = {
+        ...built,
+        familyFingerprint:
+          target.group.canonicalContainer.familyFingerprint,
+        artifacts: Object.fromEntries(
+          Object.entries(built.artifacts).map(([key, file]) => [
+            key,
+            path.relative(ROOT, file),
+          ]),
+        ),
+        artifactHashes: Object.fromEntries(
+          Object.entries(built.artifactHashes).map(
+            ([file, hash]) => [path.relative(ROOT, file), hash],
+          ),
+        ),
+      };
+      if (!canonicalContainerProof.passed) {
+        throw new Error(
+          `canonical container ${target.nodeId} 的 style frame/mask/alignment/final-state proof 未通过。`,
+        );
+      }
+    }
     composites.push({
       compositeId: target.compositeId,
       pattern: target.pattern,
@@ -411,6 +491,8 @@ try {
       proofFrames,
       layerStackProof,
       loopingWorldProof,
+      canonicalContainerProof,
+      spatialProof,
     });
   }
 
@@ -419,10 +501,17 @@ try {
     ...stateSequences.map(({node, sceneId}) => ({sceneId, id: node.id, pattern: 'state-sequence', registrationId: node.registration.id, sourceMasterAssetId: node.registration.sourceMasterAssetId})),
   ];
   await writeJson(reportFile, {
-    schemaVersion: 6,
+    schemaVersion: 7,
     slug,
     generatedAt: new Date().toISOString(),
     planFingerprint: storyboard.directingSummary.styleProofPlan.fingerprint,
+    motionContractFingerprint: storyboard.motionContract.fingerprint,
+    motionApprovalFingerprint:
+      storyboard.motionContract.approvalFingerprint,
+    motionLanguageCard: path.relative(
+      ROOT,
+      paths.motionLanguageCardFile,
+    ),
     directingTargets,
     runtimeBuildFingerprint,
     outputs,
@@ -435,10 +524,10 @@ try {
     assetEvidence,
     proofFrameCount: panels.length,
   });
-  console.log(`✓ v6 多维风险风格证明：${outputs.map(({file}) => file).join(', ')}`);
+  console.log(`✓ v7 动作契约绑定的多维风险风格证明：${outputs.map(({file}) => file).join(', ')}`);
   console.log(`✓ 组合证明联系表：${path.relative(ROOT, contactSheet)}`);
   console.log(`✓ 运动报告：${path.relative(ROOT, reportFile)}`);
 } catch (error) {
-  console.error(`style:proof failed: ${error.message}`);
+  console.error(`project:style-proof failed: ${error.message}`);
   process.exitCode = 1;
 }

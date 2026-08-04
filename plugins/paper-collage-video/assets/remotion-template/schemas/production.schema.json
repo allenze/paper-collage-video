@@ -28,7 +28,6 @@
         "preview",
         "human-review",
         "final-render",
-        "publish-approval",
         "complete"
       ]
     },
@@ -69,6 +68,8 @@
         "storyboard": {"type": "string", "minLength": 1},
         "prompts": {"type": "string", "minLength": 1},
         "review": {"type": "string", "minLength": 1},
+        "motionLanguageCard": {"$ref": "#/$defs/nullablePath"},
+        "motionApproval": {"$ref": "#/$defs/nullablePath"},
         "styleProof": {"$ref": "#/$defs/nullablePath"},
         "directingRevision": {"$ref": "#/$defs/nullablePath"},
         "semanticRevision": {"$ref": "#/$defs/nullablePath"},

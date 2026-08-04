@@ -4,6 +4,7 @@
   "slug": "{{slug}}",
   "status": "pending",
   "intakeFingerprint": null,
+  "styleProfileBinding": null,
   "requested": {
     "durationSeconds": null,
     "sceneCount": null

@@ -4,7 +4,7 @@ Read this before generating recurring characters, articulated subjects, function
 
 ## Classify Risk Before Generation
 
-Use one dominant `semanticBinding.riskClass` per schema-v7 image request, then bind every additional applicable contract in `contractIds`. The runtime unions only contract checks that are meaningful on the source asset; an evidence target with `"scope": "composite"` remains mandatory at composition proof without incorrectly failing the raster source. Use `"scope": "asset"` only for checks that must hold on the original file. If any bound contract is `identity`, declare `generationFamily` even when identity is not the dominant risk.
+Use one dominant `semanticBinding.riskClass` per schema-v8 image request, then bind every additional applicable contract in `contractIds`. The executable `styleProfileBinding` is orthogonal to semantic truth: it constrains visual language but never replaces a topology, identity, mechanism, or diagram contract. The runtime unions only contract checks that are meaningful on the source asset; an evidence target with `"scope": "composite"` remains mandatory at composition proof without incorrectly failing the raster source. Use `"scope": "asset"` only for checks that must hold on the original file. If any bound contract is `identity`, declare `generationFamily` even when identity is not the dominant risk.
 
 `decorative` is valid only when `contractIds` is empty. If a plate contains a named subject, meaningful negative space, a working mechanism, or an explanatory diagram, classify it by the dominant critical risk instead of calling the whole plate decorative.
 
@@ -88,11 +88,16 @@ Keep `generationFamily` independent from `compositionBinding`. A full-frame `fre
   "contractIds": ["recurring-cast"],
   "generationFamily": {
     "familyId": "cast-family-01",
-    "memberIds": ["elder-scholar", "young-engineer"],
+    "identityMemberIds": ["elder-scholar", "young-engineer"],
     "referenceAssetIds": ["cast-reference-sheet"]
   }
 }
 ```
+
+`identityMemberIds` names only recurring identities governed by the bound
+identity contracts. A multi-state sheet additionally declares
+`stateMemberIds` for its complete pose/state cells; do not merge identity and
+state ids into one ambiguous member list.
 
 ## Mechanism Contract
 
@@ -151,6 +156,21 @@ contract does not replace registration and source-package rules. Relative
 rear/subject/front motion additionally requires complete layer roles and
 responsive reveal envelopes. Do not invent synonymous check names because the
 quality recorder rejects unknown enums.
+
+For a rigid frame with changing internal contents, use
+`canonical-container` in addition to the mechanism semantic contract. The
+mechanism contract states what the fill or accumulation means; the container
+contract proves that one frame, one interior mask, one authoritative contents
+sequence, and measurable terminal state execute it. Do not represent the same
+internal surface with both a fill texture and a separate waterline image.
+
+Spatial truth is orthogonal to semantic topology. Use root
+`spatialContracts[]` to prove a current contact anchor against a support
+surface, real foreground paint order, subtitle clearance, sustained gait
+cadence, or causal continuity across adjacent scenes. A silhouette can pass a
+topology contract while floating above the ground; a correct world asset can
+still appear as a discontinuous replacement in the next scene. Semantic and
+spatial targets fingerprint and review those different claims independently.
 
 ## Evidence Rules
 

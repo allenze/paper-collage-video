@@ -14,7 +14,28 @@ import {
   deriveAssetBudget,
 } from '../scripts/creative-plan-lib.mjs';
 import {validateAssetRequest} from '../scripts/provider-lib.mjs';
-import {buildLayerStackProof} from '../scripts/layer-stack-proof-lib.mjs';
+import {
+  buildLayerStackProof,
+  referenceCellRectForRegisteredSheet,
+} from '../scripts/layer-stack-proof-lib.mjs';
+
+const STYLE_REQUEST = {
+  styleProfileBinding: {
+    schemaVersion: 1,
+    id: 'hand-drawn-cutout-explainer',
+    catalogVersion: 'fixture',
+    profileFingerprint: 'a'.repeat(64),
+    directives: ['fixture ink', 'fixture paper', 'Avoid: fixture gloss'],
+  },
+  quality: {
+    requiredChecks: [
+      'style-profile-conformant',
+      'silhouette-fidelity',
+      'negative-space-clean',
+      'background-leak-free',
+    ],
+  },
+};
 
 const revealEnvelope = {
   '16:9': {x: 0.04, y: 0.03, scale: 0.05, rotationDegrees: 2},
@@ -172,14 +193,14 @@ test('v3 production profiles reserve explicit layer-package attempts without aut
       },
       {
         baseImageAttempts: 6,
-        layerPackageAttemptReserve: 6,
-        maxGeneratedImages: 12,
+        layerPackageAttemptReserve: 8,
+        maxGeneratedImages: 14,
       },
     ],
   );
 });
 
-test('schema-v7 rejects isolated depth members and accepts one complete 2x2 layer sheet request', () => {
+test('schema-v8 rejects isolated depth members and accepts one complete 2x2 layer sheet request', () => {
   const recoveryPolicy = {
     completeSourceContext: true,
     localDeterministicFixFirst: true,
@@ -188,10 +209,11 @@ test('schema-v7 rejects isolated depth members and accepts one complete 2x2 laye
     fallback: 'full-source-regeneration',
   };
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: 'layer-request',
     assetId: 'boat-layer-sheet',
     capability: 'image',
+    ...STYLE_REQUEST,
     output: 'public/projects/layer-request/boat-layer-sheet.png',
     prompt: 'Reference plus complete rear, subject, and front layers.',
     outputSurface: {mode: 'layer-sheet'},
@@ -339,6 +361,234 @@ test('family-aware proof renders neutral, exploded and three responsive envelope
     ]) {
       assert.ok((await fs.stat(file)).size > 0);
     }
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('scene-stacked family proof preserves the authored oversized carrier at envelope extremes', async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'scene-carrier-layer-proof-'),
+  );
+  try {
+    const files = new Map();
+    for (const [id, svg] of [
+      ['rear', '<rect width="160" height="90" fill="#d8c598"/>'],
+      ['subject', '<circle cx="80" cy="45" r="18" fill="#8f5f3f"/>'],
+      ['front', '<path d="M0 72 Q80 54 160 72 V90 H0 Z" fill="#536f5f"/>'],
+    ]) {
+      const file = path.join(directory, `${id}.png`);
+      await sharp(Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90">${svg}</svg>`,
+      )).png().toFile(file);
+      files.set(id, file);
+    }
+    const group = {
+      id: 'scene-carrier-stack',
+      registration: {canvas: {width: 160, height: 90}},
+      layerStack: {
+        revealEnvelope: {
+          '16:9': {x: 0.08, y: 0.06, scale: 0.1, rotationDegrees: 2},
+          '9:16': {x: 0.05, y: 0.08, scale: 0.12, rotationDegrees: 2},
+          '1:1': {x: 0.06, y: 0.07, scale: 0.11, rotationDegrees: 2},
+        },
+      },
+      children: [
+        {id: 'rear', kind: 'asset', slot: 'support-rear', depth: -0.7},
+        {id: 'subject', kind: 'asset', slot: 'subject', depth: -0.55},
+        {id: 'front', kind: 'asset', slot: 'support-front', depth: 0.9},
+      ],
+    };
+    const viewportProof = await buildLayerStackProof({
+      group,
+      memberFiles: files,
+      referenceFile: files.get('rear'),
+      directory: path.join(directory, 'viewport'),
+      evidenceId: 'viewport-stack',
+    });
+    assert.equal(viewportProof.passed, false);
+
+    const sceneCarrierGroup = {
+      ...group,
+      stackingContext: 'scene',
+      transform: {
+        x: 0.5,
+        y: 0.5,
+        width: 3,
+        height: 2.5,
+        anchorX: 0.5,
+        anchorY: 0.5,
+      },
+    };
+    const carrierProof = await buildLayerStackProof({
+      group: sceneCarrierGroup,
+      memberFiles: files,
+      referenceFile: files.get('rear'),
+      directory: path.join(directory, 'carrier'),
+      evidenceId: 'scene-carrier-stack',
+    });
+    assert.equal(carrierProof.passed, true);
+    assert.equal(carrierProof.artifacts.envelopeExtremes.length, 3);
+    assert.ok(
+      carrierProof.artifacts.envelopeExtremes.every(
+        ({transparentPixels}) => transparentPixels === 0,
+      ),
+    );
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('registered layer sheet proof resolves the reference cell before comparison', async () => {
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'layer-sheet-reference-'),
+  );
+  try {
+    const sheet = path.join(directory, 'sheet.png');
+    await sharp({
+      create: {
+        width: 200,
+        height: 200,
+        channels: 4,
+        background: '#00000000',
+      },
+    }).composite([
+      {
+        input: Buffer.from(
+          '<svg width="100" height="100"><rect width="100" height="100" fill="#d3b986"/></svg>',
+        ),
+        left: 0,
+        top: 0,
+      },
+    ]).png().toFile(sheet);
+    const record = {
+      assetId: 'fixture-sheet',
+      request: {
+        layerPackageBinding: {
+          packageRole: 'registered-sheet',
+          sheetLayout: {
+            columns: 2,
+            rows: 2,
+            cells: [
+              {packageRole: 'reference', row: 0, column: 0},
+              {packageRole: 'support-rear', row: 0, column: 1},
+              {packageRole: 'subject', row: 1, column: 0},
+              {packageRole: 'support-front', row: 1, column: 1},
+            ],
+          },
+        },
+      },
+    };
+    const referenceRect = await referenceCellRectForRegisteredSheet({
+      record,
+      file: sheet,
+    });
+    assert.deepEqual(referenceRect, {
+      left: 0,
+      top: 0,
+      width: 100,
+      height: 100,
+    });
+    const providerNativeOddSheet = path.join(
+      directory,
+      'provider-native-odd-sheet.png',
+    );
+    await sharp({
+      create: {
+        width: 201,
+        height: 203,
+        channels: 4,
+        background: '#d3b986ff',
+      },
+    }).png().toFile(providerNativeOddSheet);
+    const providerNativeRecord = structuredClone(record);
+    providerNativeRecord.request.layerPackageBinding.sheetLayout.providerSource = {
+      canvasMode: 'provider-native',
+      minimumWidth: 200,
+      minimumHeight: 200,
+      cellExtraction: 'explicit-rects',
+    };
+    assert.deepEqual(
+      await referenceCellRectForRegisteredSheet({
+        record: providerNativeRecord,
+        file: providerNativeOddSheet,
+      }),
+      {
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 101,
+      },
+    );
+    await assert.rejects(
+      referenceCellRectForRegisteredSheet({
+        record,
+        file: providerNativeOddSheet,
+      }),
+      /原生画布无法按 2x2 提取 reference 格位/,
+    );
+    const memberFiles = new Map();
+    for (const [id, color] of [
+      ['rear', '#d3b986ff'],
+      ['subject', '#8f5f3fff'],
+      ['front', '#536f5fff'],
+    ]) {
+      const file = path.join(directory, `${id}.png`);
+      await sharp({
+        create: {
+          width: 100,
+          height: 100,
+          channels: 4,
+          background: color,
+        },
+      }).png().toFile(file);
+      memberFiles.set(id, file);
+    }
+    const proof = await buildLayerStackProof({
+      group: {
+        id: 'fixture-stack',
+        registration: {canvas: {width: 100, height: 100}},
+        layerStack: {
+          revealEnvelope: {
+            '16:9': {x: 0, y: 0, scale: 0, rotationDegrees: 0},
+            '9:16': {x: 0, y: 0, scale: 0, rotationDegrees: 0},
+            '1:1': {x: 0, y: 0, scale: 0, rotationDegrees: 0},
+          },
+        },
+        children: [
+          {
+            id: 'rear',
+            kind: 'asset',
+            slot: 'support-rear',
+            depth: -0.7,
+          },
+          {
+            id: 'subject',
+            kind: 'asset',
+            slot: 'subject',
+            depth: 0,
+          },
+          {
+            id: 'front',
+            kind: 'asset',
+            slot: 'support-front',
+            depth: 0.7,
+          },
+        ],
+      },
+      memberFiles,
+      referenceFile: sheet,
+      referenceRect,
+      directory: path.join(directory, 'evidence'),
+      evidenceId: 'fixture-stack',
+    });
+    assert.equal(proof.passed, true);
+    assert.deepEqual(
+      await sharp(proof.artifacts.referenceComparison)
+        .metadata()
+        .then(({width, height}) => ({width, height})),
+      {width: 200, height: 100},
+    );
   } finally {
     await fs.rm(directory, {recursive: true, force: true});
   }

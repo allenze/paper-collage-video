@@ -1,11 +1,16 @@
 import {Composition, type CalculateMetadataFunction} from 'remotion';
-import starterDemo from '../projects/starter-demo/project.json';
+import starterDemo from '../fixtures/starter-demo/project.json';
 import {MainVideo} from './MainVideo';
-import {normalizeProject, type PaperCollageProject} from './project';
+import {
+  normalizeProject,
+  type PaperCollageProject,
+} from './project';
 
-const defaultProject = starterDemo as PaperCollageProject;
+const defaultProject = starterDemo as unknown as PaperCollageProject;
 
-const calculateProjectMetadata: CalculateMetadataFunction<PaperCollageProject> = ({props}) => {
+const calculateProjectMetadata: CalculateMetadataFunction<PaperCollageProject> = ({
+  props,
+}) => {
   const normalized = normalizeProject(props);
   return {
     durationInFrames: normalized.durationInFrames,
@@ -16,11 +21,13 @@ const calculateProjectMetadata: CalculateMetadataFunction<PaperCollageProject> =
   };
 };
 
-export const RemotionRoot = () => (
-  <Composition
-    id="Paper-Collage"
-    component={MainVideo}
-    defaultProps={defaultProject}
-    calculateMetadata={calculateProjectMetadata}
-  />
-);
+export const RemotionRoot = () => {
+  return (
+    <Composition
+      id="Paper-Collage"
+      component={MainVideo}
+      defaultProps={defaultProject}
+      calculateMetadata={calculateProjectMetadata}
+    />
+  );
+};

@@ -22,9 +22,10 @@ const sceneConcept = (scene) => ({
   staticRationale: scene.staticRationale ?? null,
   beats: (scene.beats ?? []).map((beat) => ({
     id: beat.id,
+    performanceRole: beat.performanceRole,
     purpose: beat.purpose,
     visual: beat.visual,
-    audioCue: beat.audioCue,
+    soundCue: beat.soundCue,
   })),
   proofs: (scene.proofTimes ?? []).map((proof) => ({
     id: proof.id,
@@ -39,6 +40,7 @@ export const storyboardConceptFingerprint = (storyboard) =>
   hashCompositionValue({
     arc: storyboard.arc,
     style: storyboard.style,
+    motionDirection: storyboard.motionDirection,
     scenes: (storyboard.scenes ?? []).map(sceneConcept),
   });
 
@@ -52,6 +54,7 @@ export const storyboardAuthoringFromCompiled = (storyboard) => ({
       )
     : storyboard.editorial,
   scenes: (storyboard.scenes ?? []).map(({compositionPlan, directing, ...scene}) => scene),
+  motionContract: undefined,
   directingSummary: undefined,
 });
 
@@ -81,6 +84,70 @@ const changedCategories = (before, after) => {
 const styleProofTarget = (storyboard) => {
   const plan = storyboard.directingSummary?.styleProofPlan ?? null;
   return plan ? {fingerprint: plan.fingerprint, targets: plan.targets} : null;
+};
+
+const editorialSceneScope = (editorial, sceneId) => {
+  const cues = (editorial?.cues ?? []).filter((cue) => cue.sceneId === sceneId);
+  const cueIds = new Set(cues.map(({id}) => id));
+  const transitions = (editorial?.transitions ?? []).filter(
+    (transition) =>
+      transition.sceneId === sceneId ||
+      transition.fromSceneId === sceneId ||
+      transition.toSceneId === sceneId,
+  );
+  return {
+    cues,
+    editPoints: (editorial?.editPoints ?? []).filter((point) =>
+      point.cueIds?.some((id) => cueIds.has(id)),
+    ),
+    bindings: (editorial?.bindings ?? []).filter(
+      (binding) => binding.sceneId === sceneId,
+    ),
+    sceneDirecting: (editorial?.sceneDirecting ?? []).find(
+      (directing) => directing.sceneId === sceneId,
+    ) ?? null,
+    resolvedEditPoints: (editorial?.resolvedEditPoints ?? []).filter(
+      (point) => point.sceneId === sceneId,
+    ),
+    responsivePlans: (editorial?.responsivePlans ?? []).map((profile) => ({
+      profileId: profile.profileId,
+      scene: profile.scenes?.find((scene) => scene.sceneId === sceneId) ?? null,
+    })),
+    transitionPlans: (editorial?.transitionPlans ?? []).filter(
+      (transition) =>
+        transition.sceneId === sceneId ||
+        transition.fromSceneId === sceneId ||
+        transition.toSceneId === sceneId,
+    ),
+    transitions,
+  };
+};
+
+const editorialGlobalScope = (editorial) => ({
+  timebase: editorial?.timebase ?? null,
+  wordTimingPolicy: editorial?.wordTimingPolicy ?? null,
+  media: editorial?.media ?? [],
+  responsiveProfiles: editorial?.responsiveProfiles ?? [],
+  activeProfile: editorial?.activeProfile ?? null,
+});
+
+export const changedEditorialSceneIds = ({
+  before,
+  after,
+  sceneIds,
+}) => {
+  const ids = [...sceneIds];
+  if (
+    hashCompositionValue(editorialGlobalScope(before)) !==
+    hashCompositionValue(editorialGlobalScope(after))
+  ) {
+    return ids.sort();
+  }
+  return ids.filter(
+    (sceneId) =>
+      hashCompositionValue(editorialSceneScope(before, sceneId)) !==
+      hashCompositionValue(editorialSceneScope(after, sceneId)),
+  ).sort();
 };
 
 const authorizationFingerprint = (authorization) =>
@@ -136,6 +203,7 @@ export const prepareDirectingRevision = ({
   currentStoryboard,
   suppliedStoryboard,
   plan,
+  styleProfile,
   production,
   reportPath,
   source = 'preview',
@@ -145,21 +213,36 @@ export const prepareDirectingRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 12,
     slug: currentStoryboard.slug,
     status: 'ready',
-    sceneTransitions: materializeSceneTransitionRecipes(authored.sceneTransitions),
+    sceneTransitions: materializeSceneTransitionRecipes(
+      authored.sceneTransitions,
+      styleProfile?.motion?.transitionSet,
+    ),
     updatedAt: at,
-  }, {plan});
+  }, {plan, styleProfile});
 
-  const issues = validateStoryboard(candidate, {slug: currentStoryboard.slug, plan});
+  const issues = validateStoryboard(candidate, {
+    slug: currentStoryboard.slug,
+    plan,
+    styleProfile,
+  });
   if (issues.length > 0) {
     throw new Error(issues.map(({location, message}) => `${location}: ${message}`).join('\n'));
   }
   const beforeConcept = storyboardConceptFingerprint(currentStoryboard);
   const afterConcept = storyboardConceptFingerprint(candidate);
   if (beforeConcept !== afterConcept) {
-    throw new Error('导演重编不得改变已批准的故事概念、风格、镜头语义、节拍语义或证明断言。');
+      throw new Error('导演重编不得改变已批准的故事概念、风格、镜头语义、节拍语义或证明断言。');
+  }
+  if (
+    currentStoryboard.motionContract?.approvalFingerprint !==
+    candidate.motionContract?.approvalFingerprint
+  ) {
+    throw new Error(
+      '导演重编不得改变已批准的全片动作语言或节拍角色；请返回现有风格/动作语言 gate。',
+    );
   }
 
   const previousScenes = new Map(currentStoryboard.scenes.map((scene) => [scene.id, scene]));
@@ -174,6 +257,38 @@ export const prepareDirectingRevision = ({
     hashCompositionValue(candidate.sceneTransitions);
   const editorialChanged =
     currentStoryboard.editorial?.fingerprint !== candidate.editorial?.fingerprint;
+  const editorialSceneIds = editorialChanged
+    ? changedEditorialSceneIds({
+        before: currentStoryboard.editorial,
+        after: candidate.editorial,
+        sceneIds: candidate.scenes.map(({id}) => id),
+      })
+    : [];
+  const spatialContractsChanged =
+    hashCompositionValue(currentStoryboard.spatialContracts ?? []) !==
+    hashCompositionValue(candidate.spatialContracts ?? []);
+  const beforeSpatialContracts = new Map(
+    (currentStoryboard.spatialContracts ?? []).map((contract) => [
+      contract.id,
+      contract,
+    ]),
+  );
+  const afterSpatialContracts = new Map(
+    (candidate.spatialContracts ?? []).map((contract) => [
+      contract.id,
+      contract,
+    ]),
+  );
+  const changedSpatialContractIds = [
+    ...new Set([
+      ...beforeSpatialContracts.keys(),
+      ...afterSpatialContracts.keys(),
+    ]),
+  ].filter(
+    (id) =>
+      hashCompositionValue(beforeSpatialContracts.get(id) ?? null) !==
+      hashCompositionValue(afterSpatialContracts.get(id) ?? null),
+  ).sort();
   if (transitionsChanged) {
     for (const transition of candidate.sceneTransitions ?? []) {
       changedSceneIds.add(transition.fromSceneId);
@@ -181,7 +296,17 @@ export const prepareDirectingRevision = ({
     }
   }
   if (editorialChanged) {
-    for (const scene of candidate.scenes) changedSceneIds.add(scene.id);
+    for (const sceneId of editorialSceneIds) changedSceneIds.add(sceneId);
+  }
+  if (spatialContractsChanged) {
+    for (const contract of changedSpatialContractIds.flatMap((id) => [
+      beforeSpatialContracts.get(id),
+      afterSpatialContracts.get(id),
+    ]).filter(Boolean)) {
+      if (contract.sceneId) changedSceneIds.add(contract.sceneId);
+      if (contract.from?.sceneId) changedSceneIds.add(contract.from.sceneId);
+      if (contract.to?.sceneId) changedSceneIds.add(contract.to.sceneId);
+    }
   }
   if (changedSceneIds.size === 0) {
     throw new Error('导演重编没有产生任何实际变化。');
@@ -197,11 +322,27 @@ export const prepareDirectingRevision = ({
     createdAt: at,
     oldDirectingFingerprint: currentStoryboard.directingSummary?.fingerprint ?? null,
     newDirectingFingerprint: candidate.directingSummary?.fingerprint ?? null,
+    motionContract: {
+      oldApprovalFingerprint:
+        currentStoryboard.motionContract?.approvalFingerprint ?? null,
+      newApprovalFingerprint:
+        candidate.motionContract?.approvalFingerprint ?? null,
+      oldExecutionFingerprint:
+        currentStoryboard.motionContract?.fingerprint ?? null,
+      newExecutionFingerprint:
+        candidate.motionContract?.fingerprint ?? null,
+      approvalPreserved:
+        currentStoryboard.motionContract?.approvalFingerprint ===
+        candidate.motionContract?.approvalFingerprint,
+    },
     protectedConceptFingerprint: beforeConcept,
     changedSceneIds: [...changedSceneIds].sort(),
     changedScenes,
     transitionsChanged,
     editorialChanged,
+    changedEditorialSceneIds: editorialSceneIds,
+    spatialContractsChanged,
+    changedSpatialContractIds,
     editPointChanges: {
       before: currentStoryboard.editorial?.resolvedEditPoints ?? [],
       after: candidate.editorial?.resolvedEditPoints ?? [],
@@ -245,6 +386,7 @@ export const prepareSemanticRevision = ({
   currentStoryboard,
   suppliedStoryboard,
   plan,
+  styleProfile,
   production,
   authorization,
   reportPath,
@@ -270,10 +412,12 @@ export const prepareSemanticRevision = ({
     hashCompositionValue(currentStoryboard.arc) !==
       hashCompositionValue(authored.arc) ||
     hashCompositionValue(currentStoryboard.style) !==
-      hashCompositionValue(authored.style)
+      hashCompositionValue(authored.style) ||
+    hashCompositionValue(currentStoryboard.motionDirection) !==
+      hashCompositionValue(authored.motionDirection)
   ) {
     throw new Error(
-      '语义重编授权按镜头生效；全片 arc 或 style 变化必须返回其所属概念/风格决策。',
+      '语义重编授权按镜头生效；全片 arc、style 或 motionDirection 变化必须返回其所属概念/风格决策。',
     );
   }
   const profileRecalculation =
@@ -303,17 +447,19 @@ export const prepareSemanticRevision = ({
   const candidate = compileStoryboardDirecting({
     ...authored,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 12,
     slug: currentStoryboard.slug,
     status: 'ready',
     sceneTransitions: materializeSceneTransitionRecipes(
       authored.sceneTransitions,
+      styleProfile?.motion?.transitionSet,
     ),
     updatedAt: at,
-  }, {plan: nextPlan});
+  }, {plan: nextPlan, styleProfile});
   const issues = validateStoryboard(candidate, {
     slug: currentStoryboard.slug,
     plan: nextPlan,
+    styleProfile,
   });
   if (issues.length > 0) {
     throw new Error(
@@ -373,6 +519,18 @@ export const prepareSemanticRevision = ({
     reportPath,
     at,
   });
+  const motionApprovalInvalidated =
+    currentStoryboard.motionContract?.approvalFingerprint !==
+    candidate.motionContract?.approvalFingerprint;
+  if (motionApprovalInvalidated) {
+    nextProduction.approvals.styleAndVoice = {
+      status: 'pending',
+      decidedAt: null,
+      note: '',
+    };
+    nextProduction.artifacts.motionApproval = null;
+    nextProduction.stage = 'style-review';
+  }
   nextProduction.artifacts.semanticRevision = reportPath;
   nextProduction.artifacts.directingRevision = null;
   const historyEntry = nextProduction.history.at(-1);
@@ -397,6 +555,7 @@ export const prepareSemanticRevision = ({
     profilePromiseRecalculation: profileRecalculation,
     executionSyncRequired: true,
     providerApprovalRequired: false,
+    motionApprovalInvalidated,
     invalidatedArtifacts: [
       'styleProof',
       'validationReport',

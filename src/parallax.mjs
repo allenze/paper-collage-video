@@ -62,6 +62,15 @@ const cameraKeyframesForValidation = (camera = {}) =>
       : [{x: 0, y: 0, zoom: 1}, {x: camera.intensity ?? 1, y: 0, zoom: 1.01}];
 
 export const cameraHasVisibleMovement = (camera = {}) => {
+  if (
+    camera?.follow &&
+    typeof camera.follow.targetNodeId === 'string' &&
+    camera.follow.targetNodeId.length > 0 &&
+    typeof camera.follow.worldNodeId === 'string' &&
+    camera.follow.worldNodeId.length > 0
+  ) {
+    return true;
+  }
   const keyframes = cameraKeyframesForValidation(camera);
   const values = (property, fallback) => keyframes.map((keyframe) => keyframe?.[property] ?? fallback);
   const spread = (items) => Math.max(...items) - Math.min(...items);

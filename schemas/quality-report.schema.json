@@ -3,12 +3,77 @@
   "$id": "https://local.paper-collage.dev/quality-report.schema.json",
   "title": "Paper Collage Asset and Composite Quality Report",
   "type": "object",
-  "required": ["schemaVersion", "projectSlug", "updatedAt", "reviewSurfaceFingerprint", "eventTimeline", "assetHistory", "assets", "composites"],
+  "required": ["schemaVersion", "projectSlug", "updatedAt", "styleProfile", "motionContract", "reviewSurfaceFingerprint", "eventTimeline", "assetHistory", "assets", "composites"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 6},
+    "schemaVersion": {"const": 7},
     "projectSlug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "updatedAt": {"type": "string", "format": "date-time"},
+    "styleProfile": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": [
+            "id",
+            "profileFingerprint",
+            "referenceFile",
+            "referenceSha256",
+            "reviewFocus"
+          ],
+          "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "profileFingerprint": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "referenceFile": {"type": "string", "minLength": 1},
+            "referenceSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "reviewFocus": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1}
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "motionContract": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": [
+            "approvalFingerprint",
+            "executionFingerprint",
+            "summary",
+            "requiredCompositeChecks"
+          ],
+          "properties": {
+            "approvalFingerprint": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "executionFingerprint": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "summary": {"type": "string", "minLength": 1},
+            "requiredCompositeChecks": {
+              "type": "array",
+              "minItems": 6,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "reviewSurfaceFingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "eventTimeline": {"type": "array", "items": {"type": "object"}},
     "assetHistory": {
@@ -40,12 +105,19 @@
           "sha256": {"type": ["string", "null"]},
           "fingerprint": {"type": ["string", "null"]},
           "semanticBinding": {"type": ["object", "null"]},
+          "styleProfileBinding": {"type": ["object", "null"]},
           "stateSheetBinding": {"type": ["object", "null"]},
           "stateSheetRecoveryBinding": {"type": ["object", "null"]},
           "registeredFamilyBinding": {
             "oneOf": [
               {"type": "null"},
               {"$ref": "https://local.paper-collage.dev/registered-family-binding.schema.json"}
+            ]
+          },
+          "canonicalContainerBinding": {
+            "oneOf": [
+              {"type": "null"},
+              {"$ref": "https://local.paper-collage.dev/canonical-container-binding.schema.json"}
             ]
           },
           "recoverySourceFile": {"type": ["string", "null"]},
@@ -74,7 +146,7 @@
         "properties": {
           "compositeId": {"type": "string", "minLength": 1},
           "sceneId": {"type": "string", "minLength": 1},
-          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "state-sequence", "event", "semantic-contract", "parallax-rig", "motif-field", "typography", "annotation", "data-graphic", "editorial-transition", "responsive-directing", "style-target"]},
+          "pattern": {"enum": ["supported-subject", "registered-environment", "registered-depth-stack", "looping-environment", "canonical-container", "state-sequence", "event", "semantic-contract", "spatial-contract", "parallax-rig", "motif-field", "typography", "annotation", "data-graphic", "editorial-transition", "responsive-directing", "style-target", "motion-contract"]},
           "nodeId": {"type": "string", "minLength": 1},
           "memberNodeIds": {"type": "array", "items": {"type": "string"}},
           "memberHashes": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},

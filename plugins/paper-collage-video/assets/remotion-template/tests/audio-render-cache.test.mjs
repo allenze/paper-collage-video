@@ -9,6 +9,9 @@ import {
   analyzeAudioLoudness,
   assessAudioPreflight,
   collectProjectAudioEvents,
+  deliveryAudioFileForMode,
+  muxAuthoritativeAudio,
+  runAudioPreflight,
 } from '../scripts/audio-preflight-lib.mjs';
 import {
   createAudioCalibrationSourceFingerprint,
@@ -22,6 +25,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const makeProject = (slug) => withCompiledEditorialFixture({
   slug,
   title: 'Cache Test',
+  styleProfile: {
+    id: 'hand-drawn-cutout-explainer',
+    profileFingerprint: 'a'.repeat(64),
+  },
   video: {width: 1920, height: 1080, fps: 30},
   theme: {
     canvas: '#000',
@@ -30,9 +37,22 @@ const makeProject = (slug) => withCompiledEditorialFixture({
     ink: '#fff',
     subtitle: '#fff',
     subtitleBackground: '#000',
-    paperEdge: '#fff',
     foreground: '#fff',
-    texture: `projects/${slug}/texture.png`,
+    surface: {
+      texture: {
+        src: `projects/${slug}/texture.png`,
+        opacity: 0.14,
+        blendMode: 'multiply',
+      },
+      subjectEdge: {mode: 'paper-outline', color: '#fff', widthPx: 3},
+      subjectShadow: {
+        mode: 'drop-shadow',
+        offsetXPx: 0,
+        offsetYPx: 10,
+        blurPx: 7,
+        color: 'rgba(20,15,12,.28)',
+      },
+    },
   },
   audio: {
     narration: {volume: 1},
@@ -104,6 +124,15 @@ test('render fingerprints separate visual changes from audio-only changes', asyn
     const changedVisual = await createRenderFingerprints(visualOnly, 'preview');
     assert.notEqual(changedVisual.visual, original.visual);
     assert.equal(changedVisual.audio, original.audio);
+    const changedStyleProfile = structuredClone(project);
+    changedStyleProfile.styleProfile.profileFingerprint = 'b'.repeat(64);
+    changedStyleProfile.styleProfile.id = 'archival-collage';
+    const changedStyle = await createRenderFingerprints(
+      changedStyleProfile,
+      'preview',
+    );
+    assert.notEqual(changedStyle.visual, original.visual);
+    assert.equal(changedStyle.audio, original.audio);
     const retimed = structuredClone(project);
     retimed.scenes[0].narration.startSeconds = 0.2;
     assert.notEqual(
@@ -122,12 +151,79 @@ test('render fingerprints separate visual changes from audio-only changes', asyn
     });
     assert.notEqual(strictPeakAnalysis.integratedLufs, null);
     assert.notEqual(strictPeakAnalysis.truePeakDbtp, null);
+
+    const mixFile = path.join(directory, 'audio-preflight.wav');
+    const preflight = await runAudioPreflight({project, output: mixFile});
+    assert.equal(preflight.analysisSurface, 'delivery-encoded-aac');
+    assert.equal(preflight.deliveryEquivalent, true);
+    assert.equal(preflight.passed, true);
+    assert.equal(typeof preflight.masteringProcessing.applied, 'boolean');
+    if (preflight.masteringProcessing.applied) {
+      assert.equal(
+        preflight.masteringProcessing.method,
+        'two-pass-loudnorm',
+      );
+      assert.ok(preflight.masteringProcessing.attempts.length >= 1);
+    }
+    assert.deepEqual(
+      preflight.probes.map(({mode, bitrate}) => ({mode, bitrate})),
+      [
+        {mode: 'preview', bitrate: '96k'},
+        {mode: 'render', bitrate: '192k'},
+      ],
+    );
+    assert.equal(preflight.probes.every(({passed}) => passed), true);
+    const quietProject = structuredClone(project);
+    quietProject.audio.narration.volume = 0.02;
+    const quietMixFile = path.join(directory, 'audio-preflight-quiet.wav');
+    const automaticallyMastered = await runAudioPreflight({
+      project: quietProject,
+      output: quietMixFile,
+    });
+    assert.equal(automaticallyMastered.passed, true);
+    assert.equal(automaticallyMastered.masteringProcessing.applied, true);
+    assert.equal(
+      automaticallyMastered.masteringProcessing.method,
+      'two-pass-loudnorm',
+    );
+    assert.ok(automaticallyMastered.masteringProcessing.attempts.length >= 1);
+    assert.equal(
+      automaticallyMastered.probes.every(({passed}) => passed),
+      true,
+    );
+    const silentVideo = path.join(directory, 'silent.mp4');
+    const video = spawnSync('ffmpeg', [
+      '-v', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=64x64:r=30',
+      '-t', '1.3', '-an', '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+      '-y', silentVideo,
+    ], {encoding: 'utf8'});
+    assert.equal(video.status, 0, video.stderr);
+    const artifact = path.join(directory, 'artifact.mp4');
+    const previewAudio = deliveryAudioFileForMode(mixFile, 'preview');
+    await muxAuthoritativeAudio({
+      video: silentVideo,
+      audio: previewAudio,
+      output: artifact,
+    });
+    const artifactLoudness = await analyzeAudioLoudness({
+      file: artifact,
+      mastering: project.audio.mastering,
+    });
+    const previewProbe = preflight.probes.find(({mode}) => mode === 'preview');
+    assert.equal(
+      artifactLoudness.integratedLufs,
+      previewProbe.loudness.integratedLufs,
+    );
+    assert.equal(
+      artifactLoudness.truePeakDbtp,
+      previewProbe.loudness.truePeakDbtp,
+    );
   } finally {
     await fs.rm(directory, {recursive: true, force: true});
   }
 });
 
-test('audio preflight recommends bounded narration gain without replacing final validation', () => {
+test('delivery-encoded audio preflight keeps bounded gain recommendations', () => {
   const project = makeProject('audio-assessment');
   const low = assessAudioPreflight({
     project,
@@ -145,23 +241,26 @@ test('audio preflight recommends bounded narration gain without replacing final 
   assert.equal(passing.passed, true);
 });
 
-test('accepted audio calibration requires a source fingerprint, applied gain, and human note', () => {
+test('technical audio mastering record never encodes a human approval state', () => {
   const calibration = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectSlug: 'audio-assessment',
-    status: 'accepted',
+    status: 'ready',
     sourceFingerprint: 'a'.repeat(64),
     currentNarrationVolume: 1,
     recommendedNarrationVolume: 2,
-    acceptedNarrationVolume: 2,
-    acceptanceNote: 'Approved after narration sync.',
+    processingNote: 'Automatically mastered to the delivery contract.',
   };
   assert.equal(
     validateAudioCalibration(calibration, 'audio-assessment'),
     calibration,
   );
   assert.throws(
-    () => validateAudioCalibration({...calibration, acceptanceNote: ''}, 'audio-assessment'),
-    /确认说明/,
+    () => validateAudioCalibration({...calibration, processingNote: ''}, 'audio-assessment'),
+    /processingNote/,
+  );
+  assert.throws(
+    () => validateAudioCalibration({...calibration, status: 'accepted'}, 'audio-assessment'),
+    /ready 或 failed/,
   );
 });

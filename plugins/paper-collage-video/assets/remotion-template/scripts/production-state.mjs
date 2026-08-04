@@ -18,7 +18,6 @@ export const PRODUCTION_STAGES = [
   'preview',
   'human-review',
   'final-render',
-  'publish-approval',
   'complete',
 ];
 
@@ -53,6 +52,8 @@ const ARTIFACT_KEYS = [
   'storyboard',
   'prompts',
   'review',
+  'motionLanguageCard',
+  'motionApproval',
   'validationReport',
   'assetsReadySeal',
   'preview',
@@ -71,6 +72,7 @@ const HUMAN_DECISION_ACTIONS = new Set([
   'request-style-voice-revision',
   'approve-preview',
   'request-preview-revision',
+  'approve-image-budget-increase',
   'approve-publish',
 ]);
 
@@ -79,12 +81,11 @@ const nextActionByStage = {
     '先完成画幅/视觉风格/视差 intake；再比较三档故事与制作方案，并一次确认档位、预算上限和 provider',
   brief: '完善 brief.md，运行 project:plan 并锁定 storyboard，再记录 brief-ready',
   'concept-review': '向人展示文案、分镜和素材清单；确认后记录 approve-concept',
-  'style-review': '展示风格样张、虚构音色及所需拓扑证据；确认且证明通过后记录 approve-style-voice',
+  'style-review': '展示风格样张、全片动作语言卡、虚构音色及所需拓扑证据；确认且证明通过后记录 approve-style-voice',
   'asset-production': '生产素材与旁白、同步时长并通过校验；然后记录 assets-ready',
   preview: '运行 project:preview',
   'human-review': '等待人审预览；确认后记录 approve-preview，或记录 request-preview-revision',
   'final-render': '运行 project:render',
-  'publish-approval': '旧版兼容状态：本地成片已交付；外部发布仍需单独请求',
   complete: '流程已完成；系统仍不得自动发布',
 };
 
@@ -110,8 +111,8 @@ const stageControlByStage = {
   'style-review': {
     mode: 'wait-human',
     gate: 'styleAndVoice',
-    requiredDecision: '请明确批准故事专属风格样张、虚构音色和 3–5 秒运动/拓扑证明，或给出修改意见。',
-    expectedArtifacts: ['storySpecificStyleSample', 'voiceAudition', 'motionProof3To5Seconds', 'topologyProofWhenRequired'],
+    requiredDecision: '请明确批准故事专属风格样张、全片动作语言、虚构音色和 3–5 秒运动/拓扑证明，或给出修改意见。',
+    expectedArtifacts: ['storySpecificStyleSample', 'motionLanguageCard', 'voiceAudition', 'motionProof3To5Seconds', 'topologyProofWhenRequired'],
   },
   'asset-production': {
     mode: 'auto-continue',
@@ -135,10 +136,6 @@ const stageControlByStage = {
     expectedArtifacts: ['final', 'report', 'contactSheet'],
     nextCommand: (slug) => `npm run project:render -- ${slug}`,
   },
-  'publish-approval': {
-    mode: 'complete',
-    expectedArtifacts: ['final', 'report', 'contactSheet', 'validationReport'],
-  },
   complete: {
     mode: 'complete',
     expectedArtifacts: ['final', 'report', 'contactSheet', 'validationReport'],
@@ -150,6 +147,62 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 const normalizeWorkItems = (state) => {
   if (!Array.isArray(state.workItems)) state.workItems = [];
   return state.workItems;
+};
+
+const unresolvedWorkItems = (state) =>
+  (state.workItems ?? []).filter(({status}) => status !== 'completed');
+
+const isDirectingRevisionWorkItem = ({id}) =>
+  id.startsWith('directing-revision-');
+
+const formatUnresolvedWorkItems = (items) =>
+  items.map(({id, status}) => `${id}(${status})`).join(', ');
+
+const renderActionFor = (mode) =>
+  mode === 'preview' ? 'render-preview' : 'render-final';
+
+const assertNoUnresolvedWorkItems = (
+  state,
+  action,
+  {allowValidatedDirectingRevision = false} = {},
+) => {
+  const unresolved = unresolvedWorkItems(state);
+  const blocking = allowValidatedDirectingRevision
+    ? unresolved.filter(
+        (item) =>
+          !isDirectingRevisionWorkItem(item) || item.status === 'blocked',
+      )
+    : unresolved;
+  if (blocking.length === 0) return;
+  throw new Error(
+    `${action} 不能在工作项未完成时继续：${formatUnresolvedWorkItems(blocking)}。` +
+      '请先用 project:checkpoint 完成或解除这些工作项；导演修订同步项由当前 project:assets-ready seal 验证后自动结清。',
+  );
+};
+
+const settleValidatedDirectingRevisionWorkItems = (state, at) => {
+  assertNoUnresolvedWorkItems(state, 'assets-ready', {
+    allowValidatedDirectingRevision: true,
+  });
+  for (const item of normalizeWorkItems(state)) {
+    if (
+      item.status === 'completed' ||
+      !isDirectingRevisionWorkItem(item)
+    ) {
+      continue;
+    }
+    item.status = 'completed';
+    item.updatedAt = at;
+    item.artifact = state.artifacts.project;
+    item.note =
+      'satisfied-by-assets-ready · 当前 seal 已验证 storyboard 与 project 执行树同步。';
+    state.history.push({
+      at,
+      action: 'work-item-completed',
+      stage: state.stage,
+      note: `${item.id} · ${item.note}`,
+    });
+  }
 };
 
 export const summarizeWorkItems = (state) => {
@@ -230,7 +283,7 @@ export const summarizeResumeState = (
     if (context.intake?.status !== 'confirmed') {
       control.gate = 'intake';
       control.requiredDecision =
-        '请选择 16:9 / 9:16、三种内置视觉风格之一，以及分层视差偏好。';
+        '请选择 16:9 / 9:16、当前内置目录中的一种视觉风格，以及分层视差偏好。';
       control.expectedArtifacts = ['styleCatalog', 'intake'];
     } else if (context.planningScenarios?.status !== 'ready') {
       capabilityAutoContinue = true;
@@ -592,7 +645,7 @@ const REVIEW_START = '<!-- production-state:start -->';
 const REVIEW_END = '<!-- production-state:end -->';
 const approvalLabels = {
   concept: '文案、分镜与事实',
-  styleAndVoice: '风格样张与虚构音色',
+  styleAndVoice: '风格样张、全片动作语言与虚构音色',
   preview: '预览片',
   publish: '可选外部发布记录',
 };
@@ -694,6 +747,7 @@ export const transitionProduction = (current, action, options = {}) => {
       assertStage(state, ['concept-review', 'style-review'], action);
       setApproval(state, 'concept', 'changes-requested', at, note);
       resetApproval(state, 'styleAndVoice');
+      state.artifacts.motionApproval = null;
       state.stage = 'concept-review';
       break;
     case 'approve-style-voice':
@@ -705,17 +759,20 @@ export const transitionProduction = (current, action, options = {}) => {
     case 'request-style-voice-revision':
       assertStage(state, ['style-review'], action);
       setApproval(state, 'styleAndVoice', 'changes-requested', at, note);
+      state.artifacts.motionApproval = null;
       break;
     case 'assets-ready':
       assertStage(state, ['asset-production'], action);
       assertApproved(state, 'concept', action);
       assertApproved(state, 'styleAndVoice', action);
+      settleValidatedDirectingRevisionWorkItems(state, at);
       state.stage = 'preview';
       break;
     case 'approve-preview':
       assertStage(state, ['human-review'], action);
       assertApproved(state, 'concept', action);
       assertApproved(state, 'styleAndVoice', action);
+      assertNoUnresolvedWorkItems(state, action);
       if (!state.artifacts.preview) {
         throw new Error('approve-preview 需要已经成功记录 preview.mp4。');
       }
@@ -725,7 +782,7 @@ export const transitionProduction = (current, action, options = {}) => {
     case 'request-preview-revision':
       assertStage(
         state,
-        ['human-review', 'final-render', 'publish-approval', 'complete'],
+        ['human-review', 'final-render', 'complete'],
         action,
       );
       setApproval(state, 'preview', 'changes-requested', at, note);
@@ -735,8 +792,23 @@ export const transitionProduction = (current, action, options = {}) => {
       }
       state.stage = 'asset-production';
       break;
+    case 'approve-image-budget-increase':
+      assertStage(
+        state,
+        [
+          'style-review',
+          'asset-production',
+          'preview',
+          'human-review',
+          'final-render',
+          'complete',
+        ],
+        action,
+      );
+      assertApproved(state, 'concept', action);
+      break;
     case 'approve-publish':
-      assertStage(state, ['publish-approval', 'complete'], action);
+      assertStage(state, ['complete'], action);
       assertApproved(state, 'preview', action);
       if (!state.artifacts.final) {
         throw new Error('approve-publish 需要已经成功记录 final.mp4。');
@@ -790,6 +862,7 @@ export const recordAssetsReadySeal = async (slug, artifacts) => {
   const state = clone(current);
   Object.assign(state.artifacts, artifacts);
   const at = new Date().toISOString();
+  settleValidatedDirectingRevisionWorkItems(state, at);
   state.updatedAt = at;
   state.history.push({
     at,
@@ -802,8 +875,26 @@ export const recordAssetsReadySeal = async (slug, artifacts) => {
   return state;
 };
 
+export const recordMotionLanguageCard = async (slug, artifact) => {
+  const {paths, state: current} = await loadProduction(slug);
+  const state = clone(current);
+  state.artifacts.motionLanguageCard = artifact;
+  const at = new Date().toISOString();
+  state.updatedAt = at;
+  state.history.push({
+    at,
+    action: 'motion-language-compiled',
+    stage: state.stage,
+    note: artifact,
+  });
+  await writeJson(paths.productionFile, state);
+  await syncReviewBestEffort(slug, state);
+  return state;
+};
+
 export const assertRenderAllowed = async (slug, mode) => {
   const {state} = await loadProduction(slug);
+  assertNoUnresolvedWorkItems(state, renderActionFor(mode));
   assertApproved(state, 'concept', `render-${mode}`);
   assertApproved(state, 'styleAndVoice', `render-${mode}`);
   const stageRank = PRODUCTION_STAGES.indexOf(state.stage);
@@ -828,6 +919,7 @@ export const transitionRender = (current, mode, artifacts, options = {}) => {
     throw new Error(`未知渲染模式：${mode}`);
   }
   const state = clone(current);
+  assertNoUnresolvedWorkItems(state, renderActionFor(mode));
   const at = options.at ?? new Date().toISOString();
   Object.assign(state.artifacts, artifacts);
   if (mode === 'preview' && state.stage === 'preview') {

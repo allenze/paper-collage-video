@@ -16,20 +16,30 @@ Draft minimum coherent beats and estimate spoken duration before resolving the p
 ## Run Intake Before Cost Planning
 
 For a title-only request, run `project:intake -- <slug> --json` immediately
-after `project:new`. Show the three returned local style-card images before the
-Ask Question UI, then collect:
+after `project:new`. Show every returned local style-card image before the Ask
+Question UI, then collect:
 
 - `16:9` (1920×1080) or `9:16` (1080×1920);
-- `儿童绘本纸片`, `手绘剪纸 / 手绘解释`, or `复古档案拼贴`;
+- one of the current catalog entries, identified by its returned id and label;
 - parallax preference `auto`, `prefer`, or `minimal`.
 
-The three text-to-image PNGs use the same canonical turtle-and-hare forest
+The text-to-image PNGs use the same canonical turtle-and-hare forest
 composition so the comparison isolates visual language. They are bundled,
 versioned, fingerprinted assets: their generation happened once during plugin
 development, while showing them during intake consumes no provider calls. They
 do not replace the later story-specific style sample. Parallax is motion
-treatment, not a fourth visual style. Do not ask the production profile or cost
+treatment, not another visual style. Do not ask the production profile or cost
 in the intake popup.
+
+Confirming intake materializes the selected catalog entry as
+`project.json.styleProfile`: a fingerprinted, immutable project snapshot of
+generation directives, motion preferences, transition set, visual-SFX policy,
+the exact neutral render surface treatment, required quality checks, review
+focus, and reference image.
+`project.json.theme` must equal `styleProfile.render.theme`; neither is a prose
+hint or a palette suggestion. Planning scenarios bind the selected profile id,
+catalog version, and profile fingerprint so a later style change invalidates
+the scenario instead of silently changing production behavior.
 
 ## Compare Three Story and Production Scenarios
 
@@ -67,6 +77,20 @@ basis, final-film effect, and these compiled figures:
 - local derivatives and provider calls avoided;
 - `profilePromise` and planned fulfillment.
 
+Layer-capable scenario source packages use the same production names and exact
+costs as the storyboard compiler: `rigid-master` is 1 provider call with no
+local members, `registered-layer-sheet` is 1 call plus 3 deterministic
+full-canvas members and 3 avoided calls, and
+`context-preserving-layer-edits` is 4 calls plus 3 local members and no avoided
+calls. An ordinary `single-background` is also one call with no derivatives,
+but it is intentionally not a compiled layer package. Do not use any other
+planning-only aliases or hand-author different counts. Before proposing a
+registered sheet for a viewport-filling environment, compare the
+provider-native sheet cell dimensions with the largest authored display size
+and camera zoom. A 2x2 package that would make one full-screen member
+materially undersampled must be replaced by full-context edits or a native
+`single-background` before the card reaches the human.
+
 The card also records factual and rights risks, even when the list is empty.
 The expected count includes the later story-specific style sample. Rejected or
 abandoned attempts count after quota is consumed; exact reuse, registered-sheet
@@ -99,6 +123,16 @@ state-family, total-state, local-motion, layered-scene, parallax-scene, and
 ambient-scene minimums. A `full-depth` plan cannot pass by rendering a
 `draft`-level film.
 
+The generic motion budget shown before scenario authoring is a scene-count
+baseline, not permission to discard approved actions from a long continuous
+shot. After the human selects an exact scenario, `project:plan` raises the
+selected plan's state-family, per-family state, and continuous-target capacities
+to cover that card when necessary. The scenario fingerprint and later
+storyboard-consistency check still prevent unapproved families or targets, while
+the exact provider-call estimate, approved attempt cap, and profile hard ceiling
+remain unchanged. This is especially important for one-take stories that contain
+several independently animated identities inside one scene.
+
 Transforms may express emotion, emphasis, spatial translation, entrances,
 camera movement, and ambient loops. They may not impersonate a changed
 silhouette, limb pose, held prop, contact relation, mechanism state, true
@@ -118,7 +152,9 @@ The storyboard is not another human gate. It is part of the existing combined co
 
 - Give the whole film one explicit arc and one shared visual/motion language.
 - Give each planned scene a narrative role, single message, blueprint, estimated duration, and at least three ordered beats.
-- Read `motion-directing.md`. Add one or more v10 `treatments` to every beat.
+- Read `motion-contract-v1.md` and `motion-directing.md`. Author one v12
+  `motionDirection`, assign every beat a `performanceRole`, and add one or more
+  `treatments` to every beat.
   Author the visible change, motion or visibility mechanism, composition
   relationship, optional graphic mechanism, risk, importance, necessity, proof
   binding, and rationale. For relative rear/subject/front motion, also read
@@ -131,10 +167,12 @@ The storyboard is not another human gate. It is part of the existing combined co
 - Define at least three proof moments per scene: an establishing state, an action/peak state, and a `final` state at or after `0.82`. Every proof needs a stable id, visible relationship assertions, and a `stateAssertions` array. Cover every planned sequence state at least once so its schedule can be verified deterministically.
 - Declare exactly one top-level `sceneTransitions[]` record for every adjacent pair. Author narrative `intent` and `rationale`, normally letting the compiler choose the registered animated recipe. Use `intent=impact` plus an impact-cut treatment when abruptness is semantic. For ordinary intents, use a `rhythmic` cut only with a `beatId` in the outgoing final 20% or incoming first 20%. Every animated boundary must be opaque and covered by both the outgoing tail and incoming narration lead.
 - Keep proof moments outside scene-boundary intervals so every sampled frame clearly proves the intended composition.
-- In schema v10, every beat and treatment declares `proofTimeId` as an approved
-  proof id or `null`; treatment proof must match its beat. If a beat names an
-  `audioCue`, it must bind an event-level proof and production must attach a
-  real sound asset to at least one matching event using that same proof id.
+- In schema v12, every beat and treatment declares `proofTimeId` as an approved
+  proof id or `null`; treatment proof must match its beat. `soundCue` names only
+  a discrete event SFX, never narration. If a beat names one, it must bind an
+  event-level proof and production must attach a real sound asset to at least
+  one matching event using that same proof id. Narration remains exclusively in
+  `scene.narration`.
 
 The compiler protects required hero actions. If the selected profile cannot afford them, it rejects the storyboard instead of silently replacing a pose change with a cheap transform. Reduce enhancement motion first, raise the profile, or reduce story scope inside the existing concept decision.
 

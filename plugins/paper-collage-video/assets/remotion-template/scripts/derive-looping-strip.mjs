@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {assertAssetManifest} from './asset-manifest-lib.mjs';
+import {transactAssetManifest} from './asset-manifest-lib.mjs';
 import {validateCompositionStructure} from './composition-lib.mjs';
 import {
   applyLoopingStripToProject,
@@ -37,19 +37,16 @@ try {
   if (!(await fileExists(projectFile)) || !(await fileExists(manifestFile))) {
     throw new Error('looping strip 必须指向已有 project.json 与 assets-manifest.json');
   }
-  const [projectInput, manifestInput] = await Promise.all([
-    readJson(projectFile),
-    readJson(manifestFile),
-  ]);
+  const projectInput = await readJson(projectFile);
   const project = structuredClone(projectInput);
-  const manifest = assertAssetManifest(
-    structuredClone(manifestInput),
-    spec.projectSlug,
-  );
-  const result = await deriveLoopingStrip({
-    root: ROOT,
-    spec,
-    manifest,
+  const result = await transactAssetManifest({
+    manifestFile,
+    projectSlug: spec.projectSlug,
+    mutate: (manifest) => deriveLoopingStrip({
+      root: ROOT,
+      spec,
+      manifest,
+    }),
   });
   if (spec.applyToProject) {
     applyLoopingStripToProject({
@@ -82,7 +79,6 @@ try {
   const reportFile = path.join(reportDirectory, `${spec.stripId}-report.json`);
   await fs.mkdir(reportDirectory, {recursive: true});
   await Promise.all([
-    writeJson(manifestFile, result.manifest),
     ...(spec.applyToProject ? [writeJson(projectFile, project)] : []),
     writeJson(reportFile, result.report),
   ]);

@@ -149,6 +149,7 @@ export const inspectObservedKeyPlanePixels = ({
   channels,
   rect = {left: 0, top: 0, width: imageWidth, height: imageHeight},
   requestedKeyColor,
+  candidateKeyColor = requestedKeyColor,
   policy = DEFAULT_OBSERVED_KEY_PLANE_POLICY,
 }) => {
   if (!validRect(rect, imageWidth, imageHeight)) {
@@ -156,6 +157,7 @@ export const inspectObservedKeyPlanePixels = ({
   }
   if (channels < 3) throw new Error('observed key plane 需要 RGB 图像数据');
   const requestedRgb = parseHexColor(requestedKeyColor);
+  const candidateRgb = parseHexColor(candidateKeyColor);
   const totalPixels = rect.width * rect.height;
   const candidates = [];
   const candidateMask = new Uint8Array(totalPixels);
@@ -170,7 +172,7 @@ export const inspectObservedKeyPlanePixels = ({
       const rgb = [data[offset], data[offset + 1], data[offset + 2]];
       const index = localY * rect.width + localX;
       const isCandidate =
-        colorDistance(rgb, requestedRgb) <= policy.maximumRequestedDistance;
+        colorDistance(rgb, candidateRgb) <= policy.maximumRequestedDistance;
       if (isCandidate) {
         candidates.push(rgb);
         candidateMask[index] = 1;
@@ -194,6 +196,7 @@ export const inspectObservedKeyPlanePixels = ({
       policy,
       policyFingerprint: observedKeyPlanePolicyFingerprint(policy),
       requestedKeyColor: requestedKeyColor.toLowerCase(),
+      candidateKeyColor: candidateKeyColor.toLowerCase(),
       observedKeyColor: null,
       rect,
       metrics: {
@@ -277,6 +280,7 @@ export const inspectObservedKeyPlanePixels = ({
     policy,
     policyFingerprint: observedKeyPlanePolicyFingerprint(policy),
     requestedKeyColor: requestedKeyColor.toLowerCase(),
+    candidateKeyColor: candidateKeyColor.toLowerCase(),
     observedKeyColor: rgbToHex(observedRgb),
     rect,
     metrics: {
@@ -299,6 +303,7 @@ export const inspectObservedKeyPlaneFile = async ({
   file,
   rect,
   requestedKeyColor,
+  candidateKeyColor = requestedKeyColor,
   policy = DEFAULT_OBSERVED_KEY_PLANE_POLICY,
 }) => {
   const pixels = await sharp(file)
@@ -312,6 +317,7 @@ export const inspectObservedKeyPlaneFile = async ({
     channels: pixels.info.channels,
     rect,
     requestedKeyColor,
+    candidateKeyColor,
     policy,
   });
 };
@@ -320,12 +326,14 @@ export const assertObservedKeyPlaneSet = ({
   observations,
   policy = DEFAULT_OBSERVED_KEY_PLANE_POLICY,
 }) => {
+  const labelFor = ({packageRole, stateId}) =>
+    packageRole === 'state' ? `state:${stateId ?? 'unknown'}` : packageRole;
   const failed = observations.filter(({passed}) => !passed);
   if (failed.length > 0) {
     throw new Error(
       failed
-        .map(({packageRole, reasons}) =>
-          `${packageRole}: ${reasons.join(', ')}`)
+        .map((observation) =>
+          `${labelFor(observation)}: ${observation.reasons.join(', ')}`)
         .join('；'),
     );
   }
@@ -337,7 +345,7 @@ export const assertObservedKeyPlaneSet = ({
       );
       if (distance > policy.maximumInterCellObservedDistance) {
         throw new Error(
-          `${observations[index].packageRole}/${observations[other].packageRole} ` +
+          `${labelFor(observations[index])}/${labelFor(observations[other])} ` +
           `观测色差 ${distance.toFixed(2)} 超过 ${policy.maximumInterCellObservedDistance}`,
         );
       }

@@ -14,7 +14,9 @@ import {
 import {
   deepMerge,
   expandCommandTemplate,
+  loadAssetRequest,
   recordAssetProvenance,
+  refreshActiveCompositionFamilyFingerprints,
   resolveConfirmedProvider,
   runProviderCommand,
   validateAssetRequest,
@@ -22,14 +24,32 @@ import {
   verifyOutputFile,
 } from '../scripts/provider-lib.mjs';
 import {
+  loadStyleCatalog,
+  materializeStyleProfile,
+  styleProfileBinding,
+} from '../scripts/style-catalog-lib.mjs';
+import {
   countProviderGeneratedImages,
   deriveContactSheetSamples,
   inspectCharacterPng,
   resolveRenderConcurrency,
 } from '../scripts/project-lib.mjs';
 import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
+import {createMotionDirectionFixture} from '../fixtures/motion-contract-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const STYLE_REQUEST = {
+  styleProfileBinding: {
+    schemaVersion: 1,
+    id: 'hand-drawn-cutout-explainer',
+    catalogVersion: 'fixture',
+    profileFingerprint: 'a'.repeat(64),
+    directives: ['fixture ink', 'fixture paper', 'Avoid: fixture gloss'],
+  },
+  quality: {
+    requiredChecks: ['style-profile-conformant'],
+  },
+};
 
 test('asset lifecycle preserves audit records and enforces one active record', () => {
   const record = (recordId, status) => ({
@@ -51,6 +71,53 @@ test('asset lifecycle preserves audit records and enforces one active record', (
   assert.throws(() => assertAssetManifest(manifest, 'lifecycle-fixture'), /多个 active/);
 });
 
+test('provider recording preserves authoritative registered-family fingerprints', () => {
+  const registeredFingerprint = 'f'.repeat(64);
+  const compositionBinding = {
+    pattern: 'registered-depth-stack',
+    registrationId: 'stone-stack',
+    sourceMasterAssetId: 'stone-sheet',
+    canvas: {width: 960, height: 540},
+  };
+  const active = (assetId, extra = {}) => ({
+    assetId,
+    sha256: assetId.padEnd(64, '0').slice(0, 64),
+    requestFingerprint: assetId.padStart(64, '1').slice(0, 64),
+    compositionBinding,
+    stateBinding: null,
+    familyFingerprint: null,
+    lifecycle: {
+      status: 'active',
+      changedAt: '2026-01-01T00:00:00.000Z',
+      reason: 'fixture',
+      supersededBy: null,
+    },
+    ...extra,
+  });
+  const manifest = {
+    assets: [
+      active('stone-sheet'),
+      active('stone-rear', {
+        registeredFamilyBinding: {
+          familyFingerprint: registeredFingerprint,
+        },
+        familyFingerprint: registeredFingerprint,
+      }),
+    ],
+  };
+  refreshActiveCompositionFamilyFingerprints(manifest);
+  assert.equal(
+    manifest.assets.find(({assetId}) => assetId === 'stone-rear')
+      .familyFingerprint,
+    registeredFingerprint,
+  );
+  assert.match(
+    manifest.assets.find(({assetId}) => assetId === 'stone-sheet')
+      .familyFingerprint,
+    /^[a-f0-9]{64}$/,
+  );
+});
+
 test('manual image imports record provenance without a generation attempt', async () => {
   const slug = `manual-image-import-${process.pid}-${Date.now()}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
@@ -69,10 +136,11 @@ test('manual image imports record provenance without a generation attempt', asyn
     }).png().toFile(output);
     const result = await recordAssetProvenance({
       request: {
-        schemaVersion: 7,
+        schemaVersion: 8,
         projectSlug: slug,
         assetId: 'manual-source',
         capability: 'image',
+        ...STYLE_REQUEST,
         output: path.relative(ROOT, output),
         prompt: 'Import the already-authorized local source.',
         outputSurface: {mode: 'opaque'},
@@ -112,15 +180,15 @@ test('manual image imports record provenance without a generation attempt', asyn
 });
 
 const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
-  schemaVersion: 10,
+  schemaVersion: 12,
   slug,
   arc: 'A concise progression from setup through action to resolution.',
   style: {
     visualThesis: 'Layered paper depth carries the story.',
     compositionRules: ['Keep the subject clear of subtitle space.'],
-    motionLanguage: ['Establish, act, then settle.'],
     layerStrategy: 'Background establishes place; cutouts carry action.',
   },
+  motionDirection: createMotionDirectionFixture(),
   scenes: Array.from({length: sceneCount}, (_, index) => ({
     id: `scene-${String(index + 1).padStart(2, '0')}`,
     title: `Scene ${index + 1}`,
@@ -129,9 +197,9 @@ const storyboardInput = ({slug, sceneCount, durationSeconds}) => ({
     blueprint: index === sceneCount - 1 ? 'quiet-lockup' : 'layered-reveal',
     estimatedDurationSeconds: durationSeconds / sceneCount,
     beats: [
-      {id: `s${index + 1}-establish`, at: 0, purpose: 'establish', visual: 'Reveal the paper stage', audioCue: null, proofTimeId: null, treatments: [{id: `s${index + 1}-establish-hold`, targetId: 'stage', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: null, rationale: 'Hold a readable opening composition.'}]},
-      {id: `s${index + 1}-action`, at: 0.5, purpose: 'develop', visual: 'Move the main cutout', audioCue: null, proofTimeId: `s${index + 1}-proof-action`, treatments: [{id: `s${index + 1}-action-hold`, targetId: 'subject', importance: 'hero', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-action`, rationale: 'Keep the action target readable in this integration fixture.'}]},
-      {id: `s${index + 1}-settle`, at: 0.9, purpose: 'resolve', visual: 'Lock the composition', audioCue: null, proofTimeId: `s${index + 1}-proof-final`, treatments: [{id: `s${index + 1}-settle-hold`, targetId: 'subject', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-final`, rationale: 'Settle the final composition.'}]},
+      {id: `s${index + 1}-establish`, at: 0, performanceRole: 'establish', purpose: 'establish', visual: 'Reveal the paper stage', soundCue: null, proofTimeId: `s${index + 1}-proof-establish`, treatments: [{id: `s${index + 1}-establish-hold`, targetId: 'stage', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-establish`, rationale: 'Hold a readable opening composition.'}]},
+      {id: `s${index + 1}-action`, at: 0.5, performanceRole: 'action', purpose: 'develop', visual: 'Move the main cutout', soundCue: null, proofTimeId: `s${index + 1}-proof-action`, treatments: [{id: `s${index + 1}-action-hold`, targetId: 'subject', importance: 'hero', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-action`, rationale: 'Keep the action target readable in this integration fixture.'}]},
+      {id: `s${index + 1}-settle`, at: 0.9, performanceRole: 'settle', purpose: 'resolve', visual: 'Lock the composition', soundCue: null, proofTimeId: `s${index + 1}-proof-final`, treatments: [{id: `s${index + 1}-settle-hold`, targetId: 'subject', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: `s${index + 1}-proof-final`, rationale: 'Settle the final composition.'}]},
     ],
     proofTimes: [
       {id: `s${index + 1}-proof-establish`, at: 0.08, label: 'Establish', kind: 'establish', assertions: ['World is readable'], stateAssertions: []},
@@ -313,7 +381,7 @@ test('command adapters write a local output and provenance records its hash', as
     );
     const recorded = await recordAssetProvenance({
       request: {
-        schemaVersion: 7,
+        schemaVersion: 8,
         projectSlug: slug,
         assetId: 'draft-script',
         capability: 'text',
@@ -360,7 +428,7 @@ test('voice outputs are measured and rejected before recording when scene timing
     ], {encoding: 'utf8'});
     assert.equal(generated.status, 0, generated.stderr);
     const base = {
-      schemaVersion: 7,
+      schemaVersion: 8,
       projectSlug: 'voice-timing-test',
       assetId: 'scene-one-narration',
       capability: 'voice',
@@ -383,16 +451,25 @@ test('voice outputs are measured and rejected before recording when scene timing
   }
 });
 
-test('v7 image requests require complete composition and semantic bindings', () => {
+test('v8 image requests require executable style, composition, and semantic bindings', () => {
   assert.throws(
-    () => validateAssetRequest({schemaVersion: 7, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
+    () => validateAssetRequest({schemaVersion: 8, projectSlug: 'binding-test', assetId: 'water', capability: 'image', output: 'public/water.png', prompt: 'water'}),
     /compositionBinding/,
   );
   assert.doesNotThrow(() => validateAssetRequest({
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: 'binding-test',
     assetId: 'water',
     capability: 'image',
+    ...STYLE_REQUEST,
+    quality: {
+      requiredChecks: [
+        'style-profile-conformant',
+        'silhouette-fidelity',
+        'negative-space-clean',
+        'background-leak-free',
+      ],
+    },
   outputSurface: {mode: 'opaque'},
     output: 'public/water.png',
     prompt: 'derive water from registered master',
@@ -405,14 +482,79 @@ test('v7 image requests require complete composition and semantic bindings', () 
   }));
 });
 
+test('loaded image requests must execute the current project Style Profile', async () => {
+  const slug = `style-request-${process.pid}-${Date.now()}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const requestFile = path.join(projectDirectory, 'requests', 'plate.json');
+  try {
+    const catalog = await loadStyleCatalog({root: ROOT});
+    const styleProfile = materializeStyleProfile(
+      catalog,
+      'hand-drawn-cutout-explainer',
+    );
+    const binding = styleProfileBinding(styleProfile);
+    await fsp.mkdir(path.dirname(requestFile), {recursive: true});
+    await fsp.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      `${JSON.stringify({styleProfile}, null, 2)}\n`,
+    );
+    const request = {
+      schemaVersion: 8,
+      projectSlug: slug,
+      assetId: 'plate',
+      capability: 'image',
+      output: `public/projects/${slug}/plate.png`,
+      prompt: `Create a paper plate. ${binding.directives.join(' ')}`,
+      styleProfileBinding: binding,
+      outputSurface: {mode: 'opaque'},
+      compositionBinding: {
+        sceneId: 'scene',
+        nodeId: 'plate',
+        pattern: 'free',
+        outputRole: 'plate',
+        canvas: {width: 100, height: 100},
+        derivation: {method: 'provider-generation'},
+      },
+      semanticBinding: {riskClass: 'decorative', contractIds: []},
+      quality: {
+        kind: 'image',
+        requiredChecks: styleProfile.quality.requiredAssetChecks,
+      },
+    };
+    await fsp.writeFile(
+      requestFile,
+      `${JSON.stringify(request, null, 2)}\n`,
+    );
+    const loaded = await loadAssetRequest(path.relative(ROOT, requestFile));
+    assert.equal(
+      loaded.request.styleProfileBinding.profileFingerprint,
+      styleProfile.profileFingerprint,
+    );
+
+    request.styleProfileBinding.profileFingerprint = 'b'.repeat(64);
+    await fsp.writeFile(
+      requestFile,
+      `${JSON.stringify(request, null, 2)}\n`,
+    );
+    await assert.rejects(
+      () => loadAssetRequest(path.relative(ROOT, requestFile)),
+      /styleProfileBinding 与当前 project.styleProfile 不一致/,
+    );
+  } finally {
+    await fsp.rm(projectDirectory, {recursive: true, force: true});
+  }
+});
+
 test('image output surfaces reject baked transparency and invalid chroma boundaries', async () => {
   const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'provider-surface-'));
   const opaque = path.join(directory, 'opaque.png');
   const alpha = path.join(directory, 'alpha.png');
+  const nativeStateSheet = path.join(directory, 'native-state-sheet.png');
+  const wrongAspectStateSheet = path.join(directory, 'wrong-aspect-state-sheet.png');
   const mixedSheet = path.join(directory, 'mixed-sheet.png');
   const checkerSheet = path.join(directory, 'checker-sheet.png');
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     capability: 'image',
     compositionBinding: {canvas: {width: 32, height: 32}},
   };
@@ -440,6 +582,44 @@ test('image output surfaces reject baked transparency and invalid chroma boundar
     );
     await assert.doesNotReject(
       verifyOutputFile(alpha, {...request, outputSurface: {mode: 'alpha'}}),
+    );
+    const stateSheetRequest = {
+      ...request,
+      compositionBinding: {canvas: {width: 32, height: 32}},
+      outputSurface: {
+        mode: 'chroma-key',
+        keyColor: '#ff00ff',
+        tolerance: 8,
+        keyPlane: {mode: 'provider-native-observed', policyId: 'flat-v1'},
+      },
+      stateSheetBinding: {
+        layout: {columns: 2, rows: 2},
+      },
+    };
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+        <rect width="64" height="64" fill="#ff00ff"/>
+        <circle cx="16" cy="16" r="8" fill="#63a142"/>
+        <circle cx="48" cy="16" r="8" fill="#63a142"/>
+        <circle cx="16" cy="48" r="8" fill="#63a142"/>
+        <circle cx="48" cy="48" r="8" fill="#63a142"/>
+      </svg>
+    `)).png().toFile(nativeStateSheet);
+    await assert.doesNotReject(
+      verifyOutputFile(nativeStateSheet, stateSheetRequest),
+    );
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="48">
+        <rect width="64" height="48" fill="#ff00ff"/>
+        <circle cx="16" cy="12" r="6" fill="#63a142"/>
+        <circle cx="48" cy="12" r="6" fill="#63a142"/>
+        <circle cx="16" cy="36" r="6" fill="#63a142"/>
+        <circle cx="48" cy="36" r="6" fill="#63a142"/>
+      </svg>
+    `)).png().toFile(wrongAspectStateSheet);
+    await assert.rejects(
+      verifyOutputFile(wrongAspectStateSheet, stateSheetRequest),
+      /与请求画布 32x32 不一致/,
     );
     const sheetRequest = {
       ...request,
@@ -544,7 +724,7 @@ test('new projects require a locked storyboard before concept approval', async (
       ),
     );
     assert.equal(project.voice.provider, 'auto');
-    assert.equal(project.schemaVersion, 10);
+    assert.equal(project.schemaVersion, 12);
     assert.deepEqual(project.quality, {minimumAssetScale: 1});
     assert.equal(project.voice.profile, 'warm-storyteller');
     assert.equal(project.plan.status, 'pending');
@@ -557,7 +737,7 @@ test('new projects require a locked storyboard before concept approval', async (
     assert.ok(fs.existsSync(path.join(projectDirectory, 'providers.json')));
     assert.ok(fs.existsSync(path.join(projectDirectory, 'storyboard.json')));
     const storyboardTemplate = JSON.parse(await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'));
-    assert.equal(storyboardTemplate.schemaVersion, 10);
+    assert.equal(storyboardTemplate.schemaVersion, 12);
     assert.deepEqual(storyboardTemplate.sceneTransitions, []);
     assert.match(storyboardTemplate.$schema, /storyboard-authoring\.schema\.json$/);
     assert.ok(fs.existsSync(path.join(projectDirectory, 'requests', '.gitkeep')));
@@ -601,6 +781,17 @@ test('new projects require a locked storyboard before concept approval', async (
     );
     assert.notEqual(blockedAdvance.status, 0);
     assert.match(blockedAdvance.stderr, /尚未获得用户确认/);
+
+    const intakeResult = spawnSync(
+      process.execPath,
+      [
+        path.join(ROOT, 'scripts', 'project-intake.mjs'),
+        slug,
+        '--selection={"aspectRatio":"16:9","visualStylePreset":"childrens-picture-book-paper","parallaxPreference":"auto","note":"Workflow fixture intake"}',
+      ],
+      {cwd: ROOT, encoding: 'utf8'},
+    );
+    assert.equal(intakeResult.status, 0, intakeResult.stderr);
 
     const select = (...selectionArgs) =>
       spawnSync(
@@ -718,9 +909,9 @@ test('new projects require a locked storyboard before concept approval', async (
     const compiledStoryboard = JSON.parse(
       await fsp.readFile(path.join(projectDirectory, 'storyboard.json'), 'utf8'),
     );
-    assert.equal(compiledStoryboard.schemaVersion, 10);
+    assert.equal(compiledStoryboard.schemaVersion, 12);
     assert.ok(compiledStoryboard.sceneTransitions.every(({intent}) => intent === 'continuity'));
-    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'paper-slide'));
+    assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.type === 'slide' && treatment.edgeStyle === 'paper'));
     assert.ok(compiledStoryboard.sceneTransitions.every(({treatment}) => treatment.motivation === 'semantic-default'));
 
     const compactStatus = spawnSync(
@@ -787,6 +978,16 @@ test('concept and all providers can be confirmed in one workflow command', async
       {cwd: ROOT, encoding: 'utf8'},
     );
     assert.equal(created.status, 0, created.stderr);
+    const intake = spawnSync(
+      process.execPath,
+      [
+        path.join(ROOT, 'scripts', 'project-intake.mjs'),
+        slug,
+        '--selection={"aspectRatio":"16:9","visualStylePreset":"childrens-picture-book-paper","parallaxPreference":"auto","note":"Fixture intake"}',
+      ],
+      {cwd: ROOT, encoding: 'utf8'},
+    );
+    assert.equal(intake.status, 0, intake.stderr);
     const planned = spawnSync(
       process.execPath,
       [
@@ -1026,6 +1227,29 @@ test('neutral transparent RGB is not mistaken for a chroma key without metadata'
     const inspection = await inspectCharacterPng(output);
     assert.equal(inspection.keyColor, null);
     assert.equal(inspection.keyColorSource, null);
+  } finally {
+    await fsp.rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('key-edge inspection requires both chroma direction and proximity to the declared key', async () => {
+  const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'paper-key-distance-test-'));
+  const output = path.join(directory, 'distance.png');
+  try {
+    const pixels = Buffer.from([
+      186, 41, 145, 128,
+      112, 38, 84, 128,
+    ]);
+    await sharp(pixels, {raw: {width: 2, height: 1, channels: 4}})
+      .png()
+      .toFile(output);
+    await fsp.writeFile(
+      `${output}.key.json`,
+      `${JSON.stringify({keyColor: '#ba2991'})}\n`,
+    );
+    const inspection = await inspectCharacterPng(output);
+    assert.ok(inspection.keyEdgeRatio > 0.45, inspection);
+    assert.ok(inspection.keyEdgeRatio < 0.55, inspection);
   } finally {
     await fsp.rm(directory, {recursive: true, force: true});
   }

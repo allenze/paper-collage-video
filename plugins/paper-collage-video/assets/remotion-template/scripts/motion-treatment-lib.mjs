@@ -10,6 +10,17 @@ import {
   summarizeLayerSourcePackages,
   validateLayerCompositionIntent,
 } from './layer-source-plan-lib.mjs';
+import {
+  collectCanonicalContainerPlans,
+  compileCanonicalContainerPlan,
+  validateCanonicalContainerIntent,
+} from './container-source-plan-lib.mjs';
+import {
+  compileMotionContract,
+  validateCompiledMotionContract,
+} from './motion-contract-lib.mjs';
+import {validatePathMotion} from '../src/pathMotion.mjs';
+import {validateEncounterAuthoring} from './encounter-contract-lib.mjs';
 
 export const TREATMENT_IMPORTANCE = ['hero', 'supporting', 'ambient'];
 export const TREATMENT_NECESSITY = ['required', 'enhancement'];
@@ -28,9 +39,11 @@ export const CHANGE_CLASSES = [
   'depth-layer-separation',
   'decorative-field',
   'world-travel',
+  'path-travel',
 ];
-export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field'];
+export const MOTION_KINDS = ['static', 'continuous-transform', 'state-sequence', 'visibility-transition', 'motif-field', 'path-locomotion'];
 export const CONTINUOUS_PRESETS = ['breathe', 'float', 'drift', 'bounce', 'pulse', 'camera', 'settle', 'traverse', 'sway', 'parallax-camera', 'scroll-world-x'];
+export const STATE_FACINGS = ['left', 'right', 'front', 'back', 'neutral'];
 export const MOTIF_FIELD_PRESETS = ['drift', 'fall-drift', 'rise-drift', 'burst', 'orbit'];
 export const MOTIF_FIELD_DISTRIBUTIONS = ['scattered', 'grid', 'edge'];
 export const COMPOSITION_PATTERNS = [
@@ -39,9 +52,10 @@ export const COMPOSITION_PATTERNS = [
   'registered-environment',
   'registered-depth-stack',
   'looping-environment',
+  'canonical-container',
 ];
 export const GRAPHIC_KINDS = ['typography', 'shape', 'annotation', 'data-graphic'];
-export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'reveal', 'route', 'data-state'];
+export const GRAPHIC_ANIMATIONS = ['pulse', 'bounce', 'draw', 'stamp', 'shake', 'drop-impact', 'reveal', 'route', 'data-state'];
 export const SEMANTIC_RISKS = ['decorative', 'identity', 'topology', 'mechanism', 'diagram'];
 export const RELATIONSHIP_PREDICATES = [
   'inside',
@@ -134,9 +148,31 @@ const finalizeStatePlayback = ({playback, states, key}) => {
       }
     }
     const active = new Set(resolved.activeStateIds);
+    const exitStates = [];
     for (const state of states) {
-      if (!active.has(state.id) && state.id !== resolved.holdStateId && state.at >= resolved.activeFrom) {
-        throw new Error(`状态家族 ${key} 的前置状态 ${state.id} 必须早于 activeFrom。`);
+      if (active.has(state.id) || state.id === resolved.holdStateId) continue;
+      if (state.at < resolved.activeFrom) continue;
+      if (
+        resolved.activeUntil !== undefined &&
+        state.at >= resolved.activeUntil
+      ) {
+        exitStates.push(state);
+        continue;
+      }
+      throw new Error(
+        `状态家族 ${key} 的非活动状态 ${state.id} 必须早于 activeFrom，或在 activeUntil 后作为结束序列。`,
+      );
+    }
+    if (exitStates.length > 0) {
+      const hold = states.find(({id}) => id === resolved.holdStateId);
+      if (
+        exitStates[0].at !== resolved.activeUntil ||
+        !hold ||
+        hold.at < exitStates.at(-1).at
+      ) {
+        throw new Error(
+          `状态家族 ${key} 的结束序列必须从 activeUntil 开始，并以 holdStateId 作为最后状态。`,
+        );
       }
     }
   }
@@ -171,6 +207,10 @@ const routeForChangeClass = {
     composition: 'looping-environment',
     proof: true,
   },
+  'path-travel': {
+    motion: 'path-locomotion',
+    proof: true,
+  },
 };
 
 const addIssue = (issues, code, message, location) =>
@@ -179,9 +219,11 @@ const addIssue = (issues, code, message, location) =>
 export const treatmentRiskScore = (treatment) =>
   (RISK_SCORE[treatment?.semanticRisk] ?? 0) * 10 +
   (treatment?.motion?.kind === 'state-sequence' ? 5 : 0) +
+  (treatment?.motion?.kind === 'path-locomotion' ? 6 : 0) +
   (treatment?.composition?.pattern === 'registered-depth-stack' ? 6 : 0) +
   (treatment?.composition?.pattern === 'registered-environment' ? 4 : 0) +
   (treatment?.composition?.pattern === 'looping-environment' ? 5 : 0) +
+  (treatment?.composition?.pattern === 'canonical-container' ? 7 : 0) +
   (treatment?.composition?.pattern === 'supported-subject' ? 3 : 0) +
   (IMPORTANCE_SCORE[treatment?.importance] ?? 0) +
   (treatment?.necessity === 'required' ? 1 : 0);
@@ -198,7 +240,7 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   if ((STYLE_SEMANTIC_SEVERITY[treatment.semanticRisk] ?? 0) === highestSemanticSeverity && highestSemanticSeverity > 0) {
     coverage.push(`semantic:${treatment.semanticRisk}`);
   }
-  if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(treatment.composition?.pattern)) {
+  if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(treatment.composition?.pattern)) {
     coverage.push(`relationship:${treatment.composition.pattern}`);
   }
   if (treatment.composition?.motionCapability === 'bounded-relative') {
@@ -217,7 +259,13 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
     coverage.push('motion:physical-rise');
   }
   if (treatment.motion?.kind === 'state-sequence') coverage.push('motion:state-sequence');
+  if (treatment.motion?.kind === 'path-locomotion') {
+    coverage.push('motion:path-locomotion');
+    coverage.push('proof:path-locomotion');
+    if (treatment.motion.cameraFollow) coverage.push('camera:path-follow');
+  }
   if (treatment.motion?.kind === 'motif-field') coverage.push('motion:motif-field');
+  if (treatment.graphic?.role === 'visual-sfx') coverage.push('graphic:visual-sfx');
   if (treatment.motion?.preset === 'scroll-world-x') {
     coverage.push('motion:looping-world');
     coverage.push('proof:world-motion');
@@ -225,7 +273,10 @@ const styleCoverageForTreatment = (treatment, highestSemanticSeverity) => {
   return coverage;
 };
 
-export const compileStyleProofPlan = (scenes) => {
+export const compileStyleProofPlan = (
+  scenes,
+  {motionContractFingerprint} = {},
+) => {
   const candidates = scenes.flatMap((scene) =>
     scene.beats.flatMap((beat) => beat.treatments.map((treatment) => ({
       sceneId: scene.id,
@@ -246,7 +297,12 @@ export const compileStyleProofPlan = (scenes) => {
       requiredCoverage: [],
       targets: [],
       sourceFamilyKeys: [],
-      fingerprint: hashCompositionValue({requiredCoverage: [], targets: []}),
+      motionContractFingerprint,
+      fingerprint: hashCompositionValue({
+        requiredCoverage: [],
+        targets: [],
+        motionContractFingerprint,
+      }),
     };
   }
   const highestSemanticSeverity = Math.max(
@@ -258,7 +314,7 @@ export const compileStyleProofPlan = (scenes) => {
       requiredCoverage.add(coverage);
     }
   }
-  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(compositionPattern))) {
+  if (candidates.some(({compositionPattern}) => ['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(compositionPattern))) {
     requiredCoverage.add('relationship:coupled');
   }
   const representative = [...candidates].sort((left, right) =>
@@ -320,6 +376,7 @@ export const compileStyleProofPlan = (scenes) => {
     requiredCoverage: [...requiredCoverage].sort(),
     targets,
     sourceFamilyKeys: [...selectedFamilies].sort(),
+    motionContractFingerprint,
   };
   return {...plan, fingerprint: hashCompositionValue(plan)};
 };
@@ -332,6 +389,17 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   }
   for (const key of ['id', 'targetId', 'changeClass', 'semanticRisk', 'rationale']) {
     if (!nonEmpty(treatment[key])) addIssue(issues, `treatment-${key}`, `${key} 不能为空。`, `${location}.${key}`);
+  }
+  if (
+    /^scene-\d+-camera$/.test(treatment.targetId) &&
+    treatment.targetId !== 'scene-camera'
+  ) {
+    addIssue(
+      issues,
+      'treatment-camera-target-alias',
+      'camera treatment 的唯一目标 id 是 scene-camera；不得写入带场景号的别名。',
+      `${location}.targetId`,
+    );
   }
   if (!TREATMENT_IMPORTANCE.includes(treatment.importance)) {
     addIssue(issues, 'treatment-importance', 'importance 必须是 hero、supporting 或 ambient。', `${location}.importance`);
@@ -362,12 +430,20 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (!CONTINUOUS_PRESETS.includes(motion.preset)) {
       addIssue(issues, 'treatment-motion-preset', `未知 continuous preset：${motion.preset}`, `${location}.motion.preset`);
     }
-    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
+    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', 'path', 'cameraFollow', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'continuous-transform 不得夹带 state-sequence 字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'state-sequence') {
     for (const key of ['poseFamilyId', 'stateId', 'visualChange']) {
       if (!nonEmpty(motion[key])) addIssue(issues, `treatment-state-${key}`, `${key} 不能为空。`, `${location}.motion.${key}`);
+    }
+    if (!STATE_FACINGS.includes(motion.facing)) {
+      addIssue(
+        issues,
+        'treatment-state-facing',
+        'state-sequence facing 必须明确声明为 left、right、front、back 或 neutral。',
+        `${location}.motion.facing`,
+      );
     }
     if (!['once', 'loop', 'ping-pong'].includes(motion.playback)) {
       addIssue(issues, 'treatment-state-playback', 'state-sequence playback 无效。', `${location}.motion.playback`);
@@ -407,6 +483,105 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (motion.preset !== undefined) {
       addIssue(issues, 'treatment-motion-mixed', 'state-sequence 不得声明 continuous preset。', `${location}.motion.preset`);
     }
+    if (motion.path !== undefined || motion.cameraFollow !== undefined) {
+      addIssue(issues, 'treatment-motion-mixed', 'state-sequence 的三维路径必须由同目标的独立 path-locomotion treatment 声明。', `${location}.motion`);
+    }
+    if (motion.pathViewBinding !== undefined) {
+      const binding = motion.pathViewBinding;
+      const groups = [
+        binding?.planarStateIds,
+        binding?.towardStateIds,
+        binding?.awayStateIds,
+      ];
+      const allIds = groups.flatMap((ids) => Array.isArray(ids) ? ids : []);
+      if (
+        !Number.isFinite(binding?.depthVelocityThreshold) ||
+        binding.depthVelocityThreshold <= 0 ||
+        !Number.isFinite(binding?.transitionWidth) ||
+        binding.transitionWidth < 0 ||
+        binding.transitionWidth > binding.depthVelocityThreshold
+      ) {
+        addIssue(issues, 'treatment-path-view-threshold', 'pathViewBinding 必须声明正 depthVelocityThreshold，且 transitionWidth 位于 0..threshold。', `${location}.motion.pathViewBinding`);
+      }
+      if (groups.some((ids) =>
+        !Array.isArray(ids) ||
+        ids.length < 2 ||
+        new Set(ids).size !== ids.length ||
+        ids.some((id) => !nonEmpty(id))
+      )) {
+        addIssue(issues, 'treatment-path-view-group', 'pathViewBinding 的 planar/toward/away 各组都必须包含至少两个不重复状态。', `${location}.motion.pathViewBinding`);
+      }
+      if (new Set(allIds).size !== allIds.length) {
+        addIssue(issues, 'treatment-path-view-overlap', 'pathViewBinding 的三个状态组不得互相重叠。', `${location}.motion.pathViewBinding`);
+      }
+    }
+  } else if (motion.kind === 'path-locomotion') {
+    for (const issue of validatePathMotion(motion.path)) {
+      addIssue(
+        issues,
+        issue.code,
+        issue.message,
+        `${location}.motion.${issue.location}`,
+      );
+    }
+    if (!Object.hasOwn(motion, 'cameraFollow')) {
+      addIssue(
+        issues,
+        'treatment-path-camera-decision',
+        'path-locomotion 必须显式声明 cameraFollow（对象或 null）。',
+        `${location}.motion.cameraFollow`,
+      );
+    }
+    if (
+      motion.cameraFollow !== null &&
+      (
+        !nonEmpty(motion.cameraFollow?.targetNodeId) ||
+        motion.cameraFollow.targetNodeId !== treatment.targetId ||
+        !nonEmpty(motion.cameraFollow?.worldNodeId)
+      )
+    ) {
+      addIssue(
+        issues,
+        'treatment-path-camera-binding',
+        'cameraFollow 必须跟随当前 path-locomotion target，并声明世界节点。',
+        `${location}.motion.cameraFollow`,
+      );
+    }
+    if (motion.path?.progress?.[0]?.at !== beatAt) {
+      addIssue(
+        issues,
+        'treatment-path-start-time',
+        'path-locomotion 所属 beat.at 必须等于 path.progress 的第一个 at。',
+        `${location}.motion.path.progress[0].at`,
+      );
+    }
+    if (
+      [
+        'preset',
+        'poseFamilyId',
+        'stateId',
+        'facing',
+        'visualChange',
+        'playback',
+        'transition',
+        ...STATE_PLAYBACK_FIELDS,
+        'action',
+        'durationSeconds',
+        'distribution',
+        'count',
+        'cycles',
+        'bounds',
+        'exclusionZones',
+        'worldBinding',
+      ].some((key) => motion[key] !== undefined)
+    ) {
+      addIssue(
+        issues,
+        'treatment-path-mixed',
+        'path-locomotion 不得夹带连续 preset、状态序列、显隐或 motif 字段。',
+        `${location}.motion`,
+      );
+    }
   } else if (motion.kind === 'visibility-transition') {
     if (!['show', 'hide'].includes(motion.action)) {
       addIssue(issues, 'treatment-visibility-action', 'visibility-transition.action 必须是 show 或 hide。', `${location}.motion.action`);
@@ -417,7 +592,7 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     if (motion.transition === 'cut' ? motion.durationSeconds !== 0 : !(Number.isFinite(motion.durationSeconds) && motion.durationSeconds > 0)) {
       addIssue(issues, 'treatment-visibility-duration', 'cut 时长必须为 0，其他 visibility-transition 时长必须大于 0。', `${location}.motion.durationSeconds`);
     }
-    if (['preset', 'poseFamilyId', 'stateId', 'visualChange', 'playback', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
+    if (['preset', 'poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'path', 'cameraFollow', ...STATE_PLAYBACK_FIELDS].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'visibility-transition 不得夹带连续或状态序列字段。', `${location}.motion`);
     }
   } else if (motion.kind === 'motif-field') {
@@ -457,7 +632,26 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
         }
       }
     }
-    if (['poseFamilyId', 'stateId', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds'].some((key) => motion[key] !== undefined)) {
+    if (motion.worldBinding !== undefined) {
+      const binding = motion.worldBinding;
+      if (
+        !nonEmpty(binding?.worldNodeId) ||
+        !['far', 'mid', 'ground', 'near'].includes(binding?.stripRole) ||
+        !(
+          Number.isFinite(binding?.relativeDriftAmplitude) &&
+          binding.relativeDriftAmplitude >= 0 &&
+          binding.relativeDriftAmplitude <= 0.05
+        )
+      ) {
+        addIssue(
+          issues,
+          'treatment-motif-world-binding',
+          'motif-field worldBinding 必须声明 worldNodeId、有效 stripRole 与 0..0.05 relativeDriftAmplitude。',
+          `${location}.motion.worldBinding`,
+        );
+      }
+    }
+    if (['poseFamilyId', 'stateId', 'facing', 'visualChange', 'playback', 'transition', 'action', 'durationSeconds', 'activeFrom', 'activeUntil', 'holdStateId', 'activeStateIds', 'path', 'cameraFollow'].some((key) => motion[key] !== undefined)) {
       addIssue(issues, 'treatment-motion-mixed', 'motif-field 不得夹带状态或显隐字段。', `${location}.motion`);
     }
   } else if (motion && Object.keys(motion).some((key) => key !== 'kind')) {
@@ -470,7 +664,8 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   } else if (
     composition.pattern !== 'free' &&
     composition.pattern !== 'registered-depth-stack' &&
-    composition.pattern !== 'looping-environment'
+    composition.pattern !== 'looping-environment' &&
+    composition.pattern !== 'canonical-container'
   ) {
     const relationship = composition.relationship;
     if (!relationship || typeof relationship !== 'object') {
@@ -493,6 +688,10 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   issues.push(
     ...validateLayerCompositionIntent(composition, {
       location: `${location}.composition`,
+    }),
+    ...validateCanonicalContainerIntent(composition, {
+      location: `${location}.composition`,
+      treatment,
     }),
   );
   if (composition?.pattern === 'looping-environment') {
@@ -580,6 +779,17 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
           addIssue(issues, 'treatment-looping-subject-occlusion', 'world subject nearOcclusion 无效。', `${location}.composition.world.subjectBindings[${index}].nearOcclusion`);
         }
         if (
+          subject?.requireNearOverlap !== undefined &&
+          typeof subject.requireNearOverlap !== 'boolean'
+        ) {
+          addIssue(
+            issues,
+            'treatment-looping-subject-overlap',
+            'world subject requireNearOverlap 必须为布尔值。',
+            `${location}.composition.world.subjectBindings[${index}].requireNearOverlap`,
+          );
+        }
+        if (
           !Array.isArray(subject?.proofTimeIds) ||
           subject.proofTimeIds.length < 2 ||
           new Set(subject.proofTimeIds).size !== subject.proofTimeIds.length ||
@@ -603,6 +813,17 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
   } else if (composition?.world !== undefined) {
     addIssue(issues, 'treatment-world-pattern', 'composition.world 只适用于 looping-environment。', `${location}.composition.world`);
   }
+  if (
+    composition?.pattern !== 'canonical-container' &&
+    composition?.container !== undefined
+  ) {
+    addIssue(
+      issues,
+      'treatment-container-pattern',
+      'composition.container 只适用于 canonical-container。',
+      `${location}.composition.container`,
+    );
+  }
 
   if (treatment.graphic !== null && treatment.graphic !== undefined) {
     if (!GRAPHIC_KINDS.includes(treatment.graphic?.kind)) {
@@ -610,6 +831,39 @@ export const validateTreatment = (treatment, {location = 'treatment', beatAt = n
     }
     if (!GRAPHIC_ANIMATIONS.includes(treatment.graphic?.animation)) {
       addIssue(issues, 'treatment-graphic-animation', 'graphic.animation 无效。', `${location}.graphic.animation`);
+    }
+    if (!['generic', 'visual-sfx'].includes(treatment.graphic?.role)) {
+      addIssue(issues, 'treatment-graphic-role', 'graphic.role 必须为 generic 或 visual-sfx。', `${location}.graphic.role`);
+    }
+    if (treatment.graphic?.role === 'visual-sfx') {
+      if (treatment.graphic.kind !== 'typography') {
+        addIssue(issues, 'treatment-visual-sfx-kind', 'visual-sfx 必须使用 typography。', `${location}.graphic.kind`);
+      }
+      if (!['impact', 'motion'].includes(treatment.graphic.sfxKind)) {
+        addIssue(issues, 'treatment-visual-sfx-type', 'visual-sfx.sfxKind 必须为 impact 或 motion。', `${location}.graphic.sfxKind`);
+      }
+      if (!nonEmpty(treatment.graphic.text) || [...treatment.graphic.text].length > 8) {
+        addIssue(issues, 'treatment-visual-sfx-text', 'visual-sfx.text 必须是 1–8 个字符。', `${location}.graphic.text`);
+      }
+      if (
+        !Number.isFinite(treatment.graphic.durationSeconds) ||
+        treatment.graphic.durationSeconds < 0.1 ||
+        treatment.graphic.durationSeconds > 1
+      ) {
+        addIssue(issues, 'treatment-visual-sfx-duration', 'visual-sfx.durationSeconds 必须位于 0.1–1 秒。', `${location}.graphic.durationSeconds`);
+      }
+      if (treatment.graphic.audioBinding !== 'beat-sound-cue') {
+        addIssue(issues, 'treatment-visual-sfx-audio', 'visual-sfx 必须绑定所属 beat.soundCue。', `${location}.graphic.audioBinding`);
+      }
+      if (!['stamp', 'shake', 'drop-impact'].includes(treatment.graphic.animation)) {
+        addIssue(issues, 'treatment-visual-sfx-animation', 'visual-sfx 只使用 stamp、shake 或 drop-impact。', `${location}.graphic.animation`);
+      }
+    } else if (
+      ['sfxKind', 'text', 'durationSeconds', 'audioBinding'].some(
+        (key) => treatment.graphic[key] !== undefined,
+      )
+    ) {
+      addIssue(issues, 'treatment-generic-graphic-fields', 'generic graphic 不得声明 visual-sfx 专用字段。', `${location}.graphic`);
     }
   }
 
@@ -646,11 +900,13 @@ const compileScene = (scene) => {
   const relationships = new Map();
   const stateFamilies = new Map();
   const continuousMotions = [];
+  const pathMotions = new Map();
   const visibilityEvents = [];
   const motifFields = [];
   const graphics = [];
   const layerStacks = new Map();
   const loopingEnvironments = new Map();
+  const canonicalContainers = new Map();
   const treatments = [];
 
   for (const beat of scene.beats ?? []) {
@@ -679,15 +935,20 @@ const compileScene = (scene) => {
           poseFamilyId: treatment.motion.poseFamilyId,
           states: [],
           playback: statePlaybackFromMotion(treatment.motion),
+          pathViewBinding: treatment.motion.pathViewBinding,
           transition: treatment.motion.transition,
           necessity: treatment.necessity,
           importance: treatment.importance,
         };
         if (family.transition !== treatment.motion.transition) throw new Error(`状态家族 ${key} 的 transition 必须保持一致。`);
+        if (JSON.stringify(family.pathViewBinding) !== JSON.stringify(treatment.motion.pathViewBinding)) {
+          throw new Error(`状态家族 ${key} 的 pathViewBinding 必须保持一致。`);
+        }
         family.playback = mergeStatePlayback(family.playback, statePlaybackFromMotion(treatment.motion), key);
         family.states.push({
           id: treatment.motion.stateId,
           at: beat.at,
+          facing: treatment.motion.facing,
           visualChange: treatment.motion.visualChange,
         });
         if (treatment.necessity === 'required') family.necessity = 'required';
@@ -702,6 +963,31 @@ const compileScene = (scene) => {
           at: beat.at,
           proofTimeId: treatment.proofTimeId ?? null,
         });
+      }
+      if (treatment.motion.kind === 'path-locomotion') {
+        const compiledPath = {
+          id: treatment.id,
+          nodeId: treatment.targetId,
+          path: treatment.motion.path,
+          cameraFollow: treatment.motion.cameraFollow,
+          at: beat.at,
+          proofTimeId: treatment.proofTimeId ?? null,
+        };
+        const prior = pathMotions.get(treatment.targetId);
+        if (
+          prior &&
+          JSON.stringify(prior) !== JSON.stringify(compiledPath)
+        ) {
+          throw new Error(
+            `二维路径 ${scene.id}::${treatment.targetId} 在同一镜头中定义不一致。`,
+          );
+        }
+        if (prior) {
+          throw new Error(
+            `二维路径 ${scene.id}::${treatment.targetId} 只能定义一次。`,
+          );
+        }
+        pathMotions.set(treatment.targetId, compiledPath);
       }
       if (treatment.motion.kind === 'visibility-transition') {
         visibilityEvents.push({
@@ -725,6 +1011,9 @@ const compileScene = (scene) => {
           cycles: treatment.motion.cycles,
           bounds: treatment.motion.bounds,
           exclusionZones: treatment.motion.exclusionZones,
+          ...(treatment.motion.worldBinding
+            ? {worldBinding: treatment.motion.worldBinding}
+            : {}),
           at: beat.at,
           proofTimeId: treatment.proofTimeId ?? null,
         });
@@ -732,9 +1021,20 @@ const compileScene = (scene) => {
       if (treatment.graphic) {
         graphics.push({
           id: treatment.id,
+          beatId: beat.id,
           nodeId: treatment.targetId,
           kind: treatment.graphic.kind,
           animation: treatment.graphic.animation,
+          role: treatment.graphic.role,
+          ...(treatment.graphic.role === 'visual-sfx'
+            ? {
+                sfxKind: treatment.graphic.sfxKind,
+                text: treatment.graphic.text,
+                durationSeconds: treatment.graphic.durationSeconds,
+                audioBinding: treatment.graphic.audioBinding,
+                soundCue: beat.soundCue,
+              }
+            : {}),
           at: beat.at,
           proofTimeId: treatment.proofTimeId ?? null,
         });
@@ -793,18 +1093,85 @@ const compileScene = (scene) => {
         }
         if (!prior) layerStacks.set(key, layerStack);
       }
+      const canonicalContainer = compileCanonicalContainerPlan({
+        sceneId: scene.id,
+        treatment,
+      });
+      if (canonicalContainer) {
+        const key = canonicalContainer.groupId;
+        const prior = canonicalContainers.get(key);
+        const stable = ({
+          treatmentId,
+          proofTimeId,
+          ...value
+        }) => value;
+        if (
+          prior &&
+          JSON.stringify(stable(prior)) !==
+            JSON.stringify(stable(canonicalContainer))
+        ) {
+          throw new Error(
+            `canonical container ${scene.id}::${key} 在同一镜头中定义不一致。`,
+          );
+        }
+        if (!prior) canonicalContainers.set(key, canonicalContainer);
+      }
     }
   }
 
   const highestRisk = [...treatments].sort((left, right) =>
     treatmentRiskScore(right) - treatmentRiskScore(left) || left.id.localeCompare(right.id),
   )[0] ?? null;
+  for (const pathMotion of pathMotions.values()) {
+    if (
+      ![...stateFamilies.values()].some(
+        ({nodeId}) => nodeId === pathMotion.nodeId,
+      )
+    ) {
+      throw new Error(
+        `二维路径 ${scene.id}::${pathMotion.nodeId} 必须与同一目标的 state-sequence 状态家族组合，不能移动冻结单帧。`,
+      );
+    }
+  }
+  for (const family of stateFamilies.values()) {
+    if (!family.pathViewBinding) continue;
+    const pathMotion = pathMotions.get(family.nodeId);
+    if (pathMotion?.path?.kind !== 'cubic-bezier-3d') {
+      throw new Error(
+        `景深视角状态家族 ${scene.id}::${family.nodeId} 必须绑定同目标的 cubic-bezier-3d 路径。`,
+      );
+    }
+    const knownStateIds = new Set(family.states.map(({id}) => id));
+    const viewStateIds = [
+      ...family.pathViewBinding.planarStateIds,
+      ...family.pathViewBinding.towardStateIds,
+      ...family.pathViewBinding.awayStateIds,
+    ];
+    for (const stateId of viewStateIds) {
+      if (!knownStateIds.has(stateId)) {
+        throw new Error(
+          `景深视角状态家族 ${scene.id}::${family.nodeId} 引用了未编排状态 ${stateId}。`,
+        );
+      }
+    }
+  }
   const compositionPlan = {
     patterns: [...patterns].sort(),
     relationships: [...relationships.values()].sort((left, right) => left.id.localeCompare(right.id)),
     stateSequences: [...stateFamilies.values()]
       .map(({necessity, importance, ...family}) => {
-        const states = [...family.states].sort((left, right) => left.at - right.at);
+        const orderedStates = [...family.states].sort(
+          (left, right) => left.at - right.at,
+        );
+        const states =
+          ['loop', 'ping-pong'].includes(family.playback.mode) &&
+          family.playback.activeFrom === undefined &&
+          family.playback.activeStateIds === undefined
+            ? orderedStates.map((state, index) => ({
+                ...state,
+                at: index / orderedStates.length,
+              }))
+            : orderedStates;
         return {
           ...family,
           states,
@@ -817,6 +1184,9 @@ const compileScene = (scene) => {
       })
       .sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
     continuousMotions: continuousMotions.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
+    pathMotions: [...pathMotions.values()].sort((left, right) =>
+      left.nodeId.localeCompare(right.nodeId),
+    ),
     visibilityEvents: visibilityEvents.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     motifFields: motifFields.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
     graphics: graphics.sort((left, right) => left.at - right.at || left.id.localeCompare(right.id)),
@@ -825,6 +1195,9 @@ const compileScene = (scene) => {
     ),
     loopingEnvironments: [...loopingEnvironments.values()].sort((left, right) =>
       left.targetId.localeCompare(right.targetId),
+    ),
+    canonicalContainers: [...canonicalContainers.values()].sort(
+      (left, right) => left.groupId.localeCompare(right.groupId),
     ),
   };
   const directing = {
@@ -845,6 +1218,17 @@ const compileScene = (scene) => {
   };
 };
 
+export const stateSheetGridForCount = (stateCount) => {
+  if (!Number.isInteger(stateCount) || stateCount < 1 || stateCount > 12) {
+    throw new Error('状态母版网格只支持 1..12 个状态。');
+  }
+  if (stateCount <= 4) return {columns: 2, rows: 2};
+  if (stateCount <= 6) return {columns: 3, rows: 2};
+  if (stateCount <= 8) return {columns: 4, rows: 2};
+  if (stateCount <= 9) return {columns: 3, rows: 3};
+  return {columns: 4, rows: 3};
+};
+
 export const summarizeDirectingDemand = (scenes, motionBudget) => {
   const treatments = scenes.flatMap((scene) =>
     scene.beats.flatMap((beat) => beat.treatments.map((treatment) => ({
@@ -853,7 +1237,11 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
     }))),
   );
   const stateFamilyMap = new Map();
-  for (const treatment of treatments.filter(({motion}) => motion.kind === 'state-sequence')) {
+  for (const treatment of treatments.filter(
+    ({motion, composition}) =>
+      motion.kind === 'state-sequence' &&
+      composition?.pattern !== 'canonical-container',
+  )) {
     // A poseFamilyId denotes one registered provider sheet. A continuous scene may
     // intentionally use several temporal instances of that same family (for
     // example, a sleeping hare and the later chase) without creating another
@@ -865,9 +1253,20 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
       poseFamilyId: treatment.motion.poseFamilyId,
       necessity: 'enhancement',
       stateIds: new Set(),
+      stateFacings: new Map(),
     };
     family.targetIds.add(treatment.targetId);
     family.stateIds.add(treatment.motion.stateId);
+    const priorFacing = family.stateFacings.get(treatment.motion.stateId);
+    if (priorFacing && priorFacing !== treatment.motion.facing) {
+      throw new Error(
+        `状态家族 ${family.poseFamilyId} 的状态 ${treatment.motion.stateId} 跨镜头声明了冲突朝向：${priorFacing} / ${treatment.motion.facing}。请拆分为不同状态，或统一构图方向。`,
+      );
+    }
+    family.stateFacings.set(
+      treatment.motion.stateId,
+      treatment.motion.facing,
+    );
     if (treatment.necessity === 'required') family.necessity = 'required';
     stateFamilyMap.set(key, family);
   }
@@ -879,21 +1278,24 @@ export const summarizeDirectingDemand = (scenes, motionBudget) => {
       poseFamilyId: family.poseFamilyId,
       necessity: family.necessity,
       stateIds: [...family.stateIds].sort(),
-      grid: family.stateIds.size <= 4
-        ? {columns: 2, rows: 2}
-        : {columns: 3, rows: 2},
+      stateFacings: [...family.stateFacings.entries()]
+        .map(([stateId, facing]) => ({stateId, facing}))
+        .sort((left, right) => left.stateId.localeCompare(right.stateId)),
+      grid: stateSheetGridForCount(family.stateIds.size),
       providerCalls: 1,
       repairPolicy: 'masked-edit-complete-sheet',
     }))
     .sort((left, right) => left.poseFamilyId.localeCompare(right.poseFamilyId));
   const uniqueContinuousTargets = new Set(
-    treatments.filter(({motion}) => motion.kind === 'continuous-transform').map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
+    treatments.filter(({motion}) =>
+      ['continuous-transform', 'path-locomotion'].includes(motion.kind),
+    ).map(({sceneId, targetId}) => `${sceneId}::${targetId}`),
   );
   const uniqueLocalMotionTargets = new Set(
     treatments
       .filter(
         ({motion, graphic}) =>
-          ['continuous-transform', 'visibility-transition', 'motif-field'].includes(
+          ['continuous-transform', 'path-locomotion', 'visibility-transition', 'motif-field'].includes(
             motion.kind,
           ) || Boolean(graphic),
       )
@@ -937,6 +1339,7 @@ export const summarizeProfileFulfillment = (scenes, demand, promise = null) => {
             'registered-environment',
             'registered-depth-stack',
             'looping-environment',
+            'canonical-container',
           ].includes(pattern),
         ),
     ).length,
@@ -1026,10 +1429,21 @@ export const recalculateProfilePromiseForLockedStaticScenes = ({
   };
 };
 
-export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
+export const compileStoryboardDirecting = (
+  storyboard,
+  {plan, styleProfile} = {},
+) => {
   const issues = [];
   if (storyboard.directingSummary !== undefined) {
     addIssue(issues, 'storyboard-derived-summary', '输入不得手写 directingSummary；它由编译器生成。', 'directingSummary');
+  }
+  if (storyboard.motionContract !== undefined) {
+    addIssue(
+      issues,
+      'storyboard-derived-motion-contract',
+      '输入不得手写 motionContract；它由编译器生成。',
+      'motionContract',
+    );
   }
   const treatmentIds = new Set();
   for (const [sceneIndex, scene] of (storyboard.scenes ?? []).entries()) {
@@ -1037,6 +1451,7 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
       addIssue(issues, 'storyboard-derived-fields', '输入不得手写 compositionPlan 或 directing；它们由编译器生成。', `scenes[${sceneIndex}]`);
     }
     const motifTargets = new Map();
+    let visualSfxCount = 0;
     const motionPolicy = scene.motionPolicy ?? 'standard';
     if (!['standard', 'locked-static'].includes(motionPolicy)) {
       addIssue(
@@ -1073,6 +1488,53 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
       for (const [treatmentIndex, treatment] of (beat.treatments ?? []).entries()) {
         const location = `${beatLocation}.treatments[${treatmentIndex}]`;
         issues.push(...validateTreatment(treatment, {location, beatAt: beat.at}));
+        if (treatment.graphic?.role === 'visual-sfx') {
+          visualSfxCount += 1;
+          if (!nonEmpty(beat.soundCue)) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-sound-cue',
+              'visual-sfx 所属节拍必须声明离散 soundCue。',
+              `${beatLocation}.soundCue`,
+            );
+          }
+          if (!nonEmpty(treatment.proofTimeId)) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-proof',
+              'visual-sfx 必须绑定所属节拍的 proofTimeId。',
+              `${location}.proofTimeId`,
+            );
+          }
+          const policy = styleProfile?.motion?.visualSfx;
+          if (
+            policy &&
+            !policy.allowedKinds?.includes(treatment.graphic.sfxKind)
+          ) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-style-kind',
+              `当前 Style Profile 不允许 ${treatment.graphic.sfxKind} visual-sfx。`,
+              `${location}.graphic.sfxKind`,
+            );
+          }
+          if (
+            policy &&
+            (
+              treatment.graphic.durationSeconds <
+                policy.durationRangeSeconds?.[0] ||
+              treatment.graphic.durationSeconds >
+                policy.durationRangeSeconds?.[1]
+            )
+          ) {
+            addIssue(
+              issues,
+              'treatment-visual-sfx-style-duration',
+              `visual-sfx 时长必须位于当前 Style Profile 的 ${policy.durationRangeSeconds?.[0]}–${policy.durationRangeSeconds?.[1]} 秒。`,
+              `${location}.graphic.durationSeconds`,
+            );
+          }
+        }
         if (treatment.motion?.kind === 'motif-field') {
           if (motifTargets.has(treatment.targetId)) {
             addIssue(issues, 'treatment-motif-target-duplicate', `单镜头 motif-field 目标只能编排一次：${treatment.targetId}。`, `${location}.targetId`);
@@ -1095,6 +1557,18 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
         issues,
         'treatment-motif-scene-budget',
         `单镜头 motif-field 总实例数必须不超过 ${MAX_MOTIF_INSTANCES_PER_SCENE}，当前为 ${motifInstanceCount}。`,
+        `scenes[${sceneIndex}].beats`,
+      );
+    }
+    const visualSfxLimit = styleProfile?.motion?.visualSfx?.maxPerScene;
+    if (
+      Number.isInteger(visualSfxLimit) &&
+      visualSfxCount > visualSfxLimit
+    ) {
+      addIssue(
+        issues,
+        'treatment-visual-sfx-scene-budget',
+        `当前 Style Profile 每镜头最多允许 ${visualSfxLimit} 个 visual-sfx，当前为 ${visualSfxCount}。`,
         `scenes[${sceneIndex}].beats`,
       );
     }
@@ -1125,6 +1599,39 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
   } catch (cause) {
     const error = new Error(cause.message);
     error.issues = [{code: 'storyboard-compile', message: cause.message, location: 'scenes'}];
+    throw error;
+  }
+  const encounterIssues = scenes.flatMap((scene, index) =>
+    validateEncounterAuthoring(scene, {location: `scenes[${index}]`}),
+  );
+  if (encounterIssues.length > 0) {
+    const error = new Error(
+      encounterIssues
+        .map(({location, message}) => `${location}: ${message}`)
+        .join('\n'),
+    );
+    error.issues = encounterIssues;
+    throw error;
+  }
+  let motionContract;
+  try {
+    motionContract = compileMotionContract({
+      direction: storyboard.motionDirection,
+      scenes,
+      sceneTransitions: storyboard.sceneTransitions ?? [],
+      editorial,
+      styleProfile,
+    });
+  } catch (cause) {
+    const error = new Error(cause.message);
+    error.issues =
+      cause.issues ?? [
+        {
+          code: 'motion-contract-compile',
+          message: cause.message,
+          location: 'motionDirection',
+        },
+      ];
     throw error;
   }
   const motionBudget = plan?.motionBudget ?? null;
@@ -1171,10 +1678,13 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     error.issues = budgetIssues;
     throw error;
   }
-  const styleProofPlan = compileStyleProofPlan(scenes);
+  const styleProofPlan = compileStyleProofPlan(scenes, {
+    motionContractFingerprint: motionContract.fingerprint,
+  });
   const generationBudget = summarizeLayerSourcePackages(scenes, {
     poseSheetCalls: demand.estimatedPoseSheetCalls,
     hardCeiling: plan?.assetBudget?.maxGeneratedImages ?? null,
+    additionalPlans: collectCanonicalContainerPlans(scenes),
   });
   if (
     Number.isInteger(generationBudget.hardCeiling) &&
@@ -1184,7 +1694,7 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
     addIssue(
       budgetIssues,
       'directing-image-attempt-budget',
-      `分层 source packages 与姿态母版至少需要 ${generationBudget.requiredProviderImageCalls} 次图片 provider 调用，超过 ${plan.productionProfile} 档位硬上限 ${generationBudget.hardCeiling}；请提高档位、改用可靠 registered-layer-sheet 或缩小范围。`,
+      `source packages 与姿态母版至少需要 ${generationBudget.requiredProviderImageCalls} 次图片 provider 调用，超过 ${plan.productionProfile} 档位硬上限 ${generationBudget.hardCeiling}；请提高档位、使用可靠批量状态来源或缩小范围。`,
       'directingSummary.generationBudget.requiredProviderImageCalls',
     );
   }
@@ -1207,13 +1717,24 @@ export const compileStoryboardDirecting = (storyboard, {plan} = {}) => {
   directingSummary.fingerprint = hashCompositionValue({
     scenes: scenes.map(({id, directing, compositionPlan}) => ({id, directing, compositionPlan})),
     sceneTransitions: storyboard.sceneTransitions,
+    spatialContracts: storyboard.spatialContracts ?? [],
     editorialFingerprint: editorial.fingerprint,
+    motionContractFingerprint: motionContract.fingerprint,
     demand: {...directingSummary, budget: undefined, fingerprint: undefined},
   });
-  return {...storyboard, editorial, scenes, directingSummary};
+  return {
+    ...storyboard,
+    motionContract,
+    editorial,
+    scenes,
+    directingSummary,
+  };
 };
 
-export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
+export const validateCompiledDirecting = (
+  storyboard,
+  {plan, styleProfile} = {},
+) => {
   try {
     const authoring = {
       ...storyboard,
@@ -1225,9 +1746,27 @@ export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
           )
         : storyboard.editorial,
       scenes: (storyboard.scenes ?? []).map(({compositionPlan, directing, ...scene}) => scene),
+      motionContract: undefined,
       directingSummary: undefined,
     };
-    const compiled = compileStoryboardDirecting(authoring, {plan});
+    const effectiveStyleProfile =
+      styleProfile ??
+      (storyboard.motionContract?.styleProfileBinding
+        ? {
+            id: storyboard.motionContract.styleProfileBinding.id,
+            profileFingerprint:
+              storyboard.motionContract.styleProfileBinding
+                .profileFingerprint,
+            motion: {
+              pacing:
+                storyboard.motionContract.styleProfileBinding.pacing,
+            },
+          }
+        : null);
+    const compiled = compileStoryboardDirecting(authoring, {
+      plan,
+      styleProfile: effectiveStyleProfile,
+    });
     const issues = [];
     for (const [index, scene] of compiled.scenes.entries()) {
       const actual = storyboard.scenes[index];
@@ -1241,6 +1780,12 @@ export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
     if (JSON.stringify(storyboard.directingSummary) !== JSON.stringify(compiled.directingSummary)) {
       addIssue(issues, 'storyboard-directing-summary-drift', 'directingSummary 已过期。', 'directingSummary');
     }
+    issues.push(
+      ...validateCompiledMotionContract({
+        storyboard,
+        styleProfile: effectiveStyleProfile,
+      }),
+    );
     return issues;
   } catch (error) {
     return error.issues ?? [{code: 'storyboard-directing-invalid', message: error.message, location: 'scenes'}];
@@ -1248,13 +1793,19 @@ export const validateCompiledDirecting = (storyboard, {plan} = {}) => {
 };
 
 const hasVisibleNodeMotion = (node) => {
+  if (node?.motion?.path) return true;
   if (node?.motion?.idle && node.motion.idle.preset !== 'still' && node.motion.idle.intensity > 0) return true;
   const frames = node?.motion?.keyframes ?? [];
-  if (frames.length < 2) return false;
-  return ['x', 'y', 'scale', 'rotation', 'opacity'].some((property) => {
+  const moves = frames.length >= 2 && ['offsetX', 'offsetY', 'scale', 'rotation', 'opacity'].some((property) => {
     const values = frames.map((frame) => frame[property]).filter((value) => value !== undefined);
     return values.length > 0 && new Set(values).size > 1;
   });
+  if (moves) return true;
+  return (
+    node?.kind === 'group' &&
+    node.stackingContext === 'scene' &&
+    (node.children ?? []).some(hasVisibleNodeMotion)
+  );
 };
 
 const traverseSpan = (node) => {
@@ -1265,8 +1816,8 @@ const traverseSpan = (node) => {
       maximum = Math.max(
         maximum,
         Math.hypot(
-          (right.x ?? 0) - (left.x ?? 0),
-          (right.y ?? 0) - (left.y ?? 0),
+          (right.offsetX ?? 0) - (left.offsetX ?? 0),
+          (right.offsetY ?? 0) - (left.offsetY ?? 0),
         ),
       );
     }
@@ -1298,18 +1849,134 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
     }
     const runtimeShape = node && {
       poseFamilyId: node.poseFamilyId,
-      states: node.states?.map(({id, at}) => ({id, at})),
+      states: node.states?.map(({id, at, facing}) => ({id, at, facing})),
       playback: node.playback,
+      pathViewBinding: node.pathViewBinding,
       transition: node.transition?.type,
     };
     const plannedShape = {
       poseFamilyId: planned.poseFamilyId,
-      states: planned.states.map(({id, at}) => ({id, at})),
+      states: planned.states.map(({id, at, facing}) => ({id, at, facing})),
       playback: planned.playback,
+      pathViewBinding: planned.pathViewBinding,
       transition: planned.transition,
     };
     if (node?.kind !== 'state-sequence' || JSON.stringify(runtimeShape) !== JSON.stringify(plannedShape)) {
       addIssue(issues, 'directing-state-sequence-drift', `状态家族 ${planned.nodeId} 与编译计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
+    }
+  }
+  for (
+    const planned of
+      storyboardScene?.compositionPlan?.canonicalContainers ?? []
+  ) {
+    const group = nodes.get(planned.groupId);
+    const binding = group?.canonicalContainer;
+    const contents = group?.children?.find(
+      ({id}) => id === planned.targetId,
+    );
+    const runtimeShape = binding && {
+      familyId: binding.familyId,
+      sourcePackageId: binding.sourcePackageId,
+      sourceStrategy: binding.sourceStrategy,
+      registrationId: group.registration?.id,
+      sourceMasterAssetId: group.registration?.sourceMasterAssetId,
+      canvas: group.registration?.canvas,
+      cleanPlateAssetId: binding.cleanPlateAssetId,
+      canonicalFrameAssetId: binding.canonicalFrameAssetId,
+      contentSheetAssetId: binding.contentSheetAssetId,
+      interiorMaskAssetId: binding.interiorMaskAssetId,
+      authoritativeSurfaceId: binding.authoritativeSurfaceId,
+      interiorShape: binding.interiorShape,
+      alignmentPolicy: binding.alignmentPolicy,
+      states: binding.states?.map(({id, fillLevel}) => ({
+        id,
+        at: contents?.states?.find((state) => state.id === id)?.at,
+        fillLevel,
+      })),
+      terminalStateId: binding.terminalStateId,
+      terminalPolicy: binding.terminalPolicy,
+      recoveryPolicy: binding.recoveryPolicy,
+    };
+    const plannedShape = {
+      familyId: planned.familyId,
+      sourcePackageId: planned.sourcePackageId,
+      sourceStrategy: planned.sourceStrategy,
+      registrationId: planned.registrationId,
+      sourceMasterAssetId: planned.sourceMasterAssetId,
+      canvas: planned.canvas,
+      cleanPlateAssetId: planned.cleanPlateAssetId,
+      canonicalFrameAssetId: planned.canonicalFrameAssetId,
+      contentSheetAssetId: planned.contentSheetAssetId,
+      interiorMaskAssetId: planned.interiorMaskAssetId,
+      authoritativeSurfaceId: planned.authoritativeSurfaceId,
+      interiorShape: planned.interiorShape,
+      alignmentPolicy: planned.alignmentPolicy,
+      states: planned.states.map(({id, at, fillLevel}) => ({
+        id,
+        at,
+        fillLevel,
+      })),
+      terminalStateId: planned.terminalStateId,
+      terminalPolicy: planned.terminalPolicy,
+      recoveryPolicy: planned.recoveryPolicy,
+    };
+    if (
+      group?.kind !== 'group' ||
+      group.pattern !== 'canonical-container' ||
+      contents?.kind !== 'state-sequence' ||
+      binding?.contentsNodeId !== planned.targetId ||
+      JSON.stringify(runtimeShape) !== JSON.stringify(plannedShape)
+    ) {
+      addIssue(
+        issues,
+        'directing-canonical-container-drift',
+        `容器机制 ${planned.groupId} 与编译计划不一致。`,
+        `${location}.composition.nodes#${planned.groupId}`,
+      );
+    }
+  }
+  for (const planned of storyboardScene?.compositionPlan?.pathMotions ?? []) {
+    const node = nodes.get(planned.nodeId);
+    if (!node) {
+      addIssue(
+        issues,
+        'directing-path-target-missing',
+        `二维路径目标不存在：${planned.nodeId}。`,
+        `${location}.composition.nodes#${planned.nodeId}`,
+      );
+      continue;
+    }
+    if (derivationOnlyNodeIds.has(planned.nodeId)) {
+      addIssue(
+        issues,
+        'directing-derivation-only-target',
+        `二维路径不能由 derivation-only 节点 ${planned.nodeId} 履行。`,
+        `${location}.composition.nodes#${planned.nodeId}`,
+      );
+      continue;
+    }
+    if (
+      node.kind !== 'state-sequence' ||
+      JSON.stringify(node.motion?.path) !== JSON.stringify(planned.path)
+    ) {
+      addIssue(
+        issues,
+        'directing-path-motion-drift',
+        `二维路径 ${planned.nodeId} 与编译计划不一致。`,
+        `${location}.composition.nodes#${planned.nodeId}.motion.path`,
+      );
+    }
+    if (
+      planned.cameraFollow !== null &&
+      JSON.stringify(scene.camera?.follow ?? null) !==
+        JSON.stringify(planned.cameraFollow)
+    ) {
+      addIssue(
+        issues,
+        'directing-path-camera-drift',
+        `二维路径 ${planned.nodeId} 的 camera follow 与编译计划不一致。`,
+        `${location}.camera.follow`,
+      );
     }
   }
   for (const planned of storyboardScene?.compositionPlan?.continuousMotions ?? []) {
@@ -1425,7 +2092,8 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       node.distribution !== planned.distribution ||
       node.count !== planned.count ||
       JSON.stringify(node.bounds) !== JSON.stringify(planned.bounds) ||
-      JSON.stringify(node.exclusionZones) !== JSON.stringify(planned.exclusionZones)
+      JSON.stringify(node.exclusionZones) !== JSON.stringify(planned.exclusionZones) ||
+      JSON.stringify(node.worldBinding ?? null) !== JSON.stringify(planned.worldBinding ?? null)
     ) {
       addIssue(issues, 'directing-motif-drift', `motif-field ${planned.nodeId} 与故事板计划不一致。`, `${location}.composition.nodes#${planned.nodeId}`);
     }
@@ -1455,6 +2123,82 @@ export const validateDirectingExecution = ({scene, storyboardScene, location = '
       addIssue(issues, 'directing-graphic-missing', `导演计划的图形目标不存在：${planned.nodeId}。`, `${location}.composition`);
     } else if (node.kind !== planned.kind) {
       addIssue(issues, 'directing-graphic-kind', `图形目标 ${planned.nodeId} 必须实现为 ${planned.kind}，当前为 ${node.kind}。`, `${location}.composition.nodes#${planned.nodeId}.kind`);
+    } else if (planned.role === 'visual-sfx') {
+      const durationSeconds =
+        Number(scene?.narration?.startSeconds ?? 0) +
+        Number(scene?.narration?.durationSeconds ?? 0) +
+        Number(scene?.tailSeconds ?? 0);
+      const expectedHideAt = Math.min(
+        1,
+        planned.at + planned.durationSeconds / Math.max(0.001, durationSeconds),
+      );
+      const events = scene?.events ?? [];
+      const matchingEvents = events.filter(
+        (event) =>
+          event.targetId === planned.nodeId &&
+          event.beatId === planned.beatId,
+      );
+      const show = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - planned.at) <= 0.035 &&
+          event.visual?.kind === 'visibility' &&
+          event.visual.action === 'show' &&
+          event.visual.transition === 'fade-scale',
+      );
+      const emphasis = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - planned.at) <= 0.035 &&
+          event.visual?.kind === 'emphasis' &&
+          event.visual.action === planned.animation,
+      );
+      const hide = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - expectedHideAt) <= 0.035 &&
+          event.visual?.kind === 'visibility' &&
+          event.visual.action === 'hide' &&
+          event.visual.transition === 'fade-scale',
+      );
+      const sound = matchingEvents.find(
+        (event) =>
+          Math.abs(event.at - planned.at) <= 0.035 &&
+          Boolean(event.sound),
+      );
+      if (node.role !== 'visual-sfx' || node.text !== planned.text) {
+        addIssue(
+          issues,
+          'directing-visual-sfx-node',
+          `visual-sfx ${planned.nodeId} 必须是 role=visual-sfx 且文字精确为“${planned.text}”的 typography 节点。`,
+          `${location}.composition.nodes#${planned.nodeId}`,
+        );
+      }
+      if (node.visibility?.initial !== 'hidden') {
+        addIssue(
+          issues,
+          'directing-visual-sfx-initial',
+          `visual-sfx ${planned.nodeId} 必须初始隐藏。`,
+          `${location}.composition.nodes#${planned.nodeId}.visibility`,
+        );
+      }
+      if (!show || !emphasis || !hide || !sound) {
+        addIssue(
+          issues,
+          'directing-visual-sfx-events',
+          `visual-sfx ${planned.nodeId} 必须在同一节拍包含 fade-scale show、${planned.animation} emphasis、约 ${planned.durationSeconds}s 后的 fade-scale hide，以及同步音效。`,
+          `${location}.events`,
+        );
+      }
+      if (
+        ![show, emphasis, sound]
+          .filter(Boolean)
+          .some((event) => event.proofTimeId === planned.proofTimeId)
+      ) {
+        addIssue(
+          issues,
+          'directing-visual-sfx-proof',
+          `visual-sfx ${planned.nodeId} 的出现、强调或音效事件必须绑定 ${planned.proofTimeId}。`,
+          `${location}.events`,
+        );
+      }
     } else if (!hasVisibleNodeMotion(node)) {
       addIssue(issues, 'directing-graphic-motion', `图形目标 ${planned.nodeId} 必须实现 ${planned.animation} 动效。`, `${location}.composition.nodes#${planned.nodeId}.motion`);
     }

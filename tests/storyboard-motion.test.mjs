@@ -2,17 +2,31 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   STORY_BLUEPRINTS,
-  compileStoryboardDirecting,
+  compileStoryboardDirecting as compileStoryboardDirectingBase,
   summarizeStoryboard,
   validateStoryboard,
 } from '../scripts/storyboard-lib.mjs';
 import {buildCreativePlan} from '../scripts/creative-plan-lib.mjs';
-import {selectStyleProofTarget, validateDirectingExecution} from '../scripts/motion-treatment-lib.mjs';
+import {
+  selectStyleProofTarget,
+  stateSheetGridForCount,
+  validateDirectingExecution,
+} from '../scripts/motion-treatment-lib.mjs';
 import {
   proofOverlapsTransition,
   stateSequenceMatchesStoryboardPlan,
 } from '../scripts/project-lib.mjs';
 import {createEditorialFixture} from '../fixtures/editorial-fixture.mjs';
+import {
+  createMotionDirectionFixture,
+  FIXTURE_STYLE_PROFILE,
+} from '../fixtures/motion-contract-fixture.mjs';
+
+const compileStoryboardDirecting = (storyboard, options = {}) =>
+  compileStoryboardDirectingBase(storyboard, {
+    ...options,
+    styleProfile: FIXTURE_STYLE_PROFILE,
+  });
 
 const plan = (profile = 'balanced') => buildCreativePlan({
   slug: 'rhythm-test',
@@ -37,17 +51,31 @@ const staticTreatment = ({id, targetId = 'subject', proofTimeId = null}) => ({
   rationale: 'A still hold keeps this beat readable.',
 });
 
+test('state-sheet grids always provide enough cells through the 12-state ceiling', () => {
+  assert.deepEqual(stateSheetGridForCount(1), {columns: 2, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(4), {columns: 2, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(5), {columns: 3, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(6), {columns: 3, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(7), {columns: 4, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(8), {columns: 4, rows: 2});
+  assert.deepEqual(stateSheetGridForCount(9), {columns: 3, rows: 3});
+  assert.deepEqual(stateSheetGridForCount(10), {columns: 4, rows: 3});
+  assert.deepEqual(stateSheetGridForCount(12), {columns: 4, rows: 3});
+  assert.throws(() => stateSheetGridForCount(0), /1\.\.12/);
+  assert.throws(() => stateSheetGridForCount(13), /1\.\.12/);
+});
+
 const authoredStoryboard = () => ({
-  schemaVersion: 10,
+  schemaVersion: 12,
   slug: 'rhythm-test',
   status: 'ready',
   arc: 'A clear setup, action, and resolution.',
   style: {
     visualThesis: 'Paper depth makes causality visible.',
     compositionRules: ['Keep the focal subject readable.'],
-    motionLanguage: ['Establish, trigger, settle.'],
     layerStrategy: 'Separate environment, subject, and foreground paper.',
   },
+  motionDirection: createMotionDirectionFixture(),
   scenes: [
     {
       id: 'scene-01',
@@ -58,11 +86,11 @@ const authoredStoryboard = () => ({
       estimatedDurationSeconds: 6,
       beats: [
         {
-          id: 'establish', at: 0, purpose: 'place', visual: 'Empty paper world', audioCue: null, proofTimeId: null,
-          treatments: [staticTreatment({id: 'hold-stage', targetId: 'stage'})],
+          id: 'establish', at: 0, performanceRole: 'establish', purpose: 'place', visual: 'Empty paper world', soundCue: null, proofTimeId: 'proof-establish',
+          treatments: [staticTreatment({id: 'hold-stage', targetId: 'stage', proofTimeId: 'proof-establish'})],
         },
         {
-          id: 'action', at: 0.48, purpose: 'act', visual: 'Subject lands on stage', audioCue: 'paper lift', proofTimeId: 'proof-action',
+          id: 'action', at: 0.48, performanceRole: 'action', purpose: 'act', visual: 'Subject lands on stage', soundCue: 'paper lift', proofTimeId: 'proof-action',
           treatments: [{
             id: 'land-on-stage',
             targetId: 'subject',
@@ -81,8 +109,8 @@ const authoredStoryboard = () => ({
           }],
         },
         {
-          id: 'settle', at: 0.9, purpose: 'resolve', visual: 'Composition locks', audioCue: null, proofTimeId: null,
-          treatments: [staticTreatment({id: 'hold-final'})],
+          id: 'settle', at: 0.9, performanceRole: 'settle', purpose: 'resolve', visual: 'Composition locks', soundCue: null, proofTimeId: 'proof-final',
+          treatments: [staticTreatment({id: 'hold-final', proofTimeId: 'proof-final'})],
         },
       ],
       proofTimes: [
@@ -116,7 +144,7 @@ test('storyboard blueprints form a bounded authoring vocabulary', () => {
   ]);
 });
 
-test('v10 compiles treatments into composition plans, risk selection, source packages, and cost evidence', () => {
+test('v12 compiles treatments into motion/composition plans, risk selection, source packages, and cost evidence', () => {
   const storyboard = readyStoryboard();
   assert.deepEqual(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()}), []);
   assert.deepEqual(storyboard.scenes[0].compositionPlan.patterns, ['free', 'supported-subject']);
@@ -362,8 +390,8 @@ test('traverse and bottom-pivot sway treatments require their runtime motion sig
           id: 'submarine',
           motion: {
             keyframes: [
-              {at: 0, x: -0.45, y: 0.28},
-              {at: 1, x: 0.45, y: -0.28},
+              {at: 0, offsetX: -0.45, offsetY: 0.28},
+              {at: 1, offsetX: 0.45, offsetY: -0.28},
             ],
           },
         },
@@ -382,12 +410,55 @@ test('traverse and bottom-pivot sway treatments require their runtime motion sig
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
   }), []);
-  runtimeScene.composition.nodes[0].motion.keyframes[1].x = -0.2;
-  runtimeScene.composition.nodes[0].motion.keyframes[1].y = 0.2;
+  runtimeScene.composition.nodes[0].motion.keyframes[1].offsetX = -0.2;
+  runtimeScene.composition.nodes[0].motion.keyframes[1].offsetY = 0.2;
   assert.ok(validateDirectingExecution({
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
   }).some(({code}) => code === 'directing-traverse-span'));
+});
+
+test('scene-stacked depth stacks satisfy carrier motion through moving registered children', () => {
+  const storyboardScene = {
+    compositionPlan: {
+      continuousMotions: [{
+        id: 'stack-drift',
+        nodeId: 'depth-stack',
+        preset: 'drift',
+        at: 0,
+        proofTimeId: 'proof-establish',
+      }],
+    },
+  };
+  const runtimeScene = {
+    composition: {
+      nodes: [{
+        id: 'depth-stack',
+        kind: 'group',
+        pattern: 'registered-depth-stack',
+        stackingContext: 'scene',
+        motion: {
+          keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}],
+        },
+        children: [{
+          id: 'rear',
+          kind: 'asset',
+          motion: {
+            keyframes: [{at: 0, offsetX: -0.01}, {at: 1, offsetX: 0.01}],
+          },
+        }],
+      }],
+    },
+  };
+  assert.deepEqual(
+    validateDirectingExecution({scene: runtimeScene, storyboardScene}),
+    [],
+  );
+  runtimeScene.composition.nodes[0].children[0].motion.keyframes[1].offsetX = -0.01;
+  assert.ok(
+    validateDirectingExecution({scene: runtimeScene, storyboardScene})
+      .some(({code}) => code === 'directing-continuous-drift'),
+  );
 });
 
 test('style proof planning covers semantic, coupled, and state risks with the fewest source families', () => {
@@ -399,7 +470,7 @@ test('style proof planning covers semantic, coupled, and state risks with the fe
     importance: 'hero',
     necessity: 'required',
     changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: 'butterfly-flight', stateId: 'folded', visualChange: 'Wings folded', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'butterfly-flight', stateId: 'folded', facing: 'right', visualChange: 'Wings folded', playback: 'once', transition: 'cut'},
     composition: {pattern: 'supported-subject', relationship: {id: 'butterfly-on-flower', predicate: 'on', object: 'flower', proof: 'Butterfly remains registered to the flower'}},
     graphic: null,
     semanticRisk: 'topology',
@@ -497,7 +568,7 @@ test('question marks and circles route to editable graphics without pose-sheet c
     changeClass: 'graphic-emphasis',
     motion: {kind: 'continuous-transform', preset: 'bounce'},
     composition: {pattern: 'free'},
-    graphic: {kind: 'shape', animation: 'bounce'},
+    graphic: {kind: 'shape', animation: 'bounce', role: 'generic'},
     semanticRisk: 'decorative',
     proofTimeId: 'proof-action',
     rationale: 'A live shape is cheaper and sharper than a new character pose.',
@@ -505,9 +576,11 @@ test('question marks and circles route to editable graphics without pose-sheet c
   const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
   assert.deepEqual(storyboard.scenes[0].compositionPlan.graphics, [{
     id: 'bounce-question-mark',
+    beatId: 'action',
     nodeId: 'question-mark',
     kind: 'shape',
     animation: 'bounce',
+    role: 'generic',
     at: 0.48,
     proofTimeId: 'proof-action',
   }]);
@@ -517,18 +590,133 @@ test('question marks and circles route to editable graphics without pose-sheet c
     camera: {preset: 'static'},
     composition: {nodes: [{
       id: 'question-mark', kind: 'shape',
-      motion: {keyframes: [{at: 0, y: 0}, {at: 1, y: -0.04}]},
+      motion: {keyframes: [{at: 0, offsetY: 0}, {at: 1, offsetY: -0.04}]},
     }]},
   };
   assert.deepEqual(validateDirectingExecution({
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
   }), []);
-  runtimeScene.composition.nodes[0].motion.keyframes[1].y = 0;
+  runtimeScene.composition.nodes[0].motion.keyframes[1].offsetY = 0;
   assert.ok(validateDirectingExecution({
     scene: runtimeScene,
     storyboardScene: storyboard.scenes[0],
   }).some(({code}) => code === 'directing-continuous-drift'));
+});
+
+test('visual sound effects compile as sparse audio-bound typography with a complete runtime lifecycle', () => {
+  const authored = authoredStoryboard();
+  authored.scenes[0].beats[1].soundCue = 'hard landing';
+  authored.scenes[0].beats[1].treatments = [{
+    id: 'landing-impact-sfx',
+    targetId: 'landing-impact-text',
+    importance: 'supporting',
+    necessity: 'enhancement',
+    changeClass: 'graphic-emphasis',
+    motion: {kind: 'continuous-transform', preset: 'bounce'},
+    composition: {pattern: 'free'},
+    graphic: {
+      kind: 'typography',
+      animation: 'drop-impact',
+      role: 'visual-sfx',
+      sfxKind: 'impact',
+      text: '咚！',
+      durationSeconds: 0.45,
+      audioBinding: 'beat-sound-cue',
+    },
+    semanticRisk: 'decorative',
+    proofTimeId: 'proof-action',
+    rationale: 'A single impact word reinforces the audible landing without becoming dialogue.',
+  }];
+  const storyboard = compileStoryboardDirecting(authored, {plan: plan()});
+  const graphic = storyboard.scenes[0].compositionPlan.graphics[0];
+  assert.deepEqual(graphic, {
+    id: 'landing-impact-sfx',
+    beatId: 'action',
+    nodeId: 'landing-impact-text',
+    kind: 'typography',
+    animation: 'drop-impact',
+    role: 'visual-sfx',
+    sfxKind: 'impact',
+    text: '咚！',
+    durationSeconds: 0.45,
+    audioBinding: 'beat-sound-cue',
+    soundCue: 'hard landing',
+    at: 0.48,
+    proofTimeId: 'proof-action',
+  });
+  assert.ok(
+    storyboard.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'graphic:visual-sfx',
+    ),
+  );
+
+  const runtimeScene = {
+    narration: {startSeconds: 0, durationSeconds: 6},
+    tailSeconds: 0,
+    composition: {
+      nodes: [{
+        id: 'landing-impact-text',
+        kind: 'typography',
+        role: 'visual-sfx',
+        text: '咚！',
+        visibility: {initial: 'hidden'},
+        motion: {idle: {preset: 'bounce', intensity: 0.4}},
+      }],
+    },
+    events: [
+      {
+        id: 'impact-show',
+        beatId: 'action',
+        targetId: 'landing-impact-text',
+        at: 0.48,
+        proofTimeId: 'proof-action',
+        visual: {
+          kind: 'visibility',
+          action: 'show',
+          transition: 'fade-scale',
+          durationSeconds: 0.08,
+        },
+        sound: {cue: 'hard landing'},
+      },
+      {
+        id: 'impact-emphasis',
+        beatId: 'action',
+        targetId: 'landing-impact-text',
+        at: 0.48,
+        proofTimeId: 'proof-action',
+        visual: {
+          kind: 'emphasis',
+          action: 'drop-impact',
+          durationSeconds: 0.2,
+          intensity: 1,
+        },
+      },
+      {
+        id: 'impact-hide',
+        beatId: 'action',
+        targetId: 'landing-impact-text',
+        at: 0.555,
+        proofTimeId: 'proof-action',
+        visual: {
+          kind: 'visibility',
+          action: 'hide',
+          transition: 'fade-scale',
+          durationSeconds: 0.08,
+        },
+      },
+    ],
+  };
+  assert.deepEqual(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }), []);
+
+  delete runtimeScene.events[0].sound;
+  assert.ok(validateDirectingExecution({
+    scene: runtimeScene,
+    storyboardScene: storyboard.scenes[0],
+  }).some(({code}) => code === 'directing-visual-sfx-events'));
 });
 
 test('visibility changes compile to persistent events with an explicit initial state', () => {
@@ -607,6 +795,11 @@ test('parallax rigs and motif fields compile into first-class directing plans', 
         height: 0.4,
         padding: 0.02,
       }],
+      worldBinding: {
+        worldNodeId: 'travelling-world',
+        stripRole: 'mid',
+        relativeDriftAmplitude: 0.004,
+      },
     },
     composition: {pattern: 'free'},
     graphic: null,
@@ -639,6 +832,11 @@ test('parallax rigs and motif fields compile into first-class directing plans', 
       height: 0.4,
       padding: 0.02,
     }],
+    worldBinding: {
+      worldNodeId: 'travelling-world',
+      stripRole: 'mid',
+      relativeDriftAmplitude: 0.004,
+    },
     at: 0.48,
     proofTimeId: 'proof-action',
   }]);
@@ -670,6 +868,11 @@ test('parallax rigs and motif fields compile into first-class directing plans', 
             height: 0.4,
             padding: 0.02,
           }],
+          worldBinding: {
+            worldNodeId: 'travelling-world',
+            stripRole: 'mid',
+            relativeDriftAmplitude: 0.004,
+          },
           motion: {keyframes: [{at: 0}, {at: 1}]},
         },
       ],
@@ -693,13 +896,13 @@ test('Cao Chong-style hero actions compile to one context-preserving pose sheet'
   scene.beats[0].treatments = [{
     id: 'cao-hold-book', targetId: 'cao', importance: 'hero', necessity: 'required',
     changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'holding-book', visualChange: 'Cao holds the open book', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'holding-book', facing: 'right', visualChange: 'Cao holds the open book', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-establish', rationale: 'Start the hero pose family on the common canvas.',
   }];
   scene.beats[1].treatments = [{
     id: 'cao-point-board', targetId: 'cao', importance: 'hero', necessity: 'required',
     changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'pointing-board', visualChange: 'Cao points at the board', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'cao-actions', stateId: 'pointing-board', facing: 'right', visualChange: 'Cao points at the board', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-action', rationale: 'A real limb change needs a registered state, not rotation.',
   }];
   scene.proofTimes[0].stateAssertions = [{nodeId: 'cao', stateId: 'holding-book'}];
@@ -718,6 +921,10 @@ test('Cao Chong-style hero actions compile to one context-preserving pose sheet'
     poseFamilyId: 'cao-actions',
     necessity: 'required',
     stateIds: ['holding-book', 'pointing-board'],
+    stateFacings: [
+      {stateId: 'holding-book', facing: 'right'},
+      {stateId: 'pointing-board', facing: 'right'},
+    ],
     grid: {columns: 2, rows: 2},
     providerCalls: 1,
     repairPolicy: 'masked-edit-complete-sheet',
@@ -738,6 +945,7 @@ test('temporal instances that reuse one pose family consume one registered sheet
       kind: 'state-sequence',
       poseFamilyId: 'hare-actions',
       stateId,
+      facing: 'right',
       visualChange: `${targetId} shows ${stateId}`,
       playback: 'once',
       transition: 'cut',
@@ -775,6 +983,11 @@ test('temporal instances that reuse one pose family consume one registered sheet
     poseFamilyId: 'hare-actions',
     necessity: 'required',
     stateIds: ['head-low', 'run', 'sleep'],
+    stateFacings: [
+      {stateId: 'head-low', facing: 'right'},
+      {stateId: 'run', facing: 'right'},
+      {stateId: 'sleep', facing: 'right'},
+    ],
     grid: {columns: 2, rows: 2},
     providerCalls: 1,
     repairPolicy: 'masked-edit-complete-sheet',
@@ -785,7 +998,7 @@ test('temporal instances that reuse one pose family consume one registered sheet
 test('project-level state-plan comparison checks the full playback contract', () => {
   const planned = {
     poseFamilyId: 'hare-actions',
-    states: [{id: 'sleep', at: 0}, {id: 'run-a', at: 0.2}, {id: 'run-b', at: 0.4}],
+    states: [{id: 'sleep', at: 0, facing: 'right'}, {id: 'run-a', at: 0.2, facing: 'right'}, {id: 'run-b', at: 0.4, facing: 'right'}],
     playback: {mode: 'loop', cycles: 3, activeFrom: 0.2, activeUntil: 0.8, holdStateId: 'sleep', activeStateIds: ['run-a', 'run-b']},
     transition: 'cut',
   };
@@ -819,14 +1032,14 @@ test('state-family authoring compiles a held prelude and registered gait plan th
     ...base,
     id: 'hare-sleep',
     proofTimeId: 'proof-establish',
-    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'sleep', visualChange: 'Hare sleeps', playback: 'loop', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'sleep', facing: 'right', visualChange: 'Hare sleeps', playback: 'loop', transition: 'cut'},
   }];
   scene.beats[1].treatments = [{
     ...base,
     id: 'hare-stride-a',
     proofTimeId: 'proof-action',
     motion: {
-      kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-a', visualChange: 'Left foreleg forward',
+      kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-a', facing: 'right', visualChange: 'Left foreleg forward',
       playback: 'loop', transition: 'cut', cycles: 3, activeFrom: 0.48, activeStateIds: ['stride-a', 'stride-b'],
     },
   }];
@@ -834,7 +1047,7 @@ test('state-family authoring compiles a held prelude and registered gait plan th
     ...base,
     id: 'hare-stride-b',
     proofTimeId: 'proof-final',
-    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-b', visualChange: 'Right foreleg forward', playback: 'loop', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: 'hare-actions', stateId: 'stride-b', facing: 'right', visualChange: 'Right foreleg forward', playback: 'loop', transition: 'cut'},
   }];
   scene.proofTimes[0].stateAssertions = [{nodeId: 'hare', stateId: 'sleep'}];
   scene.proofTimes[1].stateAssertions = [{nodeId: 'hare', stateId: 'stride-a'}];
@@ -850,7 +1063,7 @@ test('state-family authoring compiles a held prelude and registered gait plan th
     composition: {
       nodes: [{
         id: 'hare', kind: 'state-sequence', poseFamilyId: 'hare-actions',
-        states: family.states.map(({id, at}) => ({id, at})),
+        states: family.states.map(({id, at, facing}) => ({id, at, facing})),
         playback: structuredClone(family.playback),
         transition: {type: family.transition, durationSeconds: 0},
       }],
@@ -868,12 +1081,12 @@ test('required hero state families cannot be silently downgraded to fit draft bu
   scene.beats[0].proofTimeId = 'proof-establish';
   scene.beats[0].treatments = ['cao', 'elephant'].map((targetId) => ({
     id: `${targetId}-start`, targetId, importance: 'hero', necessity: 'required', changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'start', visualChange: 'Start pose', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'start', facing: 'right', visualChange: 'Start pose', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-establish', rationale: 'Required opening state.',
   }));
   scene.beats[1].treatments = ['cao', 'elephant'].map((targetId) => ({
     id: `${targetId}-finish`, targetId, importance: 'hero', necessity: 'required', changeClass: 'pose-change',
-    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'finish', visualChange: 'Finish pose', playback: 'once', transition: 'cut'},
+    motion: {kind: 'state-sequence', poseFamilyId: `${targetId}-actions`, stateId: 'finish', facing: 'right', visualChange: 'Finish pose', playback: 'once', transition: 'cut'},
     composition: {pattern: 'free'}, graphic: null, semanticRisk: 'identity', proofTimeId: 'proof-action', rationale: 'Required final state.',
   }));
   scene.proofTimes[0].stateAssertions = ['cao', 'elephant'].map((nodeId) => ({nodeId, stateId: 'start'}));
@@ -895,14 +1108,248 @@ test('ready storyboards require ordered beats, final proof, and plan alignment',
   assert.ok(issues.some(({code}) => code === 'storyboard-final-proof'));
 });
 
-test('v9 storyboard audio beats require an approved event-level proof', () => {
+test('v12 storyboard sound beats require an approved event-level proof', () => {
   const storyboard = readyStoryboard();
   storyboard.scenes[0].beats[1].proofTimeId = null;
   assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})
-    .some(({code}) => code === 'storyboard-audio-proof-required'));
+    .some(({code}) => code === 'storyboard-sound-proof-required'));
+});
+
+test('v12 rejects the legacy audioCue field and requires an explicit soundCue', () => {
+  const legacy = readyStoryboard();
+  legacy.scenes[0].beats[1].audioCue = legacy.scenes[0].beats[1].soundCue;
+  delete legacy.scenes[0].beats[1].soundCue;
+  const issues = validateStoryboard(legacy, {slug: 'rhythm-test', plan: plan()});
+  assert.ok(issues.some(({code}) => code === 'storyboard-beat-audio-cue-legacy'));
+  assert.ok(issues.some(({code}) => code === 'storyboard-beat-sound-field'));
+});
+
+test('camera treatments reject scene-number aliases', () => {
+  const storyboard = readyStoryboard();
+  storyboard.scenes[0].beats[0].treatments[0].targetId = 'scene-04-camera';
+  assert.ok(validateStoryboard(storyboard, {slug: 'rhythm-test', plan: plan()})
+    .some(({code}) => code === 'treatment-camera-target-alias'));
 });
 
 test('motion proof moments cannot be hidden inside scene boundary transitions', () => {
   assert.equal(proofOverlapsTransition({at: 0.08, enterTransitionFrames: 12, exitTransitionFrames: 0, durationInFrames: 300}), false);
   assert.equal(proofOverlapsTransition({at: 0.95, enterTransitionFrames: 0, exitTransitionFrames: 30, durationInFrames: 300}), true);
+});
+
+test('path locomotion compiles as an orthogonal route bound to one looping state family and camera follow', () => {
+  const authored = authoredStoryboard();
+  const path = {
+    kind: 'cubic-bezier-3d',
+    coordinateSpace: 'parent-normalized-depth',
+    start: {x: -0.3, y: 0, z: -0.4},
+    segments: [{
+      control1: {x: -0.12, y: -0.2, z: -0.1},
+      control2: {x: 0.12, y: 0.2, z: 0.2},
+      end: {x: 0.3, y: 0, z: 0.5},
+    }],
+    progress: [
+      {at: 0, distance: 0, ease: 'ease-in-out'},
+      {at: 1, distance: 1, ease: 'ease-in-out'},
+    ],
+    orientation: {
+      mode: 'path-tangent',
+      forwardAngleDegrees: 0,
+      smoothingSeconds: 0.08,
+      maximumTurnDegreesPerSecond: 240,
+    },
+    projection: {
+      depthDistanceScale: 0.65,
+      farScale: 0.68,
+      nearScale: 1.35,
+      farOpacity: 0.7,
+      nearOpacity: 1,
+      farBlurPx: 2,
+      nearBlurPx: 0,
+      depthOrderSpan: 40,
+    },
+  };
+  const stateTreatment = ({id, stateId, visualChange, proofTimeId}) => ({
+    id,
+    targetId: 'tadpoles',
+    importance: 'supporting',
+    necessity: 'required',
+    changeClass: 'pose-change',
+    motion: {
+      kind: 'state-sequence',
+      poseFamilyId: 'tadpole-swim',
+      stateId,
+      facing: 'neutral',
+      visualChange,
+      playback: 'loop',
+      transition: 'cut',
+      cycles: 8,
+    },
+    composition: {pattern: 'free'},
+    graphic: null,
+    semanticRisk: 'identity',
+    proofTimeId,
+    rationale: 'Registered tail phases make swimming visible.',
+  });
+  authored.scenes[0].beats[0].treatments.push(
+    stateTreatment({
+      id: 'tail-left-state',
+      stateId: 'tail-left',
+      visualChange: 'Tail bends left.',
+      proofTimeId: 'proof-establish',
+    }),
+    {
+      id: 'tadpole-path',
+      targetId: 'tadpoles',
+      importance: 'supporting',
+      necessity: 'required',
+      changeClass: 'path-travel',
+      motion: {
+        kind: 'path-locomotion',
+        path,
+        cameraFollow: {
+          targetNodeId: 'tadpoles',
+          worldNodeId: 'pond-world',
+          framing: {x: 0.5, y: 0.54},
+          lookAheadSeconds: 0.15,
+          smoothingSeconds: 0.2,
+          zoom: 1,
+          worldBounds: {x: -1, y: -1, width: 3, height: 3},
+        },
+      },
+      composition: {pattern: 'free'},
+      graphic: null,
+      semanticRisk: 'identity',
+      proofTimeId: 'proof-establish',
+      rationale: 'One curved world-space route owns position and heading.',
+    },
+  );
+  authored.scenes[0].beats[1].treatments.push(
+    stateTreatment({
+      id: 'tail-right-state',
+      stateId: 'tail-right',
+      visualChange: 'Tail bends right.',
+      proofTimeId: 'proof-action',
+    }),
+  );
+  authored.spatialContracts = [{
+    id: 'tadpole-path-contract',
+    kind: 'path-locomotion',
+    sceneId: 'scene-01',
+    nodeId: 'tadpoles',
+    worldNodeId: 'pond-world',
+    fromProofTimeId: 'proof-establish',
+    throughProofTimeId: 'proof-final',
+    turnProofTimeIds: ['proof-action'],
+    stateIds: ['tail-left', 'tail-right'],
+    minimumChangesPerSecond: 2,
+    continueThroughWindowEnd: true,
+    minimumTravel: 0.4,
+    minimumDepthTravel: 0.6,
+    minimumProjectionScaleDelta: 0.3,
+    requiredDepthDirections: ['toward-camera'],
+    minimumDirectionSectors: 2,
+    maximumHeadingErrorDegrees: 20,
+    maximumTurnDegreesPerSecond: 240,
+    requireCameraFollow: true,
+  }];
+
+  const compiled = compileStoryboardDirecting(authored, {plan: plan()});
+  const scene = compiled.scenes[0];
+  assert.equal(scene.compositionPlan.pathMotions.length, 1);
+  assert.deepEqual(scene.compositionPlan.pathMotions[0], {
+    id: 'tadpole-path',
+    nodeId: 'tadpoles',
+    path,
+    cameraFollow: authored.scenes[0].beats[0].treatments[2].motion.cameraFollow,
+    at: 0,
+    proofTimeId: 'proof-establish',
+  });
+  assert.equal(
+    scene.compositionPlan.stateSequences[0].poseFamilyId,
+    'tadpole-swim',
+  );
+  assert.ok(
+    compiled.motionContract.scenes[0].continuousTreatmentIds.includes(
+      'tadpole-path',
+    ),
+  );
+  assert.ok(
+    compiled.motionContract.scenes[0].cameraTreatmentIds.includes(
+      'tadpole-path',
+    ),
+  );
+  assert.ok(
+    compiled.directingSummary.styleProofPlan.requiredCoverage.includes(
+      'motion:path-locomotion',
+    ),
+  );
+});
+
+test('one camera may follow the lead while sibling path swimmers omit camera follow', () => {
+  const sharedPath = {
+    kind: 'cubic-bezier-3d',
+    coordinateSpace: 'parent-normalized-depth',
+    start: {x: -0.2, y: 0, z: 0},
+    segments: [{
+      control1: {x: -0.05, y: -0.1, z: 0},
+      control2: {x: 0.05, y: 0.1, z: 0},
+      end: {x: 0.2, y: 0, z: 0},
+    }],
+    progress: [
+      {at: 0, distance: 0, ease: 'linear'},
+      {at: 1, distance: 1, ease: 'linear'},
+    ],
+    orientation: {
+      mode: 'path-tangent',
+      forwardAngleDegrees: 0,
+      smoothingSeconds: 0.08,
+      maximumTurnDegreesPerSecond: 240,
+    },
+    projection: {
+      depthDistanceScale: 0.65,
+      farScale: 0.68,
+      nearScale: 1.35,
+      farOpacity: 0.7,
+      nearOpacity: 1,
+      farBlurPx: 2,
+      nearBlurPx: 0,
+      depthOrderSpan: 40,
+    },
+  };
+  const follow = {
+    targetNodeId: 'lead',
+    worldNodeId: 'pond-world',
+    framing: {x: 0.5, y: 0.54},
+    lookAheadSeconds: 0.15,
+    smoothingSeconds: 0.2,
+    zoom: 1,
+    worldBounds: {x: -1, y: -1, width: 3, height: 3},
+  };
+  const pathNode = (id) => ({
+    id,
+    kind: 'state-sequence',
+    motion: {path: sharedPath},
+  });
+  const runtimeScene = {
+    camera: {follow},
+    composition: {nodes: [pathNode('lead'), pathNode('follower')]},
+  };
+  const storyboardScene = {
+    compositionPlan: {
+      pathMotions: [
+        {id: 'lead-path', nodeId: 'lead', path: sharedPath, cameraFollow: follow},
+        {
+          id: 'follower-path',
+          nodeId: 'follower',
+          path: sharedPath,
+          cameraFollow: null,
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(
+    validateDirectingExecution({scene: runtimeScene, storyboardScene}),
+    [],
+  );
 });

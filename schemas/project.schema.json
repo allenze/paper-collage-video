@@ -1,15 +1,31 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://local.paper-collage.dev/project.schema.json",
-  "title": "Paper Collage Project v10",
+  "title": "Paper Collage Project v12",
   "type": "object",
-  "required": ["schemaVersion", "slug", "title", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
+  "required": ["schemaVersion", "slug", "title", "intake", "styleProfile", "motionContract", "plan", "quality", "video", "theme", "voice", "audio", "editorial", "scenes", "sceneTransitions"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 10},
+    "schemaVersion": {"const": 12},
     "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
     "title": {"type": "string", "minLength": 1},
     "intake": {"$ref": "#/$defs/intake"},
+    "styleProfile": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "$ref": "https://local.paper-collage.dev/style-profile.schema.json#/$defs/snapshot"
+        }
+      ]
+    },
+    "motionContract": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "$ref": "https://local.paper-collage.dev/motion-contract.schema.json#/$defs/compiled"
+        }
+      ]
+    },
     "plan": {"$ref": "#/$defs/plan"},
     "quality": {
       "type": "object",
@@ -27,12 +43,20 @@
       },
       "additionalProperties": false
     },
-    "theme": {"$ref": "#/$defs/theme"},
+    "theme": {
+      "$ref": "https://local.paper-collage.dev/style-profile.schema.json#/$defs/theme"
+    },
     "voice": {"$ref": "#/$defs/voice"},
     "audio": {"$ref": "#/$defs/audio"},
     "editorial": {"$ref": "editorial.schema.json#/$defs/editorialProject"},
     "worlds": {"type": "array", "items": {"$ref": "#/$defs/worldContract"}},
     "trajectoryContracts": {"type": "array", "items": {"$ref": "#/$defs/trajectoryContract"}},
+    "spatialContracts": {
+      "type": "array",
+      "items": {
+        "$ref": "https://local.paper-collage.dev/spatial-contract.schema.json#/$defs/contract"
+      }
+    },
     "scenes": {"type": "array", "items": {"$ref": "#/$defs/scene"}},
     "sceneTransitions": {"type": "array", "items": {"$ref": "#/$defs/sceneBoundaryTransition"}}
   },
@@ -47,12 +71,13 @@
         "parallaxPreference",
         "styleCatalogVersion",
         "styleCatalogFingerprint",
+        "styleProfileFingerprint",
         "confirmedAt",
         "note",
         "updatedAt"
       ],
       "properties": {
-        "schemaVersion": {"const": 1},
+        "schemaVersion": {"const": 2},
         "status": {"enum": ["pending", "confirmed"]},
         "aspectRatio": {
           "oneOf": [
@@ -63,13 +88,7 @@
         "visualStylePreset": {
           "oneOf": [
             {"type": "null"},
-            {
-              "enum": [
-                "childrens-picture-book-paper",
-                "hand-drawn-cutout-explainer",
-                "archival-collage"
-              ]
-            }
+            {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"}
           ]
         },
         "parallaxPreference": {
@@ -85,6 +104,12 @@
           ]
         },
         "styleCatalogFingerprint": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          ]
+        },
+        "styleProfileFingerprint": {
           "oneOf": [
             {"type": "null"},
             {"type": "string", "pattern": "^[a-f0-9]{64}$"}
@@ -324,6 +349,33 @@
             }
           ]
         },
+        "imageBudgetRevisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "fromLimit",
+              "toLimit",
+              "usedAtApproval",
+              "reservedAtApproval",
+              "profileHardCeiling",
+              "authorizedAt",
+              "humanNote"
+            ],
+            "properties": {
+              "schemaVersion": {"const": 1},
+              "fromLimit": {"type": "integer", "minimum": 0},
+              "toLimit": {"type": "integer", "minimum": 0},
+              "usedAtApproval": {"type": "integer", "minimum": 0},
+              "reservedAtApproval": {"type": "integer", "minimum": 0},
+              "profileHardCeiling": {"type": "integer", "minimum": 0},
+              "authorizedAt": {"type": "string", "format": "date-time"},
+              "humanNote": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
         "requested": {
           "type": "object",
           "required": ["durationSeconds", "sceneCount"],
@@ -351,24 +403,6 @@
           ]
         },
         "updatedAt": {"type": "string", "format": "date-time"}
-      },
-      "additionalProperties": false
-    },
-    "theme": {
-      "type": "object",
-      "required": ["canvas", "sceneBackground", "accent", "ink", "subtitle", "subtitleBackground", "paperEdge", "foreground", "texture"],
-      "properties": {
-        "canvas": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
-        "sceneBackground": {"type": "string"},
-        "accent": {"type": "string"},
-        "ink": {"type": "string"},
-        "subtitle": {"type": "string"},
-        "subtitleBackground": {"type": "string"},
-        "paperEdge": {"type": "string"},
-        "foreground": {"type": "string"},
-        "texture": {"type": "string"},
-        "fontFamily": {"type": "string"},
-        "fontFile": {"type": "string"}
       },
       "additionalProperties": false
     },
@@ -488,6 +522,9 @@
         "targetId": {"type": "string", "minLength": 1},
         "visual": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/visibilityVisual"}, {"$ref": "#/$defs/emphasisVisual"}, {"$ref": "#/$defs/holdVisual"}]},
         "proofTimeId": {"type": "string", "minLength": 1},
+        "encounter": {
+          "$ref": "https://local.paper-collage.dev/encounter-contract.schema.json#/$defs/eventBinding"
+        },
         "sound": {"$ref": "#/$defs/sound"}
       },
       "additionalProperties": false
@@ -509,23 +546,25 @@
       "type": "object",
       "required": ["type", "motivation", "durationSeconds"],
       "properties": {
-        "type": {"enum": ["cut", "paper-wipe", "dip-to-paper", "paper-slide", "torn-wipe", "paper-iris", "page-turn", "paper-shutters"]},
+        "type": {"enum": ["cut", "wipe", "dip", "slide", "iris", "page-turn", "shutters"]},
         "motivation": {"enum": ["semantic-default", "authored", "rhythmic", "impact"]},
         "durationSeconds": {"type": "number", "minimum": 0, "maximum": 1.5},
+        "edgeStyle": {"enum": ["clean", "paper", "torn"]},
         "direction": {"enum": ["left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top"]},
         "beatId": {"type": "string", "minLength": 1}
       },
       "allOf": [
-        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}, "motivation": {"enum": ["rhythmic", "impact"]}}, "not": {"required": ["direction"]}}},
+        {"if": {"properties": {"type": {"const": "cut"}}}, "then": {"properties": {"durationSeconds": {"const": 0}, "motivation": {"enum": ["rhythmic", "impact"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["edgeStyle"]}]}}},
+        {"if": {"not": {"properties": {"type": {"const": "cut"}}}}, "then": {"required": ["edgeStyle"]}},
         {"if": {"properties": {"motivation": {"const": "rhythmic"}}}, "then": {"required": ["beatId"], "properties": {"type": {"const": "cut"}}}},
         {"if": {"properties": {"motivation": {"const": "impact"}}}, "then": {"properties": {"type": {"const": "cut"}}}},
-        {"if": {"properties": {"type": {"const": "paper-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.2}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "dip-to-paper"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
-        {"if": {"properties": {"type": {"const": "paper-slide"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.25}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "torn-wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "paper-iris"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "wipe"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.2}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"required": ["edgeStyle"], "properties": {"edgeStyle": {"const": "torn"}}}, "then": {"properties": {"type": {"const": "wipe"}}}},
+        {"if": {"properties": {"type": {"const": "dip"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
+        {"if": {"properties": {"type": {"const": "slide"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.25}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
+        {"if": {"properties": {"type": {"const": "iris"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.3}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}},
         {"if": {"properties": {"type": {"const": "page-turn"}}}, "then": {"required": ["direction"], "properties": {"durationSeconds": {"minimum": 0.4}, "direction": {"enum": ["left-to-right", "right-to-left"]}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"required": ["beatId"]}}},
-        {"if": {"properties": {"type": {"const": "paper-shutters"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.4}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}}
+        {"if": {"properties": {"type": {"const": "shutters"}}}, "then": {"properties": {"durationSeconds": {"minimum": 0.4}, "motivation": {"enum": ["semantic-default", "authored"]}}, "not": {"anyOf": [{"required": ["direction"]}, {"required": ["beatId"]}]}}}
       ],
       "additionalProperties": false
     },
@@ -533,7 +572,7 @@
       "type": "object",
       "properties": {
         "background": {"type": "string", "minLength": 1},
-        "paperTexture": {
+        "surfaceTexture": {
           "type": "object",
           "required": ["visible", "opacity", "blendMode"],
           "properties": {
@@ -559,7 +598,62 @@
             "variant": {"enum": ["boxed", "plain", "hidden"]},
             "color": {"type": "string"},
             "background": {"type": "string"},
-            "maxWidth": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+            "maxWidth": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "fontFamily": {"type": "string", "minLength": 1},
+            "fontWeight": {"type": "integer", "minimum": 400, "maximum": 800},
+            "edgeTreatment": {"enum": ["soft-shadow", "crisp-outline", "none"]}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "cameraFollow": {
+      "type": "object",
+      "required": [
+        "targetNodeId",
+        "worldNodeId",
+        "framing",
+        "lookAheadSeconds",
+        "smoothingSeconds",
+        "zoom",
+        "worldBounds"
+      ],
+      "properties": {
+        "targetNodeId": {"type": "string", "minLength": 1},
+        "worldNodeId": {"type": "string", "minLength": 1},
+        "framing": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": {
+            "x": {"type": "number", "minimum": 0, "maximum": 1},
+            "y": {"type": "number", "minimum": 0, "maximum": 1}
+          },
+          "additionalProperties": false
+        },
+        "lookAheadSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "smoothingSeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "zoom": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 3
+        },
+        "worldBounds": {
+          "type": "object",
+          "required": ["x", "y", "width", "height"],
+          "properties": {
+            "x": {"type": "number"},
+            "y": {"type": "number"},
+            "width": {"type": "number", "exclusiveMinimum": 0},
+            "height": {"type": "number", "exclusiveMinimum": 0}
           },
           "additionalProperties": false
         }
@@ -594,6 +688,7 @@
             "preset": {"enum": ["push", "pull", "pan-left", "pan-right", "static"]},
             "intensity": {"type": "number", "minimum": 0, "maximum": 3},
             "keyframes": {"type": "array", "minItems": 2, "items": {"type": "object"}},
+            "follow": {"$ref": "#/$defs/cameraFollow"},
             "parallax": {
               "type": "object",
               "required": ["enabled", "strength", "focalDepth"],
@@ -619,6 +714,12 @@
           },
           "additionalProperties": false
         },
+        "encounters": {
+          "type": "array",
+          "items": {
+            "$ref": "https://local.paper-collage.dev/encounter-contract.schema.json#/$defs/contract"
+          }
+        },
         "subtitles": {
           "type": "array",
           "items": {
@@ -637,5 +738,35 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "intake": {
+            "properties": {"status": {"const": "pending"}}
+          }
+        }
+      },
+      "then": {"properties": {"styleProfile": {"type": "null"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "intake": {
+            "properties": {"status": {"const": "confirmed"}}
+          }
+        }
+      },
+      "then": {"properties": {"styleProfile": {"type": "object"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "scenes": {"minItems": 1}
+        }
+      },
+      "then": {"properties": {"motionContract": {"type": "object"}}}
+    }
+  ],
   "additionalProperties": false
 }

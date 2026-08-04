@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import {
   assertAssetManifest,
   createAssetRecordId,
+  transactAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {ROOT, SLUG_PATTERN, fileExists, probeMedia, readJson, writeJson} from './project-lib.mjs';
 import {
@@ -20,6 +21,7 @@ import {
   generationRequestFingerprint,
   generationAttemptsPath,
   isQuotaConsumingImageRequest,
+  normalizeAttemptModel,
 } from './generation-attempt-lib.mjs';
 import {
   assertObservedKeyPlaneSet,
@@ -32,6 +34,15 @@ import {
 import {
   inspectStateAnchorRegistration,
 } from './state-sheet-lib.mjs';
+import {
+  styleProfileBinding,
+  validateStyleProfileBinding,
+} from './style-catalog-lib.mjs';
+import {
+  canonicalContainerPackageBindingMatchesPlan,
+  validateCanonicalContainerIntent,
+} from './container-source-plan-lib.mjs';
+import {assertWorldTopologyBinding} from './world-topology-proof-lib.mjs';
 
 export const PROVIDER_CAPABILITIES = ['text', 'image', 'voice'];
 export const PROVIDER_ADAPTERS = ['host', 'command', 'manual'];
@@ -54,6 +65,7 @@ const IMAGE_QUALITY_CHECKS = [
   'no-people',
   'safe-area-clear',
   'style-consistent',
+  'style-profile-conformant',
   'subject-complete',
   'identity-consistent',
   'identity-distinct-within-frame',
@@ -73,8 +85,20 @@ const IMAGE_QUALITY_CHECKS = [
   'diagram-edge-clean',
   'small-text-legible',
   'no-procedural-noise-on-semantic-lines',
+  'clean-plate-clear',
+  'canonical-frame-only',
+  'container-content-only',
+  'container-state-separation',
+  'container-fill-progression',
 ];
 const PROVIDER_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export const CANONICAL_CONTAINER_PROMPT_DIRECTIVES = {
+  'clean-plate': 'CLEAN_PLATE_ONLY_NO_CONTAINER',
+  'canonical-frame': 'CANONICAL_FRAME_ONLY_NO_CONTENTS',
+  'content-state-sheet':
+    'CONTENT_STATES_ONLY_NO_CONTAINER_FRAME_OR_EXTRA_SURFACE',
+};
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -114,14 +138,18 @@ export const createRequestFingerprint = ({request, providerId, model}) => {
     model: model ?? request.model ?? null,
     settings: request.settings ?? {},
     quality: request.quality ?? null,
+    styleProfileBinding: request.styleProfileBinding ?? null,
     compositionBinding: request.compositionBinding ?? null,
     stateBinding: request.stateBinding ?? null,
     stateSheetBinding: request.stateSheetBinding ?? null,
     stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
     layerPackageBinding: request.layerPackageBinding ?? null,
+    containerPackageBinding: request.containerPackageBinding ?? null,
     semanticBinding: request.semanticBinding ?? null,
     timingBinding: request.timingBinding ?? null,
     outputSurface: request.outputSurface ?? null,
+    providerSource: request.providerSource ?? null,
+    worldTopologyBinding: request.worldTopologyBinding ?? null,
     providerId,
   };
   return createHash('sha256')
@@ -368,15 +396,7 @@ export const buildProviderInvocation = ({request, provider, attemptId = null, mo
   };
 };
 
-export const normalizeReportedModel = ({provider, model}) => {
-  const aliases = new Set(provider.invocation?.reportedModelAliases ?? []);
-  const configured = provider.invocation?.modelValue ?? provider.model ?? null;
-  if (!configured) return model ?? null;
-  if (!model || model === configured || aliases.has(model)) return configured ?? model ?? null;
-  throw new Error(
-    `provider 回报的 model ${model} 未映射到已确认配置 ${configured ?? '(none)'}。`,
-  );
-};
+export const normalizeReportedModel = normalizeAttemptModel;
 
 export const assertProviderSelections = (loaded) => {
   assertProviderConfig(loaded);
@@ -683,7 +703,7 @@ export const inspectStateSheetRecoveryMask = async ({maskFile, stateSheetBinding
 
 export const validateAssetRequest = (request) => {
   const errors = [];
-  if (request?.schemaVersion !== 7) errors.push('schemaVersion 必须为 7');
+  if (request?.schemaVersion !== 8) errors.push('schemaVersion 必须为 8');
   if (!SLUG_PATTERN.test(request?.projectSlug ?? '')) errors.push('projectSlug 格式无效');
   if (!SLUG_PATTERN.test(request?.assetId ?? '')) errors.push('assetId 格式无效');
   if (!PROVIDER_CAPABILITIES.includes(request?.capability)) errors.push('capability 必须是 text、image 或 voice');
@@ -694,15 +714,81 @@ export const validateAssetRequest = (request) => {
     errors.push('image request 缺少 compositionBinding');
   }
   if (request?.capability === 'image' && !isPlainObject(request.semanticBinding)) {
-    errors.push('schema-v7 image request 缺少 semanticBinding');
+    errors.push('schema-v8 image request 缺少 semanticBinding');
+  }
+  if (request?.providerSource !== undefined) {
+    const source = request.providerSource;
+    const target = source?.normalization?.targetCanvas;
+    const expected = request.compositionBinding?.canvas;
+    if (request.capability !== 'image') {
+      errors.push('providerSource 只能用于 image request');
+    } else if (
+      !isPlainObject(source) ||
+      source.mode !== 'provider-native' ||
+      !Number.isInteger(source.minimumWidth) ||
+      source.minimumWidth < 2 ||
+      !Number.isInteger(source.minimumHeight) ||
+      source.minimumHeight < 2 ||
+      !Number.isFinite(source.aspectRatioTolerance) ||
+      source.aspectRatioTolerance < 0 ||
+      source.aspectRatioTolerance > 0.1 ||
+      source.normalization?.method !== 'deterministic-resize' ||
+      !Number.isInteger(target?.width) ||
+      target.width < 1 ||
+      !Number.isInteger(target?.height) ||
+      target.height < 1
+    ) {
+      errors.push(
+        'providerSource 必须声明 provider-native 最小画布、宽高比容差和 deterministic-resize 目标。',
+      );
+    } else if (
+      target.width !== expected?.width ||
+      target.height !== expected?.height
+    ) {
+      errors.push(
+        'providerSource.normalization.targetCanvas 必须与 compositionBinding.canvas 一致。',
+      );
+    }
+  }
+  if (
+    request?.capability === 'image' &&
+    request.compositionBinding?.pattern === 'looping-environment'
+  ) {
+    const binding = request.worldTopologyBinding;
+    if (
+      !isPlainObject(binding) ||
+      binding.schemaVersion !== 1 ||
+      !binding.proofId ||
+      !/^[a-f0-9]{64}$/.test(binding.fingerprint ?? '') ||
+      !binding.stripId
+    ) {
+      errors.push(
+        'looping-environment image request 必须绑定通过的 worldTopologyBinding。',
+      );
+    }
+  } else if (request?.worldTopologyBinding !== undefined) {
+    errors.push('worldTopologyBinding 只能用于 looping-environment image request');
   }
   if (request?.capability === 'image') {
+    const styleIssues = validateStyleProfileBinding(
+      request.styleProfileBinding,
+    );
+    errors.push(...styleIssues.map(({message}) => message));
+    if (
+      !isPlainObject(request.quality) ||
+      !Array.isArray(request.quality.requiredChecks) ||
+      !request.quality.requiredChecks.includes('style-profile-conformant')
+    ) {
+      errors.push(
+        'schema-v8 image request 的 quality.requiredChecks 必须包含 style-profile-conformant',
+      );
+    }
     const surface = request.outputSurface;
     if (
       !isPlainObject(surface) ||
       !['alpha', 'chroma-key', 'opaque', 'layer-sheet', 'seamless-strip-x'].includes(surface.mode)
     ) {
-      errors.push('schema-v7 image request 缺少有效 outputSurface');
+      errors.push('schema-v8 image request 缺少有效 outputSurface');
     } else {
       if (
         surface.mode === 'chroma-key' &&
@@ -791,16 +877,24 @@ export const validateAssetRequest = (request) => {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 compositionBinding');
     const binding = request.compositionBinding;
     if (!binding.sceneId || !binding.nodeId || !binding.outputRole) errors.push('compositionBinding 缺少 sceneId、nodeId 或 outputRole');
-    if (!['free', 'supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'state-sequence'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
+    if (!['free', 'supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'state-sequence', 'canonical-container'].includes(binding.pattern)) errors.push('compositionBinding.pattern 无效');
     if (!Number.isInteger(binding.canvas?.width) || binding.canvas.width < 1 || !Number.isInteger(binding.canvas?.height) || binding.canvas.height < 1) errors.push('compositionBinding.canvas 无效');
     if (!['provider-generation', 'provider-edit', 'alpha-extraction', 'crop', 'seamless-period-crop', 'mask-application', 'manual-import'].includes(binding.derivation?.method)) errors.push('compositionBinding.derivation.method 无效');
     if (binding.pattern !== 'state-sequence' && (request.stateBinding || request.stateSheetBinding || request.stateSheetRecoveryBinding)) errors.push('stateBinding/stateSheetBinding/stateSheetRecoveryBinding 只能用于 state-sequence');
-    if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
+    if (['supported-subject', 'registered-environment', 'registered-depth-stack', 'state-sequence', 'canonical-container'].includes(binding.pattern) && (!binding.registrationId || !binding.sourceMasterAssetId)) errors.push('耦合素材必须声明 registrationId 和 sourceMasterAssetId');
     if (
       binding.pattern === 'registered-depth-stack' &&
       !isPlainObject(request.layerPackageBinding)
     ) {
       errors.push('registered-depth-stack 图像必须声明 layerPackageBinding');
+    }
+    if (
+      binding.pattern === 'canonical-container' &&
+      !isPlainObject(request.containerPackageBinding)
+    ) {
+      errors.push(
+        'canonical-container 图像必须声明 containerPackageBinding',
+      );
     }
     if (binding.pattern === 'state-sequence') {
       const state = request.stateBinding;
@@ -1152,6 +1246,226 @@ export const validateAssetRequest = (request) => {
       }
     }
   }
+  if (request?.containerPackageBinding !== undefined) {
+    const binding = request.containerPackageBinding;
+    if (
+      request.capability !== 'image' ||
+      !isPlainObject(binding)
+    ) {
+      errors.push('containerPackageBinding 只能用于 image request');
+    } else {
+      const composition = request.compositionBinding;
+      if (
+        composition?.pattern !== 'canonical-container' ||
+        binding.sourceStrategy !==
+          'canonical-frame-with-content-sheet' ||
+        binding.registrationId !== composition.registrationId ||
+        binding.sourceMasterAssetId !==
+          composition.sourceMasterAssetId
+      ) {
+        errors.push(
+          'containerPackageBinding 必须与 canonical-container compositionBinding 使用同一注册族',
+        );
+      }
+      errors.push(
+        ...validateCanonicalContainerIntent(
+          {
+            pattern: 'canonical-container',
+            container: {
+              ...binding,
+              groupId: composition?.nodeId,
+              states: (binding.states ?? []).map(
+                ({stateId, ...state}) => ({
+                  id: stateId,
+                  ...state,
+                }),
+              ),
+            },
+          },
+          {location: 'request.compositionBinding'},
+        ).map(({message}) => message),
+      );
+      const ids = [
+        binding.cleanPlateAssetId,
+        binding.canonicalFrameAssetId,
+        binding.contentSheetAssetId,
+        binding.interiorMaskAssetId,
+      ];
+      if (
+        !PROVIDER_ID_PATTERN.test(binding.familyId ?? '') ||
+        !PROVIDER_ID_PATTERN.test(binding.sourcePackageId ?? '') ||
+        ids.some((id) => !PROVIDER_ID_PATTERN.test(id ?? '')) ||
+        new Set(ids).size !== ids.length
+      ) {
+        errors.push(
+          'container package 必须声明唯一且格式有效的 plate/frame/sheet/mask 资产 id',
+        );
+      }
+      if (
+        binding.frameRedrawPolicy !==
+          'forbidden-in-content-states' ||
+        binding.duplicateSurfacePolicy !==
+          'single-authoritative-state-sequence'
+      ) {
+        errors.push(
+          'container package 必须禁止状态格重画容器，并只保留一个权威内部表面消费者',
+        );
+      }
+      const expectedRecovery = {
+        strategy: 'preserve-content-sheet-context',
+        localDeterministicFixFirst: true,
+        isolatedStateGeneration: 'forbidden',
+        providerRepair: 'masked-complete-sheet-edit',
+        fallback: 'full-content-sheet-regeneration',
+      };
+      if (
+        JSON.stringify(stableValue(binding.recoveryPolicy)) !==
+        JSON.stringify(stableValue(expectedRecovery))
+      ) {
+        errors.push(
+          'container recoveryPolicy 必须保留完整内容状态表上下文并禁止 isolated state generation',
+        );
+      }
+      const states = binding.states ?? [];
+      const cells = new Set();
+      const stateIds = new Set();
+      let previousAt = -Infinity;
+      let previousFill = -Infinity;
+      const layout = binding.sheetLayout;
+      if (
+        !Number.isInteger(layout?.columns) ||
+        layout.columns < 1 ||
+        layout.columns > 4 ||
+        !Number.isInteger(layout?.rows) ||
+        layout.rows < 1 ||
+        layout.rows > 4 ||
+        !Array.isArray(states) ||
+        states.length < 2 ||
+        states.length > layout.columns * layout.rows
+      ) {
+        errors.push(
+          'container content state sheet 必须声明可容纳至少两个状态的 1..4 网格',
+        );
+      }
+      for (const state of states) {
+        const cell = `${state.row}:${state.column}`;
+        if (
+          !PROVIDER_ID_PATTERN.test(state.stateId ?? '') ||
+          stateIds.has(state.stateId) ||
+          cells.has(cell) ||
+          !Number.isInteger(state.row) ||
+          state.row < 0 ||
+          state.row >= (layout?.rows ?? 0) ||
+          !Number.isInteger(state.column) ||
+          state.column < 0 ||
+          state.column >= (layout?.columns ?? 0) ||
+          !Number.isFinite(state.at) ||
+          state.at < 0 ||
+          state.at > 1 ||
+          state.at <= previousAt ||
+          !Number.isFinite(state.fillLevel) ||
+          state.fillLevel < 0 ||
+          state.fillLevel > 1 ||
+          state.fillLevel <= previousFill
+        ) {
+          errors.push(
+            'container states 必须具有唯一格位、唯一 id，并按 at/fillLevel 严格递增',
+          );
+        }
+        stateIds.add(state.stateId);
+        cells.add(cell);
+        previousAt = state.at ?? previousAt;
+        previousFill = state.fillLevel ?? previousFill;
+      }
+      if (
+        !states.some(
+          ({stateId}) => stateId === binding.terminalStateId,
+        ) ||
+        states.at(-1)?.stateId !== binding.terminalStateId
+      ) {
+        errors.push(
+          'container terminalStateId 必须引用最后一个最高水位状态',
+        );
+      }
+      const roleToAssetId = {
+        'clean-plate': binding.cleanPlateAssetId,
+        'canonical-frame': binding.canonicalFrameAssetId,
+        'content-state-sheet': binding.contentSheetAssetId,
+      };
+      const expectedOutputRole = {
+        'clean-plate': 'container-clean-plate',
+        'canonical-frame': 'container-frame',
+        'content-state-sheet': 'container-content-state-sheet',
+      };
+      if (
+        !Object.hasOwn(roleToAssetId, binding.packageRole) ||
+        roleToAssetId[binding.packageRole] !== request.assetId ||
+        composition?.outputRole !==
+          expectedOutputRole[binding.packageRole]
+      ) {
+        errors.push(
+          'container request 的 packageRole、assetId 与 outputRole 必须一致',
+        );
+      }
+      const expectedCanvas =
+        binding.packageRole === 'content-state-sheet'
+          ? {
+              width: binding.canvas?.width * layout?.columns,
+              height: binding.canvas?.height * layout?.rows,
+            }
+          : binding.canvas;
+      if (
+        expectedCanvas?.width !== composition?.canvas?.width ||
+        expectedCanvas?.height !== composition?.canvas?.height
+      ) {
+        errors.push(
+          'container request composition canvas 与注册画布或内容状态表网格不一致',
+        );
+      }
+      const surfaceMode = request.outputSurface?.mode;
+      if (
+        (
+          binding.packageRole === 'clean-plate' &&
+          surfaceMode !== 'opaque'
+        ) ||
+        (
+          binding.packageRole === 'canonical-frame' &&
+          !['alpha', 'chroma-key'].includes(surfaceMode)
+        ) ||
+        (
+          binding.packageRole === 'content-state-sheet' &&
+          surfaceMode !== 'alpha'
+        )
+      ) {
+        errors.push(
+          'clean plate 必须 opaque，canonical frame 必须透明/色键，content state sheet 必须 alpha',
+        );
+      }
+      const directive =
+        CANONICAL_CONTAINER_PROMPT_DIRECTIVES[binding.packageRole];
+      if (!directive || !request.prompt?.includes(directive)) {
+        errors.push(
+          `container prompt 必须包含角色约束 ${directive ?? 'unknown-role'}`,
+        );
+      }
+      const roleChecks = {
+        'clean-plate': ['clean-plate-clear'],
+        'canonical-frame': ['canonical-frame-only'],
+        'content-state-sheet': [
+          'container-content-only',
+          'container-state-separation',
+          'container-fill-progression',
+        ],
+      };
+      for (const check of roleChecks[binding.packageRole] ?? []) {
+        if (!request.quality?.requiredChecks?.includes(check)) {
+          errors.push(
+            `container ${binding.packageRole} request 必须包含质量检查 ${check}`,
+          );
+        }
+      }
+    }
+  }
   if (request?.semanticBinding !== undefined) {
     if (request.capability !== 'image') errors.push('只有 image request 可以声明 semanticBinding');
     const binding = request.semanticBinding;
@@ -1200,6 +1514,47 @@ export const validateAssetRequest = (request) => {
 export const loadAssetRequest = async (requestInput) => {
   const file = resolveWorkspacePath(requestInput, 'request 路径');
   const request = validateAssetRequest(await readJson(file));
+  if (request.capability === 'image') {
+    const projectFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'project.json',
+    );
+    if (!(await fileExists(projectFile))) {
+      throw new Error('image request 缺少当前 project.json，无法验证 styleProfileBinding');
+    }
+    const project = await readJson(projectFile);
+    if (!project.styleProfile) {
+      throw new Error('image request 只能在项目确认 executable styleProfile 后执行');
+    }
+    const expectedStyleBinding = styleProfileBinding(project.styleProfile);
+    if (
+      JSON.stringify(stableValue(request.styleProfileBinding)) !==
+      JSON.stringify(stableValue(expectedStyleBinding))
+    ) {
+      throw new Error(
+        'styleProfileBinding 与当前 project.styleProfile 不一致；请重新生成请求',
+      );
+    }
+    const missingDirectives = expectedStyleBinding.directives.filter(
+      (directive) => !request.prompt.includes(directive),
+    );
+    if (missingDirectives.length > 0) {
+      throw new Error(
+        `image request.prompt 未执行当前 Style Profile 指令：${missingDirectives.join('；')}`,
+      );
+    }
+    const missingStyleChecks =
+      project.styleProfile.quality.requiredAssetChecks.filter(
+        (check) => !request.quality.requiredChecks.includes(check),
+      );
+    if (missingStyleChecks.length > 0) {
+      throw new Error(
+        `quality.requiredChecks 缺少当前 Style Profile 检查：${missingStyleChecks.join(', ')}`,
+      );
+    }
+  }
   await assertRequestSemanticContracts(request);
   if (request.layerPackageBinding) {
     const storyboardFile = path.join(
@@ -1229,6 +1584,69 @@ export const loadAssetRequest = async (requestInput) => {
     ) {
       throw new Error(
         'layerPackageBinding 必须与当前 storyboard 编译出的 source package 完全一致',
+      );
+    }
+  }
+  if (
+    request.capability === 'image' &&
+    request.compositionBinding?.pattern === 'looping-environment'
+  ) {
+    const storyboardFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'storyboard.json',
+    );
+    const reportFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'world-topology-proof.json',
+    );
+    if (
+      !(await fileExists(storyboardFile)) ||
+      !(await fileExists(reportFile))
+    ) {
+      throw new Error(
+        'looping-environment provider request 前必须运行 project:world-topology-proof。',
+      );
+    }
+    assertWorldTopologyBinding({
+      request,
+      storyboard: await readJson(storyboardFile),
+      report: await readJson(reportFile),
+    });
+  }
+  if (request.containerPackageBinding) {
+    const storyboardFile = path.join(
+      ROOT,
+      'projects',
+      request.projectSlug,
+      'storyboard.json',
+    );
+    if (!(await fileExists(storyboardFile))) {
+      throw new Error(
+        'canonical container provider request 缺少已编译 storyboard，不能在规划前调用 provider',
+      );
+    }
+    const storyboard = await readJson(storyboardFile);
+    const binding = request.containerPackageBinding;
+    const plan =
+      storyboard.directingSummary?.generationBudget
+        ?.sourcePackagePlans?.find(
+          ({id}) => id === binding.sourcePackageId,
+        );
+    if (
+      !plan ||
+      plan.pattern !== 'canonical-container' ||
+      plan.groupId !== request.compositionBinding.nodeId ||
+      !canonicalContainerPackageBindingMatchesPlan({
+        binding,
+        plan,
+      })
+    ) {
+      throw new Error(
+        'containerPackageBinding 必须与当前 storyboard 编译出的 canonical container source package 完全一致',
       );
     }
   }
@@ -1321,6 +1739,7 @@ export const verifyOutputFile = async (file, request = null) => {
   }
   let metadata = null;
   let keyPlaneObservation = null;
+  let providerSourceObservation = null;
   if (request?.capability === 'image') {
     metadata = await sharp(file).metadata().catch(() => null);
     if (!metadata?.width || !metadata?.height) {
@@ -1328,8 +1747,20 @@ export const verifyOutputFile = async (file, request = null) => {
     }
     if (request.schemaVersion >= 3) {
       const expected = request.compositionBinding.canvas;
+      const providerSourcePolicy = request.providerSource ?? null;
       const providerSource =
         request.layerPackageBinding?.sheetLayout?.providerSource ?? null;
+      const stateSheetLayout = request.stateSheetBinding?.layout ?? null;
+      const stateSheetUsesProviderNativeCanvas =
+        stateSheetLayout &&
+        metadata.width >= expected.width &&
+        metadata.height >= expected.height &&
+        metadata.width % stateSheetLayout.columns === 0 &&
+        metadata.height % stateSheetLayout.rows === 0 &&
+        Math.abs(
+          metadata.width / metadata.height -
+          expected.width / expected.height,
+        ) <= 0.002;
       if (
         providerSource?.canvasMode === 'provider-native' &&
         (
@@ -1344,11 +1775,47 @@ export const verifyOutputFile = async (file, request = null) => {
       }
       if (
         providerSource?.canvasMode !== 'provider-native' &&
+        providerSourcePolicy?.mode !== 'provider-native' &&
+        !stateSheetUsesProviderNativeCanvas &&
         (metadata.width !== expected.width || metadata.height !== expected.height)
       ) {
         throw new Error(
           `provider 图像尺寸 ${metadata.width}x${metadata.height} 与请求画布 ${expected.width}x${expected.height} 不一致。`,
         );
+      }
+      if (providerSourcePolicy?.mode === 'provider-native') {
+        const actualAspect = metadata.width / metadata.height;
+        const targetAspect = expected.width / expected.height;
+        if (
+          metadata.width < providerSourcePolicy.minimumWidth ||
+          metadata.height < providerSourcePolicy.minimumHeight ||
+          Math.abs(actualAspect - targetAspect) >
+            providerSourcePolicy.aspectRatioTolerance
+        ) {
+          throw new Error(
+            `provider 原生画布 ${metadata.width}x${metadata.height} 不满足最小尺寸或宽高比容差；` +
+            `目标 ${expected.width}x${expected.height}，容差 ${providerSourcePolicy.aspectRatioTolerance}。`,
+          );
+        }
+        const observation = {
+          schemaVersion: 1,
+          mode: 'provider-native',
+          rawCanvas: {width: metadata.width, height: metadata.height},
+          targetCanvas: {
+            width: providerSourcePolicy.normalization.targetCanvas.width,
+            height: providerSourcePolicy.normalization.targetCanvas.height,
+          },
+          normalization: 'deterministic-resize',
+          normalizationRequired:
+            metadata.width !== expected.width ||
+            metadata.height !== expected.height,
+        };
+        providerSourceObservation = {
+          ...observation,
+          observationFingerprint: createHash('sha256')
+            .update(JSON.stringify(stableValue(observation)))
+            .digest('hex'),
+        };
       }
     }
     const surface = request.outputSurface;
@@ -1525,7 +1992,63 @@ export const verifyOutputFile = async (file, request = null) => {
       channels: audio.channels ?? null,
     };
   }
-  return {stat, metadata, keyPlaneObservation};
+  return {
+    stat,
+    metadata,
+    keyPlaneObservation,
+    providerSourceObservation,
+  };
+};
+
+const compositionFamilyKey = (asset) => {
+  const binding = asset.compositionBinding;
+  if (!binding) return null;
+  return [
+    binding.pattern,
+    binding.registrationId ?? asset.assetId,
+    binding.sourceMasterAssetId ?? asset.assetId,
+    binding.canvas?.width,
+    binding.canvas?.height,
+  ].join(':');
+};
+
+export const refreshActiveCompositionFamilyFingerprints = (
+  manifest,
+  {familyKey = compositionFamilyKey} = {},
+) => {
+  const activeAssets = manifest.assets.filter(
+    ({lifecycle}) => lifecycle.status === 'active',
+  );
+  const familyKeys = new Set(activeAssets.map(familyKey).filter(Boolean));
+  for (const key of familyKeys) {
+    const members = activeAssets
+      .filter((asset) => familyKey(asset) === key)
+      .sort((left, right) => left.assetId.localeCompare(right.assetId));
+    const familyFingerprint = createHash('sha256')
+      .update(JSON.stringify(stableValue({
+        key,
+        members: members.map(({
+          assetId,
+          sha256: memberSha256,
+          requestFingerprint,
+          compositionBinding,
+          stateBinding,
+        }) => ({
+          assetId,
+          sha256: memberSha256,
+          requestFingerprint,
+          compositionBinding,
+          stateBinding,
+        })),
+      })))
+      .digest('hex');
+    for (const member of members) {
+      member.familyFingerprint =
+        member.registeredFamilyBinding?.familyFingerprint ??
+        familyFingerprint;
+    }
+  }
+  return manifest;
 };
 
 export const recordAssetProvenance = async ({
@@ -1543,16 +2066,45 @@ export const recordAssetProvenance = async ({
     isQuotaConsumingImageRequest(request) &&
     provider.adapter !== 'manual' &&
     !reusedFrom;
-  if (trackedAttempt && !recoverClosedAttempt) {
-    await assertReservedGenerationAttempt({request, provider, attemptId});
+  const canonicalModel = normalizeAttemptModel({
+    provider,
+    model:
+      model ??
+      request.model ??
+      provider.invocation?.modelValue ??
+      provider.model ??
+      null,
+  });
+  let trackedAttemptRecord = null;
+  if (trackedAttempt) {
+    const asserted = recoverClosedAttempt
+      ? await assertRecoverableGenerationAttempt({
+          request,
+          provider,
+          attemptId,
+          model: canonicalModel,
+        })
+      : await assertReservedGenerationAttempt({
+          request,
+          provider,
+          attemptId,
+          model: canonicalModel,
+        });
+    trackedAttemptRecord = asserted.attempt;
   }
   let stat;
   let metadata;
   let keyPlaneObservation;
+  let providerSourceObservation;
   let sha256;
   try {
     sha256 = createHash('sha256').update(await fs.readFile(output)).digest('hex');
-    ({stat, metadata, keyPlaneObservation} = await verifyOutputFile(output, request));
+    ({
+      stat,
+      metadata,
+      keyPlaneObservation,
+      providerSourceObservation,
+    } = await verifyOutputFile(output, request));
   } catch (error) {
     if (trackedAttempt && !recoverClosedAttempt) {
       await closeGenerationAttempt({
@@ -1570,135 +2122,114 @@ export const recordAssetProvenance = async ({
   const manifestFile = path.join(ROOT, 'projects', request.projectSlug, 'assets-manifest.json');
   let record;
   try {
-    const manifest = (await fileExists(manifestFile))
-      ? await readJson(manifestFile)
-      : {
-          $schema: '../../schemas/assets-manifest.schema.json',
-          schemaVersion: 4,
-          projectSlug: request.projectSlug,
-          assets: [],
-        };
-    assertAssetManifest(manifest, request.projectSlug);
-    if (
-      recoverClosedAttempt &&
-      manifest.assets.some((asset) => asset.attemptId === attemptId)
-    ) {
-      throw new Error(`生成尝试 ${attemptId} 已经存在资产登记，不能重复恢复。`);
-    }
-    if (recoverClosedAttempt) {
-      await assertRecoverableGenerationAttempt({
-        request,
-        provider,
-        attemptId,
-        output: path.relative(ROOT, output),
-        outputSha256: sha256,
-      });
-    }
-    const actualModel = model || request.model || provider.model || null;
-    const recordedAt = new Date().toISOString();
-    const requestFingerprint = createRequestFingerprint({
-      request,
-      providerId: provider.id,
-      model: actualModel,
-    });
-    const providerObservation = keyPlaneObservation
-      ? {
-          schemaVersion: 1,
-          ...keyPlaneObservation,
-          observationFingerprint: createHash('sha256')
-            .update(JSON.stringify(stableValue({
-              policyFingerprint: keyPlaneObservation.policyFingerprint,
-              sourceSha256: sha256,
-              cells: keyPlaneObservation.cells,
-            })))
-            .digest('hex'),
-          sourceAttempt: {
-            attemptId,
-            status: 'succeeded',
-            quotaConsumed: true,
-            requestFingerprint: generationRequestFingerprint(request),
-            output: path.relative(ROOT, output),
-          },
+    const transaction = await transactAssetManifest({
+      manifestFile,
+      projectSlug: request.projectSlug,
+      createIfMissing: true,
+      mutate: async (manifest) => {
+        if (
+          recoverClosedAttempt &&
+          manifest.assets.some((asset) => asset.attemptId === attemptId)
+        ) {
+          throw new Error(`生成尝试 ${attemptId} 已经存在资产登记，不能重复恢复。`);
         }
-      : null;
-    record = {
-      recordId: createAssetRecordId({
-        assetId: request.assetId,
-        requestFingerprint,
-        sha256,
-        recordedAt,
-      }),
-      assetId: request.assetId,
-      capability: request.capability,
-      file: path.relative(ROOT, output),
-      provider: provider.id,
-      adapter: provider.adapter,
-      tool: provider.tool ?? null,
-      model: actualModel,
-      externalId: externalId || null,
-      attemptId,
-      recoveredFromClosedAttempt: recoverClosedAttempt,
-      requestFingerprint,
-      reusedFrom,
-      sha256,
-      sizeBytes: stat.size,
-      media: metadata
-        ? request.capability === 'image'
-          ? {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false}
-          : metadata
-        : null,
-      recordedAt,
-      request: {...request},
-      compositionBinding: request.compositionBinding ?? null,
-      stateBinding: request.stateBinding ?? null,
-      stateSheetBinding: request.stateSheetBinding ?? null,
-      stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
-      semanticBinding: request.semanticBinding ?? null,
-      providerObservation,
-      familyFingerprint: null,
-      lifecycle: {
-        status: 'active',
-        changedAt: recordedAt,
-        reason: 'recorded',
-        supersededBy: null,
+        if (recoverClosedAttempt) {
+          await assertRecoverableGenerationAttempt({
+            request,
+            provider,
+            attemptId,
+            model: canonicalModel,
+            output: path.relative(ROOT, output),
+            outputSha256: sha256,
+          });
+        }
+        const actualModel = trackedAttemptRecord?.model ?? canonicalModel;
+        const recordedAt = new Date().toISOString();
+        const requestFingerprint = createRequestFingerprint({
+          request,
+          providerId: provider.id,
+          model: actualModel,
+        });
+        const providerObservation = keyPlaneObservation
+          ? {
+              schemaVersion: 1,
+              ...keyPlaneObservation,
+              observationFingerprint: createHash('sha256')
+                .update(JSON.stringify(stableValue({
+                  policyFingerprint: keyPlaneObservation.policyFingerprint,
+                  sourceSha256: sha256,
+                  cells: keyPlaneObservation.cells,
+                })))
+                .digest('hex'),
+              sourceAttempt: {
+                attemptId,
+                status: 'succeeded',
+                quotaConsumed: true,
+                requestFingerprint: generationRequestFingerprint(request),
+                output: path.relative(ROOT, output),
+              },
+            }
+          : null;
+        const nextRecord = {
+          recordId: createAssetRecordId({
+            assetId: request.assetId,
+            requestFingerprint,
+            sha256,
+            recordedAt,
+          }),
+          assetId: request.assetId,
+          capability: request.capability,
+          file: path.relative(ROOT, output),
+          provider: provider.id,
+          adapter: provider.adapter,
+          tool: provider.tool ?? null,
+          model: actualModel,
+          externalId: externalId || null,
+          attemptId,
+          recoveredFromClosedAttempt: recoverClosedAttempt,
+          requestFingerprint,
+          reusedFrom,
+          sha256,
+          sizeBytes: stat.size,
+          media: metadata
+            ? request.capability === 'image'
+              ? {width: metadata.width, height: metadata.height, format: metadata.format ?? null, hasAlpha: metadata.hasAlpha ?? false}
+              : metadata
+            : null,
+          recordedAt,
+          request: {...request},
+          providerSource: providerSourceObservation,
+          compositionBinding: request.compositionBinding ?? null,
+          stateBinding: request.stateBinding ?? null,
+          stateSheetBinding: request.stateSheetBinding ?? null,
+          stateSheetRecoveryBinding: request.stateSheetRecoveryBinding ?? null,
+          containerPackageBinding:
+            request.containerPackageBinding ?? null,
+          semanticBinding: request.semanticBinding ?? null,
+          providerObservation,
+          familyFingerprint: null,
+          lifecycle: {
+            status: 'active',
+            changedAt: recordedAt,
+            reason: 'recorded',
+            supersededBy: null,
+          },
+        };
+        for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
+          assetId === request.assetId && lifecycle.status === 'active')) {
+          previous.lifecycle = {
+            status: 'superseded',
+            changedAt: recordedAt,
+            reason: 'replaced-by-new-record',
+            supersededBy: nextRecord.recordId,
+          };
+        }
+        manifest.assets.push(nextRecord);
+        refreshActiveCompositionFamilyFingerprints(manifest);
+        return {manifest, record: nextRecord};
       },
-    };
-    for (const previous of manifest.assets.filter(({assetId, lifecycle}) =>
-      assetId === request.assetId && lifecycle.status === 'active')) {
-      previous.lifecycle = {
-        status: 'superseded',
-        changedAt: recordedAt,
-        reason: 'replaced-by-new-record',
-        supersededBy: record.recordId,
-      };
-    }
-    manifest.assets.push(record);
-    const familyKey = (asset) => {
-      const binding = asset.compositionBinding;
-      if (!binding) return null;
-      return [
-        binding.pattern,
-        binding.registrationId ?? asset.assetId,
-        binding.sourceMasterAssetId ?? asset.assetId,
-        binding.canvas?.width,
-        binding.canvas?.height,
-      ].join(':');
-    };
-    const activeAssets = manifest.assets.filter(({lifecycle}) => lifecycle.status === 'active');
-    const familyKeys = new Set(activeAssets.map(familyKey).filter(Boolean));
-    for (const key of familyKeys) {
-      const members = activeAssets
-        .filter((asset) => familyKey(asset) === key)
-        .sort((left, right) => left.assetId.localeCompare(right.assetId));
-      const familyFingerprint = createHash('sha256')
-        .update(JSON.stringify(stableValue({
-          key,
-          members: members.map(({assetId, sha256: memberSha256, requestFingerprint, compositionBinding, stateBinding}) => ({assetId, sha256: memberSha256, requestFingerprint, compositionBinding, stateBinding})),
-        })))
-        .digest('hex');
-      for (const member of members) member.familyFingerprint = familyFingerprint;
-    }
-    await writeJson(manifestFile, manifest);
+    });
+    record = transaction.record;
   } catch (error) {
     if (trackedAttempt && !recoverClosedAttempt) {
       await closeGenerationAttempt({

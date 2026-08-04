@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   assessCreativePlanTimeline,
+  approveImageBudgetIncrease,
   assertApprovedImageBudgetDecision,
   assertConfirmedPlanDecision,
   buildCreativePlan,
@@ -9,6 +10,7 @@ import {
   deriveMotionBudget,
   deriveCreativePlanMode,
   deriveDurationAuthority,
+  resetUnconfirmedCreativePlan,
   summarizeConceptDecision,
   summarizeProductionProfiles,
   validateCreativePlan,
@@ -90,8 +92,8 @@ test('production profiles set explicit generated-image budgets', () => {
     characterSheets: 2,
     styleSamples: 1,
     baseImageAttempts: 6,
-    layerPackageAttemptReserve: 6,
-    maxGeneratedImages: 12,
+    layerPackageAttemptReserve: 8,
+    maxGeneratedImages: 14,
   });
   assert.deepEqual(deriveAssetBudget('draft', 6), {
     backgrounds: 6,
@@ -103,7 +105,7 @@ test('production profiles set explicit generated-image budgets', () => {
     maxGeneratedImages: 23,
   });
   assert.equal(deriveAssetBudget('balanced', 6).maxGeneratedImages, 38);
-  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 61);
+  assert.equal(deriveAssetBudget('full-depth', 6).maxGeneratedImages, 73);
   assert.deepEqual(deriveMotionBudget('draft', 6), {
     maxPoseSheetCalls: 2,
     maxStatesPerSheet: 4,
@@ -133,7 +135,7 @@ test('concept decisions expose bounded profile choices with exact scene budgets'
     [
       ['draft', 9],
       ['balanced', 14],
-      ['full-depth', 21],
+      ['full-depth', 25],
     ],
   );
   assert.deepEqual(
@@ -203,6 +205,67 @@ test('human-approved image limit is narrower than the profile ceiling and covers
   );
 });
 
+test('human-approved image budget increases remain bounded and auditable', () => {
+  const base = make({
+    sceneCount: 1,
+    productionProfile: 'full-depth',
+  });
+  const plan = {
+    ...base,
+    scenarioBinding: {
+      scenarioSetFingerprint: 'a'.repeat(64),
+      optionId: 'full-depth',
+      optionFingerprint: 'b'.repeat(64),
+      expectedProviderImageCalls: 5,
+      proposedImageAttemptLimit: 12,
+      selectedAt: at,
+    },
+    storyScope: 'expanded',
+    profilePromise: {
+      minRequiredStateFamilies: 0,
+      minEnhancementStateFamilies: 0,
+      minTotalStates: 0,
+      minLocalMotionTargets: 0,
+      minLayeredScenes: 0,
+      minParallaxScenes: 0,
+      minAmbientScenes: 0,
+    },
+    approvedImageBudget: {
+      imageAttemptLimit: 12,
+      expectedProviderImageCalls: 5,
+      profileHardCeiling: 14,
+      approvedAt: at,
+    },
+  };
+  const result = approveImageBudgetIncrease({
+    plan,
+    imageAttemptLimit: 14,
+    attempts: {used: 12, reserved: 0},
+    humanNote: 'Approve two additional environment attempts',
+    at: '2026-07-18T00:00:00.000Z',
+  });
+  assert.equal(result.plan.approvedImageBudget.imageAttemptLimit, 14);
+  assert.equal(result.plan.imageBudgetRevisions.length, 1);
+  assert.deepEqual(
+    {
+      from: result.revision.fromLimit,
+      to: result.revision.toLimit,
+      used: result.revision.usedAtApproval,
+    },
+    {from: 12, to: 14, used: 12},
+  );
+  assert.throws(
+    () =>
+      approveImageBudgetIncrease({
+        plan,
+        imageAttemptLimit: 15,
+        attempts: {used: 12, reserved: 0},
+        humanNote: 'Too high',
+      }),
+    /超过当前 profile hard ceiling 14/,
+  );
+});
+
 test('creative planning preserves each explicit user constraint', () => {
   assert.throws(
     () =>
@@ -220,6 +283,29 @@ test('creative planning preserves each explicit user constraint', () => {
       }),
     /不得改写该目标/,
   );
+});
+
+test('an unapproved resolved plan can return to pending without carrying approval', () => {
+  const resolved = make({
+    requestedSceneCount: 1,
+    sceneCount: 1,
+    productionProfile: 'full-depth',
+  });
+  resolved.assetBudget.maxGeneratedImages = 12;
+  const pending = resetUnconfirmedCreativePlan(resolved, {
+    slug: 'planning-test',
+    at,
+  });
+  assert.equal(pending.status, 'pending');
+  assert.deepEqual(pending.requested, {
+    durationSeconds: null,
+    sceneCount: 1,
+  });
+  assert.equal(pending.resolved, null);
+  assert.equal(pending.assetBudget, null);
+  assert.equal(pending.motionBudget, null);
+  assert.equal(pending.approvedImageBudget, null);
+  assert.deepEqual(validateCreativePlan(pending, {slug: 'planning-test'}), []);
 });
 
 test('creative planning rejects narration that cannot fit the target duration', () => {

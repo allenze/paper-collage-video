@@ -113,7 +113,10 @@ try {
       quotaConsumed,
       note: valueFor('--note') ?? '',
     });
-    console.log(`✓ 生成尝试已关闭：${result.event.status} (${result.event.quotaConsumed ? 'counted' : 'not-counted'})`);
+    console.log(
+      `✓ 生成尝试${result.reused ? '已是目标关闭状态，未重复写入' : '已关闭'}：` +
+      `${result.event.status} (${result.event.quotaConsumed ? 'counted' : 'not-counted'})`,
+    );
   } else {
     throw new Error('用法：provider:attempt -- <reserve|summary|close> ...');
   }

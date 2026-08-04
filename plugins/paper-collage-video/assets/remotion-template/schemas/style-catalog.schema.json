@@ -5,29 +5,30 @@
   "required": ["schemaVersion", "version", "canonicalSubject", "styles"],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 1},
+    "schemaVersion": {"const": 3},
     "version": {"type": "string", "minLength": 1},
     "canonicalSubject": {"type": "string", "minLength": 1},
     "styles": {
       "type": "array",
-      "minItems": 3,
-      "maxItems": 3,
+      "minItems": 1,
+      "maxItems": 12,
+      "uniqueItems": true,
       "items": {
         "type": "object",
-        "required": ["id", "label", "summary", "image"],
+        "required": ["id", "label", "summary", "image", "profile"],
         "properties": {
           "id": {
-            "enum": [
-              "childrens-picture-book-paper",
-              "hand-drawn-cutout-explainer",
-              "archival-collage"
-            ]
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
           },
           "label": {"type": "string", "minLength": 1},
           "summary": {"type": "string", "minLength": 1},
           "image": {
             "type": "string",
             "pattern": "^style-catalog/[a-z0-9-]+\\.png$"
+          },
+          "profile": {
+            "$ref": "https://local.paper-collage.dev/style-profile.schema.json#/$defs/definition"
           }
         },
         "additionalProperties": false

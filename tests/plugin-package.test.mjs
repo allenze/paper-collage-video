@@ -20,8 +20,8 @@ const assertPatchedFastUri = (lockFile) => {
   assert.ok(version, `${lockFile} must lock fast-uri`);
   const [major, minor, patch] = version.split('.').map(Number);
   assert.ok(
-    major > 3 || (major === 3 && (minor > 1 || (minor === 1 && patch >= 4))),
-    `${lockFile} locks vulnerable fast-uri ${version}; require >=3.1.4`,
+    major > 3 || (major === 3 && (minor > 1 || (minor === 1 && patch >= 5))),
+    `${lockFile} locks vulnerable fast-uri ${version}; require >=3.1.5`,
   );
 };
 
@@ -81,6 +81,32 @@ test('plugin manifest points at a complete packaged skill', () => {
   assert.ok(fs.existsSync(path.join(PLUGIN_ROOT, 'LICENSE')));
 });
 
+test('source and packaged skills document publish approval as a post-completion audit command', () => {
+  const command =
+    'npm run project:advance -- <slug> approve-publish --note="<destination + action + scope>"';
+  for (const relative of [
+    'SKILL.md',
+    path.join('references', 'approval-gates.md'),
+  ]) {
+    const source = fs.readFileSync(
+      path.join(ROOT, 'skills', 'make-paper-collage-video', relative),
+      'utf8',
+    );
+    const packaged = fs.readFileSync(
+      path.join(
+        PLUGIN_ROOT,
+        'skills',
+        'make-paper-collage-video',
+        relative,
+      ),
+      'utf8',
+    );
+    assert.equal(packaged, source, relative);
+    assert.ok(source.includes(command), relative);
+    assert.match(source, /post-completion audit event/);
+  }
+});
+
 test('repository and packaged locks exclude the vulnerable fast-uri range', () => {
   assertPatchedFastUri(path.join(ROOT, 'package-lock.json'));
   assertPatchedFastUri(path.join(RUNTIME_ROOT, 'package-lock.json'));
@@ -106,17 +132,41 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/derive-registered-family.mjs',
   );
   assert.equal(
+    packageJson.scripts['assets:derive-semantic-slices'],
+    'node scripts/derive-semantic-slices.mjs',
+  );
+  assert.equal(
     packageJson.scripts['proof:registered-family'],
     'node scripts/prove-registered-family.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['assets:derive-canonical-container'],
+    'node scripts/derive-canonical-container.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['assets:normalize-provider-source'],
+    'node scripts/normalize-provider-source.mjs',
+  );
+  assert.equal(
+    packageJson.scripts['proof:canonical-container'],
+    'node scripts/prove-canonical-container.mjs',
   );
   assert.equal(
     packageJson.scripts['proof:alpha-bands'],
     'node scripts/prove-alpha-bands.mjs',
   );
   assert.equal(packageJson.scripts['project:plan'], 'node scripts/project-plan.mjs');
+  assert.equal(
+    packageJson.scripts['project:world-topology-proof'],
+    'node scripts/project-world-topology-proof.mjs',
+  );
   assert.equal(packageJson.scripts['project:intake'], 'node scripts/project-intake.mjs');
   assert.equal(packageJson.scripts['project:scenarios'], 'node scripts/project-scenarios.mjs');
   assert.equal(packageJson.scripts['project:budget'], 'node scripts/project-budget.mjs');
+  assert.equal(
+    packageJson.scripts['project:increase-image-budget'],
+    'node scripts/project-increase-image-budget.mjs',
+  );
   assert.equal(packageJson.scripts['project:storyboard'], 'node scripts/project-storyboard.mjs');
   assert.equal(packageJson.scripts['project:revise-preview-directing'], 'node scripts/project-revise-preview-directing.mjs');
   assert.equal(packageJson.scripts['project:asset-lifecycle'], 'node scripts/project-asset-lifecycle.mjs');
@@ -138,7 +188,8 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.match(packageJson.scripts['project:audio-calibration'], /category=deterministic-check/);
   assert.match(packageJson.scripts['project:stitch-narration'], /stitch-narration/);
   assert.equal(packageJson.scripts['project:subtitles'], 'node scripts/project-subtitles.mjs');
-  assert.match(packageJson.scripts['style:proof'], /category=evidence-render/);
+  assert.match(packageJson.scripts['project:style-proof'], /category=evidence-render/);
+  assert.equal(packageJson.scripts['style:proof'], undefined);
   assert.equal(
     packageJson.scripts['sample:vox'],
     'remotion render src/index.ts Paper-Collage dist/vox-primitives/preview.mp4 --props=fixtures/vox-primitives/project.json --codec=h264',
@@ -160,8 +211,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'node scripts/verify-phase2-proof.mjs',
   );
   assert.equal(
-    packageJson.scripts['schema:v10'],
-    'node scripts/schema-v10.mjs',
+    packageJson.scripts['schema:v12'],
+    'node scripts/schema-v12.mjs',
   );
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'projects', 'starter-demo')));
   assert.ok(fs.existsSync(path.join(RUNTIME_ROOT, 'THIRD_PARTY_NOTICES.md')));
@@ -198,7 +249,10 @@ test('packaged runtime is lightweight and independent from production projects',
       'report.json',
     ),
   );
-  assert.equal(starterProject.schemaVersion, 10);
+  const catalogStyleImages = readJson(
+    path.join(ROOT, 'public', 'style-catalog', 'catalog.json'),
+  ).styles.map(({image}) => `public/${image}`);
+  assert.equal(starterProject.schemaVersion, 12);
   assert.ok(starterProject.scenes[0].composition.nodes.length >= 2);
   assert.equal(starterProject.scenes[0].motion.proofTimes.length, 3);
   assert.equal(starterProject.scenes[0].events.length, 3);
@@ -210,11 +264,11 @@ test('packaged runtime is lightweight and independent from production projects',
   assert.deepEqual(starterProject.sceneTransitions, []);
   assert.deepEqual(starterProject.quality, {minimumAssetScale: 0.5});
   assert.equal(starterManifest.schemaVersion, 4);
-  assert.equal(starterQuality.schemaVersion, 6);
+  assert.equal(starterQuality.schemaVersion, 7);
   assert.equal(starterQuality.updatedAt, '2026-01-01T00:00:00.000Z');
   assert.match(starterQuality.reviewSurfaceFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(starterQuality.eventTimeline.length, 3);
-  assert.equal(starterQuality.composites.length, 3);
+  assert.equal(starterQuality.composites.length, 5);
   assert.ok(starterQuality.composites.every(({status}) => status === 'passed'));
   assert.equal(starterQuality.assets.length, 2);
   assert.ok(starterQuality.assets.every(({status}) => status === 'passed'));
@@ -265,6 +319,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/provider-request.mjs',
     'scripts/provider-recover-record.mjs',
     'scripts/provider-recover-rejected-source.mjs',
+    'scripts/checkerboard-alpha-lib.mjs',
+    'scripts/decorative-scatter-lib.mjs',
     'scripts/rejected-output-recovery-lib.mjs',
     'scripts/provider-reuse.mjs',
     'scripts/provider-select.mjs',
@@ -289,9 +345,20 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/planning-scenario-lib.mjs',
     'scripts/style-catalog-lib.mjs',
     'scripts/composition-lib.mjs',
+    'scripts/container-source-plan-lib.mjs',
+    'scripts/derive-canonical-container.mjs',
+    'scripts/canonical-container-lib.mjs',
     'scripts/derive-registered-family.mjs',
     'scripts/registered-family-lib.mjs',
+    'scripts/derive-semantic-slices.mjs',
+    'scripts/semantic-slices-lib.mjs',
+    'scripts/world-topology-proof-lib.mjs',
+    'scripts/encounter-contract-lib.mjs',
+    'scripts/project-world-topology-proof.mjs',
+    'scripts/normalize-provider-source.mjs',
     'scripts/motion-treatment-lib.mjs',
+    'scripts/motion-contract-lib.mjs',
+    'scripts/motion-approval-lib.mjs',
     'scripts/project-composition-proof.mjs',
     'scripts/project-render-status.mjs',
     'scripts/phase2-proof-lib.mjs',
@@ -306,12 +373,13 @@ test('packaged runtime is lightweight and independent from production projects',
     'scripts/storyboard-lib.mjs',
     'scripts/world-trajectory-lib.mjs',
     'scripts/render-phase2-proof.mjs',
-    'scripts/schema-v10.mjs',
-    'scripts/validate_v10_schemas.py',
+    'scripts/schema-v12.mjs',
+    'scripts/validate_v12_schemas.py',
     'scripts/verify-phase2-proof.mjs',
     'scripts/verify-vox-sample.mjs',
     'scripts/prove-alpha-bands.mjs',
     'scripts/prove-registered-family.mjs',
+    'scripts/prove-canonical-container.mjs',
     'scripts/vox-sample-proof-lib.mjs',
     'scripts/project-confirm-concept.mjs',
     'scripts/style-motion-proof.mjs',
@@ -332,6 +400,8 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/project.schema.json',
     'schemas/planning-scenarios.schema.json',
     'schemas/style-catalog.schema.json',
+    'schemas/style-profile.schema.json',
+    'schemas/motion-contract.schema.json',
     'schemas/editorial.schema.json',
     'schemas/semantic-contracts.schema.json',
     'schemas/generation-attempt.schema.json',
@@ -344,8 +414,14 @@ test('packaged runtime is lightweight and independent from production projects',
     'schemas/quality-review-contact-sheet.schema.json',
     'schemas/registered-family.schema.json',
     'schemas/registered-family-binding.schema.json',
+    'schemas/semantic-slices.schema.json',
+    'schemas/canonical-container.schema.json',
+    'schemas/canonical-container-binding.schema.json',
     'schemas/provider-observation.schema.json',
     'schemas/rejected-output-recovery.schema.json',
+    'schemas/world-topology-proof.schema.json',
+    'schemas/encounter-contract.schema.json',
+    'schemas/provider-source-normalization.schema.json',
     'templates/project/production.json',
     'templates/project/planning-scenarios.json',
     'templates/project/production-metrics.json',
@@ -355,14 +431,20 @@ test('packaged runtime is lightweight and independent from production projects',
     'templates/project/quality-report.json',
     'providers.json',
     'fixtures/editorial-fixture.mjs',
+    'fixtures/motion-contract-fixture.mjs',
+    'fixtures/canonical-container/canonical-container.json',
+    'fixtures/canonical-container/canonical-container-binding.json',
+    'fixtures/canonical-container/canonical-container-intent.json',
+    'fixtures/canonical-container/canonical-container-plan.json',
     'fixtures/phase2-proof-fixture.mjs',
+    'tests/canonical-container.test.mjs',
+    'tests/p0-p1-hardening.test.mjs',
+    'tests/motion-contract.test.mjs',
     'public/fixtures/vox-phase2-proof/narration-1.wav',
     'public/fixtures/vox-phase2-proof/narration-1.timing.json',
     'public/style-catalog/catalog.json',
     'public/style-catalog/generation-provenance.json',
-    'public/style-catalog/childrens-picture-book-paper.png',
-    'public/style-catalog/hand-drawn-cutout-explainer.png',
-    'public/style-catalog/archival-collage.png',
+    ...catalogStyleImages,
   ]) {
     assert.deepEqual(
       fs.readFileSync(path.join(RUNTIME_ROOT, relative)),
@@ -415,8 +497,8 @@ test('packaged starter proof keeps the complete quality gate ready', async () =>
     write: false,
   });
   assert.equal(prepared.ready, true);
-  assert.equal(prepared.total, 5);
-  assert.equal(prepared.passed, 5);
+  assert.equal(prepared.total, 7);
+  assert.equal(prepared.passed, 7);
   const validation = spawnSync(
     process.execPath,
     ['scripts/project-validate.mjs', 'starter-demo'],
@@ -451,6 +533,10 @@ test('bootstrap creates an isolated resumable workspace and is idempotent', asyn
     assert.equal(
       readJson(path.join(target, 'package.json')).name,
       'paper-collage-video-workspace',
+    );
+    assert.match(
+      await fsp.readFile(path.join(target, 'src', 'Root.tsx'), 'utf8'),
+      /starterDemo as unknown as PaperCollageProject/,
     );
     assert.ok(fs.existsSync(path.join(target, 'providers.json')));
     assert.ok(fs.existsSync(path.join(target, 'providers.local.example.json')));

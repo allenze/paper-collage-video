@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import {createHash} from 'node:crypto';
 import {
   collectCompositionAssets,
   collectCompositionGroups,
@@ -44,20 +45,66 @@ import {
   assertAssetManifest,
 } from './asset-manifest-lib.mjs';
 import {summarizeProductionContracts} from './world-trajectory-lib.mjs';
-import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
+import {
+  buildLayerStackProof,
+  referenceCellRectForRegisteredSheet,
+} from './layer-stack-proof-lib.mjs';
 import {applyResponsiveDirectingPlan} from '../src/editorialPrimitives.mjs';
 import {
   buildLoopingWorldProof,
   buildTraverseWorldMotionProofs,
 } from './world-motion-proof-lib.mjs';
+import {
+  buildSpatialContractProof,
+  spatialContractDebugOverlay,
+  summarizeSpatialContracts,
+} from './spatial-contract-lib.mjs';
+import {
+  buildCanonicalContainerProof,
+} from './canonical-container-lib.mjs';
 
 const args = process.argv.slice(2);
 const [slug] = args.filter((argument) => !argument.startsWith('--'));
 const force = args.includes('--force');
+const hashFile = async (file) =>
+  createHash('sha256').update(await fs.readFile(file)).digest('hex');
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
+const summarizeEncounterContracts = (project) =>
+  (project.scenes ?? []).flatMap((scene) =>
+    (scene.encounters ?? []).map((contract) => ({
+      sceneId: scene.id,
+      contractId: contract.id,
+      travelerNodeId: contract.travelerNodeId,
+      targetNodeId: contract.targetNodeId,
+      worldNodeId: contract.worldNodeId,
+      narrationCueId: contract.narrationCueId,
+      phaseEvents: Object.fromEntries(
+        Object.entries(contract.phaseBeatIds).map(([phase, beatId]) => [
+          phase,
+          scene.events.find(
+            (event) =>
+              event.beatId === beatId &&
+              event.targetId === contract.targetNodeId &&
+              event.encounter?.contractId === contract.id &&
+              event.encounter?.phase === phase,
+          )?.id ?? null,
+        ]),
+      ),
+      opacityLifecycleUsed: scene.events.some(
+        (event) =>
+          event.targetId === contract.targetNodeId &&
+          event.visual?.kind === 'visibility',
+      ),
+      passed: true,
+    })),
+  );
+
 const findTargetBounds = ({scene, nodeId, video}) => {
+  if (scene.camera?.follow) {
+    return {left: 0, top: 0, width: video.width, height: video.height};
+  }
   let result = null;
   const visit = (nodes, parentRect, parentGroup = null) => {
     for (const node of nodes ?? []) {
@@ -142,7 +189,7 @@ try {
   const {project} = await loadProject(slug);
   const validation = await validateProject(project);
   console.log(formatValidation(validation));
-  if (!validation.passed) throw new Error('v10 组合结构未通过，不能生成证明帧。');
+  if (!validation.passed) throw new Error('v12 组合结构未通过，不能生成证明帧。');
 
   const timeline = deriveTimeline(project);
   const paths = projectPaths(slug);
@@ -282,6 +329,7 @@ try {
           'supported-subject',
           'registered-environment',
           'registered-depth-stack',
+          'canonical-container',
         ].includes(parent.pattern)
       ) continue;
       coupledNodes.set(`${scene.id}:${node.id}:${node.src}`, {
@@ -336,10 +384,13 @@ try {
       path.normalize(path.join('public', node.src)),
     ) ?? null;
     const registeredFamilyBinding = record?.registeredFamilyBinding ?? null;
+    const canonicalContainerBinding =
+      record?.canonicalContainerBinding ?? null;
     const cached = previousEvidence.get(`${sceneId}:${node.id}:${node.src}`);
     if (!force && await assetEvidenceIsCurrent(cached, node, {
       renderSize,
       registeredFamilyBinding,
+      canonicalContainerBinding,
     })) {
       assetEvidence.push(cached);
       reusedEvidence += 1;
@@ -351,6 +402,7 @@ try {
           evidenceId: `${sceneId}-${node.id}${stateId ? `-${stateId}` : ''}`,
           renderSize,
           registeredFamilyBinding,
+          canonicalContainerBinding,
         }),
         sceneId,
       });
@@ -529,11 +581,58 @@ try {
       (
         target.pattern !== 'looping-environment' ||
         cached.loopingWorldProof?.passed === true
+      ) &&
+      (
+        target.pattern !== 'canonical-container' ||
+        (
+          cached.canonicalContainerProof?.passed === true &&
+          cached.canonicalContainerProof?.familyFingerprint ===
+            target.group.canonicalContainer?.familyFingerprint &&
+          Object.values(
+            cached.canonicalContainerProof.artifacts ?? {},
+          ).length === 3 &&
+          (
+            await Promise.all(
+              Object.values(
+                cached.canonicalContainerProof.artifacts ?? {},
+              ).map(async (file) => {
+                if (!file) return false;
+                const absolute = path.resolve(ROOT, file);
+                return (
+                  await fileExists(absolute) &&
+                  await hashFile(absolute) ===
+                    cached.canonicalContainerProof
+                      .artifactHashes?.[file]
+                );
+              }),
+            )
+          ).every(Boolean)
+        )
+      ) &&
+      (
+        target.pattern !== 'spatial-contract' ||
+        cached.spatialProof?.passed === true
       );
     if (reusableComposite) {
       composites.push(cached);
       reusedComposites += 1;
       continue;
+    }
+    let spatialProof = null;
+    if (target.pattern === 'spatial-contract') {
+      spatialProof = await buildSpatialContractProof(
+        project,
+        target.spatialContract,
+      );
+      if (!spatialProof.passed) {
+        const failed = spatialProof.checks
+          .filter(({passed}) => !passed)
+          .map(({id}) => id)
+          .join(', ');
+        throw new Error(
+          `spatial contract ${target.spatialContract.id} 未通过：${failed}。`,
+        );
+      }
     }
     const proofFrames = [];
     for (const shot of proofShots) {
@@ -559,19 +658,30 @@ try {
                 video: project.video,
               });
         const safeId = target.compositeId.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
-        const cropFile = path.join(cropDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.png`);
-        const debugFile = path.join(debugDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.png`);
-        await sharp(renderedProof.file).extract(bounds).png().toFile(cropFile);
+        const cropFile = path.join(cropDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.jpg`);
+        const debugFile = path.join(debugDirectory, `${safeId}-${shot.sceneId}-${proofTimeId}.jpg`);
+        await sharp(renderedProof.file)
+          .extract(bounds)
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
+          .toFile(cropFile);
         await sharp(renderedProof.file)
           .composite([{
-            input: debugOverlay({
-              width: renderedProof.width,
-              height: renderedProof.height,
-              bounds,
-              label: `${target.compositeId} · ${shot.sceneId} · ${proofTimeId}`,
-            }),
+            input: target.pattern === 'spatial-contract'
+              ? spatialContractDebugOverlay({
+                  proof: spatialProof,
+                  sceneId: shot.sceneId,
+                  proofTimeId,
+                  width: renderedProof.width,
+                  height: renderedProof.height,
+                })
+              : debugOverlay({
+                  width: renderedProof.width,
+                  height: renderedProof.height,
+                  bounds,
+                  label: `${target.compositeId} · ${shot.sceneId} · ${proofTimeId}`,
+                }),
           }])
-          .png()
+          .jpeg({quality: 92, chromaSubsampling: '4:4:4'})
           .toFile(debugFile);
         proofFrames.push({
           ...(target.pattern === 'responsive-directing'
@@ -598,11 +708,18 @@ try {
       const referenceRecord = recordsByAssetId.get(
         target.group.registration.sourceMasterAssetId,
       );
+      const referenceFile = referenceRecord?.file
+        ? path.resolve(ROOT, referenceRecord.file)
+        : null;
       const built = await buildLayerStackProof({
         group: target.group,
         memberFiles,
-        referenceFile: referenceRecord?.file
-          ? path.resolve(ROOT, referenceRecord.file)
+        referenceFile,
+        referenceRect: referenceFile
+          ? await referenceCellRectForRegisteredSheet({
+              record: referenceRecord,
+              file: referenceFile,
+            })
           : null,
         directory: evidenceDirectory,
         evidenceId: `${target.sceneId}-${target.nodeId}-layer-stack`,
@@ -656,6 +773,37 @@ try {
         );
       }
     }
+    let canonicalContainerProof = null;
+    if (target.pattern === 'canonical-container') {
+      const built = await buildCanonicalContainerProof({
+        root: ROOT,
+        group: target.group,
+        manifest,
+        directory: evidenceDirectory,
+        evidenceId: `${target.sceneId}-${target.nodeId}-canonical-container`,
+      });
+      canonicalContainerProof = {
+        ...built,
+        familyFingerprint:
+          target.group.canonicalContainer.familyFingerprint,
+        artifacts: Object.fromEntries(
+          Object.entries(built.artifacts).map(([key, file]) => [
+            key,
+            path.relative(ROOT, file),
+          ]),
+        ),
+        artifactHashes: Object.fromEntries(
+          Object.entries(built.artifactHashes).map(
+            ([file, hash]) => [path.relative(ROOT, file), hash],
+          ),
+        ),
+      };
+      if (!canonicalContainerProof.passed) {
+        throw new Error(
+          `canonical container ${target.nodeId} 的 frame/mask/alignment/final-state proof 未通过。`,
+        );
+      }
+    }
     composites.push({
       compositeId: target.compositeId,
       sceneId: target.sceneId,
@@ -664,6 +812,8 @@ try {
       proofFrames,
       layerStackProof,
       loopingWorldProof,
+      canonicalContainerProof,
+      spatialProof,
     });
     generatedComposites += 1;
   }
@@ -697,7 +847,9 @@ try {
     frames,
     composites,
     worldMotionProofs: traverseWorldMotionProofs,
+    encounterProofs: summarizeEncounterContracts(project),
     productionContracts: summarizeProductionContracts(project),
+    spatialContracts: summarizeSpatialContracts(project),
     assetEvidence,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     cache: {

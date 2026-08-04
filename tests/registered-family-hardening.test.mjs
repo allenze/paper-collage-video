@@ -9,15 +9,21 @@ import {prepareRegisteredFamilyProof} from '../scripts/asset-hardening-proof-lib
 import {
   DEFAULT_ALPHA_BAND_THRESHOLDS,
   inspectAlphaBands,
+  inspectAlphaTopology,
 } from '../scripts/alpha-band-lib.mjs';
 import {
   REGISTERED_FAMILY_RECOVERY_POLICY,
   applyRegisteredFamilyToProject,
+  assertRegisteredFamilyGroupMembers,
   assertRegisteredFamilyRecords,
   deriveRegisteredFamily,
   sha256File,
   validateRegisteredFamilySpec,
 } from '../scripts/registered-family-lib.mjs';
+import {
+  expectedRegisteredFamilyAlphaEvidenceCount,
+  stateSequenceRegistrationStatus,
+} from '../scripts/quality-lib.mjs';
 
 const writeImageRecord = async ({
   root,
@@ -334,6 +340,103 @@ test('registered family derives three deterministic full-canvas members and life
   }
 });
 
+test('registered family places an active state-sheet cell as a full-context subject', async () => {
+  const fixture = await makeFamilyFixture();
+  try {
+    const stateFile = path.join(
+      fixture.root,
+      'public',
+      'projects',
+      'family-proof',
+      'frog-waiting.png',
+    );
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="80" height="96">
+        <rect width="80" height="96" fill="transparent"/>
+        <ellipse cx="40" cy="51" rx="28" ry="38" fill="#79a84d"/>
+      </svg>
+    `)).png().toFile(stateFile);
+    const stateRecord = await writeImageRecord({
+      root: fixture.root,
+      assetId: 'frog-waiting',
+      file: path.relative(fixture.root, stateFile),
+      adapter: 'registered-sheet-cell',
+      compositionBinding: {
+        sceneId: 'scene',
+        nodeId: 'frog',
+        pattern: 'state-sequence',
+        registrationId: 'frog-pose-registration',
+        sourceMasterAssetId: 'frog-pose-sheet',
+        outputRole: 'registered-state',
+        canvas: {width: 80, height: 96},
+        derivation: {method: 'crop', parentAssetId: 'frog-pose-sheet'},
+      },
+      extra: {
+        sourceSheetAssetId: 'frog-pose-sheet',
+        familyFingerprint: 'a'.repeat(64),
+        stateBinding: {
+          poseFamilyId: 'frog-reactions',
+          stateId: 'waiting',
+          registrationId: 'frog-pose-registration',
+          sourceMasterAssetId: 'frog-pose-sheet',
+          facing: 'left',
+          anchors: [{id: 'seat-contact', x: 0.5, y: 0.85}],
+          identityReferenceAssetId: 'frog-reference',
+          identityReferenceSha256: 'b'.repeat(64),
+        },
+      },
+      index: 3,
+    });
+    const manifest = structuredClone(fixture.manifest);
+    manifest.assets.push(stateRecord);
+    const spec = structuredClone(fixture.spec);
+    spec.familyId = 'frog-waiting-family';
+    const subject = spec.members.find(({role}) => role === 'subject');
+    subject.source = {
+      kind: 'state-sheet-cell',
+      assetId: 'frog-waiting',
+      poseFamilyId: 'frog-reactions',
+      stateId: 'waiting',
+    };
+    subject.derivation = {
+      placement: {left: 80, top: 40, width: 80, height: 96},
+    };
+
+    assert.deepEqual(validateRegisteredFamilySpec(spec), []);
+    const result = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec,
+      manifest,
+      now: '2026-07-23T03:00:00.000Z',
+    });
+    const derivedSubject = result.records.find(
+      ({registeredFamilyBinding}) =>
+        registeredFamilyBinding.role === 'subject',
+    );
+    assert.equal(
+      derivedSubject.registeredFamilyBinding.source.kind,
+      'state-sheet-cell',
+    );
+    assert.equal(
+      derivedSubject.registeredFamilyBinding.source.stateId,
+      'waiting',
+    );
+    assert.deepEqual(
+      derivedSubject.registeredFamilyBinding.derivation.placement,
+      {left: 80, top: 40, width: 80, height: 96},
+    );
+    assert.equal(
+      assertRegisteredFamilyRecords({
+        records: result.records,
+        registration: fixture.registration,
+      }).passed,
+      true,
+    );
+  } finally {
+    await fs.rm(fixture.root, {recursive: true, force: true});
+  }
+});
+
 test('registered family derives provider-native mixed-surface sheets with explicit rects and chroma provenance', async () => {
   const fixture = await makeFamilyFixture();
   try {
@@ -457,6 +560,239 @@ test('registered family derives provider-native mixed-surface sheets with explic
         registration: fixture.registration,
       }).passed,
       true,
+    );
+  } finally {
+    await fs.rm(fixture.root, {recursive: true, force: true});
+  }
+});
+
+test('registered family recovers one-pixel provider edge drift for full-context chroma members without resizing', async () => {
+  const fixture = await makeFamilyFixture();
+  try {
+    const {canvas} = fixture.registration;
+    const publicDirectory = path.join(
+      fixture.root,
+      'public',
+      'projects',
+      'family-proof',
+    );
+    const files = {
+      'support-rear': path.join(publicDirectory, 'edit-rear.png'),
+      subject: path.join(publicDirectory, 'edit-subject.png'),
+      'support-front': path.join(publicDirectory, 'edit-front.png'),
+    };
+    await sharp({
+      create: {
+        ...canvas,
+        channels: 4,
+        background: '#d3b986',
+      },
+    }).png().toFile(files['support-rear']);
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="239" height="160">
+        <rect width="239" height="160" fill="#ff00ff"/>
+        <ellipse cx="118" cy="78" rx="34" ry="56" fill="#b56b49"/>
+      </svg>
+    `)).png().toFile(files.subject);
+    await sharp(Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="240" height="160">
+        <rect width="240" height="160" fill="#ff00ff"/>
+        <path d="M12 116 Q120 86 228 116 V152 H12 Z" fill="#2f733f"/>
+      </svg>
+    `)).png().toFile(files['support-front']);
+
+    const sourcePackageId = 'fixture-context-edits';
+    const memberAssetIds = fixture.spec.members.map(({assetId}) => assetId);
+    const layerBinding = (role) => ({
+      sourcePackageId,
+      pattern: fixture.spec.pattern,
+      motionCapability: 'bounded-relative',
+      sourceStrategy: 'context-preserving-layer-edits',
+      registrationId: fixture.registration.id,
+      sourceMasterAssetId: fixture.registration.sourceMasterAssetId,
+      canvas,
+      packageRole: role,
+      completeness: {
+        'support-rear': 'clean-plate',
+        subject: 'full-silhouette',
+        'support-front': 'full-overlay',
+      }[role],
+      memberAssetIds,
+      referenceAssetIds: [fixture.registration.sourceMasterAssetId],
+      sheetLayout: null,
+      recoveryPolicy: {
+        completeSourceContext: true,
+        localDeterministicFixFirst: true,
+        isolatedMemberGeneration: 'forbidden',
+        providerRepair: 'masked-complete-source-edit',
+        fallback: 'full-source-regeneration',
+      },
+    });
+    const sourceRecords = [];
+    for (const [index, role] of [
+      'support-rear',
+      'subject',
+      'support-front',
+    ].entries()) {
+      const recovery = role === 'subject';
+      sourceRecords.push(await writeImageRecord({
+        root: fixture.root,
+        assetId: `edit-${role}`,
+        file: path.relative(fixture.root, files[role]),
+        adapter: 'host',
+        compositionBinding: {
+          sceneId: 'scene',
+          nodeId: 'rig',
+          pattern: fixture.spec.pattern,
+          registrationId: fixture.registration.id,
+          sourceMasterAssetId: fixture.registration.sourceMasterAssetId,
+          outputRole: role,
+          canvas,
+          derivation: {
+            method: 'provider-edit',
+            parentAssetId: fixture.registration.sourceMasterAssetId,
+          },
+        },
+        extra: {
+          request: {
+            outputSurface: role === 'support-rear'
+              ? {mode: 'opaque'}
+              : {
+                  mode: 'chroma-key',
+                  keyColor: '#ff00ff',
+                  tolerance: 24,
+                },
+            layerPackageBinding: layerBinding(role),
+          },
+          ...(recovery
+            ? {
+                lifecycle: {
+                  status: 'recovery-source',
+                  changedAt: '2026-07-23T00:00:00.000Z',
+                  reason: 'provider returned one pixel less width',
+                  supersededBy: null,
+                },
+                providerObservation: {
+                  schemaVersion: 1,
+                  mode: 'provider-native-observed',
+                  policyId: 'flat-v1',
+                  policyFingerprint: '1'.repeat(64),
+                  observationFingerprint: '2'.repeat(64),
+                  cells: [{
+                    packageRole: 'image',
+                    passed: true,
+                    requestedKeyColor: '#ff00ff',
+                    observedKeyColor: '#ff00ff',
+                    policyFingerprint: '1'.repeat(64),
+                    metrics: {},
+                  }],
+                },
+              }
+            : {}),
+        },
+        index: index + 10,
+      }));
+    }
+    fixture.manifest.assets = [
+      fixture.manifest.assets.find(
+        ({assetId}) => assetId === fixture.registration.sourceMasterAssetId,
+      ),
+      ...sourceRecords,
+    ];
+    fixture.spec.sourcePackageId = sourcePackageId;
+    fixture.spec.sourceStrategy = 'context-preserving-layer-edits';
+    fixture.spec.members = fixture.spec.members.map((member) => ({
+      ...member,
+      source: {
+        kind: 'layer-package-member',
+        assetId: `edit-${member.role}`,
+      },
+      derivation: {
+        ...(member.role === 'subject'
+          ? {
+              placement: {
+                left: 0,
+                top: 0,
+                width: 239,
+                height: 160,
+              },
+            }
+          : {}),
+        ...(['subject', 'support-front'].includes(member.role)
+          ? {
+              keying: {
+                keyColor: '#ff00ff',
+                transparentThreshold: 18,
+                opaqueThreshold: 95,
+                edgeFeather: 0.6,
+                matteErode: 1,
+                edgePadding: 6,
+              },
+            }
+          : {}),
+      },
+    }));
+
+    assert.deepEqual(validateRegisteredFamilySpec(fixture.spec), []);
+    const result = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: fixture.spec,
+      manifest: fixture.manifest,
+      now: '2026-07-23T03:00:00.000Z',
+    });
+    const subject = result.records.find(
+      ({registeredFamilyBinding}) =>
+        registeredFamilyBinding.role === 'subject',
+    );
+    const {data, info} = await sharp(path.join(fixture.root, subject.file))
+      .ensureAlpha()
+      .raw()
+      .toBuffer({resolveWithObject: true});
+    assert.equal(info.width, 240);
+    assert.equal(info.height, 160);
+    assert.equal(data[(80 * info.width + 239) * 4 + 3], 0);
+    assert.ok(data[(80 * info.width + 118) * 4 + 3] > 200);
+    assert.equal(subject.registeredFamilyBinding.derivation.placement.width, 239);
+    assert.equal(subject.registeredFamilyBinding.derivation.outputCanvasPreserved, true);
+
+    const collidingSpec = structuredClone(fixture.spec);
+    collidingSpec.familyId = 'fixture-colliding-family';
+    collidingSpec.members = collidingSpec.members.map((member) => ({
+      ...member,
+      assetId: member.source.assetId,
+      nodeId: `colliding-${member.role}`,
+      output:
+        `public/projects/family-proof/registered/colliding-${member.role}.png`,
+    }));
+    const firstCollision = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: collidingSpec,
+      manifest: result.manifest,
+      now: '2026-07-23T04:00:00.000Z',
+    });
+    const secondCollisionSpec = structuredClone(collidingSpec);
+    secondCollisionSpec.members[0].nodeId = 'colliding-rear-rebound';
+    const secondCollision = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: secondCollisionSpec,
+      manifest: firstCollision.manifest,
+      now: '2026-07-23T05:00:00.000Z',
+    });
+    assert.equal(secondCollision.report.providerImageCalls, 3);
+    assert.equal(
+      secondCollision.records.find(
+        ({registeredFamilyBinding}) =>
+          registeredFamilyBinding.role === 'support-rear',
+      ).registeredFamilyBinding.nodeId,
+      'colliding-rear-rebound',
+    );
+    assert.equal(
+      secondCollision.manifest.assets.filter(
+        ({assetId, lifecycle}) =>
+          assetId === 'edit-support-rear' &&
+          lifecycle.status === 'active',
+      ).length,
+      1,
     );
   } finally {
     await fs.rm(fixture.root, {recursive: true, force: true});
@@ -676,6 +1012,155 @@ test('registered-family CLI writes manifest provenance and a proof report withou
   }
 });
 
+test('registered family group accepts a state-sequence subject only when every state keeps complete family context', async () => {
+  const fixture = await makeFamilyFixture();
+  try {
+    const first = await deriveRegisteredFamily({
+      root: fixture.root,
+      spec: fixture.spec,
+      manifest: structuredClone(fixture.manifest),
+      now: '2026-07-23T01:00:00.000Z',
+    });
+    const variantFingerprint = 'a'.repeat(64);
+    const variant = first.records.map((record) => {
+      const cloned = structuredClone(record);
+      cloned.assetId = `variant-${record.assetId}`;
+      cloned.familyFingerprint = variantFingerprint;
+      cloned.registeredFamilyBinding.familyId = 'fixture-family-variant';
+      cloned.registeredFamilyBinding.familyFingerprint = variantFingerprint;
+      cloned.registeredFamilyBinding.nodeId =
+        `variant-${record.registeredFamilyBinding.nodeId}`;
+      return cloned;
+    });
+    const recordForRole = (records, role) =>
+      records.find(
+        ({registeredFamilyBinding}) =>
+          registeredFamilyBinding.role === role,
+      );
+    const rear = recordForRole(first.records, 'support-rear');
+    const front = recordForRole(first.records, 'support-front');
+    const subject = recordForRole(first.records, 'subject');
+    const variantSubject = recordForRole(variant, 'subject');
+    const group = {
+      id: 'rig',
+      kind: 'group',
+      pattern: 'supported-subject',
+      registration: fixture.registration,
+      children: [
+        {
+          id: rear.registeredFamilyBinding.nodeId,
+          kind: 'asset',
+          slot: 'support-rear',
+        },
+        {
+          id: 'water-levels',
+          kind: 'state-sequence',
+          slot: 'subject',
+          states: [{src: 'low.png'}, {src: 'high.png'}],
+        },
+        {
+          id: front.registeredFamilyBinding.nodeId,
+          kind: 'asset',
+          slot: 'support-front',
+        },
+      ],
+    };
+    const members = [
+      {node: group.children[0], records: [rear]},
+      {
+        node: group.children[1],
+        records: [subject, variantSubject],
+      },
+      {node: group.children[2], records: [front]},
+    ];
+    const complete = assertRegisteredFamilyGroupMembers({
+      group,
+      members,
+      allRecords: [...first.records, ...variant],
+    });
+    assert.equal(complete.passed, true, complete.errors.join('\n'));
+    assert.equal(complete.stateful, true);
+    assert.deepEqual(
+      complete.familyIds,
+      ['fixture-family', 'fixture-family-variant'],
+    );
+
+    const incomplete = assertRegisteredFamilyGroupMembers({
+      group,
+      members,
+      allRecords: [
+        ...first.records,
+        ...variant.filter(
+          ({registeredFamilyBinding}) =>
+            registeredFamilyBinding.role !== 'support-rear',
+        ),
+      ],
+    });
+    assert.equal(incomplete.passed, false);
+    assert.match(incomplete.errors.join('\n'), /上下文不完整/);
+  } finally {
+    await fs.rm(fixture.root, {recursive: true, force: true});
+  }
+});
+
+test('quality accepts registered-family state sequences and counts every visual state for alpha evidence', () => {
+  const sequence = {
+    id: 'water-levels',
+    kind: 'state-sequence',
+    slot: 'subject',
+    poseFamilyId: 'water-levels',
+    registration: {
+      id: 'jar-registration',
+      sourceMasterAssetId: 'jar-master',
+      canvas: {width: 1920, height: 1080},
+      origin: 'top-left',
+    },
+    states: ['low', 'mid', 'high'].map((id) => ({
+      id,
+      facing: 'neutral',
+      anchors: {base: {x: 0.5, y: 0.85}},
+      identityReferenceAssetId: 'jar-master',
+      identityReferenceSha256: 'a'.repeat(64),
+    })),
+  };
+  const stateRecords = sequence.states.map(({id}) => ({
+    assetId: `jar-${id}`,
+    registeredFamilyBinding: {
+      familyId: `jar-family-${id}`,
+      registrationId: 'jar-registration',
+      sourceMasterAssetId: 'jar-master',
+      slot: 'subject',
+      canvas: {width: 1920, height: 1080},
+      origin: 'top-left',
+    },
+  }));
+  const status = stateSequenceRegistrationStatus({
+    sequence,
+    stateRecords,
+    registeredFamily: {passed: true},
+  });
+  assert.equal(status.passed, true);
+  assert.equal(status.mode, 'registered-family');
+  assert.equal(status.poseStateRegistrationsBound, false);
+  assert.equal(status.registeredFamilyStatesBound, true);
+
+  assert.equal(
+    expectedRegisteredFamilyAlphaEvidenceCount({
+      group: {children: [{}, {}, {}]},
+      familyRecords: [{}, {}, {}, {}, {}],
+    }),
+    5,
+  );
+  assert.equal(
+    stateSequenceRegistrationStatus({
+      sequence,
+      stateRecords,
+      registeredFamily: {passed: false},
+    }).passed,
+    false,
+  );
+});
+
 const writeAlphaFixture = async ({file, residue = false, extreme = false}) => {
   const width = 240;
   const height = 180;
@@ -728,4 +1213,88 @@ test('alpha-band detector distinguishes natural contour/shadow from rectangular 
   } finally {
     await fs.rm(root, {recursive: true, force: true});
   }
+});
+
+test('alpha topology rejects detached fragments and hard derivation rectangles', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'alpha-topology-'));
+  try {
+    const cleanFile = path.join(root, 'clean.png');
+    const fragmentFile = path.join(root, 'fragment.png');
+    const cropFile = path.join(root, 'crop.png');
+    const cleanSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
+        <path d="M70 30 C30 80 45 170 140 175 C230 180 265 95 220 35 C175 5 105 5 70 30 Z" fill="#9b6542"/>
+      </svg>
+    `);
+    const fragmentSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
+        <path d="M70 30 C30 80 45 170 140 175 C230 180 265 95 220 35 C175 5 105 5 70 30 Z" fill="#9b6542"/>
+        <rect x="272" y="8" width="18" height="28" fill="#9b6542"/>
+      </svg>
+    `);
+    const cropSvg = Buffer.from(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="300" height="200">
+        <rect x="60" y="40" width="180" height="120" fill="#9b6542"/>
+      </svg>
+    `);
+    await sharp(cleanSvg).png().toFile(cleanFile);
+    await sharp(fragmentSvg).png().toFile(fragmentFile);
+    await sharp(cropSvg).png().toFile(cropFile);
+    const clean = await inspectAlphaTopology({file: cleanFile});
+    const fragment = await inspectAlphaTopology({file: fragmentFile});
+    const declaredFragment = await inspectAlphaTopology({
+      file: fragmentFile,
+      expectedComponents: [{
+        left: 272,
+        top: 8,
+        width: 18,
+        height: 28,
+      }],
+    });
+    const semanticScenery = await inspectAlphaTopology({
+      file: fragmentFile,
+      allowDetachedComponents: true,
+    });
+    const crop = await inspectAlphaTopology({
+      file: cropFile,
+      derivationRegions: [{
+        id: 'fixture-clip',
+        kind: 'crop-boundary',
+        rect: {left: 60, top: 40, width: 180, height: 120},
+      }],
+    });
+    assert.equal(clean.passed, true);
+    assert.equal(fragment.passed, false);
+    assert.ok(fragment.failures.some(({diagnostic}) =>
+      diagnostic.classification === 'detached-rectangular-alpha-fragment'));
+    assert.equal(declaredFragment.passed, true);
+    assert.equal(semanticScenery.passed, true);
+    assert.equal(semanticScenery.allowDetachedComponents, true);
+    assert.equal(crop.passed, false);
+    const semanticCrop = await inspectAlphaTopology({
+      file: cropFile,
+      derivationRegions: [{
+        id: 'fixture-clip',
+        kind: 'crop-boundary',
+        rect: {left: 60, top: 40, width: 180, height: 120},
+      }],
+      allowDetachedComponents: true,
+    });
+    assert.equal(semanticCrop.passed, false);
+    assert.ok(crop.failures.some(({diagnostic}) =>
+      diagnostic.classification === 'hard-rectangular-derivation-boundary'));
+  } finally {
+    await fs.rm(root, {recursive: true, force: true});
+  }
+});
+
+test('registered-family fixture proof rejects misleading project arguments', () => {
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/prove-registered-family.mjs', 'not-a-project-proof'],
+    {cwd: path.resolve('.',), encoding: 'utf8'},
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /内置 fixture 证明/);
+  assert.match(result.stderr, /project:composition-proof/);
 });

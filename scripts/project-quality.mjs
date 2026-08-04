@@ -18,6 +18,12 @@ import {
 } from './production-metrics-lib.mjs';
 
 const args = process.argv.slice(2);
+const usage =
+  '用法：project:quality -- <slug> <prepare|status|scaffold|contact-sheet|record|record-batch> [--scope=all|style] [--input=<reviews.json>] [--output=<path>] [--reviewer=<id>] [--quiet] [--json]；也兼容 <action> <slug>。';
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(usage);
+  process.exit(0);
+}
 const positionals = args.filter((arg) => !arg.startsWith('--'));
 const actions = [
   'prepare',
@@ -102,18 +108,18 @@ const inspectReviewArtifacts = async (projectSlug, status) => {
 
 try {
   if (!slug || !actions.includes(action)) {
-    throw new Error(
-      '用法：project:quality -- <slug> <prepare|status|scaffold|contact-sheet|record|record-batch> [--input=<reviews.json>] [--output=<path>] [--reviewer=<id>] [--quiet] [--json]；也兼容 <action> <slug>。',
-    );
+    throw new Error(usage);
   }
   let status;
   let incrementalScaffold = null;
   let contactSheets = null;
   if (action === 'scaffold') {
+    const reviewScope = valueFor('--scope') ?? 'all';
     const built = await buildQualityReviewScaffold({
       slug,
       reviewer: valueFor('--reviewer') ?? 'host-vision',
       includePassed: args.includes('--all'),
+      reviewScope,
     });
     status = built.status;
     const output = valueFor('--output') ?? `projects/${slug}/quality-review-scaffold.json`;
@@ -181,7 +187,7 @@ try {
     const payload = JSON.parse(await fs.readFile(file, 'utf8'));
     if (Array.isArray(payload)) {
       throw new Error(
-        'record-batch 必须使用 project:quality scaffold 生成的 schemaVersion 2 对象，不能提交未绑定报告指纹的裸数组。',
+        'record-batch 必须使用 project:quality scaffold 生成的 schemaVersion 3 对象，不能提交未绑定报告指纹和证据哈希的裸数组。',
       );
     }
     await assertQualityReviewScaffoldCurrent({slug, scaffold: payload});
@@ -189,6 +195,8 @@ try {
       slug,
       reviews: payload.reviews,
       sourceReportFingerprint: payload.sourceReport.fingerprint,
+      allowPendingSemanticEvidenceTargets:
+        payload.reviewScope === 'style',
     });
     const reviews = payload.reviews;
     await finishLatestMetricSegment({
@@ -206,6 +214,7 @@ try {
         reviewer:
           reviews.find(({reviewer}) => reviewer?.trim())?.reviewer ??
           'host-vision',
+        reviewScope: payload.reviewScope ?? 'all',
       });
       const pendingFile = defaultPendingScaffoldFile(slug);
       await fs.writeFile(
@@ -240,7 +249,11 @@ try {
       });
     }
   } else {
-    status = await prepareQualityReport(slug, {write: action === 'prepare'});
+    const reviewScope = valueFor('--scope') ?? 'all';
+    status = await prepareQualityReport(slug, {
+      write: action === 'prepare',
+      allowPendingSemanticEvidenceTargets: reviewScope === 'style',
+    });
   }
   const reviewArtifacts = await inspectReviewArtifacts(slug, status);
   if (action === 'scaffold') {

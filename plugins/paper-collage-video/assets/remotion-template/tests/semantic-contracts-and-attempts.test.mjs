@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -7,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import sharp from 'sharp';
 import {
   closeGenerationAttempt,
+  normalizeAttemptModel,
   readGenerationAttemptEvents,
   reserveGenerationAttempt,
   summarizeGenerationAttempts,
@@ -17,7 +19,9 @@ import {
   validateAssetRequest,
 } from '../scripts/provider-lib.mjs';
 import {
+  COMPOSITE_QUALITY_CHECKS,
   collectCompositeQualityTargets,
+  collectStyleProofTargets,
   prepareQualityReport,
 } from '../scripts/quality-lib.mjs';
 import {
@@ -28,6 +32,70 @@ import {
 import {withCompiledEditorialFixture} from '../fixtures/editorial-fixture.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('path locomotion depth checks are registered for quality review', () => {
+  assert.ok(COMPOSITE_QUALITY_CHECKS.includes('depth-projection-readable'));
+  assert.ok(COMPOSITE_QUALITY_CHECKS.includes('depth-order-clean'));
+});
+
+const STYLE_REQUEST = {
+  styleProfileBinding: {
+    schemaVersion: 1,
+    id: 'hand-drawn-cutout-explainer',
+    catalogVersion: 'fixture',
+    profileFingerprint: 'a'.repeat(64),
+    directives: [
+      'fixture ink',
+      'fixture paper',
+      'Avoid: fixture gloss',
+      'Composition: fixture hierarchy',
+      'Composition: fixture spacing',
+    ],
+  },
+  quality: {
+    requiredChecks: ['style-profile-conformant'],
+  },
+};
+const STYLE_PROFILE = {
+  id: STYLE_REQUEST.styleProfileBinding.id,
+  catalogVersion: STYLE_REQUEST.styleProfileBinding.catalogVersion,
+  profileFingerprint:
+    STYLE_REQUEST.styleProfileBinding.profileFingerprint,
+  generation: {
+    promptDirectives: ['fixture ink', 'fixture paper'],
+    negativeDirectives: ['fixture gloss'],
+    compositionPrinciples: ['fixture hierarchy', 'fixture spacing'],
+  },
+  quality: {
+    requiredAssetChecks: ['style-profile-conformant'],
+  },
+};
+
+test('provider model aliases normalize to one canonical attempt identity', () => {
+  const provider = {
+    model: 'fallback-model',
+    invocation: {
+      modelValue: 'configured-model',
+      reportedModelAliases: ['reported-alias'],
+    },
+  };
+  assert.equal(
+    normalizeAttemptModel({provider, model: 'configured-model'}),
+    'configured-model',
+  );
+  assert.equal(
+    normalizeAttemptModel({provider, model: 'reported-alias'}),
+    'configured-model',
+  );
+  assert.equal(
+    normalizeAttemptModel({provider, model: null}),
+    'configured-model',
+  );
+  assert.throws(
+    () => normalizeAttemptModel({provider, model: 'different-model'}),
+    /未映射到已确认配置 configured-model/,
+  );
+});
 const manifestFixture = (projectSlug, assets) => ({
   schemaVersion: 4,
   projectSlug,
@@ -166,12 +234,13 @@ test('diagram composite checks do not automatically become raster asset checks',
   );
 });
 
-test('schema-v7 image requests classify semantic risk independently from composition families', () => {
+test('schema-v8 image requests classify semantic risk independently from composition families', () => {
   const base = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: 'contract-test',
     assetId: 'cast-master',
     capability: 'image',
+    ...STYLE_REQUEST,
   outputSurface: {mode: 'opaque'},
     output: 'public/cast.png',
     prompt: 'A recurring cast in one full-frame plate.',
@@ -191,6 +260,12 @@ test('schema-v7 image requests classify semantic risk independently from composi
   );
   assert.doesNotThrow(() => validateAssetRequest({
     ...base,
+    quality: {
+      requiredChecks: [
+        'style-profile-conformant',
+        'identity-family-consistent',
+      ],
+    },
     semanticBinding: {
       riskClass: 'identity-critical',
       contractIds: ['recurring-cast'],
@@ -208,13 +283,17 @@ test('multi-contract images inherit checks and identity family rules from every 
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const requestFile = path.join(projectDirectory, 'requests', 'machine-cast.json');
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId: 'machine-cast',
     capability: 'image',
+    ...STYLE_REQUEST,
   outputSurface: {mode: 'opaque'},
     output: `public/projects/${slug}/machine-cast.png`,
-    prompt: 'Two recurring operators using a complete working machine.',
+    prompt:
+      'Two recurring operators using a complete working machine. ' +
+      'fixture ink fixture paper Avoid: fixture gloss ' +
+      'Composition: fixture hierarchy Composition: fixture spacing',
     compositionBinding: {
       sceneId: 'scene-a', nodeId: 'machine', pattern: 'free', outputRole: 'master-plate',
       canvas: {width: 100, height: 100}, derivation: {method: 'provider-generation'},
@@ -225,11 +304,15 @@ test('multi-contract images inherit checks and identity family rules from every 
     },
     quality: {
       kind: 'mechanism',
-      requiredChecks: ['mechanism-complete', 'load-path-readable', 'physical-plausibility', 'reference-conformant'],
+      requiredChecks: ['mechanism-complete', 'load-path-readable', 'physical-plausibility', 'reference-conformant', 'style-profile-conformant'],
     },
   };
   try {
     await fs.mkdir(path.dirname(requestFile), {recursive: true});
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      `${JSON.stringify({styleProfile: STYLE_PROFILE}, null, 2)}\n`,
+    );
     await fs.writeFile(path.join(projectDirectory, 'generation-attempts.jsonl'), '');
     await fs.writeFile(path.join(projectDirectory, 'semantic-contracts.json'), `${JSON.stringify({
       schemaVersion: 1,
@@ -277,7 +360,7 @@ test('old image request schemas are rejected instead of bypassing semantic contr
     }, null, 2)}\n`);
     await assert.rejects(
       () => loadAssetRequest(path.relative(ROOT, requestFile)),
-      /schemaVersion 必须为 7/,
+      /schemaVersion 必须为 8/,
     );
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
@@ -290,10 +373,11 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
   const output = path.join(ROOT, 'public', 'projects', slug, 'wrong-size.png');
   const provider = {id: 'test-image', adapter: 'host', model: 'fixture'};
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId: 'diagram-card',
     capability: 'image',
+    ...STYLE_REQUEST,
   outputSurface: {mode: 'opaque'},
     output: path.relative(ROOT, output),
     prompt: 'A clean diagram card.',
@@ -344,14 +428,140 @@ test('attempt ledger blocks over-budget calls and counts rejected provider outpu
   }
 });
 
+test('attempt reserve and provenance keep one canonical provider model invariant', async () => {
+  const slug = `attempt-model-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const provider = {
+    id: 'model-provider',
+    adapter: 'host',
+    model: 'fallback-model',
+    invocation: {
+      modelValue: 'configured-model',
+      reportedModelAliases: ['reported-alias'],
+    },
+  };
+  const requestFor = (assetId) => ({
+    schemaVersion: 8,
+    projectSlug: slug,
+    assetId,
+    capability: 'image',
+    ...STYLE_REQUEST,
+    output: `public/projects/${slug}/${assetId}.png`,
+    outputSurface: {mode: 'opaque'},
+    prompt: `Canonical model fixture ${assetId}.`,
+    compositionBinding: {
+      sceneId: 'scene-a',
+      nodeId: assetId,
+      pattern: 'free',
+      outputRole: 'plate',
+      canvas: {width: 16, height: 16},
+      derivation: {method: 'provider-generation'},
+    },
+    semanticBinding: {riskClass: 'decorative', contractIds: []},
+  });
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(publicDirectory, {recursive: true});
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      JSON.stringify({
+        plan: {
+          assetBudget: {maxGeneratedImages: 6},
+          approvedImageBudget: {imageAttemptLimit: 2},
+        },
+      }),
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'assets-manifest.json'),
+      JSON.stringify(manifestFixture(slug, [])),
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'generation-attempts.jsonl'),
+      '',
+    );
+    await assert.rejects(
+      reserveGenerationAttempt({
+        request: requestFor('unreserved'),
+        provider,
+        model: 'different-model',
+      }),
+      /未映射到已确认配置 configured-model/,
+    );
+    assert.equal(
+      (await readGenerationAttemptEvents(slug)).events.length,
+      0,
+    );
+
+    const acceptedRequest = requestFor('accepted');
+    const acceptedOutput = path.join(publicDirectory, 'accepted.png');
+    await sharp({
+      create: {
+        width: 16,
+        height: 16,
+        channels: 3,
+        background: '#886644',
+      },
+    }).png().toFile(acceptedOutput);
+    const acceptedAttempt = await reserveGenerationAttempt({
+      request: acceptedRequest,
+      provider,
+      model: 'reported-alias',
+    });
+    assert.equal(acceptedAttempt.event.model, 'configured-model');
+    const acceptedRecord = await recordAssetProvenance({
+      request: acceptedRequest,
+      output: acceptedOutput,
+      provider,
+      model: 'reported-alias',
+      attemptId: acceptedAttempt.event.attemptId,
+    });
+    assert.equal(acceptedRecord.record.model, 'configured-model');
+
+    const mismatchedRequest = requestFor('mismatched');
+    const mismatchedOutput = path.join(publicDirectory, 'mismatched.png');
+    await sharp({
+      create: {
+        width: 16,
+        height: 16,
+        channels: 3,
+        background: '#668844',
+      },
+    }).png().toFile(mismatchedOutput);
+    const mismatchedAttempt = await reserveGenerationAttempt({
+      request: mismatchedRequest,
+      provider,
+    });
+    await assert.rejects(
+      recordAssetProvenance({
+        request: mismatchedRequest,
+        output: mismatchedOutput,
+        provider,
+        model: 'different-model',
+        attemptId: mismatchedAttempt.event.attemptId,
+      }),
+      /未映射到已确认配置 configured-model/,
+    );
+    const summary = summarizeGenerationAttempts(
+      (await readGenerationAttemptEvents(slug)).events,
+    );
+    assert.equal(summary.byStatus.succeeded, 1);
+    assert.equal(summary.reserved, 1);
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
 test('attempt ledger enforces the narrower human-approved cap instead of the profile ceiling', async () => {
   const slug = `attempt-approved-cap-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = (assetId) => ({
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId,
     capability: 'image',
+    ...STYLE_REQUEST,
     outputSurface: {mode: 'opaque'},
     compositionBinding: {derivation: {method: 'provider-generation'}},
   });
@@ -463,14 +673,159 @@ test('diagram filters fail deterministically and semantic proof targets span sce
   }
 });
 
+test('style proof defers semantic evidence for a planned node that is not generated yet', async () => {
+  const slug = `semantic-style-pending-${process.pid}`;
+  const projectDirectory = path.join(ROOT, 'projects', slug);
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const scene = {
+    id: 'scene-a',
+    motion: {
+      proofTimes: [{
+        id: 'final',
+        at: 0.9,
+        label: 'Final',
+        kind: 'final',
+        assertions: ['Readable'],
+      }],
+    },
+    composition: {
+      coordinateSpace: {width: 100, height: 100},
+      nodes: [{
+        id: 'existing-subject',
+        kind: 'asset',
+        assetRole: 'character',
+        src: `projects/${slug}/existing.png`,
+        z: 1,
+        transform: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1,
+          anchorX: 0,
+          anchorY: 0,
+        },
+        motion: {keyframes: [{at: 0}, {at: 1}]},
+      }],
+    },
+    events: [],
+  };
+  const project = withCompiledEditorialFixture({
+    slug,
+    quality: {minimumAssetScale: 1},
+    video: {width: 100, height: 100, fps: 30},
+    audio: {narration: {volume: 1}},
+    scenes: [scene],
+    sceneTransitions: [],
+  });
+  const pendingDiagram = {
+    id: 'pending-diagram-contract',
+    kind: 'diagram',
+    title: 'Pending diagram',
+    invariants: ['The final diagram remains legible.'],
+    protectedLayers: ['text', 'icons', 'arrows', 'borders'],
+    forbiddenSvgFeatures: ['feTurbulence', 'feDisplacementMap', 'feBlend'],
+    finalCanvas: {width: 100, height: 100},
+    evidenceTargets: [{
+      id: 'pending-diagram-final',
+      checks: [
+        'diagram-edge-clean',
+        'small-text-legible',
+        'no-procedural-noise-on-semantic-lines',
+      ],
+      shots: [{
+        sceneId: 'scene-a',
+        nodeId: 'pending-diagram',
+        proofTimeIds: ['final'],
+      }],
+    }],
+  };
+  try {
+    await fs.mkdir(projectDirectory, {recursive: true});
+    await fs.mkdir(publicDirectory, {recursive: true});
+    await sharp({
+      create: {
+        width: 100,
+        height: 100,
+        channels: 4,
+        background: '#806040ff',
+      },
+    }).png().toFile(path.join(publicDirectory, 'existing.png'));
+    await fs.writeFile(
+      path.join(projectDirectory, 'project.json'),
+      `${JSON.stringify(project, null, 2)}\n`,
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'assets-manifest.json'),
+      `${JSON.stringify(manifestFixture(slug, []), null, 2)}\n`,
+    );
+    await fs.writeFile(
+      path.join(projectDirectory, 'semantic-contracts.json'),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        projectSlug: slug,
+        status: 'ready',
+        contracts: [pendingDiagram],
+      }, null, 2)}\n`,
+    );
+
+    await assert.rejects(
+      () => collectCompositeQualityTargets(project),
+      /pending-diagram/,
+    );
+    const targets = await collectStyleProofTargets(project, {
+      sceneId: 'scene-a',
+      treatmentId: 'existing-subject-style',
+      targetId: 'existing-subject',
+      proofTimeId: 'final',
+      riskScore: 20,
+      directingFingerprint: 'a'.repeat(64),
+      sourceFamilyKey: 'target:existing-subject',
+      coverage: ['style:character'],
+    });
+    assert.ok(
+      targets.every(
+        ({compositeId}) =>
+          compositeId !==
+          'semantic:pending-diagram-contract:pending-diagram-final',
+      ),
+    );
+    await assert.rejects(
+      () => prepareQualityReport(slug, {write: false}),
+      /pending-diagram/,
+    );
+    await assert.doesNotReject(
+      () => prepareQualityReport(slug, {
+        write: false,
+        allowPendingSemanticEvidenceTargets: true,
+      }),
+    );
+    const stylePrepare = spawnSync(
+      process.execPath,
+      [
+        path.join(ROOT, 'scripts', 'project-quality.mjs'),
+        slug,
+        'prepare',
+        '--scope=style',
+        '--quiet',
+      ],
+      {cwd: ROOT, encoding: 'utf8'},
+    );
+    assert.equal(stylePrepare.status, 0, stylePrepare.stderr);
+  } finally {
+    await fs.rm(projectDirectory, {recursive: true, force: true});
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+  }
+});
+
 test('manual attempt closure requires truthful quota semantics', async () => {
   const slug = `attempt-close-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId: 'asset',
     capability: 'image',
+    ...STYLE_REQUEST,
   outputSurface: {mode: 'opaque'},
     compositionBinding: {derivation: {method: 'provider-generation'}},
   };
@@ -487,6 +842,31 @@ test('manual attempt closure requires truthful quota semantics', async () => {
       () => closeGenerationAttempt({slug, attemptId: reserved.event.attemptId, status: 'rejected', quotaConsumed: false}),
       /必须计入生成额度/,
     );
+    const closed = await closeGenerationAttempt({
+      slug,
+      attemptId: reserved.event.attemptId,
+      status: 'failed-before-generation',
+      quotaConsumed: false,
+      note: 'provider did not start',
+    });
+    assert.equal(closed.reused, false);
+    const retried = await closeGenerationAttempt({
+      slug,
+      attemptId: reserved.event.attemptId,
+      status: 'failed-before-generation',
+      quotaConsumed: false,
+    });
+    assert.equal(retried.reused, true);
+    assert.equal((await readGenerationAttemptEvents(slug)).events.length, 2);
+    await assert.rejects(
+      () => closeGenerationAttempt({
+        slug,
+        attemptId: reserved.event.attemptId,
+        status: 'abandoned',
+        quotaConsumed: false,
+      }),
+      /关闭参数不一致/,
+    );
   } finally {
     await fs.rm(projectDirectory, {recursive: true, force: true});
   }
@@ -498,10 +878,11 @@ test('a succeeded closed attempt can recover one provenance record without consu
   const output = path.join(ROOT, 'public', 'projects', slug, 'asset.png');
   const provider = {id: 'provider', adapter: 'host', model: 'fixture'};
   const request = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId: 'asset',
     capability: 'image',
+    ...STYLE_REQUEST,
     output: path.relative(ROOT, output),
     outputSurface: {mode: 'opaque'},
     prompt: 'A deterministic fixture.',
@@ -544,6 +925,16 @@ test('a succeeded closed attempt can recover one provenance record without consu
       output: path.relative(ROOT, output),
       outputSha256: sha256,
     });
+    await assert.rejects(
+      recordAssetProvenance({
+        request,
+        output,
+        provider: {...provider, model: 'changed-model'},
+        attemptId: reserved.event.attemptId,
+        recoverClosedAttempt: true,
+      }),
+      /model fixture.*changed-model.*不匹配/,
+    );
     const recovered = await recordAssetProvenance({
       request,
       output,
@@ -577,10 +968,11 @@ test('parallel reservations cannot oversubscribe the approved image budget', asy
   const slug = `attempt-race-${process.pid}`;
   const projectDirectory = path.join(ROOT, 'projects', slug);
   const request = (assetId) => ({
-    schemaVersion: 7,
+    schemaVersion: 8,
     projectSlug: slug,
     assetId,
     capability: 'image',
+    ...STYLE_REQUEST,
   outputSurface: {mode: 'opaque'},
     compositionBinding: {derivation: {method: 'provider-generation'}},
   });

@@ -8,6 +8,32 @@ const parseKeyColor = (value) => {
     Number.parseInt(value.slice(index, index + 2), 16));
 };
 
+const keyPlaneDistance = (red, green, blue, key) => {
+  const keyMagnitudeSquared =
+    key[0] * key[0] +
+    key[1] * key[1] +
+    key[2] * key[2];
+  const projection = Math.max(
+    0,
+    Math.min(
+      1.25,
+      (red * key[0] + green * key[1] + blue * key[2]) /
+        keyMagnitudeSquared,
+    ),
+  );
+  const residual = Math.hypot(
+    red - projection * key[0],
+    green - projection * key[1],
+    blue - projection * key[2],
+  );
+  // A provider often paints shadows by darkening the key plane. Euclidean
+  // distance mistakes those same-hue shadows for opaque artwork. Measure the
+  // distance to the key-colour ray instead, while forcing near-black pixels
+  // opaque so genuine ink contours are not erased.
+  const darknessPenalty = Math.max(0, 0.35 - projection) * 441.7;
+  return Math.hypot(residual, darknessPenalty);
+};
+
 const minimumFilter = ({data, width, height, radius}) => {
   if (radius <= 0) return data;
   const horizontal = new Uint8Array(data.length);
@@ -149,11 +175,7 @@ export const removeChromaKey = async ({
     rgb[targetOffset] = red;
     rgb[targetOffset + 1] = green;
     rgb[targetOffset + 2] = blue;
-    const distance = Math.hypot(
-      red - key[0],
-      green - key[1],
-      blue - key[2],
-    );
+    const distance = keyPlaneDistance(red, green, blue, key);
     const normalized = Math.max(
       0,
       Math.min(
@@ -252,6 +274,7 @@ export const removeChromaKey = async ({
       opaqueThreshold,
       edgeFeather,
       matteErode,
+      distanceMetric: 'key-ray-with-darkness-floor-v1',
       despill: 'key-chroma-edge',
       transparentRgb: {
         mode: 'edge-pad-neutral',

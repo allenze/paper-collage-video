@@ -34,36 +34,147 @@ const dataUrlFor = async (file) =>
 const safeText = (value) =>
   String(value).replace(/[<>&"]/g, '');
 
+const sceneCarrierRect = ({group, width, height}) => {
+  if (group?.stackingContext !== 'scene') return null;
+  const transform = group.transform ?? {};
+  const values = [
+    transform.x,
+    transform.y,
+    transform.width,
+    transform.height,
+    transform.anchorX,
+    transform.anchorY,
+  ];
+  if (!values.every(Number.isFinite)) {
+    throw new Error(
+      `scene-stacked registered-depth-stack ${group.id} 缺少完整静态 carrier transform`,
+    );
+  }
+  const carrierWidth = transform.width * width;
+  const carrierHeight = transform.height * height;
+  return {
+    left: transform.x * width - transform.anchorX * carrierWidth,
+    top: transform.y * height - transform.anchorY * carrierHeight,
+    width: carrierWidth,
+    height: carrierHeight,
+  };
+};
+
+const presentationRect = ({metadata, width, height, carrier}) => {
+  if (carrier) return carrier;
+  const cover = Math.max(width / metadata.width, height / metadata.height);
+  const baseWidth = metadata.width * cover;
+  const baseHeight = metadata.height * cover;
+  return {
+    left: (width - baseWidth) / 2,
+    top: (height - baseHeight) / 2,
+    width: baseWidth,
+    height: baseHeight,
+  };
+};
+
+export const referenceCellRectForRegisteredSheet = async ({
+  record,
+  file,
+}) => {
+  const binding =
+    record?.layerPackageBinding ??
+    record?.request?.layerPackageBinding ??
+    null;
+  if (
+    binding?.packageRole !== 'registered-sheet' ||
+    !binding?.sheetLayout
+  ) {
+    return null;
+  }
+  const {columns, rows, cells} = binding.sheetLayout;
+  const referenceCell = cells?.find(
+    ({packageRole}) => packageRole === 'reference',
+  );
+  if (
+    !referenceCell ||
+    !Number.isInteger(columns) ||
+    columns < 1 ||
+    !Number.isInteger(rows) ||
+    rows < 1
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId ?? 'unknown'} 缺少可提取的 reference 格位`,
+    );
+  }
+  const metadata = await sharp(file).metadata();
+  if (
+    !Number.isInteger(metadata.width) ||
+    !Number.isInteger(metadata.height)
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId ?? 'unknown'} 的原生画布无法按 ${columns}x${rows} 提取 reference 格位`,
+    );
+  }
+  const providerNativeExplicit =
+    binding.sheetLayout.providerSource?.canvasMode === 'provider-native' &&
+    binding.sheetLayout.providerSource?.cellExtraction === 'explicit-rects';
+  if (
+    !providerNativeExplicit &&
+    (
+      metadata.width % columns !== 0 ||
+      metadata.height % rows !== 0
+    )
+  ) {
+    throw new Error(
+      `registered-layer-sheet ${record.assetId ?? 'unknown'} 的原生画布无法按 ${columns}x${rows} 提取 reference 格位`,
+    );
+  }
+  const left = Math.floor(
+    referenceCell.column * metadata.width / columns,
+  );
+  const right = Math.floor(
+    (referenceCell.column + 1) * metadata.width / columns,
+  );
+  const top = Math.floor(
+    referenceCell.row * metadata.height / rows,
+  );
+  const bottom = Math.floor(
+    (referenceCell.row + 1) * metadata.height / rows,
+  );
+  return {
+    left,
+    top,
+    width: right - left,
+    height: bottom - top,
+  };
+};
+
 const layerSvg = async ({
   members,
   width,
   height,
   limit,
   direction,
+  carrier,
 }) => {
   const images = [];
   for (const member of members) {
     const metadata = await sharp(member.file).metadata();
-    const inputWidth = metadata.width;
-    const inputHeight = metadata.height;
-    const cover = Math.max(width / inputWidth, height / inputHeight);
-    const baseWidth = inputWidth * cover;
-    const baseHeight = inputHeight * cover;
+    const placement = presentationRect({
+      metadata,
+      width,
+      height,
+      carrier,
+    });
     const depth = member.depth;
     const scale = 1 + Math.abs(depth) * limit.scale;
     const translateX = direction * depth * limit.x * width;
     const translateY = direction * depth * limit.y * height;
     const rotation =
       direction * depth * limit.rotationDegrees;
-    const left = (width - baseWidth) / 2;
-    const top = (height - baseHeight) / 2;
     images.push(`
       <image
         href="${await dataUrlFor(member.file)}"
-        x="${left}"
-        y="${top}"
-        width="${baseWidth}"
-        height="${baseHeight}"
+        x="${placement.left}"
+        y="${placement.top}"
+        width="${placement.width}"
+        height="${placement.height}"
         preserveAspectRatio="none"
         transform="translate(${translateX} ${translateY}) rotate(${rotation} ${width / 2} ${height / 2}) translate(${width / 2} ${height / 2}) scale(${scale}) translate(${-width / 2} ${-height / 2})"
       />
@@ -81,14 +192,17 @@ const writeEnvelopePair = async ({
   profile,
   limit,
   file,
+  group,
 }) => {
   const {width, height} = PROFILE_SIZES[profile];
+  const carrier = sceneCarrierRect({group, width, height});
   const negative = await layerSvg({
     members,
     width,
     height,
     limit,
     direction: -1,
+    carrier,
   });
   const positive = await layerSvg({
     members,
@@ -96,6 +210,7 @@ const writeEnvelopePair = async ({
     height,
     limit,
     direction: 1,
+    carrier,
   });
   const left = await sharp(negative).ensureAlpha().png().toBuffer();
   const right = await sharp(positive).ensureAlpha().png().toBuffer();
@@ -141,15 +256,17 @@ const subjectTravelSvg = async ({
   height,
   limit,
   direction,
+  carrier,
 }) => {
   const images = [];
   for (const member of members) {
     const metadata = await sharp(member.file).metadata();
-    const cover = Math.max(width / metadata.width, height / metadata.height);
-    const baseWidth = metadata.width * cover;
-    const baseHeight = metadata.height * cover;
-    const left = (width - baseWidth) / 2;
-    const top = (height - baseHeight) / 2;
+    const placement = presentationRect({
+      metadata,
+      width,
+      height,
+      carrier,
+    });
     const moving = member.role === 'subject';
     const translateX = moving ? direction * limit.x * width : 0;
     const translateY = moving ? -direction * limit.y * height : 0;
@@ -158,10 +275,10 @@ const subjectTravelSvg = async ({
     images.push(`
       <image
         href="${await dataUrlFor(member.file)}"
-        x="${left}"
-        y="${top}"
-        width="${baseWidth}"
-        height="${baseHeight}"
+        x="${placement.left}"
+        y="${placement.top}"
+        width="${placement.width}"
+        height="${placement.height}"
         preserveAspectRatio="none"
         transform="translate(${translateX} ${translateY}) rotate(${rotation} ${width / 2} ${height / 2}) translate(${width / 2} ${height / 2}) scale(${scale}) translate(${-width / 2} ${-height / 2})"
       />
@@ -179,14 +296,17 @@ const writeSubjectTravelPair = async ({
   profile,
   limit,
   file,
+  group,
 }) => {
   const {width, height} = PROFILE_SIZES[profile];
+  const carrier = sceneCarrierRect({group, width, height});
   const lowerLeft = await subjectTravelSvg({
     members,
     width,
     height,
     limit,
     direction: -1,
+    carrier,
   });
   const upperRight = await subjectTravelSvg({
     members,
@@ -194,6 +314,7 @@ const writeSubjectTravelPair = async ({
     height,
     limit,
     direction: 1,
+    carrier,
   });
   const left = await sharp(lowerLeft).ensureAlpha().png().toBuffer();
   const right = await sharp(upperRight).ensureAlpha().png().toBuffer();
@@ -237,6 +358,7 @@ export const buildLayerStackProof = async ({
   group,
   memberFiles,
   referenceFile,
+  referenceRect = null,
   directory,
   evidenceId,
 }) => {
@@ -281,6 +403,22 @@ export const buildLayerStackProof = async ({
     `${safeId}-reference-comparison.png`,
   );
   const reference = referenceFile ?? neutralFile;
+  const referenceMetadata = await sharp(reference).metadata();
+  let referenceInput = reference;
+  if (referenceRect) {
+    referenceInput = await sharp(reference)
+      .extract(referenceRect)
+      .resize(canvas.width, canvas.height, {fit: 'fill'})
+      .png()
+      .toBuffer();
+  } else if (
+    referenceMetadata.width !== canvas.width ||
+    referenceMetadata.height !== canvas.height
+  ) {
+    throw new Error(
+      `registered-depth-stack ${group.id} 的 reference ${referenceMetadata.width}x${referenceMetadata.height} 与注册画布 ${canvas.width}x${canvas.height} 不一致，且未声明 referenceRect`,
+    );
+  }
   await sharp({
     create: {
       width: canvas.width * 2,
@@ -290,7 +428,7 @@ export const buildLayerStackProof = async ({
     },
   })
     .composite([
-      {input: reference, left: 0, top: 0},
+      {input: referenceInput, left: 0, top: 0},
       {input: neutralFile, left: canvas.width, top: 0},
     ])
     .png()
@@ -350,6 +488,7 @@ export const buildLayerStackProof = async ({
         profile,
         limit: group.layerStack.revealEnvelope[profile],
         file,
+        group,
       }),
     );
   }
@@ -366,6 +505,7 @@ export const buildLayerStackProof = async ({
           profile,
           limit: group.layerStack.subjectTravelEnvelope[profile],
           file,
+          group,
         }),
       );
     }

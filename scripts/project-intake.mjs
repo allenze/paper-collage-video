@@ -11,6 +11,7 @@ import {loadProject, writeJson} from './project-lib.mjs';
 import {loadProduction} from './production-state.mjs';
 import {
   loadStyleCatalog,
+  materializeStyleProfile,
   styleCatalogDecision,
 } from './style-catalog-lib.mjs';
 
@@ -26,7 +27,7 @@ const printGate = ({project, catalog}) => {
     title: project.title,
     status: project.intake?.status ?? 'pending',
     instruction:
-      '先向用户并排显示三张 styleCards，再用 Ask Question 收集三个选择；不要把内置风格卡当作项目风格样张。',
+      '先向用户展示当前目录中的全部 styleCards，再收集画幅、一个视觉风格和视差偏好；风格卡是目录参考，不是项目风格样张。',
     questions: [
       {
         id: 'aspectRatio',
@@ -58,7 +59,7 @@ const printGate = ({project, catalog}) => {
     return;
   }
   console.log(`项目：${project.title}`);
-  console.log('等待 intake：画幅、三选一视觉风格、分层视差偏好。');
+  console.log(`等待 intake：画幅、${catalog.styles.length} 选一视觉风格、分层视差偏好。`);
   for (const style of payload.questions[1].options) {
     console.log(`  ${style.id}: ${style.label} · ${style.absolutePath}`);
   }
@@ -86,12 +87,22 @@ try {
       ? JSON.parse(await fs.readFile(resolveWorkspacePath(input, 'intake selection 路径'), 'utf8'))
       : JSON.parse(inline);
     const intake = confirmIntake({selection, catalog});
+    const styleProfile = materializeStyleProfile(
+      catalog,
+      intake.visualStylePreset,
+    );
     const video = {
       ...project.video,
       width: ASPECT_RATIOS[intake.aspectRatio].width,
       height: ASPECT_RATIOS[intake.aspectRatio].height,
     };
-    await writeJson(paths.projectFile, {...project, intake, video});
+    await writeJson(paths.projectFile, {
+      ...project,
+      intake,
+      styleProfile,
+      theme: structuredClone(styleProfile.render.theme),
+      video,
+    });
     console.log(`✓ intake 已确认：${intake.aspectRatio} · ${intake.visualStylePreset} · parallax=${intake.parallaxPreference}`);
     console.log(`✓ intake fingerprint：${intakeDecisionFingerprint(intake)}`);
     console.log('下一步：生成共同故事骨架与三个 planning scenarios；此时仍不得调用图片 provider。');

@@ -9,6 +9,7 @@ import {
 } from './motion-treatment-lib.mjs';
 import {validateSceneTransitionSequence} from '../src/sceneTimeline.mjs';
 import {validateCompiledEditorial} from './editorial-system-lib.mjs';
+import {validateStoryboardSpatialContracts} from './spatial-contract-lib.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -37,11 +38,14 @@ export const storyboardFileFor = (slug) => {
   return path.join(ROOT, 'projects', slug, 'storyboard.json');
 };
 
-export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
+export const validateStoryboard = (
+  storyboard,
+  {slug, plan, styleProfile} = {},
+) => {
   const issues = [];
   const add = (code, message, location) => issues.push({code, message, location});
-  if (storyboard?.schemaVersion !== 10) {
-    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 10。', 'schemaVersion');
+  if (storyboard?.schemaVersion !== 12) {
+    add('storyboard-schema-version', 'storyboard.schemaVersion 必须为 12。', 'schemaVersion');
   }
   if (storyboard?.slug !== slug) {
     add('storyboard-slug', `storyboard.slug 必须为 ${slug}。`, 'slug');
@@ -68,7 +72,7 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
     for (const key of ['visualThesis', 'layerStrategy']) {
       if (!nonEmpty(style[key])) add(`storyboard-style-${key}`, `style.${key} 不能为空。`, `style.${key}`);
     }
-    for (const key of ['compositionRules', 'motionLanguage']) {
+    for (const key of ['compositionRules']) {
       if (!Array.isArray(style[key]) || style[key].length === 0 || style[key].some((item) => !nonEmpty(item))) {
         add(`storyboard-style-${key}`, `style.${key} 必须包含至少一条明确规则。`, `style.${key}`);
       }
@@ -92,6 +96,9 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
     sceneTransitions: storyboard.sceneTransitions,
   })) {
     add(`storyboard-${issue.code}`, issue.message, issue.location);
+  }
+  for (const issue of validateStoryboardSpatialContracts(storyboard)) {
+    add(issue.code, issue.message, issue.location);
   }
   const sceneIds = new Set();
   let estimatedDuration = 0;
@@ -193,8 +200,30 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
             if (stateIndex.get(playback.activeStateIds[index - 1]) >= stateIndex.get(playback.activeStateIds[index])) add('storyboard-sequence-active-order', 'activeStateIds 必须与 states 的顺序一致。', `${sequenceLocation}.playback.activeStateIds`);
           }
           const activeIds = new Set(playback.activeStateIds);
+          const exitStates = [];
           for (const state of sequence.states ?? []) {
-            if (!activeIds.has(state.id) && state.id !== playback.holdStateId && state.at >= playback.activeFrom) add('storyboard-sequence-prelude-state', `前置状态 ${state.id} 必须早于 activeFrom。`, `${sequenceLocation}.states`);
+            if (activeIds.has(state.id) || state.id === playback.holdStateId) continue;
+            if (state.at < playback.activeFrom) continue;
+            if (
+              playback.activeUntil !== undefined &&
+              state.at >= playback.activeUntil
+            ) {
+              exitStates.push(state);
+              continue;
+            }
+            add('storyboard-sequence-segment-state', `非活动状态 ${state.id} 必须早于 activeFrom，或在 activeUntil 后作为结束序列。`, `${sequenceLocation}.states`);
+          }
+          if (exitStates.length > 0) {
+            const hold = sequence.states.find(
+              ({id}) => id === playback.holdStateId,
+            );
+            if (
+              exitStates[0].at !== playback.activeUntil ||
+              !hold ||
+              hold.at < exitStates.at(-1).at
+            ) {
+              add('storyboard-sequence-exit-order', '结束序列必须从 activeUntil 开始，并以 holdStateId 作为最后状态。', `${sequenceLocation}.states`);
+            }
           }
         }
       }
@@ -228,8 +257,22 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       if (!Array.isArray(beat.treatments) || beat.treatments.length === 0) {
         add('storyboard-beat-treatments', '每个节拍至少需要一个导演 treatment。', `${beatLocation}.treatments`);
       }
-      if (beat.audioCue !== null && beat.audioCue !== undefined && !nonEmpty(beat.audioCue)) {
-        add('storyboard-beat-audio', 'audioCue 必须为非空字符串或 null。', `${beatLocation}.audioCue`);
+      if (Object.hasOwn(beat, 'audioCue')) {
+        add(
+          'storyboard-beat-audio-cue-legacy',
+          'audioCue 已移除：离散事件音效请使用 soundCue，旁白只属于 scene.narration。',
+          `${beatLocation}.audioCue`,
+        );
+      }
+      if (!Object.hasOwn(beat, 'soundCue')) {
+        add(
+          'storyboard-beat-sound-field',
+          'v12 节拍必须显式声明 soundCue（离散事件音效字符串或 null）。',
+          `${beatLocation}.soundCue`,
+        );
+      }
+      if (beat.soundCue !== null && beat.soundCue !== undefined && !nonEmpty(beat.soundCue)) {
+        add('storyboard-beat-sound', 'soundCue 必须为离散事件音效的非空字符串或 null；旁白只属于 scene.narration。', `${beatLocation}.soundCue`);
       }
       if (!Object.hasOwn(beat, 'proofTimeId')) {
         add('storyboard-beat-proof-field', 'v5 节拍必须显式声明 proofTimeId（字符串或 null）。', `${beatLocation}.proofTimeId`);
@@ -237,8 +280,8 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       if (beat.proofTimeId !== null && beat.proofTimeId !== undefined && !nonEmpty(beat.proofTimeId)) {
         add('storyboard-beat-proof-id', 'proofTimeId 必须为非空字符串或 null。', `${beatLocation}.proofTimeId`);
       }
-      if (beat.audioCue && !nonEmpty(beat.proofTimeId)) {
-        add('storyboard-audio-proof-required', '带 audioCue 的节拍必须绑定事件级 proofTimeId。', `${beatLocation}.proofTimeId`);
+      if (beat.soundCue && !nonEmpty(beat.proofTimeId)) {
+        add('storyboard-sound-proof-required', '带 soundCue 的节拍必须绑定事件级 proofTimeId。', `${beatLocation}.proofTimeId`);
       }
       if (nonEmpty(beat.proofTimeId)) {
         beatEvidenceBindings.push({proofTimeId: beat.proofTimeId, location: beatLocation});
@@ -277,7 +320,9 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
         if (!plannedStates.has(stateId)) add('storyboard-proof-state-unknown', `状态证明引用了未知状态 ${stateId}。`, `${location}.proofTimes`);
       }
       for (const stateId of plannedStates) {
-        if (!assertedStates.has(stateId)) add('storyboard-proof-state-coverage', `状态 ${sequence.nodeId}/${stateId} 缺少证明时刻。`, `${location}.proofTimes`);
+        if (!sequence.pathViewBinding && !assertedStates.has(stateId)) {
+          add('storyboard-proof-state-coverage', `状态 ${sequence.nodeId}/${stateId} 缺少证明时刻。`, `${location}.proofTimes`);
+        }
       }
     }
     for (const binding of beatEvidenceBindings) {
@@ -300,14 +345,20 @@ export const validateStoryboard = (storyboard, {slug, plan} = {}) => {
       'scenes',
     );
   }
-  issues.push(...validateCompiledDirecting(storyboard, {plan}));
+  issues.push(
+    ...validateCompiledDirecting(storyboard, {plan, styleProfile}),
+  );
   return issues;
 };
 
 export const loadStoryboard = async (slug) =>
   JSON.parse(await fs.readFile(storyboardFileFor(slug), 'utf8'));
 
-export const assertStoryboardReady = async (slug, plan) => {
+export const assertStoryboardReady = async (
+  slug,
+  plan,
+  styleProfile = undefined,
+) => {
   let storyboard;
   try {
     storyboard = await loadStoryboard(slug);
@@ -315,7 +366,11 @@ export const assertStoryboardReady = async (slug, plan) => {
     if (error.code === 'ENOENT') throw new Error('缺少 storyboard.json；请先运行 project:storyboard。');
     throw error;
   }
-  const issues = validateStoryboard(storyboard, {slug, plan});
+  const issues = validateStoryboard(storyboard, {
+    slug,
+    plan,
+    styleProfile,
+  });
   if (storyboard.status !== 'ready' || issues.length > 0) {
     const detail = issues.map(({location, message}) => `${location}: ${message}`).join('；');
     throw new Error(`故事板尚未就绪；请先运行 project:storyboard。${detail ? ` ${detail}` : ''}`);
@@ -346,6 +401,14 @@ export const summarizeStoryboard = (storyboard) => ({
   directing: storyboard?.status === 'ready'
       ? {
         fingerprint: storyboard.directingSummary?.fingerprint ?? null,
+        motionContract: storyboard.motionContract
+          ? {
+              summary: storyboard.motionContract.direction.summary,
+              approvalFingerprint:
+                storyboard.motionContract.approvalFingerprint,
+              executionFingerprint: storyboard.motionContract.fingerprint,
+            }
+          : null,
         styleProofPlan: storyboard.directingSummary?.styleProofPlan ?? null,
         estimatedPoseSheetCalls: storyboard.directingSummary?.estimatedPoseSheetCalls ?? 0,
         avoidedIsolatedStateCalls: storyboard.directingSummary?.avoidedIsolatedStateCalls ?? 0,

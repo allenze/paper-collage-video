@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import Ajv2020 from 'ajv/dist/2020.js';
 import {createHash} from 'node:crypto';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
 import test from 'node:test';
@@ -24,7 +25,10 @@ import {validateCreativePlan} from '../scripts/creative-plan-lib.mjs';
 import {
   summarizeProfileFulfillment,
 } from '../scripts/motion-treatment-lib.mjs';
-import {loadStyleCatalog} from '../scripts/style-catalog-lib.mjs';
+import {
+  loadStyleCatalog,
+  materializeStyleProfile,
+} from '../scripts/style-catalog-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const at = '2026-07-25T00:00:00.000Z';
@@ -55,7 +59,7 @@ const makeScene = ({
       strategy: layered ? 'registered-layer-sheet' : 'single-background',
       providerCalls: 1,
       localDerivatives: layered ? 3 : 0,
-      avoidedCalls: layered ? 2 : 0,
+      avoidedCalls: layered ? 3 : 0,
     },
   ],
   parallax,
@@ -201,11 +205,52 @@ const makeScenarioInput = () => ({
   ],
 });
 
-test('built-in style catalog contains three fingerprinted cards for one canonical subject', async () => {
+test('built-in style catalog is dynamic and contains fingerprinted cards for one canonical subject', async () => {
   const catalog = await loadStyleCatalog({root: ROOT});
-  assert.equal(catalog.styles.length, 3);
+  assert.ok(catalog.styles.length >= 1);
   assert.match(catalog.fingerprint, /^[a-f0-9]{64}$/);
-  assert.equal(new Set(catalog.styles.map(({image}) => image)).size, 3);
+  assert.equal(
+    new Set(catalog.styles.map(({image}) => image)).size,
+    catalog.styles.length,
+  );
+  assert.equal(
+    new Set(catalog.styles.map(({profileFingerprint}) => profileFingerprint))
+      .size,
+    catalog.styles.length,
+  );
+  assert.ok(
+    catalog.styles.every(({profile}) =>
+      ['paper-story', 'clean-video'].includes(profile.motion.transitionSet),
+    ),
+  );
+  const comicStyleIds = [
+    'korean-cinematic-comic',
+    'japanese-animation-comic',
+    'hong-kong-action-comic',
+    'american-superhero-comic',
+  ];
+  const comicStyles = comicStyleIds.map((styleId) => {
+    const style = catalog.styles.find(({id}) => id === styleId);
+    assert.ok(style, `missing bundled comic style ${styleId}`);
+    return style;
+  });
+  for (const {profile} of comicStyles) {
+    assert.equal(profile.motion.transitionSet, 'clean-video');
+    assert.equal(profile.render.theme.surface.texture, null);
+    assert.equal(profile.render.theme.surface.subjectEdge.mode, 'none');
+    assert.equal(profile.render.theme.surface.subjectShadow.mode, 'none');
+    assert.ok(profile.motion.visualSfx.maxPerScene <= 2);
+    assert.ok(
+      profile.generation.negativeDirectives.some((directive) =>
+        directive.includes('long-scroll comic layouts'),
+      ),
+    );
+    assert.ok(
+      profile.generation.negativeDirectives.some((directive) =>
+        directive.includes('Speech balloons'),
+      ),
+    );
+  }
   const dimensions = new Set();
   for (const style of catalog.styles) {
     assert.equal((await fs.stat(style.absolutePath)).isFile(), true);
@@ -224,7 +269,7 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
     ),
   );
   assert.equal(provenance.generator, 'Codex built-in image_gen');
-  assert.equal(provenance.generationCount, 3);
+  assert.equal(provenance.generationCount, provenance.images.length);
   assert.deepEqual(
     provenance.images.map(({id}) => id),
     catalog.styles.map(({id}) => id),
@@ -238,10 +283,18 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
       image.sha256,
     );
   }
-  const validator = new Ajv2020({
+  const styleProfileSchema = JSON.parse(
+    await fs.readFile(
+      path.join(ROOT, 'schemas', 'style-profile.schema.json'),
+      'utf8',
+    ),
+  );
+  const ajv = new Ajv2020({
     strict: false,
     formats: {'date-time': true},
-  }).compile(
+  });
+  ajv.addSchema(styleProfileSchema);
+  const validator = ajv.compile(
     JSON.parse(
       await fs.readFile(
         path.join(ROOT, 'schemas', 'style-catalog.schema.json'),
@@ -256,6 +309,74 @@ test('built-in style catalog contains three fingerprinted cards for one canonica
     ),
   );
   assert.equal(validator(persisted), true, JSON.stringify(validator.errors));
+  const executable = materializeStyleProfile(
+    catalog,
+    'hand-drawn-cutout-explainer',
+  );
+  assert.equal(
+    executable.render.theme.surface.subjectShadow.blurPx,
+    7,
+  );
+  assert.ok(
+    executable.quality.requiredAssetChecks.includes(
+      'style-profile-conformant',
+    ),
+  );
+});
+
+test('a new valid catalog profile becomes selectable without changing a style id enum', async () => {
+  const source = await loadStyleCatalog({root: ROOT});
+  const directory = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'paper-collage-style-catalog-'),
+  );
+  try {
+    const catalogDirectory = path.join(directory, 'public', 'style-catalog');
+    await fs.mkdir(catalogDirectory, {recursive: true});
+    for (const style of source.styles) {
+      await fs.mkdir(
+        path.dirname(path.join(directory, 'public', style.image)),
+        {recursive: true},
+      );
+      await fs.copyFile(
+        style.absolutePath,
+        path.join(directory, 'public', style.image),
+      );
+    }
+    const addedImage = 'style-catalog/dynamic-test-style.png';
+    await fs.copyFile(
+      source.styles[0].absolutePath,
+      path.join(directory, 'public', addedImage),
+    );
+    const catalog = JSON.parse(
+      await fs.readFile(source.catalogFile, 'utf8'),
+    );
+    catalog.styles.push({
+      ...structuredClone(catalog.styles[0]),
+      id: 'dynamic-test-style',
+      label: '动态测试风格',
+      image: addedImage,
+    });
+    await fs.writeFile(
+      path.join(catalogDirectory, 'catalog.json'),
+      `${JSON.stringify(catalog, null, 2)}\n`,
+      'utf8',
+    );
+    const loaded = await loadStyleCatalog({root: directory});
+    assert.equal(loaded.styles.length, source.styles.length + 1);
+    assert.equal(
+      confirmIntake({
+        selection: {
+          aspectRatio: '16:9',
+          visualStylePreset: 'dynamic-test-style',
+          parallaxPreference: 'minimal',
+        },
+        catalog: loaded,
+      }).visualStylePreset,
+      'dynamic-test-style',
+    );
+  } finally {
+    await fs.rm(directory, {recursive: true, force: true});
+  }
 });
 
 test('intake locks the two supported aspect ratios and separates parallax from visual style', async () => {
@@ -277,6 +398,12 @@ test('intake locks the two supported aspect ratios and separates parallax from v
     label: '竖屏 9:16',
   });
   assert.equal(intake.visualStylePreset.includes('parallax'), false);
+  assert.equal(
+    intake.styleProfileFingerprint,
+    catalog.styles.find(
+      ({id}) => id === intake.visualStylePreset,
+    ).profileFingerprint,
+  );
   assert.match(intakeDecisionFingerprint(intake), /^[a-f0-9]{64}$/);
 });
 
@@ -320,10 +447,15 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
     [
       [6, 8, 15],
       [10, 12, 38],
-      [17, 19, 81],
+      [17, 19, 97],
     ],
   );
   assert.ok(scenarios.options.every(({plannedFulfillment}) => plannedFulfillment.passed));
+  assert.deepEqual(scenarios.styleProfileBinding, {
+    id: intake.visualStylePreset,
+    catalogVersion: intake.styleCatalogVersion,
+    profileFingerprint: intake.styleProfileFingerprint,
+  });
   const validator = new Ajv2020({
     strict: false,
     formats: {'date-time': true},
@@ -346,6 +478,11 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
   assert.deepEqual(validateCreativePlan(plan, {slug: 'gui-tu-sai-pao'}), []);
   assert.equal(plan.storyScope, 'standard');
   assert.equal(plan.scenarioBinding.expectedProviderImageCalls, 10);
+  assert.deepEqual(plan.motionBudget, {
+    maxPoseSheetCalls: 3,
+    maxStatesPerSheet: 4,
+    maxContinuousTargets: 24,
+  });
   assert.deepEqual(
     scenarioDecisionFor(scenarios, 'balanced'),
     {
@@ -408,6 +545,107 @@ test('three scenarios bind story scope, exact calls, caps, and quality floors be
     () => assertStoryboardMatchesScenario(balanced, missingApology),
     /姿态母版家族|关键动作/,
   );
+});
+
+test('scenario source packages use the same exact costs as storyboard planning', async () => {
+  const catalog = await loadStyleCatalog({root: ROOT});
+  const intake = confirmIntake({
+    selection: {
+      aspectRatio: '16:9',
+      visualStylePreset: 'hand-drawn-cutout-explainer',
+      parallaxPreference: 'auto',
+    },
+    catalog,
+    at,
+  });
+  const input = makeScenarioInput();
+  const source = input.options[2].scenes[0].sourcePackages[0];
+  source.strategy = 'context-preserving-layer-edits';
+  source.providerCalls = 1;
+  source.localDerivatives = 3;
+  source.avoidedCalls = 0;
+  assert.throws(
+    () =>
+      buildPlanningScenarios({
+        slug: 'source-cost-drift',
+        intake,
+        input,
+        at,
+      }),
+    /providerCalls.*context-preserving-layer-edits/,
+  );
+});
+
+test('a selected one-take scenario raises motion capacity to its exact approved demand', () => {
+  const scenarios = {
+    fingerprint: 'a'.repeat(64),
+    requested: {durationSeconds: null, sceneCount: 1},
+    options: [
+      {
+        id: 'full-depth',
+        storyScope: 'expanded',
+        durationSeconds: 92,
+        sceneCount: 1,
+        estimatedNarrationSeconds: 82,
+        rationale: 'one continuous journey with several independently animated encounters',
+        fingerprint: 'b'.repeat(64),
+        profilePromise: {
+          minRequiredStateFamilies: 1,
+          minEnhancementStateFamilies: 1,
+          minTotalStates: 8,
+          minLocalMotionTargets: 3,
+          minLayeredScenes: 1,
+          minParallaxScenes: 1,
+          minAmbientScenes: 1,
+        },
+        providerEstimate: {
+          expectedImageCalls: 10,
+          proposedImageAttemptLimit: 11,
+        },
+        scenes: [
+          {
+            id: 'scene-01',
+            stateFamilies: [
+              {
+                id: 'lead-depth-cycle',
+                necessity: 'required',
+                states: Array.from(
+                  {length: 12},
+                  (_, index) => `lead-${index}`,
+                ),
+              },
+              ...Array.from({length: 5}, (_, familyIndex) => ({
+                id: `encounter-${familyIndex}`,
+                necessity: familyIndex === 4 ? 'enhancement' : 'required',
+                states: Array.from(
+                  {length: 4},
+                  (_, stateIndex) => `state-${stateIndex}`,
+                ),
+              })),
+            ],
+            localMotionTargets: Array.from({length: 8}, (_, index) => ({
+              targetId: `target-${index}`,
+              preset: 'translate',
+            })),
+          },
+        ],
+      },
+    ],
+  };
+  const plan = buildCreativePlanFromScenario({
+    slug: 'one-take-journey',
+    scenarios,
+    optionId: 'full-depth',
+    at,
+  });
+  assert.deepEqual(plan.motionBudget, {
+    maxPoseSheetCalls: 6,
+    maxStatesPerSheet: 12,
+    maxContinuousTargets: 8,
+  });
+  assert.deepEqual(validateCreativePlan(plan, {slug: 'one-take-journey'}), []);
+  assert.equal(plan.assetBudget.maxGeneratedImages, 14);
+  assert.equal(plan.scenarioBinding.expectedProviderImageCalls, 10);
 });
 
 test('scenario rejects a key semantic action that is counted but not visibly executed', async () => {

@@ -10,7 +10,12 @@ import {
   deriveLoopingStrip,
   LOOPING_STRIP_RECOVERY_POLICY,
 } from '../scripts/looping-strip-lib.mjs';
+import {removeChromaKey} from '../scripts/chroma-key-lib.mjs';
 import {validateTreatment} from '../scripts/motion-treatment-lib.mjs';
+import {
+  evaluateNearLayerRelation,
+  inspectStripVisibleSurface,
+} from '../scripts/world-motion-proof-lib.mjs';
 import {
   inspectWorldStripCoverage,
   resolveWorldStripCopies,
@@ -20,7 +25,7 @@ import {
 } from '../src/worldStrip.mjs';
 
 const hash = (value) => createHash('sha256').update(value).digest('hex');
-const still = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]};
+const still = {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]};
 const transform = (height = 1) => ({
   x: 0,
   y: 0,
@@ -84,6 +89,17 @@ test('world-strip phase wraps deterministically with gap-free internal copies', 
   });
   assert.ok(end.wraps >= 8);
   assert.ok(end.cameraCompensatedDisplacement < start.cameraCompensatedDisplacement);
+  const rasterCopies = resolveWorldStripCopies({
+    firstCopyX: 0.25,
+    tileWidth: geometry.tileWidth,
+    copyCount: geometry.copyCount,
+  });
+  assert.equal(rasterCopies[0].width, geometry.tileWidth + 2);
+  assert.equal(
+    rasterCopies[1].x,
+    rasterCopies[0].x + geometry.tileWidth,
+    'raster overlap must not change logical world phase',
+  );
   for (let index = 0; index <= 100; index += 1) {
     const frame = resolveWorldStripFrame({
       progress: index / 100,
@@ -240,13 +256,32 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
           },
           {
             id: 'finish-marker',
-            kind: 'asset',
-            assetRole: 'prop',
-            src: 'finish-marker.png',
+            kind: 'group',
+            pattern: 'free',
             z: 5,
-            depth: 0.25,
+            coordinateSpace: {width: 100, height: 100},
             transform: {x: 0.8, y: 0.72, width: 0.08, height: 0.2, anchorX: 0.5, anchorY: 1},
             motion: still,
+            children: [
+              {
+                id: 'finish-support',
+                kind: 'asset',
+                assetRole: 'prop',
+                src: 'finish-support.png',
+                z: 0,
+                transform: transform(),
+                motion: still,
+              },
+              {
+                id: 'finish-sign',
+                kind: 'asset',
+                assetRole: 'prop',
+                src: 'finish-marker.png',
+                z: 1,
+                transform: transform(),
+                motion: still,
+              },
+            ],
           },
         ],
       },
@@ -348,6 +383,34 @@ test('looping-environment validates semantic strips, tracked subject, seam proof
   );
 });
 
+test('sparse near layers may prove depth order without forcing subject overlap', () => {
+  const base = {
+    nearOcclusion: 'behind-near',
+    subjectZ: 60,
+    nearStripZ: 90,
+    verticalOverlap: 0,
+    hasSubjectGeometry: true,
+    hasNearGeometry: true,
+  };
+  assert.equal(
+    evaluateNearLayerRelation({...base, requireNearOverlap: true}),
+    false,
+  );
+  assert.equal(
+    evaluateNearLayerRelation({...base, requireNearOverlap: false}),
+    true,
+  );
+  assert.equal(
+    evaluateNearLayerRelation({
+      ...base,
+      requireNearOverlap: false,
+      nearStripZ: 40,
+    }),
+    false,
+    'optional overlap must not weaken declared z-order',
+  );
+});
+
 test('world-travel authoring compiles only through looping-environment and scroll-world-x', () => {
   const treatment = {
     id: 'road-travel',
@@ -369,6 +432,7 @@ test('world-travel authoring compiles only through looping-environment and scrol
           role: 'tracked',
           anchorMode: 'screen',
           nearOcclusion: 'above-near',
+          requireNearOverlap: false,
           proofTimeIds: ['proof-before', 'proof-seam', 'proof-after'],
         }],
         seamProofTimeIds: {before: 'proof-before', seam: 'proof-seam', after: 'proof-after'},
@@ -390,11 +454,41 @@ test('world-travel authoring compiles only through looping-environment and scrol
     rationale: 'The tracked car stays readable while a proved world passes behind it.',
   };
   assert.deepEqual(validateTreatment(treatment, {beatAt: 0.5}), []);
+  const invalidOverlap = structuredClone(treatment);
+  invalidOverlap.composition.world.subjectBindings[0].requireNearOverlap = 'no';
+  assert.ok(
+    validateTreatment(invalidOverlap, {beatAt: 0.5})
+      .some(({code}) => code === 'treatment-looping-subject-overlap'),
+  );
   const wrong = structuredClone(treatment);
   wrong.motion.preset = 'drift';
   assert.ok(
     validateTreatment(wrong, {beatAt: 0.5})
       .some(({code}) => code === 'treatment-looping-preset'),
+  );
+});
+
+test('sparse scenery strips use a semantic span threshold while backdrops stay continuous', async () => {
+  const source = 'fixtures/looping-world/sparse-scenery.svg';
+  const scenery = await inspectStripVisibleSurface({
+    source,
+    role: 'mid',
+    surfaceRole: 'scenery',
+  });
+  const backdrop = await inspectStripVisibleSurface({
+    source,
+    role: 'far',
+    surfaceRole: 'backdrop',
+  });
+  assert.equal(scenery.passed, true);
+  assert.equal(
+    scenery.thresholds.minimumHorizontalVisibleSpanRatio,
+    0.25,
+  );
+  assert.equal(backdrop.passed, false);
+  assert.equal(
+    backdrop.thresholds.minimumHorizontalVisibleSpanRatio,
+    0.85,
   );
 });
 
@@ -409,9 +503,10 @@ test('looping strip derivation accepts a recovery source and proves source/rende
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
         const seamX = x >= width - 4 ? x - (width - 4) : x;
+        const wave = Math.sin((seamX / (width - 4)) * Math.PI * 2);
         const offset = (y * width + x) * 4;
-        pixels[offset] = (seamX * 7 + y * 3) % 255;
-        pixels[offset + 1] = (seamX * 11 + 40) % 255;
+        pixels[offset] = Math.round(128 + wave * 34 + (y % 9));
+        pixels[offset + 1] = Math.round(142 + wave * 26 + (y % 7));
         pixels[offset + 2] = (y * 5 + 90) % 255;
         pixels[offset + 3] = 255;
       }
@@ -581,12 +676,55 @@ test('ground strips reject matching transparent presentation margins and mirror-
         ...base,
         seamStrategy: 'mirror-crop',
         canonicalTile: {left: 100, top: 0, width: 200, height},
+        alphaFeather: {topPixels: 20, bottomPixels: 0},
       },
     });
     assert.equal(result.report.passed, true);
     assert.equal(result.report.seamStrategy, 'mirror-crop');
     assert.ok(result.report.sourceEdgeAlphaCoverage.minimum >= 0.05);
     assert.equal(result.binding.output.width, 400);
+    assert.deepEqual(result.binding.alphaFeather, {topPixels: 20, bottomPixels: 0});
+    assert.deepEqual(result.report.alphaFeather, {topPixels: 20, bottomPixels: 0});
+    const alpha = await sharp(path.join(root, 'public', 'road-loop.png'))
+      .ensureAlpha()
+      .extractChannel(3)
+      .raw()
+      .toBuffer();
+    assert.equal(alpha[0], 0);
+    assert.equal(alpha[50 * 400], 255);
+  } finally {
+    await fs.rm(root, {recursive: true, force: true});
+  }
+});
+
+test('chroma key treats darkened key-plane shadows as transparent without erasing warm artwork or black ink', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'key-plane-shadow-test-'));
+  try {
+    const input = path.join(root, 'key-plane.png');
+    const pixels = Buffer.from([
+      248, 3, 239,
+      124, 2, 120,
+      220, 90, 60,
+      8, 8, 8,
+    ]);
+    await sharp(pixels, {raw: {width: 4, height: 1, channels: 3}})
+      .png()
+      .toFile(input);
+    const {buffer, metadata} = await removeChromaKey({
+      input,
+      keyColor: '#f803ef',
+      transparentThreshold: 20,
+      opaqueThreshold: 120,
+      edgeFeather: 0,
+      matteErode: 0,
+      edgePadding: 0,
+    });
+    const rgba = await sharp(buffer).ensureAlpha().raw().toBuffer();
+    assert.equal(rgba[3], 0);
+    assert.equal(rgba[7], 0);
+    assert.ok(rgba[11] >= 250, `warm artwork alpha was damaged: ${rgba[11]}`);
+    assert.ok(rgba[15] >= 250, `black ink alpha was damaged: ${rgba[15]}`);
+    assert.equal(metadata.distanceMetric, 'key-ray-with-darkness-floor-v1');
   } finally {
     await fs.rm(root, {recursive: true, force: true});
   }

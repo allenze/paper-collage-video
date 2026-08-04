@@ -6,7 +6,22 @@ import {fileURLToPath} from 'node:url';
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 export const RUNTIME_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
 
-export const RUNTIME_BUILD_INPUTS = [
+const STYLE_CATALOG_FILE = 'public/style-catalog/catalog.json';
+const styleCatalog = JSON.parse(
+  await fs.readFile(path.join(RUNTIME_ROOT, STYLE_CATALOG_FILE), 'utf8'),
+);
+const STYLE_CATALOG_IMAGE_INPUTS = styleCatalog.styles.map(({image}) => {
+  const normalized = path.posix.normalize(`public/${image}`);
+  if (
+    !normalized.startsWith('public/style-catalog/') ||
+    normalized.includes('..')
+  ) {
+    throw new Error(`风格目录图片路径越界：${image}`);
+  }
+  return normalized;
+});
+
+export const RUNTIME_EXPLICIT_INPUTS = [
   'package.json',
   'requirements.txt',
   'remotion.config.ts',
@@ -14,6 +29,7 @@ export const RUNTIME_BUILD_INPUTS = [
   'schemas/editorial.schema.json',
   'schemas/assets-manifest.schema.json',
   'schemas/asset-request.schema.json',
+  'schemas/provider-source-normalization.schema.json',
   'schemas/audio-calibration.schema.json',
   'schemas/production.schema.json',
   'schemas/planning-scenarios.schema.json',
@@ -23,19 +39,25 @@ export const RUNTIME_BUILD_INPUTS = [
   'schemas/quality-review-scaffold.schema.json',
   'schemas/quality-review-contact-sheet.schema.json',
   'schemas/looping-strip.schema.json',
+  'schemas/motion-contract.schema.json',
   'schemas/registered-family.schema.json',
   'schemas/registered-family-binding.schema.json',
+  'schemas/canonical-container.schema.json',
+  'schemas/canonical-container-binding.schema.json',
   'schemas/rejected-output-recovery.schema.json',
   'schemas/semantic-contracts.schema.json',
   'schemas/semantic-revision-authorization.schema.json',
+  'schemas/spatial-contract.schema.json',
+  'schemas/state-sheet.schema.json',
   'schemas/storyboard.schema.json',
   'schemas/storyboard-authoring.schema.json',
+  'schemas/world-topology-proof.schema.json',
+  'schemas/encounter-contract.schema.json',
   'schemas/style-catalog.schema.json',
-  'public/style-catalog/catalog.json',
+  'schemas/style-profile.schema.json',
+  STYLE_CATALOG_FILE,
   'public/style-catalog/generation-provenance.json',
-  'public/style-catalog/childrens-picture-book-paper.png',
-  'public/style-catalog/hand-drawn-cutout-explainer.png',
-  'public/style-catalog/archival-collage.png',
+  ...STYLE_CATALOG_IMAGE_INPUTS,
   'scripts/composition-lib.mjs',
   'scripts/creative-plan-lib.mjs',
   'scripts/intake-lib.mjs',
@@ -45,6 +67,8 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/asset-evidence-lib.mjs',
   'scripts/asset-manifest-lib.mjs',
   'scripts/chroma-key-lib.mjs',
+  'scripts/checkerboard-alpha-lib.mjs',
+  'scripts/decorative-scatter-lib.mjs',
   'scripts/asset-hardening-proof-lib.mjs',
   'scripts/audio-calibration-lib.mjs',
   'scripts/audio-preflight-lib.mjs',
@@ -53,22 +77,31 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/editorial-system-lib.mjs',
   'scripts/generation-attempt-lib.mjs',
   'scripts/layer-source-plan-lib.mjs',
+  'scripts/container-source-plan-lib.mjs',
   'scripts/layer-stack-proof-lib.mjs',
   'scripts/looping-strip-lib.mjs',
+  'scripts/world-topology-proof-lib.mjs',
+  'scripts/encounter-contract-lib.mjs',
+  'scripts/motion-approval-lib.mjs',
+  'scripts/motion-contract-lib.mjs',
   'scripts/motion-treatment-lib.mjs',
   'scripts/observed-key-plane-lib.mjs',
   'scripts/provider-attempt.mjs',
   'scripts/provider-lib.mjs',
   'scripts/provider-recover-rejected-source.mjs',
   'scripts/project-composition-proof.mjs',
+  'scripts/project-world-topology-proof.mjs',
   'scripts/project-budget.mjs',
   'scripts/project-advance.mjs',
   'scripts/project-assets-ready.mjs',
+  'scripts/project-audio-preflight.mjs',
   'scripts/project-confirm-concept.mjs',
   'scripts/project-intake.mjs',
   'scripts/project-doctor.mjs',
   'scripts/project-lib.mjs',
+  'scripts/project-metrics-run.mjs',
   'scripts/project-plan.mjs',
+  'scripts/project-quality.mjs',
   'scripts/project-scenarios.mjs',
   'scripts/project-render-status.mjs',
   'scripts/project-revise-preview-semantic.mjs',
@@ -80,11 +113,15 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/world-trajectory-lib.mjs',
   'scripts/prepare-phase2-proof.mjs',
   'scripts/prepare-looping-world-proof.mjs',
+  'scripts/prepare-path-locomotion-proof.mjs',
   'scripts/production-state.mjs',
   'scripts/process-state-sheet.mjs',
   'scripts/derive-registered-family.mjs',
+  'scripts/derive-canonical-container.mjs',
   'scripts/derive-looping-strip.mjs',
+  'scripts/normalize-provider-source.mjs',
   'scripts/registered-family-lib.mjs',
+  'scripts/canonical-container-lib.mjs',
   'scripts/rejected-output-recovery-lib.mjs',
   'scripts/quality-lib.mjs',
   'scripts/render-cache-lib.mjs',
@@ -93,6 +130,7 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/semantic-contract-lib.mjs',
   'scripts/remove_chroma_key.py',
   'scripts/state-sequence-lib.mjs',
+  'scripts/spatial-contract-lib.mjs',
   'scripts/style-motion-proof.mjs',
   'scripts/project-scene-preview.mjs',
   'scripts/project-stitch-narration.mjs',
@@ -102,16 +140,28 @@ export const RUNTIME_BUILD_INPUTS = [
   'scripts/subtitle-lib.mjs',
   'scripts/render-phase2-proof.mjs',
   'scripts/render-looping-world-proof.mjs',
-  'scripts/schema-v10.mjs',
-  'scripts/validate_v10_schemas.py',
+  'scripts/render-path-locomotion-proof.mjs',
+  'scripts/schema-v12.mjs',
+  'scripts/validate_v12_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-looping-world-proof.mjs',
+  'scripts/verify-path-locomotion-proof.mjs',
   'scripts/verify-vox-sample.mjs',
   'scripts/prove-alpha-bands.mjs',
   'scripts/prove-registered-family.mjs',
+  'scripts/prove-canonical-container.mjs',
   'scripts/vox-sample-proof-lib.mjs',
+  'fixtures/canonical-container/canonical-container.json',
+  'fixtures/canonical-container/canonical-container-binding.json',
+  'fixtures/canonical-container/canonical-container-intent.json',
+  'fixtures/canonical-container/canonical-container-plan.json',
+  'fixtures/starter-demo/project.json',
+  'fixtures/motion-contract-fixture.mjs',
   'fixtures/phase2-proof-fixture.mjs',
   'fixtures/looping-world-fixture.mjs',
+  'fixtures/path-locomotion-fixture.mjs',
+  'src/index.ts',
+  'src/Root.tsx',
   'src/MainVideo.tsx',
   'src/EditorialNodes.tsx',
   'src/ReplicaChapterScene.tsx',
@@ -121,6 +171,8 @@ export const RUNTIME_BUILD_INPUTS = [
   'src/editorialPrimitives.mjs',
   'src/motifField.mjs',
   'src/parallax.mjs',
+  'src/pathMotion.mjs',
+  'src/pathMotion.d.mts',
   'src/worldStrip.mjs',
   'src/project.ts',
   'src/sceneTimeline.mjs',
@@ -130,19 +182,157 @@ export const RUNTIME_BUILD_INPUTS = [
   'src/visibilityLifecycle.mjs',
 ];
 
+const JAVASCRIPT_MODULE_EXTENSIONS = new Set([
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.mts',
+  '.ts',
+  '.tsx',
+]);
+const LOCAL_IMPORT_PATTERN =
+  /(?:\bimport\s+(?:[^"'();]*?\s+from\s*)?|\bexport\s+(?:[^"']*?\s+from\s*))["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+const LOCAL_IMPORT_RESOLUTION_SUFFIXES = [
+  '',
+  '.mjs',
+  '.js',
+  '.ts',
+  '.tsx',
+  '.json',
+  '/index.mjs',
+  '/index.js',
+  '/index.ts',
+  '/index.tsx',
+];
+
+const relativeRuntimePath = (root, file) =>
+  path.relative(root, file).split(path.sep).join('/');
+
+const resolveLocalRuntimeImport = async ({root, importer, specifier}) => {
+  if (!specifier.startsWith('.')) return null;
+  const normalizedSpecifier = specifier.split(/[?#]/, 1)[0];
+  const unresolved = path.resolve(path.dirname(importer), normalizedSpecifier);
+  const relative = path.relative(root, unresolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(
+      `runtime 本地导入越界：${relativeRuntimePath(root, importer)} -> ${specifier}`,
+    );
+  }
+  for (const suffix of LOCAL_IMPORT_RESOLUTION_SUFFIXES) {
+    const candidate = `${unresolved}${suffix}`;
+    const stat = await fs.stat(candidate).catch(() => null);
+    if (stat?.isFile()) return candidate;
+  }
+  throw new Error(
+    `runtime 本地导入无法解析：${relativeRuntimePath(root, importer)} -> ${specifier}`,
+  );
+};
+
+export const discoverRuntimeInputClosure = async ({
+  root = RUNTIME_ROOT,
+  roots = RUNTIME_EXPLICIT_INPUTS,
+} = {}) => {
+  const explicit = new Set(roots);
+  const discovered = new Set();
+  const visited = new Set();
+  const queue = roots
+    .filter((relative) =>
+      JAVASCRIPT_MODULE_EXTENSIONS.has(path.extname(relative)),
+    )
+    .map((relative) => path.resolve(root, relative));
+  while (queue.length > 0) {
+    const importer = queue.shift();
+    const importerRelative = relativeRuntimePath(root, importer);
+    if (visited.has(importerRelative)) continue;
+    visited.add(importerRelative);
+    const source = await fs.readFile(importer, 'utf8');
+    LOCAL_IMPORT_PATTERN.lastIndex = 0;
+    for (
+      let match = LOCAL_IMPORT_PATTERN.exec(source);
+      match;
+      match = LOCAL_IMPORT_PATTERN.exec(source)
+    ) {
+      const resolved = await resolveLocalRuntimeImport({
+        root,
+        importer,
+        specifier: match[1] ?? match[2],
+      });
+      if (!resolved) continue;
+      const relative = relativeRuntimePath(root, resolved);
+      if (!explicit.has(relative)) discovered.add(relative);
+      if (
+        JAVASCRIPT_MODULE_EXTENSIONS.has(path.extname(relative)) &&
+        !visited.has(relative)
+      ) {
+        queue.push(resolved);
+      }
+    }
+  }
+  return [...discovered].sort();
+};
+
+const RUNTIME_DISCOVERED_INPUTS = await discoverRuntimeInputClosure();
+
+export const RUNTIME_BUILD_INPUTS = [
+  ...RUNTIME_EXPLICIT_INPUTS,
+  ...RUNTIME_DISCOVERED_INPUTS,
+];
+
+const AUDIO_DELIVERY_ONLY_INPUTS = [
+  'schemas/audio-calibration.schema.json',
+  'scripts/assets-ready-seal-lib.mjs',
+  'scripts/audio-calibration-lib.mjs',
+  'scripts/audio-preflight-lib.mjs',
+  'scripts/project-assets-ready.mjs',
+  'scripts/project-audio-calibration.mjs',
+  'scripts/project-audio-preflight.mjs',
+  'scripts/project-report.mjs',
+];
+
+const SUBTITLE_PRESENTATION_INPUTS = [
+  'scripts/project-subtitles.mjs',
+  'scripts/subtitle-contract-lib.mjs',
+  'scripts/subtitle-lib.mjs',
+  'src/SubtitleOverlay.tsx',
+  'src/subtitleSurface.mjs',
+  'src/subtitleSurface.d.mts',
+];
+
+const NON_OUTPUT_RUNTIME_INPUTS = [
+  'fixtures/editorial-fixture.mjs',
+  'scripts/production-metrics-lib.mjs',
+  'scripts/python-runtime.mjs',
+];
+
+const AUDIO_DELIVERY_RUNTIME_INPUTS = new Set([
+  'package.json',
+  'schemas/audio-calibration.schema.json',
+  'schemas/project.schema.json',
+  'scripts/audio-calibration-lib.mjs',
+  'scripts/audio-preflight-lib.mjs',
+  'scripts/project-lib.mjs',
+  'scripts/project-render.mjs',
+  'scripts/render-cache-lib.mjs',
+  'scripts/runtime-build-lib.mjs',
+  'scripts/timeline-continuity-lib.mjs',
+  'src/sceneTimeline.mjs',
+]);
+
 export const RUNTIME_SURFACE_INPUTS = {
+  'final-visual': RUNTIME_BUILD_INPUTS.filter(
+    (relative) => ![
+      ...AUDIO_DELIVERY_ONLY_INPUTS,
+      ...NON_OUTPUT_RUNTIME_INPUTS,
+    ].includes(relative),
+  ),
   'composition-proof': RUNTIME_BUILD_INPUTS.filter((relative) => ![
-    'scripts/audio-calibration-lib.mjs',
-    'scripts/audio-preflight-lib.mjs',
-    'scripts/project-audio-calibration.mjs',
-    'scripts/project-report.mjs',
-    'scripts/project-subtitles.mjs',
-    'scripts/subtitle-contract-lib.mjs',
-    'scripts/subtitle-lib.mjs',
-    'src/SubtitleOverlay.tsx',
-    'src/subtitleSurface.mjs',
-    'src/subtitleSurface.d.mts',
+    ...AUDIO_DELIVERY_ONLY_INPUTS,
+    ...SUBTITLE_PRESENTATION_INPUTS,
+    ...NON_OUTPUT_RUNTIME_INPUTS,
   ].includes(relative)),
+  'audio-delivery': RUNTIME_BUILD_INPUTS.filter(
+    (relative) => AUDIO_DELIVERY_RUNTIME_INPUTS.has(relative),
+  ),
 };
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');

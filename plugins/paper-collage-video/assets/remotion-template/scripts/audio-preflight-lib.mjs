@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   ROOT,
@@ -15,6 +16,8 @@ const parseLoudness = (stderr) => {
       integratedLufs: null,
       truePeakDbtp: null,
       loudnessRangeLu: null,
+      thresholdLufs: null,
+      targetOffsetLu: null,
     };
   }
   const parsed = JSON.parse(match);
@@ -26,11 +29,26 @@ const parseLoudness = (stderr) => {
     integratedLufs: numberOrNull(parsed.input_i),
     truePeakDbtp: numberOrNull(parsed.input_tp),
     loudnessRangeLu: numberOrNull(parsed.input_lra),
+    thresholdLufs: numberOrNull(parsed.input_thresh),
+    targetOffsetLu: numberOrNull(parsed.target_offset),
   };
 };
 
 const clamp = (value, minimum, maximum) =>
   Math.max(minimum, Math.min(maximum, value));
+
+export const AUDIO_DELIVERY_PROFILES = Object.freeze([
+  {mode: 'preview', bitrate: '96k'},
+  {mode: 'render', bitrate: '192k'},
+]);
+
+export const deliveryAudioFileForMode = (mixOutput, mode) => {
+  const profile = AUDIO_DELIVERY_PROFILES.find((entry) => entry.mode === mode);
+  if (!profile) throw new Error(`未知音频交付模式：${mode}`);
+  const extension = path.extname(mixOutput);
+  const base = extension.length > 0 ? mixOutput.slice(0, -extension.length) : mixOutput;
+  return `${base}-${profile.mode}.m4a`;
+};
 
 export const collectProjectAudioEvents = (project) => {
   const timeline = deriveTimeline(project);
@@ -125,6 +143,79 @@ export const analyzeAudioLoudness = async ({file, mastering}) => {
   return parseLoudness(stderr);
 };
 
+const masteringOutputFor = (output) => {
+  const extension = path.extname(output);
+  const base = extension.length > 0
+    ? output.slice(0, -extension.length)
+    : output;
+  return `${base}-unmastered${extension || '.wav'}`;
+};
+
+export const masterAudioMix = async ({
+  input,
+  output,
+  mastering,
+  targetLufs = mastering.targetLufs,
+  targetTruePeakDbtp = Math.min(mastering.truePeakDbtp - 1, -1.5),
+}) => {
+  const normalizedTargetLufs = clamp(targetLufs, -70, -5);
+  const normalizedTruePeakDbtp = clamp(targetTruePeakDbtp, -9, 0);
+  const analysis = await analyzeAudioLoudness({
+    file: input,
+    mastering: {
+      ...mastering,
+      targetLufs: normalizedTargetLufs,
+      truePeakDbtp: normalizedTruePeakDbtp,
+    },
+  });
+  if (
+    !Number.isFinite(analysis.integratedLufs) ||
+    !Number.isFinite(analysis.truePeakDbtp) ||
+    !Number.isFinite(analysis.loudnessRangeLu) ||
+    !Number.isFinite(analysis.thresholdLufs) ||
+    !Number.isFinite(analysis.targetOffsetLu)
+  ) {
+    throw new Error('自动母带无法测量完整 loudnorm 参数。');
+  }
+  const filter = [
+    `loudnorm=I=${normalizedTargetLufs}`,
+    `TP=${normalizedTruePeakDbtp}`,
+    'LRA=11',
+    `measured_I=${analysis.integratedLufs}`,
+    `measured_TP=${analysis.truePeakDbtp}`,
+    `measured_LRA=${analysis.loudnessRangeLu}`,
+    `measured_thresh=${analysis.thresholdLufs}`,
+    `offset=${analysis.targetOffsetLu}`,
+    'linear=true',
+    'print_format=summary',
+  ].join(':');
+  await runCommand('ffmpeg', [
+    '-v',
+    'error',
+    '-i',
+    input,
+    '-af',
+    filter,
+    '-ar',
+    '48000',
+    '-ac',
+    '2',
+    '-c:a',
+    'pcm_s16le',
+    '-y',
+    output,
+  ]);
+  return {
+    applied: true,
+    method: 'two-pass-loudnorm',
+    input: path.relative(ROOT, input),
+    output: path.relative(ROOT, output),
+    sourceLoudness: analysis,
+    targetLufs: normalizedTargetLufs,
+    targetTruePeakDbtp: normalizedTruePeakDbtp,
+  };
+};
+
 export const assessAudioPreflight = ({project, loudness}) => {
   const mastering = project.audio.mastering;
   const loudnessDelta =
@@ -164,16 +255,160 @@ export const assessAudioPreflight = ({project, loudness}) => {
   };
 };
 
+export const encodeAudioDeliveryProbe = async ({
+  input,
+  output,
+  bitrate,
+}) => {
+  await runCommand('ffmpeg', [
+    '-v',
+    'error',
+    '-i',
+    input,
+    '-vn',
+    '-c:a',
+    'aac',
+    '-b:a',
+    bitrate,
+    '-ar',
+    '48000',
+    '-ac',
+    '2',
+    '-movflags',
+    '+faststart',
+    '-y',
+    output,
+  ]);
+  return output;
+};
+
+export const muxAuthoritativeAudio = async ({
+  video,
+  audio,
+  output,
+}) => {
+  await runCommand('ffmpeg', [
+    '-v',
+    'error',
+    '-i',
+    video,
+    '-i',
+    audio,
+    '-map',
+    '0:v:0',
+    '-map',
+    '1:a:0',
+    '-c:v',
+    'copy',
+    '-c:a',
+    'copy',
+    '-shortest',
+    '-movflags',
+    '+faststart',
+    '-y',
+    output,
+  ]);
+  return output;
+};
+
 export const runAudioPreflight = async ({project, output}) => {
-  const mixed = await renderProjectAudioMix({project, output});
-  const loudness = await analyzeAudioLoudness({
-    file: mixed.output,
-    mastering: project.audio.mastering,
-  });
+  const rawOutput = masteringOutputFor(output);
+  const mixed = await renderProjectAudioMix({project, output: rawOutput});
+  await fs.copyFile(rawOutput, output);
+
+  const inspectDelivery = async () => {
+    const probes = [];
+    for (const profile of AUDIO_DELIVERY_PROFILES) {
+      const probeFile = deliveryAudioFileForMode(output, profile.mode);
+      await encodeAudioDeliveryProbe({
+        input: output,
+        output: probeFile,
+        bitrate: profile.bitrate,
+      });
+      const loudness = await analyzeAudioLoudness({
+        file: probeFile,
+        mastering: project.audio.mastering,
+      });
+      probes.push({
+        mode: profile.mode,
+        bitrate: profile.bitrate,
+        file: path.relative(ROOT, probeFile),
+        ...assessAudioPreflight({project, loudness}),
+      });
+    }
+    const limitingProbe =
+      probes.find((probe) => !probe.passed) ??
+      probes.find((probe) => probe.mode === 'render') ??
+      probes[0];
+    return {
+      probes,
+      limitingProbe,
+      passed: probes.every((probe) => probe.passed),
+    };
+  };
+
+  let delivery = await inspectDelivery();
+  let masteringProcessing = {
+    applied: false,
+    method: 'none',
+    input: path.relative(ROOT, rawOutput),
+    output: path.relative(ROOT, output),
+    attempts: [],
+  };
+  let targetLufs = project.audio.mastering.targetLufs;
+  let targetTruePeakDbtp = Math.min(
+    project.audio.mastering.truePeakDbtp - 1,
+    -1.5,
+  );
+  for (let attempt = 1; !delivery.passed && attempt <= 3; attempt += 1) {
+    const applied = await masterAudioMix({
+      input: rawOutput,
+      output,
+      mastering: project.audio.mastering,
+      targetLufs,
+      targetTruePeakDbtp,
+    });
+    delivery = await inspectDelivery();
+    masteringProcessing = {
+      ...applied,
+      attempts: [
+        ...(masteringProcessing.attempts ?? []),
+        {
+          attempt,
+          targetLufs: applied.targetLufs,
+          targetTruePeakDbtp: applied.targetTruePeakDbtp,
+          probes: delivery.probes.map(
+            ({mode, passed, loudness}) => ({mode, passed, loudness}),
+          ),
+        },
+      ],
+    };
+    if (!delivery.passed) {
+      const measuredLufs = delivery.limitingProbe.loudness.integratedLufs;
+      const measuredPeak = delivery.limitingProbe.loudness.truePeakDbtp;
+      if (Number.isFinite(measuredLufs)) {
+        targetLufs +=
+          project.audio.mastering.targetLufs - measuredLufs;
+      }
+      if (
+        Number.isFinite(measuredPeak) &&
+        measuredPeak > project.audio.mastering.truePeakDbtp
+      ) {
+        targetTruePeakDbtp -=
+          measuredPeak - project.audio.mastering.truePeakDbtp + 0.5;
+      }
+    }
+  }
   return {
-    ...assessAudioPreflight({project, loudness}),
+    ...delivery.limitingProbe,
+    passed: delivery.passed,
+    deliveryEquivalent: true,
+    analysisSurface: 'delivery-encoded-aac',
+    probes: delivery.probes,
+    masteringProcessing,
     mix: {
-      file: path.relative(ROOT, mixed.output),
+      file: path.relative(ROOT, output),
+      unmasteredFile: path.relative(ROOT, rawOutput),
       durationSeconds: mixed.durationSeconds,
       eventCount: mixed.events.length,
       events: mixed.events,

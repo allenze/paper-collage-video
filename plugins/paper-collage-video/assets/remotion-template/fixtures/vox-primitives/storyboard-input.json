@@ -1,14 +1,29 @@
 {
   "$schema": "../../schemas/storyboard-authoring.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 12,
   "slug": "vox-primitives",
   "status": "ready",
   "arc": "A layered world resolves into a decisive editorial beat.",
   "style": {
     "visualThesis": "Large editorial typography sits inside tactile paper depth while bounded motifs supply motion energy.",
     "compositionRules": ["Keep the title dominant.", "Separate background, focal copy, motif field, and foreground frame by depth."],
-    "motionLanguage": ["Slow camera-coupled parallax, then a beat-aligned hard cut.", "Use deterministic motif fields instead of generated motion footage."],
     "layerStrategy": "Background atlas, focal title, decorative field, and foreground torn frame."
+  },
+  "motionDirection": {
+    "schemaVersion": 1,
+    "summary": "Establish paper depth, energize each title with bounded motion, then settle into a readable rhythmic edit.",
+    "pacing": "gentle",
+    "performance": {
+      "grammar": ["establish", "action", "settle"],
+      "anticipation": "selective",
+      "followThrough": "selective",
+      "poseStrategy": "mixed",
+      "minimumFinalHoldRatio": 0.1
+    },
+    "camera": {"strategy": "motivated"},
+    "transitions": {"strategy": "rhythmic-accented"},
+    "ambient": {"strategy": "selective"},
+    "styleDeviationRationale": null
   },
   "scenes": [
     {
@@ -22,9 +37,10 @@
         {
           "id": "world-open",
           "at": 0.05,
+          "performanceRole": "establish",
           "purpose": "establish",
           "visual": "The atlas opens as four paper planes.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "world-establish",
           "treatments": [{
             "id": "world-parallax",
@@ -43,9 +59,10 @@
         {
           "id": "world-field",
           "at": 0.48,
+          "performanceRole": "action",
           "purpose": "energize",
           "visual": "A bounded petal field drifts across the title.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "world-action",
           "treatments": [{
             "id": "world-petals",
@@ -74,9 +91,10 @@
         {
           "id": "world-cut",
           "at": 0.9,
+          "performanceRole": "settle",
           "purpose": "accent",
           "visual": "The title locks before the edit.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "world-final",
           "treatments": [{
             "id": "world-title-hold",
@@ -110,9 +128,10 @@
         {
           "id": "cut-open",
           "at": 0.05,
+          "performanceRole": "establish",
           "purpose": "reveal",
           "visual": "The second card lands immediately on the beat.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "cut-establish",
           "treatments": [{
             "id": "cut-parallax",
@@ -131,9 +150,10 @@
         {
           "id": "cut-burst",
           "at": 0.48,
+          "performanceRole": "action",
           "purpose": "punctuate",
           "visual": "A star field bursts around the message.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "cut-action",
           "treatments": [{
             "id": "cut-stars",
@@ -162,9 +182,10 @@
         {
           "id": "cut-final",
           "at": 0.9,
+          "performanceRole": "settle",
           "purpose": "resolve",
           "visual": "The card settles into a final lockup.",
-          "audioCue": null,
+          "soundCue": null,
           "proofTimeId": "cut-final-proof",
           "treatments": [{
             "id": "cut-title-hold",

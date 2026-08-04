@@ -16,10 +16,7 @@ import {
   resolvePublicFile,
   writeJson,
 } from './project-lib.mjs';
-import {
-  createRuntimeBuildFingerprint,
-  createRuntimeSurfaceFingerprint,
-} from './runtime-build-lib.mjs';
+import {createRuntimeSurfaceFingerprint} from './runtime-build-lib.mjs';
 
 export const hashFileStream = async (file) =>
   new Promise((resolve, reject) => {
@@ -103,8 +100,9 @@ export const createCompositionProofProject = (project) => ({
 });
 
 export const createVisualFingerprint = async (project, mode) => {
-  const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
-  const sources = [project.theme.texture, project.theme.fontFile];
+  const runtimeBuildFingerprint =
+    await createRuntimeSurfaceFingerprint('final-visual');
+  const sources = [project.theme.surface?.texture?.src, project.theme.fontFile];
   for (const scene of project.scenes ?? []) {
     sources.push(
       ...collectRuntimeVisibleCompositionSources(scene.composition),
@@ -120,6 +118,8 @@ export const createVisualFingerprint = async (project, mode) => {
     mode,
     title: project.title,
     video: project.video,
+    styleProfile: project.styleProfile,
+    motionContract: project.motionContract,
     theme: project.theme,
     scenes: (project.scenes ?? []).map(visualScene),
     sceneTransitions: project.sceneTransitions,
@@ -135,11 +135,8 @@ export const createSceneProofFingerprint = async ({
   absoluteFrame,
   surface = 'final-visual',
 }) => {
-  const runtimeFingerprint =
-    surface === 'composition-proof'
-      ? await createRuntimeSurfaceFingerprint('composition-proof')
-      : await createRuntimeBuildFingerprint();
-  const sources = [project.theme.texture, project.theme.fontFile];
+  const runtimeFingerprint = await createRuntimeSurfaceFingerprint(surface);
+  const sources = [project.theme.surface?.texture?.src, project.theme.fontFile];
   sources.push(
     ...collectRuntimeVisibleCompositionSources(scene.composition),
   );
@@ -151,6 +148,8 @@ export const createSceneProofFingerprint = async ({
   }
   return hashCompositionValue({
     video: project.video,
+    styleProfile: project.styleProfile,
+    motionContract: project.motionContract,
     theme: project.theme,
     scene:
       surface === 'composition-proof'
@@ -172,6 +171,8 @@ export const createAudioFingerprint = async (project) => {
     durationInFrames: timeline.durationInFrames,
     events,
     sourceHashes,
+    runtimeFingerprint:
+      await createRuntimeSurfaceFingerprint('audio-delivery'),
   });
 };
 

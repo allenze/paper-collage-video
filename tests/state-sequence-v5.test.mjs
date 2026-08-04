@@ -10,29 +10,290 @@ import {createRequestFingerprint, inspectStateSheetRecoveryMask, validateAssetRe
 import {
   inspectCompositeTechnical,
   inspectUntargetedSheetCells,
+  proofTimesForStateSequence,
 } from '../scripts/quality-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
 import {
   createStateFamilyFingerprint,
+  resolveOutputStateRegistration,
   stateOutputName,
   summarizeActualPoseSheets,
   validateStateSheetSpec,
 } from '../scripts/state-sheet-lib.mjs';
-import {resolveTargetViewportSnapshot} from '../scripts/world-motion-proof-lib.mjs';
+import {
+  resolvePathViewWeights,
+  resolveSequenceLayers,
+  resolveSequenceState,
+} from '../scripts/state-sequence-lib.mjs';
+import {
+  buildTargetWorldMotionProof,
+  resolveTargetViewportSnapshot,
+} from '../scripts/world-motion-proof-lib.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const STYLE_REQUEST = {
+  styleProfileBinding: {
+    schemaVersion: 1,
+    id: 'hand-drawn-cutout-explainer',
+    catalogVersion: 'fixture',
+    profileFingerprint: 'a'.repeat(64),
+    directives: ['fixture ink', 'fixture paper', 'Avoid: fixture gloss'],
+  },
+  quality: {
+    requiredChecks: [
+      'style-profile-conformant',
+      'identity-family-consistent',
+    ],
+  },
+};
 const anchorPolicy = {requiredAnchorIds: ['ground-contact'], maximumDrift: 0.02};
+const defaultStateSheetKeying = {
+  keyColor: '#ff00ff',
+  transparentThreshold: 18,
+  opaqueThreshold: 95,
+  edgeFeather: 0.6,
+  matteErode: 1,
+  edgePadding: 6,
+};
 const stateContract = (state) => ({
   ...state,
   facing: 'right',
   anchors: [{id: 'ground-contact', x: 0.5, y: 0.9}],
 });
 
+test('path-bound state sequences inherit proof times from their locomotion contract', () => {
+  const scene = {
+    id: 'pond',
+    motion: {
+      proofTimes: [
+        {id: 'start', at: 0.05},
+        {id: 'turn-a', at: 0.3},
+        {id: 'unrelated', at: 0.5},
+        {id: 'turn-b', at: 0.7},
+        {id: 'settle', at: 0.9},
+      ],
+    },
+  };
+  const node = {
+    id: 'tadpole',
+    motion: {path: {kind: 'cubic-bezier-3d'}},
+  };
+  const proofTimes = proofTimesForStateSequence({
+    scene,
+    node,
+    spatialContracts: [{
+      id: 'tadpole-route',
+      kind: 'path-locomotion',
+      sceneId: 'pond',
+      nodeId: 'tadpole',
+      fromProofTimeId: 'start',
+      turnProofTimeIds: ['turn-a', 'turn-b'],
+      throughProofTimeId: 'settle',
+    }],
+  });
+  assert.deepEqual(
+    proofTimes.map(({id}) => id),
+    ['start', 'turn-a', 'turn-b', 'settle'],
+  );
+});
+
+test('path companions in one pose family inherit the lead locomotion proof window', () => {
+  const scene = {
+    id: 'pond',
+    motion: {
+      proofTimes: [
+        {id: 'start', at: 0.05},
+        {id: 'turn', at: 0.5},
+        {id: 'settle', at: 0.9},
+      ],
+    },
+    composition: {
+      nodes: [
+        {
+          id: 'lead',
+          kind: 'state-sequence',
+          poseFamilyId: 'tadpole-swim',
+          motion: {path: {kind: 'cubic-bezier-3d'}},
+        },
+        {
+          id: 'follower',
+          kind: 'state-sequence',
+          poseFamilyId: 'tadpole-swim',
+          motion: {path: {kind: 'cubic-bezier-3d'}},
+        },
+        {
+          id: 'unrelated',
+          kind: 'state-sequence',
+          poseFamilyId: 'other-swim',
+          motion: {path: {kind: 'cubic-bezier-3d'}},
+        },
+      ],
+    },
+  };
+  const spatialContracts = [{
+    kind: 'path-locomotion',
+    sceneId: 'pond',
+    nodeId: 'lead',
+    fromProofTimeId: 'start',
+    turnProofTimeIds: ['turn'],
+    throughProofTimeId: 'settle',
+  }];
+  assert.deepEqual(
+    proofTimesForStateSequence({
+      scene,
+      node: scene.composition.nodes[1],
+      spatialContracts,
+    }).map(({id}) => id),
+    ['start', 'turn', 'settle'],
+  );
+  assert.deepEqual(
+    proofTimesForStateSequence({
+      scene,
+      node: scene.composition.nodes[2],
+      spatialContracts,
+    }),
+    [],
+  );
+});
+
+test('authored state assertions take precedence over locomotion proof fallback', () => {
+  const scene = {
+    id: 'pond',
+    motion: {
+      proofTimes: [
+        {id: 'start', at: 0.05},
+        {
+          id: 'authored-state',
+          at: 0.5,
+          stateAssertions: [{nodeId: 'tadpole', stateId: 'toward-camera'}],
+        },
+        {id: 'settle', at: 0.9},
+      ],
+    },
+  };
+  const proofTimes = proofTimesForStateSequence({
+    scene,
+    node: {
+      id: 'tadpole',
+      motion: {path: {kind: 'cubic-bezier-3d'}},
+    },
+    spatialContracts: [{
+      kind: 'path-locomotion',
+      sceneId: 'pond',
+      nodeId: 'tadpole',
+      fromProofTimeId: 'start',
+      turnProofTimeIds: [],
+      throughProofTimeId: 'settle',
+    }],
+  });
+  assert.deepEqual(proofTimes.map(({id}) => id), ['authored-state']);
+});
+
+test('3D path velocity selects and smoothly blends planar, toward, and away swim loops', () => {
+  const states = [
+    ['planar-a', 0, 'neutral'],
+    ['planar-b', 0.16, 'neutral'],
+    ['toward-a', 0.32, 'front'],
+    ['toward-b', 0.48, 'front'],
+    ['away-a', 0.64, 'back'],
+    ['away-b', 0.8, 'back'],
+  ].map(([id, at, facing]) => ({id, at, facing}));
+  const node = {
+    states,
+    playback: {mode: 'loop', cycles: 4},
+    transition: {type: 'cut', durationSeconds: 0},
+    pathViewBinding: {
+      depthVelocityThreshold: 0.2,
+      transitionWidth: 0.1,
+      planarStateIds: ['planar-a', 'planar-b'],
+      towardStateIds: ['toward-a', 'toward-b'],
+      awayStateIds: ['away-a', 'away-b'],
+    },
+  };
+  assert.equal(resolveSequenceState({
+    node,
+    progress: 0.1,
+    pathDepthVelocity: 0,
+  }).id, 'planar-a');
+  assert.equal(resolveSequenceState({
+    node,
+    progress: 0.1,
+    pathDepthVelocity: 0.4,
+  }).id, 'toward-a');
+  assert.equal(resolveSequenceState({
+    node,
+    progress: 0.1,
+    pathDepthVelocity: -0.4,
+  }).id, 'away-a');
+
+  const transitionWeights = resolvePathViewWeights({
+    node,
+    pathDepthVelocity: 0.2,
+  });
+  assert.deepEqual(
+    transitionWeights.map(({view}) => view),
+    ['planar', 'toward-camera'],
+  );
+  assert.ok(transitionWeights.every(({weight}) => Math.abs(weight - 0.5) < 1e-9));
+  const layers = resolveSequenceLayers({
+    node,
+    progress: 0.1,
+    durationSeconds: 4,
+    pathDepthVelocity: 0.2,
+  });
+  assert.deepEqual(layers.map(({id}) => id), ['planar-a', 'toward-a']);
+  assert.ok(layers.every(({opacity}) => Math.abs(opacity - 0.5) < 1e-9));
+});
+
+test('horizontal mirror derives opposite facing and registered anchors deterministically', () => {
+  const source = {
+    id: 'stride',
+    facing: 'left',
+    anchors: [{id: 'ground-contact', x: 0.25, y: 0.9}],
+    orientationTransform: {
+      kind: 'horizontal-mirror',
+      outputFacing: 'right',
+    },
+  };
+  assert.deepEqual(resolveOutputStateRegistration(source), {
+    facing: 'right',
+    anchors: [{id: 'ground-contact', x: 0.75, y: 0.9}],
+  });
+  const invalid = {
+    schemaVersion: 1,
+    projectSlug: 'fixture-project',
+    sceneId: 'scene-1',
+    nodeId: 'reader',
+    poseFamilyId: 'reader-poses',
+    sourceAssetId: 'reader-sheet',
+    input: 'public/reader-sheet.png',
+    outputDirectory: 'public/states',
+    registration: {
+      id: 'reader-registration',
+      sourceMasterAssetId: 'reader-master',
+    },
+    identityReference: {assetId: 'reader-master'},
+    anchorPolicy,
+    layout: {columns: 2, rows: 1},
+    states: [
+      {...stateContract({id: 'reading', row: 0, column: 0}), orientationTransform: {kind: 'horizontal-mirror', outputFacing: 'right'}},
+      stateContract({id: 'pointing', row: 0, column: 1}),
+    ],
+    keying: defaultStateSheetKeying,
+  };
+  assert.ok(
+    validateStateSheetSpec(invalid).some((error) =>
+      error.includes('orientationTransform'),
+    ),
+  );
+});
+
 const sheetRequest = () => ({
-  schemaVersion: 7,
+  schemaVersion: 8,
   projectSlug: 'fixture-project',
   assetId: 'reader-state-sheet',
   capability: 'image',
+  ...STYLE_REQUEST,
   outputSurface: {mode: 'opaque'},
   output: 'public/projects/fixture-project/assets/reader-state-sheet.png',
   prompt: 'A registered 2x2 pose sheet on a uniform chroma background.',
@@ -131,6 +392,7 @@ test('multi-state provider requests reject isolated cells and require context-pr
       'cell-separation',
       'reference-conformant',
       'untargeted-cells-unchanged',
+      'style-profile-conformant',
     ],
   };
   assert.equal(validateAssetRequest(masked), masked);
@@ -247,7 +509,7 @@ test('registered sheet processing preserves row-major cells and produces stable 
       {id: 'pointing', row: 1, column: 0},
       {id: 'book-down', row: 1, column: 1},
     ].map(stateContract),
-    keying: {keyColor: 'auto', matteErode: 1},
+    keying: {...defaultStateSheetKeying, keyColor: 'auto'},
   };
   assert.deepEqual(validateStateSheetSpec(spec), []);
   assert.equal(stateOutputName({poseFamilyId: spec.poseFamilyId, stateId: 'book-down'}), 'reader-poses-book-down.png');
@@ -259,6 +521,13 @@ test('registered sheet processing preserves row-major cells and produces stable 
   const invalid = structuredClone(spec);
   invalid.states[2].column = 1;
   assert.ok(validateStateSheetSpec(invalid).length > 0);
+  const invalidKeying = structuredClone(spec);
+  invalidKeying.keying.opaqueThreshold = invalidKeying.keying.transparentThreshold;
+  assert.ok(
+    validateStateSheetSpec(invalidKeying).some((error) =>
+      error.includes('transparentThreshold'),
+    ),
+  );
   const drifted = structuredClone(spec);
   drifted.states[2].anchors[0].x = 0.7;
   assert.ok(validateStateSheetSpec(drifted).some((error) => error.includes('anchor 漂移')));
@@ -296,7 +565,7 @@ test('state sheet processor turns one recorded provider image into registered lo
     await fs.mkdir(projectDirectory, {recursive: true});
     await fs.mkdir(publicDirectory, {recursive: true});
     const left = await sharp({create: {width: 100, height: 100, channels: 3, background: '#ff00ff'}})
-      .composite([{input: Buffer.from('<svg width="100" height="100"><circle cx="50" cy="54" r="28" fill="#3b7d42"/></svg>')}])
+      .composite([{input: Buffer.from('<svg width="100" height="100"><circle cx="30" cy="54" r="24" fill="#3b7d42"/></svg>')}])
       .png().toBuffer();
     const right = await sharp({create: {width: 100, height: 100, channels: 3, background: '#ff00ff'}})
       .composite([{input: Buffer.from('<svg width="100" height="100"><rect x="24" y="24" width="52" height="60" rx="12" fill="#d48a32"/></svg>')}])
@@ -323,11 +592,56 @@ test('state sheet processor turns one recorded provider image into registered lo
       projectSlug: slug,
       assets: [
         {
-          recordId: '1'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture', supersededBy: null},
+          recordId: '1'.padStart(64, '0'), lifecycle: {status: 'recovery-source', changedAt: '2026-01-01T00:00:00.000Z', reason: 'fixture-recovered-state-sheet', supersededBy: null},
           assetId: 'reader-sheet', capability: 'image', file: path.relative(ROOT, input), provider: 'fixture', adapter: 'host',
+          attemptId: 'img-44444444-4444-4444-8444-444444444444',
+          recoveredFromRejectedAttempt: true,
           requestFingerprint: 'a'.repeat(64), reusedFrom: null, sha256: sourceSha256, sizeBytes: (await fs.stat(input)).size,
           recordedAt: '2026-01-01T00:00:00.000Z', request: {stateSheetBinding: binding}, compositionBinding: null,
           stateSheetBinding: binding, familyFingerprint: null,
+          providerObservation: {
+            schemaVersion: 1,
+            mode: 'provider-native-observed',
+            policyId: 'flat-v1',
+            policyFingerprint: 'c'.repeat(64),
+            observationFingerprint: 'd'.repeat(64),
+            sourceAttempt: {
+              attemptId: 'img-44444444-4444-4444-8444-444444444444',
+              status: 'rejected',
+              quotaConsumed: true,
+              requestFingerprint: 'a'.repeat(64),
+              output: path.relative(ROOT, input),
+            },
+            cells: ['reading', 'pointing'].map((stateId, index) => ({
+              schemaVersion: 1,
+              packageRole: 'state',
+              stateId,
+              mode: 'provider-native-observed',
+              policy: {},
+              policyFingerprint: 'c'.repeat(64),
+              requestedKeyColor: '#ff00ff',
+              observedKeyColor: '#ff00ff',
+              rect: {
+                left: index * 100,
+                top: 0,
+                width: 100,
+                height: 100,
+              },
+              metrics: {
+                totalPixels: 10000,
+                candidatePixels: 8000,
+                coverage: 0.8,
+                boundaryCoverage: 1,
+                requestedToObservedDistance: 0,
+                clusterP95Distance: 0,
+                clusterP99Distance: 0,
+                largestComponentShare: 1,
+                foregroundP10Distance: 100,
+              },
+              passed: true,
+              reasons: [],
+            })),
+          },
         },
         {
           recordId: '9'.padStart(64, '0'), lifecycle: {status: 'active', changedAt: '2026-01-01T00:00:00.000Z', reason: 'identity-reference', supersededBy: null},
@@ -346,8 +660,20 @@ test('state sheet processor turns one recorded provider image into registered lo
       layout: {columns: 2, rows: 1}, states: [
         {id: 'reading', row: 0, column: 0},
         {id: 'pointing', row: 0, column: 1},
-      ].map(stateContract),
-      keying: {keyColor: '#ff00ff', matteErode: 1},
+      ].map((state) => ({
+        ...stateContract(state),
+        orientationTransform: {
+          kind: 'horizontal-mirror',
+          outputFacing: 'left',
+        },
+      })),
+      keying: {
+        ...defaultStateSheetKeying,
+        transparentThreshold: 22,
+        opaqueThreshold: 121,
+        edgeFeather: 1.25,
+        edgePadding: 4,
+      },
     }, null, 2)}\n`);
     const processed = spawnSync(process.execPath, ['scripts/process-state-sheet.mjs', path.relative(ROOT, specFile)], {cwd: ROOT, encoding: 'utf8'});
     assert.equal(processed.status, 0, processed.stderr);
@@ -356,10 +682,25 @@ test('state sheet processor turns one recorded provider image into registered lo
     assert.equal(report.schemaVersion, 4);
     assert.equal(report.anchorRegistrationProof.passed, true);
     assert.equal(report.identityReference.assetId, 'reader-master');
-    assert.equal(report.generationMode, 'initial-family-sheet');
+    assert.equal(report.generationMode, 'rejected-output-recovery');
+    assert.equal(report.sourceLifecycle, 'recovery-source');
+    assert.deepEqual(report.observedKeyColors, {
+      reading: '#ff00ff',
+      pointing: '#ff00ff',
+    });
     assert.equal(report.isolatedCellGenerationUsed, false);
     assert.equal(report.derivedStateCount, 2);
     assert.equal(report.avoidedIndividualCalls, 1);
+    const keyingMetadata = JSON.parse(
+      await fs.readFile(
+        path.join(outputDirectory, 'reader-poses-reading.png.key.json'),
+        'utf8',
+      ),
+    );
+    assert.equal(keyingMetadata.transparentThreshold, 22);
+    assert.equal(keyingMetadata.opaqueThreshold, 121);
+    assert.equal(keyingMetadata.edgeFeather, 1.25);
+    assert.equal(keyingMetadata.transparentRgb.paddingPixels, 4);
     const dimensions = await Promise.all(['reading', 'pointing'].map(async (stateId) => {
       const metadata = await sharp(path.join(outputDirectory, `reader-poses-${stateId}.png`)).metadata();
       return `${metadata.width}x${metadata.height}:${metadata.hasAlpha}`;
@@ -368,6 +709,35 @@ test('state sheet processor turns one recorded provider image into registered lo
     const manifest = JSON.parse(await fs.readFile(path.join(projectDirectory, 'assets-manifest.json'), 'utf8'));
     assert.equal(manifest.assets.filter(({adapter}) => adapter === 'registered-sheet-cell').length, 2);
     assert.equal(new Set(manifest.assets.filter(({stateBinding}) => stateBinding).map(({familyFingerprint}) => familyFingerprint)).size, 1);
+    const reading = manifest.assets.find(
+      ({assetId, lifecycle}) =>
+        assetId === 'reader-poses-reading' && lifecycle.status === 'active',
+    );
+    assert.equal(reading.stateBinding.facing, 'left');
+    assert.equal(
+      reading.compositionBinding.derivation.orientationTransform.kind,
+      'horizontal-mirror',
+    );
+    const alphaCentroidX = await sharp(
+      path.join(outputDirectory, 'reader-poses-reading.png'),
+    ).ensureAlpha().raw().toBuffer({resolveWithObject: true}).then(
+      ({data, info}) => {
+        let weightedX = 0;
+        let alphaTotal = 0;
+        for (let y = 0; y < info.height; y += 1) {
+          for (let x = 0; x < info.width; x += 1) {
+            const alpha = data[(y * info.width + x) * info.channels + 3];
+            weightedX += x * alpha;
+            alphaTotal += alpha;
+          }
+        }
+        return weightedX / alphaTotal;
+      },
+    );
+    assert.ok(
+      alphaCentroidX > 60,
+      `expected mirrored alpha centroid > 60, got ${alphaCentroidX}`,
+    );
     assert.deepEqual(summarizeActualPoseSheets(manifest), {
       families: [{
         poseFamilyId: 'reader-poses',
@@ -448,7 +818,7 @@ test('explicit registered source rects preserve a full silhouette that crosses a
         {id: 'reading', row: 0, column: 0},
         {id: 'pointing', row: 0, column: 1},
       ].map(stateContract),
-      keying: {keyColor: '#ff00ff', matteErode: 1},
+      keying: defaultStateSheetKeying,
       extraction: {
         mode: 'explicit-source-rects', canvas: {width: 120, height: 100},
         cells: [
@@ -590,7 +960,7 @@ test('world-motion proof resolves a looping state sequence through its hold stat
       playback: {mode: 'loop', cycles: 2, activeFrom: 0.01, activeUntil: 0.3, holdStateId: 'sleep', activeStateIds: ['run-a']},
       transition: {type: 'cut', durationSeconds: 0}, z: 2, depth: 0,
       transform: {x: 0.2, y: 0.5, width: 0.2, height: 0.2, anchorX: 0, anchorY: 0},
-      motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+      motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
     };
     const scene = {
       camera: {preset: 'static'},
@@ -603,4 +973,103 @@ test('world-motion proof resolves a looping state sequence through its hold stat
   } finally {
     await fs.rm(directory, {recursive: true, force: true});
   }
+});
+
+test('world-motion proof isolates an editable shape without a raster source', async () => {
+  const scene = {
+    camera: {preset: 'static'},
+    composition: {
+      nodes: [{
+        id: 'carried-stone',
+        kind: 'shape',
+        shape: 'ellipse',
+        style: {
+          fill: '#74685c',
+          stroke: '#3f352d',
+          strokeWidth: 2,
+          radius: 999,
+        },
+        z: 3,
+        depth: 0,
+        transform: {
+          x: 0.2,
+          y: 0.3,
+          width: 0.08,
+          height: 0.1,
+          anchorX: 0.5,
+          anchorY: 0.5,
+        },
+        motion: {
+          keyframes: [
+            {at: 0, offsetX: 0, offsetY: 0},
+            {at: 1, offsetX: 0.4, offsetY: -0.1},
+          ],
+        },
+      }],
+    },
+  };
+  const snapshot = await resolveTargetViewportSnapshot({
+    scene,
+    nodeId: 'carried-stone',
+    progress: 0.5,
+    video: {width: 1000, height: 500},
+  });
+  assert.equal(snapshot.source, 'shape:ellipse');
+  assert.equal(snapshot.sourceKind, 'editable-shape');
+  assert.deepEqual(snapshot.alphaBounds, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+  });
+  assert.ok(snapshot.visibleAreaRatio > 0.99);
+  assert.ok(snapshot.screenOccupancy > 0);
+});
+
+test('world-motion proof keeps a readable occupancy floor for small editable props', async () => {
+  const scene = {
+    camera: {preset: 'static'},
+    composition: {
+      nodes: [{
+        id: 'carried-stone',
+        kind: 'shape',
+        shape: 'ellipse',
+        style: {
+          fill: '#74685c',
+          stroke: '#3f352d',
+          strokeWidth: 2,
+          radius: 999,
+        },
+        z: 3,
+        depth: 0,
+        transform: {
+          x: 0.2,
+          y: 0.3,
+          width: 0.018,
+          height: 0.024,
+          anchorX: 0.5,
+          anchorY: 0.5,
+        },
+        motion: {
+          keyframes: [
+            {at: 0, offsetX: 0, offsetY: 0},
+            {at: 1, offsetX: 0.4, offsetY: -0.1},
+          ],
+        },
+      }],
+    },
+  };
+  const proof = await buildTargetWorldMotionProof({
+    scene,
+    nodeId: 'carried-stone',
+    proofTimes: [
+      {id: 'start', at: 0},
+      {id: 'end', at: 1},
+    ],
+    video: {width: 1920, height: 1080},
+  });
+  assert.equal(proof.thresholds.minimumScreenOccupancy, 0.00025);
+  assert.equal(proof.readabilityPassed, true);
+  assert.equal(proof.motionResolvable, true);
+  assert.equal(proof.passed, true);
 });

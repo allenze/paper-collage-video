@@ -59,7 +59,7 @@
         "sha256"
       ],
       "properties": {
-        "kind": {"enum": ["registered-layer-sheet", "layer-package-member"]},
+        "kind": {"enum": ["registered-layer-sheet", "layer-package-member", "state-sheet-cell"]},
         "assetId": {"type": "string", "minLength": 1},
         "stateId": {"type": ["string", "null"]},
         "sourceSheetAssetId": {"type": ["string", "null"]},

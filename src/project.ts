@@ -15,8 +15,8 @@ export type MotionEase = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'ho
 
 export type MotionKeyframe = {
   at: number;
-  x?: number;
-  y?: number;
+  offsetX?: number;
+  offsetY?: number;
   scale?: number;
   rotation?: number;
   opacity?: number;
@@ -30,10 +30,45 @@ export type IdleMotion = {
   phase?: number;
 };
 
+export type PathPoint = {x: number; y: number; z: number};
+
+export type PathMotion = {
+  kind: 'cubic-bezier-3d';
+  coordinateSpace: 'parent-normalized-depth';
+  start: PathPoint;
+  segments: Array<{
+    control1: PathPoint;
+    control2: PathPoint;
+    end: PathPoint;
+  }>;
+  progress: Array<{
+    at: number;
+    distance: number;
+    ease?: MotionEase;
+  }>;
+  orientation: {
+    mode: 'path-tangent';
+    forwardAngleDegrees: number;
+    smoothingSeconds: number;
+    maximumTurnDegreesPerSecond: number;
+  };
+  projection: {
+    depthDistanceScale: number;
+    farScale: number;
+    nearScale: number;
+    farOpacity: number;
+    nearOpacity: number;
+    farBlurPx: number;
+    nearBlurPx: number;
+    depthOrderSpan: number;
+  };
+};
+
 export type NodeMotion = {
   keyframes: MotionKeyframe[];
   idle?: IdleMotion;
   pivot?: {x: number; y: number};
+  path?: PathMotion;
 };
 
 export type NodeVisibility = {
@@ -61,6 +96,76 @@ export type CompositionRegistration = {
   origin: 'top-left';
 };
 
+export type CanonicalContainerMetrics = {
+  rawBounds: RegisteredFamilyRect;
+  alignedBounds: RegisteredFamilyRect;
+  maskBounds: RegisteredFamilyRect;
+  translation: {x: number; y: number};
+  centerDrift: number;
+  bottomGap: number;
+  fillLevel: number;
+  fillLevelDeviation: number;
+  rimGap: number;
+  bottomBandCoverage: number;
+  interiorRetention: number;
+  clippedPixels: number;
+  outsideMaskPixels: number;
+};
+
+export type CanonicalContainerContract = {
+  schemaVersion: 1;
+  familyId: string;
+  sourcePackageId: string;
+  sourceStrategy: 'canonical-frame-with-content-sheet';
+  familyFingerprint: string;
+  cleanPlateNodeId: string;
+  canonicalFrameNodeId: string;
+  contentsNodeId: string;
+  cleanPlateAssetId: string;
+  cleanPlateSha256: string;
+  canonicalFrameAssetId: string;
+  canonicalFrameSha256: string;
+  contentSheetAssetId: string;
+  contentSheetSha256: string;
+  interiorMaskAssetId: string;
+  interiorMaskSha256: string;
+  authoritativeSurfaceId: string;
+  interiorShape: {
+    kind: 'polygon';
+    points: Array<[number, number]>;
+  };
+  alignmentPolicy: {
+    mode: 'center-bottom';
+    maximumTranslationX: number;
+    maximumTranslationY: number;
+    maximumCenterDrift: number;
+    maximumBottomGap: number;
+    maximumFillLevelDeviation: number;
+    minimumInteriorRetention: number;
+  };
+  states: Array<{
+    id: string;
+    fillLevel: number;
+    assetId: string;
+    sha256: string;
+    metrics: CanonicalContainerMetrics;
+  }>;
+  terminalStateId: string;
+  terminalPolicy: {
+    minimumFillLevel: number;
+    maximumRimGap: number;
+    minimumBottomBandCoverage: number;
+    bottomBandHeight: number;
+  };
+  recoveryPolicy: {
+    strategy: 'preserve-content-sheet-context';
+    localDeterministicFixFirst: true;
+    isolatedStateGeneration: 'forbidden';
+    providerRepair: 'masked-complete-sheet-edit';
+    fallback: 'full-content-sheet-regeneration';
+  };
+};
+
 export type RegisteredFamilyRole =
   | 'support-rear'
   | 'subject'
@@ -72,7 +177,13 @@ export type RegisteredFamilySource =
       assetId: string;
       packageRole: RegisteredFamilyRole;
     }
-  | {kind: 'layer-package-member'; assetId: string};
+  | {kind: 'layer-package-member'; assetId: string}
+  | {
+      kind: 'state-sheet-cell';
+      assetId: string;
+      poseFamilyId: string;
+      stateId: string;
+    };
 
 export type RegisteredFamilyRect = {
   left: number;
@@ -212,6 +323,14 @@ export type SequenceState = {
   identityReferenceSha256: string;
 };
 
+export type PathViewBinding = {
+  depthVelocityThreshold: number;
+  transitionWidth: number;
+  planarStateIds: string[];
+  towardStateIds: string[];
+  awayStateIds: string[];
+};
+
 export type CompositionStateSequenceNode = {
   id: string;
   kind: 'state-sequence';
@@ -231,6 +350,7 @@ export type CompositionStateSequenceNode = {
     holdStateId?: string;
     activeStateIds?: string[];
   };
+  pathViewBinding?: PathViewBinding;
   transition: {type: 'cut' | 'crossfade'; durationSeconds: number};
   z: number;
   slot?: string;
@@ -290,7 +410,7 @@ export type EditorialAdvancedTransition = {
   matchDimensions: Array<'shape' | 'position' | 'scale' | 'color' | 'value'>;
   continuityTolerance: number;
   invalidPolicy: 'reject' | 'fallback';
-  fallback?: 'cut' | 'paper-wipe' | 'panel-replace';
+  fallback?: 'cut' | 'wipe' | 'panel-replace';
   treatment:
     | 'hard-cut'
     | 'card-switch'
@@ -441,6 +561,7 @@ export type EditorialSystem = {
 export type CompositionTypographyNode = {
   id: string;
   kind: 'typography';
+  role?: 'visual-sfx';
   text: string;
   treatment: {
     fit: {
@@ -618,6 +739,10 @@ export type LoopingStripBinding = {
     width: number;
     height: number;
   };
+  alphaFeather?: {
+    topPixels: number;
+    bottomPixels: number;
+  } | null;
   output: {
     width: number;
     height: number;
@@ -668,8 +793,16 @@ export type CompositionGroupNode = {
     | 'supported-subject'
     | 'registered-environment'
     | 'registered-depth-stack'
-    | 'looping-environment';
+    | 'looping-environment'
+    | 'canonical-container';
   renderParticipation?: 'visible' | 'derivation-only';
+  /**
+   * `scene` lets a top-level registered depth stack expose its registered
+   * members to the scene z-order so external characters can interleave with
+   * them. The group may be a static axis-aligned layout carrier, but it may not
+   * animate, rotate, fade, or create its own isolated stacking context.
+   */
+  stackingContext?: 'isolated' | 'scene';
   z: number;
   depth?: number;
   coordinateSpace: CoordinateSpace;
@@ -694,6 +827,7 @@ export type CompositionGroupNode = {
       role: 'tracked' | 'participant';
       anchorMode: 'screen' | 'world';
       nearOcclusion: 'behind-near' | 'above-near';
+      requireNearOverlap?: boolean;
       proofTimeIds: string[];
     }>;
     seamProofTimeIds: {
@@ -708,6 +842,7 @@ export type CompositionGroupNode = {
     };
     overscanPx: number;
   };
+  canonicalContainer?: CanonicalContainerContract;
   support?: {
     subjectId: string;
     layering?: 'between-supports' | 'subject-front';
@@ -747,6 +882,11 @@ export type CompositionMotifFieldNode = {
     height: number;
     padding?: number;
   }>;
+  worldBinding?: {
+    worldNodeId: string;
+    stripRole: 'far' | 'mid' | 'ground' | 'near';
+    relativeDriftAmplitude: number;
+  };
   z: number;
   depth?: number;
   transform: NodeTransform;
@@ -784,10 +924,20 @@ export type SubtitleCue = {fromSeconds: number; toSeconds: number; text: string}
 export type NormalizedSubtitleCue = {from: number; to: number; text: string};
 
 export type CameraKeyframe = {at: number; x?: number; y?: number; zoom?: number};
+export type CameraFollow = {
+  targetNodeId: string;
+  worldNodeId: string;
+  framing: {x: number; y: number};
+  lookAheadSeconds: number;
+  smoothingSeconds: number;
+  zoom: number;
+  worldBounds: {x: number; y: number; width: number; height: number};
+};
 export type SceneCamera = {
   preset: 'push' | 'pull' | 'pan-left' | 'pan-right' | 'static';
   intensity: number;
   keyframes?: CameraKeyframe[];
+  follow?: CameraFollow;
   parallax?: {
     enabled: boolean;
     strength: number;
@@ -831,7 +981,30 @@ export type ProjectEvent = {
   targetId: string;
   visual: EventVisual | null;
   proofTimeId?: string;
+  encounter?: {
+    contractId: string;
+    phase: 'enter' | 'approach' | 'answer' | 'exit';
+    narrationCueId?: string;
+  };
   sound?: ProjectSound;
+};
+
+export type EncounterContract = {
+  id: string;
+  travelerNodeId: string;
+  targetNodeId: string;
+  worldNodeId: string;
+  narrationCueId: string;
+  phaseBeatIds: {
+    enter: string;
+    approach: string;
+    answer: string;
+    exit: string;
+  };
+  entryEdge: 'left' | 'right';
+  exitEdge: 'left' | 'right';
+  minimumTravelViewports: number;
+  cueToleranceSeconds: number;
 };
 
 export type SceneBoundaryTransition = {
@@ -849,15 +1022,15 @@ export type SceneBoundaryTransition = {
   treatment: {
     type:
       | 'cut'
-      | 'paper-wipe'
-      | 'dip-to-paper'
-      | 'paper-slide'
-      | 'torn-wipe'
-      | 'paper-iris'
+      | 'wipe'
+      | 'dip'
+      | 'slide'
+      | 'iris'
       | 'page-turn'
-      | 'paper-shutters';
+      | 'shutters';
     motivation: 'semantic-default' | 'authored' | 'rhythmic' | 'impact';
     durationSeconds: number;
+    edgeStyle?: 'clean' | 'paper' | 'torn';
     direction?:
       | 'left-to-right'
       | 'right-to-left'
@@ -890,9 +1063,26 @@ export type ProjectTheme = {
   ink: string;
   subtitle: string;
   subtitleBackground: string;
-  paperEdge: string;
   foreground: string;
-  texture: string;
+  surface: {
+    texture: null | {
+      src: string;
+      opacity: number;
+      blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+    };
+    subjectEdge:
+      | {mode: 'none'}
+      | {mode: 'paper-outline'; color: string; widthPx: number};
+    subjectShadow:
+      | {mode: 'none'}
+      | {
+          mode: 'drop-shadow';
+          offsetXPx: number;
+          offsetYPx: number;
+          blurPx: number;
+          color: string;
+        };
+  };
   fontFamily?: string;
   fontFile?: string;
 };
@@ -906,7 +1096,7 @@ export type ProjectAudioMastering = {
 
 export type SceneAppearance = {
   background?: string;
-  paperTexture?: {
+  surfaceTexture?: {
     visible: boolean;
     opacity: number;
     blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
@@ -920,6 +1110,9 @@ export type SceneAppearance = {
     color?: string;
     background?: string;
     maxWidth?: number;
+    fontFamily?: string;
+    fontWeight?: number;
+    edgeTreatment?: 'soft-shadow' | 'crisp-outline' | 'none';
   };
 };
 
@@ -939,15 +1132,212 @@ export type ProjectScene = {
     durationSeconds: number;
     text: string;
   };
+  encounters?: EncounterContract[];
   subtitles: SubtitleCue[];
   events: ProjectEvent[];
 };
 
+export type SpatialContract =
+  | {
+      id: string;
+      kind: 'grounding';
+      sceneId: string;
+      subjectNodeId: string;
+      supportNodeId: string;
+      proofTimeIds: string[];
+      subjectAnchor:
+        | {mode: 'normalized'; x: number; y: number}
+        | {mode: 'state-anchor'; name: string};
+      supportSurface: {points: Array<{x: number; y: number}>};
+      supportScreenBand: {minY: number; maxY: number};
+      mode: 'contact' | 'locked-contact';
+      maxGap: number;
+      maxPenetration: number;
+      maxRelativeDrift: number;
+      frontOcclusion?: {
+        nodeId: string;
+        relation: 'in-front-of-subject' | 'behind-subject';
+        minimumAlphaOverlap?: number;
+      };
+      subtitleClearance?: {minimumGap: number};
+    }
+  | {
+      id: string;
+      kind: 'continuity';
+      from: {sceneId: string; proofTimeId: string};
+      to: {sceneId: string; proofTimeId: string};
+      nodePairs: Array<{
+        role: 'world' | 'subject' | 'prop' | 'support';
+        fromNodeId: string;
+        toNodeId: string;
+        requireSameFamily: boolean;
+        maxPositionDelta: number;
+        maxScaleDelta: number;
+      }>;
+      groundingContractIds: string[];
+      maxCameraPositionDelta: number;
+      maxCameraZoomDelta: number;
+    }
+  | {
+      id: string;
+      kind: 'gait';
+      sceneId: string;
+      nodeId: string;
+      fromProofTimeId: string;
+      throughProofTimeId: string;
+      stateIds: string[];
+      minimumChangesPerSecond: number;
+      continueThroughWindowEnd: boolean;
+    }
+  | {
+      id: string;
+      kind: 'travel-facing';
+      sceneId: string;
+      nodeId: string;
+      fromProofTimeId: string;
+      throughProofTimeId: string;
+      direction: 'left' | 'right';
+      expectedFacing: 'left' | 'right' | 'front' | 'back' | 'neutral';
+      minimumTravel: number;
+      rationale: string;
+    }
+  | {
+      id: string;
+      kind: 'path-locomotion';
+      sceneId: string;
+      nodeId: string;
+      worldNodeId: string;
+      fromProofTimeId: string;
+      throughProofTimeId: string;
+      turnProofTimeIds: string[];
+      stateIds: string[];
+      minimumChangesPerSecond: number;
+      continueThroughWindowEnd: boolean;
+      minimumTravel: number;
+      minimumDepthTravel: number;
+      minimumProjectionScaleDelta: number;
+      requiredDepthDirections: Array<'toward-camera' | 'away-camera'>;
+      minimumDirectionSectors: number;
+      maximumHeadingErrorDegrees: number;
+      maximumTurnDegreesPerSecond: number;
+      screenSafeBand?: {
+        minX: number;
+        maxX: number;
+        minY: number;
+        maxY: number;
+        rationale: string;
+      };
+      requireCameraFollow: boolean;
+    };
+
 export type PaperCollageProject = {
   $schema?: string;
-  schemaVersion: 10;
+  schemaVersion: 12;
   slug: string;
   title: string;
+  styleProfile: null | {
+    schemaVersion: 2;
+    id: string;
+    label: string;
+    summary: string;
+    catalogVersion: string;
+    catalogFingerprint: string;
+    profileFingerprint: string;
+    referenceImage: string;
+    generation: {
+      promptDirectives: string[];
+      negativeDirectives: string[];
+      compositionPrinciples: string[];
+      preferredSurfaces: Array<
+        'alpha' | 'chroma-key' | 'opaque' | 'layer-sheet' | 'seamless-strip-x'
+      >;
+    };
+    motion: {
+      pacing: 'gentle' | 'playful' | 'measured' | 'dynamic';
+      preferredIdlePresets: Array<'float' | 'breathe' | 'drift' | 'sway' | 'still'>;
+      transitionSet: 'paper-story' | 'clean-video';
+      visualSfx: {
+        policy: 'rare' | 'selective' | 'expressive';
+        maxPerScene: number;
+        allowedKinds: Array<'impact' | 'motion'>;
+        durationRangeSeconds: [number, number];
+      };
+    };
+    render: {theme: ProjectTheme};
+    quality: {
+      requiredAssetChecks: string[];
+      requiredCompositeChecks: string[];
+      reviewFocus: string[];
+    };
+  };
+  motionContract: null | {
+    schemaVersion: 1;
+    direction: {
+      schemaVersion: 1;
+      summary: string;
+      pacing: 'gentle' | 'playful' | 'measured' | 'dynamic';
+      performance: {
+        grammar: Array<
+          | 'establish'
+          | 'anticipate'
+          | 'action'
+          | 'follow-through'
+          | 'settle'
+          | 'hold'
+          | 'transition'
+        >;
+        anticipation: 'none' | 'selective' | 'required-for-hero';
+        followThrough: 'none' | 'selective' | 'required-for-hero';
+        poseStrategy: 'continuous-led' | 'pose-to-pose' | 'mixed';
+        minimumFinalHoldRatio: number;
+      };
+      camera: {strategy: 'locked' | 'motivated' | 'expressive'};
+      transitions: {
+        strategy: 'story-led' | 'rhythmic-accented' | 'chapter-led';
+      };
+      ambient: {strategy: 'minimal' | 'selective' | 'persistent'};
+      styleDeviationRationale: string | null;
+    };
+    styleProfileBinding: {
+      id: string;
+      profileFingerprint: string;
+      pacing: 'gentle' | 'playful' | 'measured' | 'dynamic';
+    };
+    scenes: Array<{
+      sceneId: string;
+      motionPolicy: 'standard' | 'locked-static';
+      phrases: Array<{
+        role:
+          | 'establish'
+          | 'anticipate'
+          | 'action'
+          | 'follow-through'
+          | 'settle'
+          | 'hold'
+          | 'transition';
+        beatId: string;
+        at: number;
+        proofTimeId: string;
+      }>;
+      heroActionBeatIds: string[];
+      stateSequenceTreatmentIds: string[];
+      continuousTreatmentIds: string[];
+      cameraTreatmentIds: string[];
+      ambientTreatmentIds: string[];
+      finalHoldRatio: number;
+      exception: null | {kind: 'locked-static'; rationale: string};
+    }>;
+    transitions: Array<{
+      id: string;
+      intent: string;
+      type: string;
+      motivation: string;
+    }>;
+    editorialFingerprint: string;
+    requiredCompositeChecks: string[];
+    approvalFingerprint: string;
+    fingerprint: string;
+  };
   plan: {
     schemaVersion: 4;
     slug: string;
@@ -974,6 +1364,16 @@ export type PaperCollageProject = {
       profileHardCeiling: number;
       approvedAt: string;
     } | null;
+    imageBudgetRevisions?: Array<{
+      schemaVersion: 1;
+      fromLimit: number;
+      toLimit: number;
+      usedAtApproval: number;
+      reservedAtApproval: number;
+      profileHardCeiling: number;
+      authorizedAt: string;
+      humanNote: string;
+    }>;
     requested: {durationSeconds: number | null; sceneCount: number | null};
     resolved: null | {
       durationSeconds: number;
@@ -1016,6 +1416,7 @@ export type PaperCollageProject = {
       | {id: string; kind: 'offscreen-at'; sceneId: string; proofTimeId: string; nodeId: string; side: 'left' | 'right'}
     >;
   }>;
+  spatialContracts?: SpatialContract[];
   scenes: ProjectScene[];
   sceneTransitions: SceneBoundaryTransition[];
 };

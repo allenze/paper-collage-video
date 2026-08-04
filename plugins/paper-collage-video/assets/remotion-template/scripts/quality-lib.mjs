@@ -47,9 +47,16 @@ import {
 import {
   derivationRegionsFromBinding,
   inspectAlphaBands,
+  inspectAlphaTopology,
 } from './alpha-band-lib.mjs';
-import {assertRegisteredFamilyRecords} from './registered-family-lib.mjs';
+import {
+  assertRegisteredFamilyGroupMembers,
+} from './registered-family-lib.mjs';
+import {
+  inspectCanonicalContainerGroupMembers,
+} from './canonical-container-lib.mjs';
 import {inspectStateAnchorRegistration} from './state-sheet-lib.mjs';
+import {inspectSemanticSliceOutput} from './semantic-slices-lib.mjs';
 
 export const ASSET_QUALITY_CHECKS = [
   'no-text',
@@ -57,6 +64,7 @@ export const ASSET_QUALITY_CHECKS = [
   'no-people',
   'safe-area-clear',
   'style-consistent',
+  'style-profile-conformant',
   'subject-complete',
   'identity-consistent',
   'identity-distinct-within-frame',
@@ -76,9 +84,21 @@ export const ASSET_QUALITY_CHECKS = [
   'diagram-edge-clean',
   'small-text-legible',
   'no-procedural-noise-on-semantic-lines',
+  'clean-plate-clear',
+  'canonical-frame-only',
+  'container-content-only',
+  'container-state-separation',
+  'container-fill-progression',
 ];
 
 export const COMPOSITE_QUALITY_CHECKS = [
+  'style-profile-consistent',
+  'motion-grammar-consistent',
+  'pacing-cadence-consistent',
+  'camera-strategy-consistent',
+  'transition-strategy-consistent',
+  'ambient-strategy-consistent',
+  'sync-anchors-current',
   'support-contact',
   'inside-or-on-readable',
   'front-occlusion',
@@ -116,6 +136,11 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'field-loop-clean',
   'typography-fit-clean',
   'typography-timing-bound',
+  'visual-sfx-audio-sync',
+  'visual-sfx-subtitle-clear',
+  'visual-sfx-subject-clear',
+  'visual-sfx-density-controlled',
+  'visual-sfx-style-consistent',
   'annotation-routing-clean',
   'annotation-exclusions-clean',
   'data-mapping-valid',
@@ -133,7 +158,38 @@ export const COMPOSITE_QUALITY_CHECKS = [
   'world-anchors-correct',
   'multi-subject-occlusion-correct',
   'signed-world-direction-correct',
+  'contact-anchor-current',
+  'support-surface-contact',
+  'spatial-paint-order-correct',
+  'relative-contact-stable',
+  'subtitle-clearance',
+  'causal-continuity',
+  'gait-cadence-clean',
+  'signed-travel-direction-correct',
+  'travel-facing-readable',
+  'travel-monotonic-clean',
+  'path-travel-clean',
+  'path-heading-readable',
+  'turn-continuity-clean',
+  'depth-projection-readable',
+  'depth-order-clean',
+  'camera-follow-coverage-clean',
+  'locomotion-cycle-bound',
+  'canonical-frame-unique',
+  'clean-plate-clear',
+  'interior-state-aligned',
+  'no-interior-overflow',
+  'bottom-load-retained',
+  'fill-state-measurable',
+  'terminal-fill-readable',
+  'authoritative-surface-unique',
 ];
+
+const compositionAppearance = (appearance) => {
+  if (!appearance) return appearance;
+  const {subtitles: _subtitles, ...rest} = appearance;
+  return rest;
+};
 
 export const QUALITY_CHECKS = [
   ...ASSET_QUALITY_CHECKS,
@@ -157,6 +213,17 @@ const COMPOSITE_PROFILES = {
   'supported-subject': ['support-contact', 'inside-or-on-readable', 'front-occlusion', 'shared-motion', 'identity-continuity', 'motion-isolation-clean'],
   'registered-environment': ['registration-aligned', 'boundary-respected', 'no-semantic-duplication', 'depth-readable', 'final-composition-readable'],
   'registered-depth-stack': ['registration-aligned', 'layer-completeness-proven', 'depth-order-readable', 'neutral-reconstruction-readable', 'exploded-view-readable', 'responsive-motion-stress-clean', 'final-composition-readable'],
+  'canonical-container': [
+    'canonical-frame-unique',
+    'clean-plate-clear',
+    'interior-state-aligned',
+    'no-interior-overflow',
+    'bottom-load-retained',
+    'fill-state-measurable',
+    'terminal-fill-readable',
+    'authoritative-surface-unique',
+    'final-composition-readable',
+  ],
   event: ['visual-event-visible', 'sound-event-bound', 'proof-time-bound', 'final-state-preserved'],
   'state-sequence': [
     'state-order-correct',
@@ -176,6 +243,53 @@ const COMPOSITE_PROFILES = {
   'data-graphic': ['data-mapping-valid', 'data-reveal-bound', 'proof-time-bound'],
   'editorial-transition': ['editorial-transition-continuity', 'proof-time-bound'],
   'responsive-directing': ['responsive-directing-bounded', 'final-composition-readable'],
+  'spatial-grounding': [
+    'contact-anchor-current',
+    'support-surface-contact',
+    'final-composition-readable',
+  ],
+  'spatial-continuity': [
+    'causal-continuity',
+    'final-composition-readable',
+  ],
+  'spatial-gait': ['gait-cadence-clean', 'final-composition-readable'],
+  'spatial-travel-facing': [
+    'signed-travel-direction-correct',
+    'travel-facing-readable',
+    'travel-monotonic-clean',
+    'final-composition-readable',
+  ],
+  'spatial-path-locomotion': [
+    'path-travel-clean',
+    'path-heading-readable',
+    'turn-continuity-clean',
+    'depth-projection-readable',
+    'depth-order-clean',
+    'camera-follow-coverage-clean',
+    'locomotion-cycle-bound',
+    'final-composition-readable',
+  ],
+};
+
+const requiredChecksForSpatialContract = (contract) => {
+  if (contract.kind === 'continuity') {
+    return COMPOSITE_PROFILES['spatial-continuity'];
+  }
+  if (contract.kind === 'gait') {
+    return COMPOSITE_PROFILES['spatial-gait'];
+  }
+  if (contract.kind === 'travel-facing') {
+    return COMPOSITE_PROFILES['spatial-travel-facing'];
+  }
+  if (contract.kind === 'path-locomotion') {
+    return COMPOSITE_PROFILES['spatial-path-locomotion'];
+  }
+  return [
+    ...COMPOSITE_PROFILES['spatial-grounding'],
+    ...(contract.frontOcclusion ? ['spatial-paint-order-correct'] : []),
+    ...(contract.mode === 'locked-contact' ? ['relative-contact-stable'] : []),
+    ...(contract.subtitleClearance ? ['subtitle-clearance'] : []),
+  ];
 };
 
 const requiredChecksForGroup = (group) => {
@@ -328,8 +442,13 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     requiredChecks,
     reviewScope = 'source-asset',
     semanticBinding = null,
+    semanticSliceBinding = null,
+    alphaTopologyExpectedComponents = [],
+    alphaTopologyAllowDetachedComponents = false,
     registeredFamilyBinding = null,
+    canonicalContainerBinding = null,
     stateSheetBinding = null,
+    outputSurface = null,
     stateSheetRecoveryBinding = null,
     recoverySourceFile = null,
     recoverySourceSha256 = null,
@@ -362,10 +481,25 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       }
       if (assetId) existing.assetId = assetId;
       if (semanticBinding) existing.semanticBinding = semanticBinding;
+      if (semanticSliceBinding) {
+        existing.semanticSliceBinding = semanticSliceBinding;
+      }
+      if (alphaTopologyExpectedComponents.length > 0) {
+        existing.alphaTopologyExpectedComponents =
+          alphaTopologyExpectedComponents;
+      }
+      existing.alphaTopologyAllowDetachedComponents =
+        existing.alphaTopologyAllowDetachedComponents ||
+        alphaTopologyAllowDetachedComponents;
       if (registeredFamilyBinding) {
         existing.registeredFamilyBinding = registeredFamilyBinding;
       }
+      if (canonicalContainerBinding) {
+        existing.canonicalContainerBinding =
+          canonicalContainerBinding;
+      }
       if (stateSheetBinding) existing.stateSheetBinding = stateSheetBinding;
+      if (outputSurface) existing.outputSurface = outputSurface;
       if (stateSheetRecoveryBinding) existing.stateSheetRecoveryBinding = stateSheetRecoveryBinding;
       if (recoverySourceFile) existing.recoverySourceFile = recoverySourceFile;
       if (recoverySourceSha256) existing.recoverySourceSha256 = recoverySourceSha256;
@@ -381,8 +515,13 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       sources: [source],
       reviewScope,
       semanticBinding,
+      semanticSliceBinding,
+      alphaTopologyExpectedComponents,
+      alphaTopologyAllowDetachedComponents,
       registeredFamilyBinding,
+      canonicalContainerBinding,
       stateSheetBinding,
+      outputSurface,
       stateSheetRecoveryBinding,
       recoverySourceFile,
       recoverySourceSha256,
@@ -437,6 +576,8 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
         kind: 'environment',
         source: `scene:${scene.id}:node:${node.id}`,
         reviewScope: 'runtime-visible',
+        alphaTopologyAllowDetachedComponents:
+          ['scenery', 'foreground-occluder'].includes(node.surfaceRole),
       });
     }
     for (const {node, renderParticipation} of collectCompositionGroups(scene.composition)) {
@@ -449,11 +590,21 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
     }
   }
 
-  const recordsByAssetId = new Map((manifest.assets ?? []).map((record) => [record.assetId, record]));
-  for (const record of activeManifestAssets(manifest)) {
+  const activeRecords = activeManifestAssets(manifest);
+  const recordsByAssetId = new Map(activeRecords.map((record) => [record.assetId, record]));
+  for (const record of activeRecords) {
     if (record.capability !== 'image') continue;
     const semanticBinding = record.semanticBinding ?? record.request?.semanticBinding ?? null;
     const registeredFamilyBinding = record.registeredFamilyBinding ?? null;
+    const registeredFamilyMaskRecord =
+      registeredFamilyBinding?.derivation?.maskAssetId
+        ? recordsByAssetId.get(
+            registeredFamilyBinding.derivation.maskAssetId,
+          ) ?? null
+        : null;
+    const semanticSliceBinding = record.semanticSliceBinding ?? null;
+    const canonicalContainerBinding =
+      record.canonicalContainerBinding ?? null;
     const boundContracts = (semanticBinding?.contractIds ?? [])
       .map((id) => semanticContracts.contracts.get(id))
       .filter(Boolean);
@@ -473,8 +624,23 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       source: `manifest:${record.assetId}`,
       requiredChecks: [...new Set([...(record.request?.quality?.requiredChecks ?? []), ...semanticChecks])],
       semanticBinding,
+      semanticSliceBinding,
+      alphaTopologyExpectedComponents:
+        semanticSliceBinding?.components ??
+        registeredFamilyMaskRecord?.semanticSliceBinding?.components ??
+        [],
+      alphaTopologyAllowDetachedComponents:
+        ['mid', 'near'].includes(record.loopingStripBinding?.role) ||
+        (
+          registeredFamilyBinding?.pattern === 'registered-depth-stack' &&
+          ['subject', 'support-front'].includes(
+            registeredFamilyBinding?.role,
+          )
+        ),
       registeredFamilyBinding,
+      canonicalContainerBinding,
       stateSheetBinding,
+      outputSurface: record.request?.outputSurface ?? null,
       stateSheetRecoveryBinding,
       recoverySourceFile: recoverySource?.file ?? null,
       recoverySourceSha256: recoverySource?.sha256 ?? null,
@@ -493,8 +659,31 @@ const collectQualityAssets = async (project, manifest, semanticContracts) => {
       (asset.semanticBinding?.contractIds ?? [])
         .map((id) => [id, semanticContracts.fingerprints.get(id) ?? null]),
     );
-    return {...asset, assetId, semanticContractFingerprints};
+    return {
+      ...asset,
+      assetId,
+      semanticContractFingerprints,
+      styleProfileBinding: project.styleProfile
+        ? {
+            id: project.styleProfile.id,
+            profileFingerprint: project.styleProfile.profileFingerprint,
+          }
+        : null,
+    };
   });
+};
+
+export const requiresTransparentAssetSurface = (asset) => {
+  if (
+    asset.registeredFamilyBinding?.derivation?.sourceSurface?.mode ===
+    'chroma-key'
+  ) {
+    return true;
+  }
+  if (asset.reviewScope === 'source-asset') {
+    return asset.outputSurface?.mode === 'transparent';
+  }
+  return ['character', 'prop'].includes(asset.kind);
 };
 
 const inspectTechnicalQuality = async ({asset, project}) => {
@@ -529,7 +718,7 @@ const inspectTechnicalQuality = async ({asset, project}) => {
   const hasRegisteredKeying =
     asset.registeredFamilyBinding?.derivation?.sourceSurface?.mode ===
     'chroma-key';
-  if (['character', 'prop'].includes(asset.kind) || hasRegisteredKeying) {
+  if (requiresTransparentAssetSurface(asset)) {
     const inspection = await inspectCharacterPng(file);
     checks.push(
       {id: 'alpha-present', passed: inspection.hasAlpha && inspection.transparentPixels > 0, actual: inspection.hasAlpha},
@@ -577,17 +766,50 @@ const inspectTechnicalQuality = async ({asset, project}) => {
     }
   }
   if (metadata.hasAlpha === true) {
+    const derivationRegions = derivationRegionsFromBinding(
+      asset.registeredFamilyBinding,
+    );
     const inspection = await inspectAlphaBands({
       file,
-      derivationRegions: derivationRegionsFromBinding(
-        asset.registeredFamilyBinding,
-      ),
+      derivationRegions,
     });
     checks.push({
       id: 'rectangular-alpha-band-free',
       passed: inspection.passed,
       expected: 'no error-severity low-alpha rectangular band',
       actual: inspection,
+    });
+    const topology = await inspectAlphaTopology({
+      file,
+      derivationRegions,
+      expectedComponents: asset.alphaTopologyExpectedComponents,
+      allowDetachedComponents:
+        asset.alphaTopologyAllowDetachedComponents,
+    });
+    checks.push({
+      id: 'alpha-topology-clean',
+      passed: topology.passed,
+      expected:
+        'no detached rectangular alpha fragment or hard rectangular derivation boundary',
+      actual: topology,
+    });
+  }
+  if (asset.semanticSliceBinding) {
+    const semanticSliceInspection = await inspectSemanticSliceOutput({
+      file,
+      binding: asset.semanticSliceBinding,
+    });
+    checks.push({
+      id: 'semantic-slice-alpha-current',
+      passed: semanticSliceInspection.passed,
+      expected: {
+        components: semanticSliceInspection.expectedComponents,
+        alphaPixels: semanticSliceInspection.expectedAlphaPixels,
+      },
+      actual: {
+        components: semanticSliceInspection.actualComponents,
+        alphaPixels: semanticSliceInspection.actualAlphaPixels,
+      },
     });
   }
   if (asset.semanticBinding?.riskClass === 'diagram-critical' && path.extname(file).toLowerCase() === '.svg') {
@@ -644,7 +866,64 @@ const hashReferencedFiles = async (sources) => {
 
 const findNode = (scene, id) => flattenCompositionNodes(scene.composition?.nodes).find(({node}) => node.id === id)?.node ?? null;
 
-export const collectCompositeQualityTargets = async (project, {manifest = null} = {}) => {
+const compositionTimingForScene = ({scene, sceneTransitions}) => ({
+  narration: {
+    startSeconds: scene.narration?.startSeconds,
+    durationSeconds: scene.narration?.durationSeconds,
+  },
+  tailSeconds: scene.tailSeconds,
+  sceneTransitions,
+});
+
+export const proofTimesForStateSequence = ({
+  scene,
+  node,
+  spatialContracts = [],
+}) => {
+  const sceneProofTimes = scene.motion?.proofTimes ?? [];
+  const assertedProofTimes = sceneProofTimes.filter((proof) =>
+    (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
+  );
+  if (assertedProofTimes.length > 0 || !node.motion?.path) {
+    return assertedProofTimes;
+  }
+  const pathContracts = spatialContracts.filter(
+    (contract) =>
+      contract.kind === 'path-locomotion' &&
+      contract.sceneId === scene.id,
+  );
+  const directContracts = pathContracts.filter(
+    (contract) => contract.nodeId === node.id,
+  );
+  const matchingContracts = directContracts.length > 0
+    ? directContracts
+    : pathContracts.filter((contract) => {
+        const contractedNode = findNode(scene, contract.nodeId);
+        return (
+          Boolean(node.poseFamilyId) &&
+          contractedNode?.poseFamilyId === node.poseFamilyId &&
+          Boolean(contractedNode.motion?.path)
+        );
+      });
+  const contractProofIds = new Set(
+    matchingContracts
+      .flatMap((contract) => [
+        contract.fromProofTimeId,
+        ...(contract.turnProofTimeIds ?? []),
+        contract.throughProofTimeId,
+      ])
+      .filter(Boolean),
+  );
+  return sceneProofTimes.filter(({id}) => contractProofIds.has(id));
+};
+
+export const collectCompositeQualityTargets = async (
+  project,
+  {
+    manifest = null,
+    allowPendingSemanticEvidenceTargets = false,
+  } = {},
+) => {
   const runtimeSurfaceFingerprint =
     await createRuntimeSurfaceFingerprint('composition-proof');
   const assetManifest = manifest ?? await readManifest(project);
@@ -671,7 +950,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         camera: scene.camera,
         depthMap,
         proofTimes,
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        timing: compositionTimingForScene({scene, sceneTransitions}),
         memberHashes,
       });
       targets.push({
@@ -699,7 +978,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         sceneId: scene.id,
         node,
         proofTimes,
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        timing: compositionTimingForScene({scene, sceneTransitions}),
         camera: scene.camera,
         affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === node.id),
         memberHashes,
@@ -744,7 +1023,17 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         compositionHash: hashCompositionValue(node),
         fingerprint,
         proofTimeIds: proofTimes.map(({id}) => id),
-        requiredChecks: COMPOSITE_PROFILES[pattern],
+        requiredChecks:
+          node.kind === 'typography' && node.role === 'visual-sfx'
+            ? [
+                ...COMPOSITE_PROFILES[pattern],
+                'visual-sfx-audio-sync',
+                'visual-sfx-subtitle-clear',
+                'visual-sfx-subject-clear',
+                'visual-sfx-density-controlled',
+                'visual-sfx-style-consistent',
+              ]
+            : COMPOSITE_PROFILES[pattern],
         reviewScope: 'runtime-visible',
         editorialNode: node,
         sceneNodes: scene.composition?.nodes ?? [],
@@ -753,15 +1042,62 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         exclusionZones: project.editorial?.responsiveProfiles?.find(
           ({id}) => id === project.editorial.activeProfile,
         )?.exclusionZones ?? [],
+        events: (scene.events ?? []).filter(
+          ({targetId}) => targetId === node.id,
+        ),
       });
     }
-    for (const {node, renderParticipation} of collectStateSequences(scene.composition)) {
+    for (const {node, parent, renderParticipation} of collectStateSequences(scene.composition)) {
       if (renderParticipation !== 'visible') continue;
-      const proofTimes = (scene.motion?.proofTimes ?? []).filter((proof) =>
-        (proof.stateAssertions ?? []).some(({nodeId}) => nodeId === node.id),
-      );
+      const proofTimes = proofTimesForStateSequence({
+        scene,
+        node,
+        spatialContracts: project.spatialContracts,
+      });
       const memberHashes = await hashReferencedFiles(node.states.map(({src}) => src));
       const stateRecords = node.states.map((state) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(state.src)))) ?? null);
+      const registeredFamilyGroup =
+        parent?.kind === 'group' &&
+        ['supported-subject', 'registered-environment', 'registered-depth-stack', 'canonical-container'].includes(
+          parent.pattern,
+        )
+          ? parent
+          : null;
+      const registeredFamilyRecords = registeredFamilyGroup
+        ? registeredFamilyGroup.children
+            .filter(({kind}) => ['asset', 'state-sequence'].includes(kind))
+            .flatMap((member) =>
+              (member.kind === 'state-sequence'
+                ? member.states.map(({src}) => src)
+                : [member.src]
+              ).map(
+                (source) =>
+                  recordsByFile.get(
+                    path.normalize(
+                      path.relative(ROOT, resolvePublicFile(source)),
+                    ),
+                  ) ?? null,
+              ),
+            )
+        : [];
+      const registeredFamilyIds = new Set(
+        registeredFamilyRecords
+          .map((record) => record?.registeredFamilyBinding?.familyId)
+          .filter(Boolean),
+      );
+      const registeredFamilyContextRecords = registeredFamilyGroup
+        ? activeManifestAssets(assetManifest).filter((record) =>
+            registeredFamilyIds.has(
+              record?.registeredFamilyBinding?.familyId,
+            ) ||
+            (
+              registeredFamilyGroup.pattern ===
+                'canonical-container' &&
+              record?.canonicalContainerBinding?.familyId ===
+                registeredFamilyGroup.canonicalContainer?.familyId
+            ),
+          )
+        : [];
       const familyProvenance = stateRecords.map((record) => record ? {
         assetId: record.assetId,
         compositionBinding: record.compositionBinding ?? record.request?.compositionBinding ?? null,
@@ -773,7 +1109,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         sceneId: scene.id,
         node,
         proofTimes,
-        timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+        timing: compositionTimingForScene({scene, sceneTransitions}),
         camera: scene.camera,
         affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === node.id),
         memberHashes,
@@ -793,6 +1129,9 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         reviewScope: 'runtime-visible',
         sequence: node,
         stateRecords,
+        registeredFamilyGroup,
+        registeredFamilyRecords,
+        registeredFamilyContextRecords,
         identityReferenceRecords: node.states.map(
           ({identityReferenceAssetId}) =>
             recordsByAssetId.get(identityReferenceAssetId) ?? null,
@@ -800,7 +1139,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       });
     }
     for (const {node: group, renderParticipation} of collectCompositionGroups(scene.composition)) {
-      if (!['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment'].includes(group.pattern)) continue;
+      if (!['supported-subject', 'registered-environment', 'registered-depth-stack', 'looping-environment', 'canonical-container'].includes(group.pattern)) continue;
       const members = descendants(group).filter((node) => ['asset', 'state-sequence', 'world-strip'].includes(node.kind));
       const sources = [
         ...members.flatMap((member) => member.kind === 'state-sequence' ? member.states.map(({src}) => src) : [member.src]),
@@ -811,11 +1150,27 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         (member.kind === 'state-sequence' ? member.states.map(({src}) => src) : [member.src])
           .map((source) => recordsByFile.get(path.normalize(path.relative(ROOT, resolvePublicFile(source)))) ?? null),
       );
+      const familyIds = new Set(
+        familyRecords
+          .map((record) => record?.registeredFamilyBinding?.familyId)
+          .filter(Boolean),
+      );
+      const familyContextRecords = activeManifestAssets(assetManifest).filter(
+        (record) =>
+          familyIds.has(record?.registeredFamilyBinding?.familyId) ||
+          (
+            group.pattern === 'canonical-container' &&
+            record?.canonicalContainerBinding?.familyId ===
+              group.canonicalContainer?.familyId
+          ),
+      );
       const familyProvenance = familyRecords.map((record) => record ? {
         assetId: record.assetId,
         compositionBinding: record.compositionBinding ?? record.request?.compositionBinding ?? null,
         registeredFamilyBinding: record.registeredFamilyBinding ?? null,
         loopingStripBinding: record.loopingStripBinding ?? null,
+        canonicalContainerBinding:
+          record.canonicalContainerBinding ?? null,
         familyFingerprint: record.familyFingerprint ?? null,
       } : null);
       const fingerprint = hashCompositionValue(
@@ -833,7 +1188,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
               sceneId: scene.id,
               group,
               proofTimes: scene.motion?.proofTimes ?? [],
-              timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions},
+              timing: compositionTimingForScene({scene, sceneTransitions}),
               camera: scene.camera,
               affectingEvents: (scene.events ?? []).filter(({targetId}) => targetId === group.id),
               memberHashes,
@@ -863,6 +1218,8 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
             : 'runtime-visible',
         group,
         familyRecords,
+        familyContextRecords,
+        manifest: assetManifest,
       });
     }
     for (const event of scene.events ?? []) {
@@ -875,7 +1232,7 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         : collectRuntimeVisibleCompositionSources(scene.composition);
       const memberHashes = await hashReferencedFiles(targetSources);
       const proof = (scene.motion?.proofTimes ?? []).find(({id}) => id === event.proofTimeId) ?? null;
-      const fingerprint = hashCompositionValue({runtimeSurfaceFingerprint, sceneId: scene.id, event, proof, targetNode, timing: {narration: scene.narration, tailSeconds: scene.tailSeconds, sceneTransitions}, camera: scene.camera, memberHashes});
+      const fingerprint = hashCompositionValue({runtimeSurfaceFingerprint, sceneId: scene.id, event, proof, targetNode, timing: compositionTimingForScene({scene, sceneTransitions}), camera: scene.camera, memberHashes});
       targets.push({
         compositeId: `event:${scene.id}:${event.id}`,
         sceneId: scene.id,
@@ -891,6 +1248,116 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
         event,
       });
     }
+  }
+  const sceneById = new Map(
+    (project.scenes ?? []).map((scene) => [scene.id, scene]),
+  );
+  for (const contract of project.spatialContracts ?? []) {
+    const proofShots = contract.kind === 'grounding'
+      ? [{
+          sceneId: contract.sceneId,
+          nodeId: contract.subjectNodeId,
+          proofTimeIds: contract.proofTimeIds,
+        }]
+      : ['gait', 'travel-facing', 'path-locomotion'].includes(contract.kind)
+        ? [{
+            sceneId: contract.sceneId,
+            nodeId: contract.nodeId,
+            proofTimeIds: [
+              contract.fromProofTimeId,
+              ...(contract.kind === 'path-locomotion'
+                ? contract.turnProofTimeIds
+                : []),
+              contract.throughProofTimeId,
+            ],
+          }]
+        : [
+            {
+              sceneId: contract.from.sceneId,
+              nodeId: contract.nodePairs[0].fromNodeId,
+              proofTimeIds: [contract.from.proofTimeId],
+            },
+            {
+              sceneId: contract.to.sceneId,
+              nodeId: contract.nodePairs[0].toNodeId,
+              proofTimeIds: [contract.to.proofTimeId],
+            },
+          ];
+    const references = contract.kind === 'grounding'
+      ? [{
+          sceneId: contract.sceneId,
+          nodeIds: [
+            contract.subjectNodeId,
+            contract.supportNodeId,
+            contract.frontOcclusion?.nodeId,
+          ].filter(Boolean),
+        }]
+      : ['gait', 'travel-facing', 'path-locomotion'].includes(contract.kind)
+        ? [{
+            sceneId: contract.sceneId,
+            nodeIds: [
+              contract.nodeId,
+              ...(contract.kind === 'path-locomotion'
+                ? [contract.worldNodeId]
+                : []),
+            ],
+          }]
+        : [
+            {
+              sceneId: contract.from.sceneId,
+              nodeIds: contract.nodePairs.map(({fromNodeId}) => fromNodeId),
+            },
+            {
+              sceneId: contract.to.sceneId,
+              nodeIds: contract.nodePairs.map(({toNodeId}) => toNodeId),
+            },
+          ];
+    const nodes = references.flatMap(({sceneId, nodeIds}) => {
+      const scene = sceneById.get(sceneId);
+      return nodeIds.flatMap((nodeId) => {
+        const node = scene ? findNode(scene, nodeId) : null;
+        return node ? [{sceneId, node}] : [];
+      });
+    });
+    const memberHashes = await hashReferencedFiles(
+      nodes.flatMap(({node}) => visualSourcesForNode(node)),
+    );
+    const sceneEvidence = proofShots.map((shot) => {
+      const scene = sceneById.get(shot.sceneId);
+      return {
+        sceneId: shot.sceneId,
+        nodeId: shot.nodeId,
+        proofs: (scene?.motion?.proofTimes ?? []).filter(({id}) =>
+          shot.proofTimeIds.includes(id),
+        ),
+        camera: scene?.camera ?? null,
+        events: scene?.events ?? [],
+      };
+    });
+    targets.push({
+      compositeId: `spatial-contract:${contract.id}`,
+      sceneId: proofShots[0].sceneId,
+      pattern: 'spatial-contract',
+      nodeId: proofShots[0].nodeId,
+      memberNodeIds: [
+        ...new Set(nodes.map(({sceneId, node}) => `${sceneId}:${node.id}`)),
+      ],
+      memberHashes,
+      compositionHash: hashCompositionValue(contract),
+      fingerprint: hashCompositionValue({
+        runtimeSurfaceFingerprint,
+        contract,
+        sceneEvidence,
+        memberHashes,
+      }),
+      proofTimeIds: [
+        ...new Set(proofShots.flatMap(({proofTimeIds}) => proofTimeIds)),
+      ],
+      proofShots,
+      requiredChecks: requiredChecksForSpatialContract(contract),
+      reviewScope: 'runtime-visible',
+      spatialContract: contract,
+    });
   }
   for (const transition of project.editorial?.transitionPlans ?? []) {
     targets.push({
@@ -968,10 +1435,30 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
   }
   const semanticContracts = await loadSemanticContracts(project.slug);
   if (semanticContracts.document?.status === 'ready' && semanticContracts.issues.length === 0) {
-    const targetIssues = validateSemanticEvidenceTargets(semanticContracts.document, project);
-    if (targetIssues.length) throw new Error(targetIssues.join('\n'));
     const sceneById = new Map((project.scenes ?? []).map((scene) => [scene.id, scene]));
-    for (const contract of semanticContracts.document.contracts) {
+    const semanticTargetIsAvailable = (evidenceTarget) =>
+      evidenceTarget.shots.every((shot) => {
+        const scene = sceneById.get(shot.sceneId);
+        if (!scene) return false;
+        if (!shot.nodeId || shot.nodeId === 'scene') return true;
+        return flattenCompositionNodes(scene.composition?.nodes)
+          .some(({node}) => node.id === shot.nodeId);
+      });
+    const contractsForEvidence = allowPendingSemanticEvidenceTargets
+      ? semanticContracts.document.contracts.map((contract) => ({
+          ...contract,
+          evidenceTargets: contract.evidenceTargets.filter(
+            semanticTargetIsAvailable,
+          ),
+        }))
+      : semanticContracts.document.contracts;
+    const evidenceDocument = {
+      ...semanticContracts.document,
+      contracts: contractsForEvidence,
+    };
+    const targetIssues = validateSemanticEvidenceTargets(evidenceDocument, project);
+    if (targetIssues.length) throw new Error(targetIssues.join('\n'));
+    for (const contract of contractsForEvidence) {
       for (const evidenceTarget of contract.evidenceTargets) {
         const proofShots = evidenceTarget.shots.map((shot) => ({
           sceneId: shot.sceneId,
@@ -1041,12 +1528,128 @@ export const collectCompositeQualityTargets = async (project, {manifest = null} 
       }
     }
   }
+  if (project.styleProfile && (project.scenes ?? []).length > 0) {
+    const visibleNodes = (project.scenes ?? []).flatMap((scene) =>
+      flattenCompositionNodes(scene.composition?.nodes)
+        .filter(({renderParticipation}) => renderParticipation === 'visible')
+        .map(({node}) => ({sceneId: scene.id, node})),
+    );
+    const memberHashes = await hashReferencedFiles(
+      (project.scenes ?? []).flatMap((scene) =>
+        collectRuntimeVisibleCompositionSources(scene.composition),
+      ),
+    );
+    const proofShots = (project.scenes ?? []).map((scene) => ({
+      sceneId: scene.id,
+      nodeId: 'project-style',
+      proofTimeIds: (scene.motion?.proofTimes ?? []).map(({id}) => id),
+    }));
+    targets.push({
+      compositeId: `style-profile:${project.styleProfile.id}`,
+      sceneId: project.scenes[0].id,
+      pattern: 'style-target',
+      nodeId: 'project-style',
+      memberNodeIds: visibleNodes.map(
+        ({sceneId, node}) => `${sceneId}:${node.id}`,
+      ),
+      memberHashes,
+      compositionHash: hashCompositionValue({
+        theme: project.theme,
+        scenes: project.scenes.map(({id, appearance, composition}) => ({
+          id,
+          appearance: compositionAppearance(appearance),
+          composition,
+        })),
+      }),
+      fingerprint: hashCompositionValue({
+        runtimeSurfaceFingerprint,
+        styleProfile: project.styleProfile,
+        theme: project.theme,
+        scenes: project.scenes.map(
+          ({id, appearance, composition, camera}) => ({
+            id,
+            appearance: compositionAppearance(appearance),
+            composition,
+            camera,
+          }),
+        ),
+        memberHashes,
+      }),
+      proofTimeIds: [
+        ...new Set(proofShots.flatMap(({proofTimeIds}) => proofTimeIds)),
+      ],
+      proofShots,
+      requiredChecks: project.styleProfile.quality.requiredCompositeChecks,
+      reviewScope: 'runtime-visible',
+      styleOnly: true,
+    });
+  }
+  if (project.motionContract && (project.scenes ?? []).length > 0) {
+    const memberHashes = await hashReferencedFiles(
+      (project.scenes ?? []).flatMap((scene) =>
+        collectRuntimeVisibleCompositionSources(scene.composition),
+      ),
+    );
+    const proofShots = project.motionContract.scenes.map((coverage) => ({
+      sceneId: coverage.sceneId,
+      nodeId: 'project-motion',
+      proofTimeIds: [
+        ...new Set(
+          coverage.phrases.map(({proofTimeId}) => proofTimeId),
+        ),
+      ],
+    }));
+    targets.push({
+      compositeId: 'motion-contract:whole-film',
+      sceneId: project.motionContract.scenes[0].sceneId,
+      pattern: 'motion-contract',
+      nodeId: 'project-motion',
+      memberNodeIds: [],
+      memberHashes,
+      compositionHash: hashCompositionValue({
+        direction: project.motionContract.direction,
+        scenes: project.motionContract.scenes,
+        transitions: project.motionContract.transitions,
+        editorialFingerprint:
+          project.motionContract.editorialFingerprint,
+      }),
+      fingerprint: hashCompositionValue({
+        runtimeSurfaceFingerprint,
+        motionContract: project.motionContract,
+        scenes: project.scenes.map(
+          ({id, motion, camera, composition, events}) => ({
+            id,
+            motion,
+            camera,
+            composition,
+            events,
+          }),
+        ),
+        sceneTransitions: project.sceneTransitions,
+        editorialFingerprint: project.editorial?.fingerprint ?? null,
+        memberHashes,
+      }),
+      proofTimeIds: [
+        ...new Set(
+          proofShots.flatMap(({proofTimeIds}) => proofTimeIds),
+        ),
+      ],
+      proofShots,
+      requiredChecks:
+        project.motionContract.requiredCompositeChecks,
+      reviewScope: 'runtime-visible',
+      styleOnly: true,
+    });
+  }
   return targets;
 };
 
 export const collectStyleProofTargets = async (project, directingTarget) => {
-  const allTargets = (await collectCompositeQualityTargets(project)).filter(
-    ({reviewScope}) => reviewScope === 'runtime-visible',
+  const allTargets = (await collectCompositeQualityTargets(project, {
+    allowPendingSemanticEvidenceTargets: true,
+  })).filter(
+    ({reviewScope, pattern}) =>
+      reviewScope === 'runtime-visible' && pattern !== 'style-target',
   );
   const matchesDirectingTarget = (target) => {
     const shots = target.proofShots ?? [{
@@ -1125,53 +1728,128 @@ const alphaCoverageInPolygon = async (source, polygon) => {
   return sampled === 0 ? 0 : visible / sampled;
 };
 
+const registeredGroupMembersForTarget = (target) => {
+  const recordsByFile = new Map(
+    (target.familyRecords ?? [])
+      .filter(Boolean)
+      .map((record) => [path.normalize(record.file), record]),
+  );
+  const recordForSource = (source) =>
+    recordsByFile.get(
+      path.normalize(path.relative(ROOT, resolvePublicFile(source))),
+    ) ?? null;
+  return (target.group?.children ?? [])
+    .filter(({kind}) => ['asset', 'state-sequence'].includes(kind))
+    .map((node) => ({
+      node,
+      records:
+        node.kind === 'state-sequence'
+          ? node.states.map(({src}) => recordForSource(src))
+          : [recordForSource(node.src)],
+    }));
+};
+
+export const stateSequenceRegistrationStatus = ({
+  sequence,
+  stateRecords,
+  registeredFamily,
+  canonicalContainerGroup = null,
+}) => {
+  const poseStateRegistrationsBound = stateRecords.every((record, index) => {
+    if (!record) return false;
+    const binding = record.stateBinding ?? record.request?.stateBinding;
+    const state = sequence.states[index];
+    return (
+      binding?.poseFamilyId === sequence.poseFamilyId &&
+      binding?.registrationId === sequence.registration.id &&
+      binding?.stateId === state.id &&
+      binding?.facing === state.facing &&
+      JSON.stringify(binding?.anchors) === JSON.stringify(state.anchors) &&
+      binding?.identityReferenceAssetId === state.identityReferenceAssetId &&
+      binding?.identityReferenceSha256 === state.identityReferenceSha256
+    );
+  });
+  const registeredFamilyStatesBound =
+    registeredFamily.passed &&
+    stateRecords.every((record) => {
+      const binding = record?.registeredFamilyBinding;
+      return (
+        binding?.registrationId === sequence.registration.id &&
+        binding?.sourceMasterAssetId ===
+          sequence.registration.sourceMasterAssetId &&
+        binding?.slot === sequence.slot &&
+        binding?.canvas?.width === sequence.registration.canvas.width &&
+        binding?.canvas?.height === sequence.registration.canvas.height &&
+        binding?.origin === sequence.registration.origin
+      );
+    });
+  const canonicalContainerStatesBound =
+    canonicalContainerGroup?.pattern === 'canonical-container' &&
+    canonicalContainerGroup.canonicalContainer?.contentsNodeId ===
+      sequence.id &&
+    stateRecords.every((record, index) => {
+      const binding = record?.canonicalContainerBinding;
+      return (
+        binding?.role === 'content-state' &&
+        binding?.familyId === sequence.poseFamilyId &&
+        binding?.registrationId === sequence.registration.id &&
+        binding?.sourceMasterAssetId ===
+          sequence.registration.sourceMasterAssetId &&
+        binding?.canvas?.width ===
+          sequence.registration.canvas.width &&
+        binding?.canvas?.height ===
+          sequence.registration.canvas.height &&
+        binding?.stateId === sequence.states[index]?.id &&
+        binding?.familyFingerprint ===
+          canonicalContainerGroup.canonicalContainer
+            .familyFingerprint
+      );
+    });
+  return {
+    passed:
+      poseStateRegistrationsBound ||
+      registeredFamilyStatesBound ||
+      canonicalContainerStatesBound,
+    mode: canonicalContainerStatesBound
+      ? 'canonical-container'
+      : registeredFamilyStatesBound
+      ? 'registered-family'
+      : poseStateRegistrationsBound
+        ? 'pose-state'
+        : 'unbound',
+    poseStateRegistrationsBound,
+    registeredFamilyStatesBound,
+    canonicalContainerStatesBound,
+  };
+};
+
+export const expectedRegisteredFamilyAlphaEvidenceCount = (target) =>
+  (target.familyRecords ?? []).filter(Boolean).length;
+
 export const inspectCompositeTechnical = async ({target, proofReport}) => {
   if (target.reviewScope === 'derivation-only') {
-    const registration = target.group.registration;
-    const registeredFamily = assertRegisteredFamilyRecords({
-      records: target.familyRecords,
-      registration,
-      pattern: target.group.pattern,
-      sourcePackageId:
-        target.group.pattern === 'registered-depth-stack'
-          ? target.group.layerStack?.sourcePackageId
-          : null,
+    const registeredFamily = assertRegisteredFamilyGroupMembers({
+      group: target.group,
+      members: registeredGroupMembersForTarget(target),
+      allRecords: target.familyContextRecords,
     });
-    const expectedCompleteness = {
-      'support-rear': 'clean-plate',
-      subject: 'full-silhouette',
-      'support-front': 'full-overlay',
-    };
-    const rolesMatchNodes = target.familyRecords.every((record) => {
-      const binding = record?.registeredFamilyBinding;
-      return target.group.children.some((node) =>
-        node.id === binding?.nodeId &&
-        node.slot === binding?.slot &&
-        binding?.role === binding?.slot &&
-        (
-          target.group.pattern !== 'registered-depth-stack' ||
-          binding?.completeness === expectedCompleteness[binding?.role]
-        ),
+    const provenanceCurrent = (target.familyRecords ?? [])
+      .filter(Boolean)
+      .every(
+        (record) =>
+          target.memberHashes[
+            path.normalize(record.file).replace(/^public[\\/]/, '')
+          ] === record.sha256,
       );
-    });
-    const provenanceCurrent = target.familyRecords.every((record) => {
-      const binding = record?.registeredFamilyBinding;
-      const node = target.group.children.find(
-        (candidate) => candidate.id === binding?.nodeId,
-      );
-      return (
-        node?.kind === 'asset' &&
-        target.memberHashes[node.src] === record?.sha256
-      );
-    });
     const checks = [
       {
         id: 'derivation-family-complete',
-        passed: registeredFamily.passed && rolesMatchNodes,
-        expected: 'one complete registered three-member source family',
+        passed: registeredFamily.passed,
+        expected: 'complete registered three-member source family context for every active state',
         actual: {
           errors: registeredFamily.errors,
-          rolesMatchNodes,
+          familyIds: registeredFamily.familyIds,
+          stateful: registeredFamily.stateful,
         },
       },
       {
@@ -1207,18 +1885,10 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       const binding = record?.compositionBinding ?? record?.request?.compositionBinding;
       return binding?.registrationId === registration?.id && binding?.sourceMasterAssetId === registration?.sourceMasterAssetId;
     });
-    const registeredFamily = assertRegisteredFamilyRecords({
-      records: target.familyRecords,
-      registration,
-    });
-    const rolesMatchNodes = target.familyRecords.every((record) => {
-      const binding = record?.registeredFamilyBinding;
-      return target.group.children.some(
-        (node) =>
-          node.id === binding?.nodeId &&
-          node.slot === binding?.slot &&
-          binding.role === binding.slot,
-      );
+    const registeredFamily = assertRegisteredFamilyGroupMembers({
+      group: target.group,
+      members: registeredGroupMembersForTarget(target),
+      allRecords: target.familyContextRecords,
     });
     if (target.group.support?.layering === 'subject-front') {
       checks.push({id: 'subject-front-layering', passed: true, expected: 'subject-front', actual: 'subject-front'});
@@ -1229,12 +1899,13 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       {id: 'registered-source-family', passed: familyBound, actual: familyBound},
       {
         id: 'registered-family-derivation',
-        passed: registeredFamily.passed && rolesMatchNodes,
+        passed: registeredFamily.passed,
         expected: 'three full-canvas registered-family members with matching roles',
         actual: {
-          passed: registeredFamily.passed && rolesMatchNodes,
+          passed: registeredFamily.passed,
           errors: registeredFamily.errors,
-          rolesMatchNodes,
+          familyIds: registeredFamily.familyIds,
+          stateful: registeredFamily.stateful,
         },
       },
     );
@@ -1243,8 +1914,11 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
         entry.sceneId === target.sceneId &&
         target.memberNodeIds.includes(entry.nodeId),
     );
+    const expectedAlphaEvidenceCount =
+      expectedRegisteredFamilyAlphaEvidenceCount(target);
     const alphaEvidenceCurrent =
-      alphaEvidence.length === target.memberNodeIds.length &&
+      expectedAlphaEvidenceCount > 0 &&
+      alphaEvidence.length === expectedAlphaEvidenceCount &&
       alphaEvidence.every((entry) => {
         const inspection = entry.alphaBandInspection;
         if (!inspection?.passed || !entry.renderSize) return false;
@@ -1282,27 +1956,10 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
     );
   }
   if (target.pattern === 'registered-depth-stack') {
-    const registration = target.group.registration;
-    const registeredFamily = assertRegisteredFamilyRecords({
-      records: target.familyRecords,
-      registration,
-      pattern: 'registered-depth-stack',
-      sourcePackageId: target.group.layerStack?.sourcePackageId,
-    });
-    const requiredCompleteness = {
-      'support-rear': 'clean-plate',
-      subject: 'full-silhouette',
-      'support-front': 'full-overlay',
-    };
-    const rolesMatchNodes = target.familyRecords.every((record) => {
-      const binding = record?.registeredFamilyBinding;
-      return target.group.children.some(
-        (node) =>
-          node.id === binding?.nodeId &&
-          node.slot === binding?.role &&
-          binding?.completeness ===
-            requiredCompleteness[binding?.role],
-      );
+    const registeredFamily = assertRegisteredFamilyGroupMembers({
+      group: target.group,
+      members: registeredGroupMembersForTarget(target),
+      allRecords: target.familyContextRecords,
     });
     const layerProof = proofEntry?.layerStackProof;
     const layerArtifacts = [
@@ -1339,13 +1996,14 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
     checks.push(
       {
         id: 'registered-layer-family',
-        passed: registeredFamily.passed && rolesMatchNodes,
+        passed: registeredFamily.passed,
         expected:
-          'three complete full-canvas members from one source package',
+          'three complete full-canvas active members with complete source-family context for every state',
         actual: {
-          passed: registeredFamily.passed && rolesMatchNodes,
+          passed: registeredFamily.passed,
           errors: registeredFamily.errors,
-          rolesMatchNodes,
+          familyIds: registeredFamily.familyIds,
+          stateful: registeredFamily.stateful,
         },
       },
       {
@@ -1413,6 +2071,121 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
         passed: entry.alphaBandInspection?.passed ?? false,
       })),
     });
+  }
+  if (target.pattern === 'canonical-container') {
+    const family = await inspectCanonicalContainerGroupMembers({
+      root: ROOT,
+      group: target.group,
+      manifest: target.manifest,
+    });
+    const proof = proofEntry?.canonicalContainerProof;
+    const artifactFiles = Object.values(
+      proof?.artifacts ?? {},
+    ).filter(Boolean);
+    const artifactsCurrent =
+      artifactFiles.length === 3 &&
+      (
+        await Promise.all(
+          artifactFiles.map(async (file) => {
+            try {
+              const absolute = assertWorkspaceFile(file);
+              return (
+                await fileExists(absolute) &&
+                await hashFile(absolute) ===
+                  proof?.artifactHashes?.[file]
+              );
+            } catch {
+              return false;
+            }
+          }),
+        )
+      ).every(Boolean);
+    const contract = target.group.canonicalContainer;
+    const terminal = contract.states.find(
+      ({id}) => id === contract.terminalStateId,
+    );
+    checks.push(
+      {
+        id: 'canonical-container-family-current',
+        passed: family.passed,
+        expected: 'all canonical source and derived records current',
+        actual: family.errors,
+      },
+      {
+        id: 'canonical-container-proof',
+        passed:
+          proof?.passed === true &&
+          artifactsCurrent &&
+          proof?.familyFingerprint ===
+            contract.familyFingerprint,
+        expected: {
+          passed: true,
+          familyFingerprint: contract.familyFingerprint,
+          artifactCount: 3,
+        },
+        actual: {
+          passed: proof?.passed ?? false,
+          familyFingerprint:
+            proof?.familyFingerprint ?? null,
+          artifactCount: artifactFiles.length,
+        },
+      },
+      {
+        id: 'canonical-container-authority',
+        passed:
+          target.group.children.filter(
+            ({slot}) => slot === 'container-frame',
+          ).length === 1 &&
+          target.group.children.filter(
+            ({semanticCoverage = []}) =>
+              semanticCoverage.includes(
+                `container-surface:${contract.authoritativeSurfaceId}`,
+              ),
+          ).length === 1,
+        expected: 'one frame and one authoritative contents consumer',
+        actual: target.group.children.map(
+          ({id, slot, semanticCoverage}) => ({
+            id,
+            slot,
+            semanticCoverage,
+          }),
+        ),
+      },
+      {
+        id: 'canonical-container-state-metrics',
+        passed: contract.states.every(
+          ({metrics}) =>
+            metrics.outsideMaskPixels === 0 &&
+            metrics.centerDrift <=
+              contract.alignmentPolicy.maximumCenterDrift &&
+            metrics.bottomGap <=
+              contract.alignmentPolicy.maximumBottomGap &&
+            metrics.fillLevelDeviation <=
+              contract.alignmentPolicy
+                .maximumFillLevelDeviation &&
+            metrics.interiorRetention >=
+              contract.alignmentPolicy.minimumInteriorRetention,
+        ),
+        expected: contract.alignmentPolicy,
+        actual: contract.states.map(({id, metrics}) => ({
+          id,
+          metrics,
+        })),
+      },
+      {
+        id: 'canonical-container-terminal',
+        passed:
+          terminal?.metrics.fillLevel >=
+            contract.terminalPolicy.minimumFillLevel &&
+          terminal?.metrics.rimGap <=
+            contract.terminalPolicy.maximumRimGap &&
+          terminal?.metrics.bottomBandCoverage >=
+            contract.terminalPolicy
+              .minimumBottomBandCoverage,
+        expected: contract.terminalPolicy,
+        actual: terminal?.metrics ?? null,
+      },
+    );
   }
   if (target.pattern === 'looping-environment') {
     const strips = target.group.children.filter(({kind}) => kind === 'world-strip');
@@ -1497,19 +2270,28 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       const proof = proofFrames.find((frame) => frame.proofTimeId === proofTimeId);
       return proof ? [proofTimeId] : [];
     }));
-    const registrationsBound = target.stateRecords.every((record, index) => {
-      if (!record) return false;
-      const binding = record.stateBinding ?? record.request?.stateBinding;
-      const state = target.sequence.states[index];
-      return (
-        binding?.poseFamilyId === target.sequence.poseFamilyId &&
-        binding?.registrationId === target.sequence.registration.id &&
-        binding?.stateId === state.id &&
-        binding?.facing === state.facing &&
-        JSON.stringify(binding?.anchors) === JSON.stringify(state.anchors) &&
-        binding?.identityReferenceAssetId === state.identityReferenceAssetId &&
-        binding?.identityReferenceSha256 === state.identityReferenceSha256
-      );
+    const registeredFamily =
+      target.registeredFamilyGroup &&
+      target.registeredFamilyGroup.pattern !==
+        'canonical-container'
+      ? assertRegisteredFamilyGroupMembers({
+          group: target.registeredFamilyGroup,
+          members: registeredGroupMembersForTarget({
+            group: target.registeredFamilyGroup,
+            familyRecords: target.registeredFamilyRecords,
+          }),
+          allRecords: target.registeredFamilyContextRecords,
+        })
+      : {passed: false, errors: [], familyIds: [], stateful: false};
+    const registrationStatus = stateSequenceRegistrationStatus({
+      sequence: target.sequence,
+      stateRecords: target.stateRecords,
+      registeredFamily,
+      canonicalContainerGroup:
+        target.registeredFamilyGroup?.pattern ===
+        'canonical-container'
+          ? target.registeredFamilyGroup
+          : null,
     });
     const registeredDimensions = new Set(target.stateRecords.map((record) =>
       record?.media ? `${record.media.width}x${record.media.height}` : 'missing',
@@ -1559,15 +2341,39 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
     );
     checks.push(
       {id: 'state-proofs-complete', passed: proofStateIds.size === target.proofTimeIds.length, expected: target.proofTimeIds.length, actual: proofStateIds.size},
-      {id: 'registered-state-family', passed: registrationsBound, actual: registrationsBound},
+      {
+        id: 'registered-state-family',
+        passed: registrationStatus.passed,
+        actual: {
+          mode: registrationStatus.mode,
+          registeredFamily: {
+            passed: registeredFamily.passed,
+            errors: registeredFamily.errors,
+            familyIds: registeredFamily.familyIds,
+            stateful: registeredFamily.stateful,
+          },
+        },
+      },
       {id: 'registered-state-dimensions', passed: registeredDimensions.size === 1 && registeredDimensions.has(expectedDimensions), expected: expectedDimensions, actual: [...registeredDimensions].join(', ')},
       {
         id: 'state-anchor-registration',
         passed:
           anchorRegistrationProof.passed &&
-          anchorEvidence.every(({passed}) => passed),
-        expected: 'declared anchor drift within policy and current per-state anchor overlays',
-        actual: {anchorRegistrationProof, anchorEvidence},
+          (
+            registrationStatus.registeredFamilyStatesBound ||
+            registrationStatus.canonicalContainerStatesBound ||
+            anchorEvidence.every(({passed}) => passed)
+          ),
+        expected:
+          'declared anchor drift within policy plus current pose overlays or complete full-canvas registered-family context',
+        actual: {
+          anchorRegistrationProof,
+          anchorEvidence,
+          registeredFamilyStatesBound:
+            registrationStatus.registeredFamilyStatesBound,
+          canonicalContainerStatesBound:
+            registrationStatus.canonicalContainerStatesBound,
+        },
       },
       {
         id: 'state-facing-metadata',
@@ -1588,6 +2394,31 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
         })),
       },
     );
+  }
+  if (target.pattern === 'spatial-contract') {
+    const spatialProof = proofEntry?.spatialProof;
+    checks.push({
+      id: 'spatial-contract-proof',
+      passed:
+        spatialProof?.contractId === target.spatialContract.id &&
+        spatialProof?.kind === target.spatialContract.kind &&
+        spatialProof?.passed === true,
+      expected: {
+        contractId: target.spatialContract.id,
+        kind: target.spatialContract.kind,
+        passed: true,
+      },
+      actual: spatialProof
+        ? {
+            contractId: spatialProof.contractId,
+            kind: spatialProof.kind,
+            passed: spatialProof.passed,
+            failedChecks: spatialProof.checks
+              ?.filter(({passed}) => !passed)
+              .map(({id}) => id) ?? [],
+          }
+        : null,
+    });
   }
   if (target.pattern === 'parallax-rig') {
     const depthLevels = new Set(target.depthMap.map(({depth}) => depth));
@@ -1667,6 +2498,39 @@ export const inspectCompositeTechnical = async ({target, proofReport}) => {
       {id: 'typography-fit', passed: !layout.overflow, expected: 'no overflow', actual: layout},
       {id: 'typography-edit-points', passed: timingBound, expected: pointIds, actual: timingBound},
     );
+    if (node.role === 'visual-sfx') {
+      const showEvents = (target.events ?? []).filter(
+        ({visual}) =>
+          visual?.kind === 'visibility' && visual.action === 'show',
+      );
+      const hideEvents = (target.events ?? []).filter(
+        ({visual}) =>
+          visual?.kind === 'visibility' && visual.action === 'hide',
+      );
+      const soundEvents = (target.events ?? []).filter(({sound}) => sound);
+      const beatIds = new Set(showEvents.map(({beatId}) => beatId));
+      const audioSynchronized = soundEvents.some(
+        ({beatId, at}) =>
+          beatIds.has(beatId) &&
+          showEvents.some(
+            (show) => show.beatId === beatId && Math.abs(show.at - at) <= 0.035,
+          ),
+      );
+      checks.push(
+        {
+          id: 'visual-sfx-event-lifecycle',
+          passed: showEvents.length > 0 && hideEvents.length > 0,
+          expected: 'show then hide',
+          actual: {show: showEvents.length, hide: hideEvents.length},
+        },
+        {
+          id: 'visual-sfx-audio-sync',
+          passed: audioSynchronized,
+          expected: 'sound and show within 0.035 normalized time',
+          actual: audioSynchronized,
+        },
+      );
+    }
   }
   if (target.pattern === 'annotation') {
     const route = resolveAnnotationRoute({
@@ -1787,7 +2651,13 @@ const preservedReview = async ({previous, fingerprint, requiredChecks}) => {
   };
 };
 
-export const prepareQualityReport = async (slug, {write = true} = {}) => {
+export const prepareQualityReport = async (
+  slug,
+  {
+    write = true,
+    allowPendingSemanticEvidenceTargets = false,
+  } = {},
+) => {
   const {project} = await loadProject(slug);
   const file = qualityReportPath(slug);
   const existing = (await fileExists(file)) ? await readJson(file) : null;
@@ -1804,31 +2674,36 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const inspectedAssets = await Promise.all(assets.map(async (asset) => {
     const absoluteFile = assertWorkspaceFile(asset.file);
     const sha256 = (await fileExists(absoluteFile)) ? await hashFile(absoluteFile) : null;
+    const baseRequiredChecks =
+      asset.requiredChecks !== undefined
+        ? asset.requiredChecks
+        : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image;
     const requiredChecks = [
-      ...new Set(
-        asset.requiredChecks !== undefined
-          ? asset.requiredChecks
-          : QUALITY_PROFILES[asset.kind] ?? QUALITY_PROFILES.image,
-      ),
+      ...new Set([
+        ...baseRequiredChecks,
+        ...(asset.reviewScope === 'derivation-only'
+          ? []
+          : project.styleProfile?.quality?.requiredAssetChecks ?? []),
+      ]),
     ];
     const unknownChecks = requiredChecks.filter((check) => !ASSET_QUALITY_CHECKS.includes(check));
     if (unknownChecks.length) throw new Error(`${asset.assetId} 含未知资产质量检查：${unknownChecks.join(', ')}`);
-    const fingerprint = asset.semanticBinding ||
-      asset.stateSheetRecoveryBinding ||
-      asset.registeredFamilyBinding
-      ? hashCompositionValue({
-          sha256,
-          semanticBinding: asset.semanticBinding,
-          semanticContractFingerprints: asset.semanticContractFingerprints,
-          stateSheetBinding: asset.stateSheetBinding,
-          stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
-          registeredFamilyBinding: asset.registeredFamilyBinding,
-          recoverySourceSha256: asset.recoverySourceSha256,
-          reviewScope: asset.reviewScope,
-          manifestRecordId: asset.manifestRecordId,
-          manifestSha256: asset.manifestSha256,
-        })
-      : sha256;
+    const fingerprint = hashCompositionValue({
+      sha256,
+      styleProfileFingerprint:
+        project.styleProfile?.profileFingerprint ?? null,
+      semanticBinding: asset.semanticBinding,
+      semanticContractFingerprints: asset.semanticContractFingerprints,
+      stateSheetBinding: asset.stateSheetBinding,
+      stateSheetRecoveryBinding: asset.stateSheetRecoveryBinding,
+      registeredFamilyBinding: asset.registeredFamilyBinding,
+      canonicalContainerBinding:
+        asset.canonicalContainerBinding,
+      recoverySourceSha256: asset.recoverySourceSha256,
+      reviewScope: asset.reviewScope,
+      manifestRecordId: asset.manifestRecordId,
+      manifestSha256: asset.manifestSha256,
+    });
     const review = await preservedReview({previous: previousAssets.get(asset.assetId), fingerprint, requiredChecks});
     const technical = await inspectTechnicalQuality({asset, project});
     return {...asset, sha256, fingerprint, requiredChecks, technical, ...review, status: entryStatus({technical, semanticChecks: review.semanticChecks})};
@@ -1839,7 +2714,10 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const proofReports = [];
   if (await fileExists(proofFile)) proofReports.push(await readJson(proofFile));
   if (await fileExists(styleProofFile)) proofReports.push(await readJson(styleProofFile));
-  const targets = await collectCompositeQualityTargets(project, {manifest});
+  const targets = await collectCompositeQualityTargets(project, {
+    manifest,
+    allowPendingSemanticEvidenceTargets,
+  });
   const inspectedComposites = await Promise.all(targets.map(async (target) => {
     const review = await preservedReview({previous: previousComposites.get(target.compositeId), fingerprint: target.fingerprint, requiredChecks: target.requiredChecks});
     const currentProofReport = proofReports.find((report) =>
@@ -1873,9 +2751,33 @@ export const prepareQualityReport = async (slug, {write = true} = {}) => {
   const timeline = deriveTimeline(project);
   const report = {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 6,
+    schemaVersion: 7,
     projectSlug: slug,
     updatedAt: new Date().toISOString(),
+    styleProfile: project.styleProfile
+      ? {
+          id: project.styleProfile.id,
+          profileFingerprint: project.styleProfile.profileFingerprint,
+          referenceFile: path.join(
+            'public',
+            project.styleProfile.referenceImage,
+          ),
+          referenceSha256: await hashFile(
+            resolvePublicFile(project.styleProfile.referenceImage),
+          ),
+          reviewFocus: project.styleProfile.quality.reviewFocus,
+        }
+      : null,
+    motionContract: project.motionContract
+      ? {
+          approvalFingerprint:
+            project.motionContract.approvalFingerprint,
+          executionFingerprint: project.motionContract.fingerprint,
+          summary: project.motionContract.direction.summary,
+          requiredCompositeChecks:
+            project.motionContract.requiredCompositeChecks,
+        }
+      : null,
     eventTimeline: timeline.scenes.flatMap((scene) => deriveEventTimeline({scene, sceneFrom: scene.from, fps: project.video.fps})),
     assetHistory: (manifest.assets ?? [])
       .filter(({lifecycle}) => lifecycle.status !== 'active')
@@ -1898,9 +2800,13 @@ export const recordQualityReviews = async ({
   slug,
   reviews,
   sourceReportFingerprint = null,
+  allowPendingSemanticEvidenceTargets = false,
 }) => {
   if (!Array.isArray(reviews) || reviews.length === 0) throw new Error('批量质量记录必须包含至少一项 review。');
-  const prepared = await prepareQualityReport(slug, {write: false});
+  const prepared = await prepareQualityReport(slug, {
+    write: false,
+    allowPendingSemanticEvidenceTargets,
+  });
   if (
     sourceReportFingerprint !== null &&
     sourceReportFingerprint !== prepared.report.reviewSurfaceFingerprint
@@ -1940,11 +2846,21 @@ export const recordQualityReviews = async ({
         if (await evidenceFilesAreCurrent([evidence])) evidenceFiles.push(evidence);
       }
     } else {
-      for (const evidenceFile of review.evidenceFiles) {
-        if (typeof evidenceFile !== 'string' || evidenceFile.trim().length === 0) throw new Error(`${reviewId} 的 evidenceFiles 必须是非空路径。`);
+      for (const evidence of review.evidenceFiles) {
+        const evidenceFile =
+          typeof evidence === 'string' ? evidence : evidence?.file;
+        if (typeof evidenceFile !== 'string' || evidenceFile.trim().length === 0) throw new Error(`${reviewId} 的 evidenceFiles 必须包含非空路径和 SHA-256。`);
         const absoluteFile = assertWorkspaceFile(evidenceFile.trim());
         if (!(await fileExists(absoluteFile))) throw new Error(`${reviewId} 的质量证据不存在：${evidenceFile}`);
-        evidenceFiles.push({file: path.relative(ROOT, absoluteFile), sha256: await hashFile(absoluteFile)});
+        const sha256 = await hashFile(absoluteFile);
+        if (
+          typeof evidence === 'object' &&
+          evidence !== null &&
+          evidence.sha256 !== sha256
+        ) {
+          throw new Error(`${reviewId} 的质量证据已变化：${evidenceFile}。请重新生成 scaffold。`);
+        }
+        evidenceFiles.push({file: path.relative(ROOT, absoluteFile), sha256});
       }
     }
     if (passedChecks.some((check) => EVIDENCE_REQUIRED_CHECKS.has(check)) && evidenceFiles.length === 0) {
@@ -1992,6 +2908,26 @@ export const readQualityReportStatus = async (slug) => {
 const proofEvidenceFiles = (proofFrame) =>
   [proofFrame?.fullFrame, proofFrame?.crop, proofFrame?.debugFrame].filter(Boolean);
 
+const layerStackProofEvidenceFiles = (layerStackProof) =>
+  [
+    layerStackProof?.artifacts?.neutralReconstruction,
+    layerStackProof?.artifacts?.referenceComparison,
+    layerStackProof?.artifacts?.explodedView,
+    ...(layerStackProof?.artifacts?.envelopeExtremes ?? []).map(
+      ({file}) => file,
+    ),
+    ...(layerStackProof?.artifacts?.subjectTravelExtremes ?? []).map(
+      ({file}) => file,
+    ),
+  ].filter(Boolean);
+
+const canonicalContainerProofEvidenceFiles = (
+  canonicalContainerProof,
+) =>
+  Object.values(
+    canonicalContainerProof?.artifacts ?? {},
+  ).filter(Boolean);
+
 const assetEvidenceFiles = (entry) =>
   [
     entry?.alphaMask,
@@ -2003,19 +2939,60 @@ const assetEvidenceFiles = (entry) =>
   ]
     .filter(Boolean);
 
-export const createQualityReviewScaffold = ({
+const currentProofCompositeFor = (proofReports, composite) =>
+  proofReports
+    .flatMap((report) => report.composites ?? [])
+    .find(
+      ({compositeId, fingerprint}) =>
+        compositeId === composite.compositeId &&
+        fingerprint === composite.fingerprint,
+    );
+
+const evidenceRecordsFor = async (files) =>
+  (
+    await Promise.all(
+      [...new Set(files.filter(Boolean))].map(async (file) => {
+        try {
+          const absoluteFile = assertWorkspaceFile(file);
+          if (!(await fileExists(absoluteFile))) return null;
+          return {
+            file: path.relative(ROOT, absoluteFile),
+            sha256: await hashFile(absoluteFile),
+          };
+        } catch {
+          return null;
+        }
+      }),
+    )
+  ).filter(Boolean);
+
+export const createQualityReviewScaffold = async ({
   status,
   projectSlug,
   reviewer,
   compositionProof = null,
   styleProof = null,
   includePassed = false,
+  reviewScope = 'all',
 }) => {
+  if (!['all', 'style'].includes(reviewScope)) {
+    throw new Error('质量审核 scope 必须是 all 或 style。');
+  }
   const proofReports = [compositionProof, styleProof].filter(Boolean);
-  const proofComposites = proofReports.flatMap((report) => report.composites ?? []);
-  const proofAssets = proofReports.flatMap((report) => report.assetEvidence ?? []);
+  const currentProofReports = proofReports.filter((report) =>
+    (status.report.composites ?? []).some((composite) =>
+      currentProofCompositeFor([report], composite),
+    ),
+  );
+  const proofAssets = currentProofReports.flatMap((report) => report.assetEvidence ?? []);
   const evidenceForAsset = (asset) => {
     const files = [asset.file];
+    if (
+      asset.requiredChecks?.includes('style-profile-conformant') &&
+      status.report.styleProfile?.referenceFile
+    ) {
+      files.push(status.report.styleProfile.referenceFile);
+    }
     const normalizedAssetFile = path.normalize(asset.file);
     for (const entry of proofAssets) {
       const sourceFile = entry.source
@@ -2033,18 +3010,31 @@ export const createQualityReviewScaffold = ({
       if (!(composite.memberNodeIds ?? []).some((nodeId) =>
         sourceBindings.some((binding) => binding.nodeId === nodeId),
       )) continue;
-      const proof = proofComposites.find(({compositeId}) =>
-        compositeId === composite.compositeId,
-      );
+      const proof = currentProofCompositeFor(currentProofReports, composite);
       files.push(...(proof?.proofFrames ?? []).flatMap(proofEvidenceFiles));
     }
     return [...new Set(files.filter(Boolean))];
   };
   const evidenceForComposite = (composite) => {
-    const proof = proofComposites.find(({compositeId}) =>
-      compositeId === composite.compositeId,
-    );
-    const files = (proof?.proofFrames ?? []).flatMap(proofEvidenceFiles);
+    const proof = currentProofCompositeFor(currentProofReports, composite);
+    if (!proof) {
+      throw new Error(
+        `${composite.compositeId} 缺少与当前组合指纹一致的视觉证明；先重新运行 project:composition-proof 或 project:style-proof，不能复用旧帧。`,
+      );
+    }
+    const files = [
+      ...(proof?.proofFrames ?? []).flatMap(proofEvidenceFiles),
+      ...layerStackProofEvidenceFiles(proof?.layerStackProof),
+      ...canonicalContainerProofEvidenceFiles(
+        proof?.canonicalContainerProof,
+      ),
+    ];
+    if (
+      composite.requiredChecks?.includes('style-profile-consistent') &&
+      status.report.styleProfile?.referenceFile
+    ) {
+      files.push(status.report.styleProfile.referenceFile);
+    }
     files.push(
       ...(proof?.loopingWorldProof?.strips ?? [])
         .map(({derivationReport}) => derivationReport)
@@ -2057,12 +3047,63 @@ export const createQualityReviewScaffold = ({
     }
     return [...new Set(files.filter(Boolean))];
   };
+  const styleCompositeIds = new Set(
+    reviewScope === 'style'
+      ? (styleProof?.composites ?? [])
+          .filter((proof) =>
+            (status.report.composites ?? []).some(
+              (composite) =>
+                composite.compositeId === proof.compositeId &&
+                composite.fingerprint === proof.fingerprint,
+            ),
+          )
+          .map(({compositeId}) => compositeId)
+      : [],
+  );
   const entries = [...status.report.assets, ...status.report.composites]
-    .filter((entry) => includePassed || entry.status !== 'passed');
+    .filter((entry) => includePassed || entry.status !== 'passed')
+    .filter(
+      (entry) =>
+        reviewScope !== 'style' ||
+        Boolean(entry.assetId) ||
+        styleCompositeIds.has(entry.compositeId),
+    );
+  const reviews = [];
+  for (const entry of entries) {
+    const assetId = entry.assetId ?? null;
+    const compositeId = entry.compositeId ?? null;
+    const evidenceFiles = await evidenceRecordsFor(
+      assetId
+        ? [...new Set([...evidenceForAsset(entry), ...(entry.recoveryEvidenceFiles ?? [])])]
+        : evidenceForComposite(entry),
+    );
+    entry.evidenceFiles = evidenceFiles;
+    reviews.push({
+      ...(assetId ? {assetId} : {compositeId}),
+      reviewer,
+      requiredChecks: entry.requiredChecks,
+      pendingChecks: Object.entries(entry.semanticChecks)
+        .filter(([, checkStatus]) => checkStatus !== 'passed')
+        .map(([check]) => check),
+      passedChecks: [],
+      failedChecks: [],
+      evidenceFiles,
+      note: '',
+    });
+  }
+  refreshQualityReviewSurfaceFingerprint(status.report);
+  for (const review of reviews) {
+    const entry = entries.find(
+      (candidate) =>
+        qualityEntryId(candidate) === (review.assetId ?? review.compositeId),
+    );
+    review.targetFingerprint = qualityReviewTargetFingerprint(entry);
+  }
   return {
     $schema: '../../schemas/quality-review-scaffold.schema.json',
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectSlug,
+    reviewScope,
     generatedAt: new Date().toISOString(),
     sourceReport: {
       file: path.relative(ROOT, status.file ?? qualityReportPath(projectSlug)),
@@ -2073,25 +3114,7 @@ export const createQualityReviewScaffold = ({
     },
     instructions:
       'Inspect every evidence file. Move each pending check into passedChecks or failedChecks and write a concrete note; never pass a check only to unblock production.',
-    reviews: entries.map((entry) => {
-      const assetId = entry.assetId ?? null;
-      const compositeId = entry.compositeId ?? null;
-      return {
-        ...(assetId ? {assetId} : {compositeId}),
-        targetFingerprint: qualityReviewTargetFingerprint(entry),
-        reviewer,
-        requiredChecks: entry.requiredChecks,
-        pendingChecks: Object.entries(entry.semanticChecks)
-          .filter(([, checkStatus]) => checkStatus !== 'passed')
-          .map(([check]) => check),
-        passedChecks: [],
-        failedChecks: [],
-        evidenceFiles: assetId
-          ? [...new Set([...evidenceForAsset(entry), ...(entry.recoveryEvidenceFiles ?? [])])]
-          : evidenceForComposite(entry),
-        note: '',
-      };
-    }),
+    reviews,
   };
 };
 
@@ -2099,44 +3122,27 @@ export const buildQualityReviewScaffold = async ({
   slug,
   reviewer = 'host-vision',
   includePassed = false,
+  reviewScope = 'all',
 }) => {
-  const status = await prepareQualityReport(slug);
+  const status = await prepareQualityReport(slug, {
+    allowPendingSemanticEvidenceTargets: reviewScope === 'style',
+  });
   const compositionFile = compositionProofReportPath(slug);
   const styleFile = path.join(ROOT, 'dist', slug, 'style-motion-proof.json');
   const [compositionProof, styleProof] = await Promise.all([
     (await fileExists(compositionFile)) ? readJson(compositionFile) : null,
     (await fileExists(styleFile)) ? readJson(styleFile) : null,
   ]);
-  const scaffold = createQualityReviewScaffold({
+  const scaffold = await createQualityReviewScaffold({
     status,
     projectSlug: slug,
     reviewer,
     compositionProof,
     styleProof,
     includePassed,
+    reviewScope,
   });
-  for (const review of scaffold.reviews) {
-    review.evidenceFiles = (
-      await Promise.all(review.evidenceFiles.map(async (file) => {
-        try {
-          return (await fileExists(assertWorkspaceFile(file))) ? file : null;
-        } catch {
-          return null;
-        }
-      }))
-    ).filter(Boolean);
-    const reviewId = review.assetId ?? review.compositeId;
-    const entry = [...status.report.assets, ...status.report.composites]
-      .find((candidate) => (candidate.assetId ?? candidate.compositeId) === reviewId);
-    if (entry) {
-      entry.evidenceFiles = await Promise.all(review.evidenceFiles.map(async (file) => ({
-        file,
-        sha256: await hashFile(assertWorkspaceFile(file)),
-      })));
-    }
-  }
   status.report.updatedAt = new Date().toISOString();
-  refreshQualityReviewSurfaceFingerprint(status.report);
   scaffold.sourceReport = {
     file: path.relative(ROOT, status.file),
     schemaVersion: status.report.schemaVersion,
@@ -2162,13 +3168,16 @@ export const assertQualityReviewScaffoldCurrent = async ({
   scaffold,
   status = null,
 }) => {
-  if (scaffold?.schemaVersion !== 2 || scaffold?.projectSlug !== slug) {
-    throw new Error(`质量审核 scaffold 必须是 ${slug} 的 schemaVersion 2 文件。`);
+  if (scaffold?.schemaVersion !== 3 || scaffold?.projectSlug !== slug) {
+    throw new Error(`质量审核 scaffold 必须是 ${slug} 的 schemaVersion 3 文件。`);
   }
   if (!scaffold?.sourceReport?.fingerprint) {
     throw new Error('质量审核 scaffold 缺少 sourceReport.fingerprint。');
   }
-  const prepared = status ?? await prepareQualityReport(slug, {write: false});
+  const prepared = status ?? await prepareQualityReport(slug, {
+    write: false,
+    allowPendingSemanticEvidenceTargets: scaffold.reviewScope === 'style',
+  });
   if (
     scaffold.sourceReport.fingerprint !==
     prepared.report.reviewSurfaceFingerprint
@@ -2193,6 +3202,9 @@ export const assertQualityReviewScaffoldCurrent = async ({
         `${reviewId} 的审核目标已过期：记录 ${review.targetFingerprint ?? 'missing'}，当前 ${expected}。`,
       );
     }
+    if (!(await evidenceFilesAreCurrent(review.evidenceFiles))) {
+      throw new Error(`${reviewId} 的质量证据文件已缺失或内容变化；请重新生成 scaffold。`);
+    }
   }
   return prepared;
 };
@@ -2208,7 +3220,7 @@ const qualityReviewPanel = async ({review, index}) => {
   const imageEvidence = [];
   for (const evidence of review.evidenceFiles ?? []) {
     try {
-      const file = assertWorkspaceFile(evidence);
+      const file = assertWorkspaceFile(evidence.file);
       if (!(await fileExists(file))) continue;
       const metadata = await sharp(file).metadata();
       if (metadata.width && metadata.height) {

@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   collectStyleProofTargets,
@@ -12,6 +14,7 @@ import {
 import {loadStoryboard} from './storyboard-lib.mjs';
 import {selectStyleProofTargets} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
+import {buildSpatialContractProof} from './spatial-contract-lib.mjs';
 
 const REQUIRED_ASSET_EVIDENCE = [
   'alphaMask',
@@ -27,11 +30,83 @@ export const styleProofReportPath = (slug) => path.join(ROOT, 'dist', slug, 'sty
 
 export const styleFingerprintForTarget = (target) => target.fingerprint;
 
-const assertEvidenceFile = async (file, label) => {
+export const buildStyleTargetPatternProof = async ({project, target}) => {
+  if (target.pattern !== 'spatial-contract') return {spatialProof: null};
+  const spatialProof = await buildSpatialContractProof(
+    project,
+    target.spatialContract,
+  );
+  if (!spatialProof.passed) {
+    const failed = spatialProof.checks
+      .filter(({passed}) => !passed)
+      .map(({id}) => id)
+      .join(', ');
+    throw new Error(
+      `spatial contract ${target.spatialContract.id} 的 style proof 未通过：${failed}。`,
+    );
+  }
+  return {spatialProof};
+};
+
+export const assertStyleTargetPatternProof = ({target, proof}) => {
+  if (target.pattern !== 'spatial-contract') return;
+  if (
+    proof.spatialProof?.contractId !== target.spatialContract.id ||
+    proof.spatialProof?.kind !== target.spatialContract.kind ||
+    proof.spatialProof?.passed !== true
+  ) {
+    throw new Error(
+      `${proof.compositeId} 缺少通过且匹配当前契约的空间样式证明。`,
+    );
+  }
+};
+
+const assertEvidenceFile = async (file, label, root = ROOT) => {
   if (typeof file !== 'string' || file.length === 0) throw new Error(`风格拓扑证明缺少 ${label}。`);
-  const absolute = path.resolve(ROOT, file);
-  if (absolute !== ROOT && !absolute.startsWith(`${ROOT}${path.sep}`)) throw new Error(`风格拓扑证明路径越过工作区：${file}`);
+  const absolute = path.resolve(root, file);
+  if (absolute !== root && !absolute.startsWith(`${root}${path.sep}`)) throw new Error(`风格拓扑证明路径越过工作区：${file}`);
   if (!(await fileExists(absolute))) throw new Error(`风格拓扑证明文件不存在：${file}`);
+  return absolute;
+};
+
+const hashFile = async (file) =>
+  createHash('sha256').update(await fs.readFile(file)).digest('hex');
+
+export const assertCanonicalContainerStyleProof = async ({
+  target,
+  proof,
+  root = ROOT,
+}) => {
+  if (target.pattern !== 'canonical-container') return;
+  const containerProof = proof.canonicalContainerProof;
+  const artifactEntries = Object.entries(
+    containerProof?.artifacts ?? {},
+  );
+  if (
+    containerProof?.passed !== true ||
+    containerProof.familyFingerprint !==
+      target.group?.canonicalContainer?.familyFingerprint ||
+    artifactEntries.length !== 3
+  ) {
+    throw new Error(
+      `${proof.compositeId} 缺少通过且绑定当前家族的 canonical-container 证明。`,
+    );
+  }
+  for (const [key, file] of artifactEntries) {
+    const absolute = await assertEvidenceFile(
+      file,
+      `${proof.compositeId}.canonicalContainer.${key}`,
+      root,
+    );
+    if (
+      await hashFile(absolute) !==
+      containerProof.artifactHashes?.[file]
+    ) {
+      throw new Error(
+        `${proof.compositeId} 的 canonical-container 证明文件已变化：${file}。`,
+      );
+    }
+  }
 };
 
 const allPassed = (semanticChecks) => Object.values(semanticChecks ?? {}).every((status) => status === 'passed');
@@ -69,18 +144,25 @@ export const assertStyleProofReady = async (slug) => {
   const targets = [...new Map(targetGroups.flat().map((target) => [target.compositeId, target])).values()];
 
   const reportFile = styleProofReportPath(slug);
-  if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run style:proof。');
+  if (!(await fileExists(reportFile))) throw new Error('缺少当前风格拓扑证明；请先运行 npm run project:style-proof。');
   const report = await readJson(reportFile);
-  if (report.schemaVersion !== 6 || report.scope !== 'style' || !Array.isArray(report.composites)) {
-    throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run style:proof。');
+  if (report.schemaVersion !== 7 || report.scope !== 'style' || !Array.isArray(report.composites)) {
+    throw new Error('风格拓扑证明格式过旧或不完整；请重新运行 npm run project:style-proof。');
   }
   const runtimeBuildFingerprint = await createRuntimeBuildFingerprint();
   if (
     report.planFingerprint !== storyboard.directingSummary.styleProofPlan.fingerprint ||
+    report.motionContractFingerprint !==
+      storyboard.motionContract.fingerprint ||
+    report.motionApprovalFingerprint !==
+      storyboard.motionContract.approvalFingerprint ||
+    storyboard.directingSummary.styleProofPlan
+      .motionContractFingerprint !==
+      storyboard.motionContract.fingerprint ||
     JSON.stringify(report.directingTargets) !== JSON.stringify(directingTargets) ||
     report.runtimeBuildFingerprint !== runtimeBuildFingerprint
   ) {
-    throw new Error('风格拓扑证明没有绑定当前多维风险覆盖计划；请重新运行 npm run style:proof。');
+    throw new Error('风格拓扑证明没有绑定当前多维风险覆盖计划；请重新运行 npm run project:style-proof。');
   }
   if (!Array.isArray(report.outputs) || report.outputs.length === 0) {
     throw new Error('风格拓扑证明缺少 outputs。');
@@ -98,6 +180,8 @@ export const assertStyleProofReady = async (slug) => {
     if (proof.fingerprint !== styleFingerprintForTarget(target)) {
       throw new Error(`${proof.compositeId} 的风格拓扑证明已过期；请重新生成。`);
     }
+    assertStyleTargetPatternProof({target, proof});
+    await assertCanonicalContainerStyleProof({target, proof});
     const frames = proof.proofFrames ?? [];
     for (const proofTimeId of target.proofTimeIds) {
       const frame = frames.find((candidate) => candidate.proofTimeId === proofTimeId);
@@ -190,7 +274,10 @@ export const assertStyleProofReady = async (slug) => {
     throw new Error('风格证明没有完整覆盖最高风险导演目标；自由目标也必须提供结构化 composite 证据。');
   }
 
-  const quality = await prepareQualityReport(slug, {write: false});
+  const quality = await prepareQualityReport(slug, {
+    write: false,
+    allowPendingSemanticEvidenceTargets: true,
+  });
   for (const target of provenTargets) {
     const composite = quality.report.composites.find(({compositeId}) => compositeId === target.compositeId);
     if (!target.styleOnly && (!composite || !allPassed(composite.semanticChecks))) {
@@ -215,6 +302,13 @@ export const assertStyleProofReady = async (slug) => {
       compositeEvidence.push(
         ...proof.loopingWorldProof.strips.map(
           ({derivationReport}) => derivationReport,
+        ),
+      );
+    }
+    if (target.pattern === 'canonical-container') {
+      compositeEvidence.push(
+        ...Object.values(
+          proof.canonicalContainerProof.artifacts,
         ),
       );
     }
@@ -249,6 +343,9 @@ export const assertStyleProofReady = async (slug) => {
     ready: true,
     report: reportFile,
     planFingerprint: storyboard.directingSummary.styleProofPlan.fingerprint,
+    motionContractFingerprint: storyboard.motionContract.fingerprint,
+    motionApprovalFingerprint:
+      storyboard.motionContract.approvalFingerprint,
     targets: directingTargets,
     composites: provenTargets.map(({compositeId}) => compositeId),
   };

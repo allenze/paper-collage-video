@@ -5,6 +5,129 @@ paper-collage Skill or runtime gap. It is not a substitute for implementation:
 an item stays open until its contract, renderer, validation, proof, tests,
 documentation, and packaged-plugin copy are updated together.
 
+## 2026-07-30 — Canonical rigid containers and measurable internal state
+
+- **Origin:** `wu-ya-he-shui-v2` / 《乌鸦喝水》 F006, F019, F023–F025,
+  and F027. The production project is closed and is not modified by this work.
+- **Observed failure:** a bottle frame, fill texture, and small water-surface
+  texture could be generated or positioned as independent visible assets. They
+  disagreed in scale and placement, allowed more than one layer to represent
+  the same water, and did not prove that the final fill reached the intended
+  level. Local nudging could improve one frame but could not establish a
+  reusable source or runtime contract.
+- **Required capability:** one first-class `canonical-container` authoring and
+  runtime pattern: a clean plate, one unique canonical frame, one complete
+  contents-only state sheet, one shared polygon interior mask, bounded
+  center/bottom auto-registration, one authoritative internal surface,
+  measurable ordered states, and measurable terminal fill. Provider prompts,
+  recovery, provenance, fingerprints, renderer order, validation, quality, and
+  proof must all consume that same contract.
+- **Acceptance evidence:** deterministic fixtures intentionally offset every
+  state and prove bounded correction plus zero outside-mask pixels; negative
+  tests reject excessive repair, fake alpha, duplicate water surfaces, missing
+  provider role directives, a provider grid/plan mismatch, and an incomplete
+  terminal state. Schema instances cover the authoring intent, derivation,
+  manifest binding, and compiled source plan.
+- **Status:** implemented and verified on 2026-07-30. TypeScript and Schema v11
+  pass; the source suite passes 252/252. The packaged runtime suite passes with
+  233 checks plus three dependency-gated skips before bootstrap; the same
+  installed-cache package passes 236/236 with zero skips after a fresh
+  bootstrap. Source, packaged plugin, installed cache, and fresh workspace share
+  runtime fingerprint
+  `5990c23e246e13309412d255d3f738d7ab95efebf57e1e2eea32b1bcad6ff097`.
+  The fresh workspace doctor reports READY and its type check and Schema v11
+  validation also pass.
+
+## 2026-07-28 — Delivery-equivalent audio and immutable review evidence
+
+- **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F010, F017, F025,
+  F034–F040, F042–F043, F054, and F055.
+- **Observed failure:** an audio-only WAV preflight could pass before AAC
+  encoding changed true peak; a current review scaffold could attach an older
+  same-id proof; small detached alpha residue and an opaque rectangular crop
+  could escape the low-alpha-band detector; node keyframe `x`/`y` was easy to
+  confuse with absolute placement or camera pixels; and render preflight could
+  spend sync/audio/quality work before reporting a stale production seal.
+- **Required capability:** encode and measure both delivery AAC profiles before
+  rendering and mux those exact streams; bind scaffold evidence by current
+  composite fingerprint and file SHA; add connected-component/derivation-edge
+  alpha topology checks; name local motion `offsetX`/`offsetY`; run the
+  production gate first. Project/fixture command identity, retryable attempt
+  closure, and help must also be truthful and side-effect free.
+- **Acceptance evidence:** audio tests compare preflight and muxed artifact
+  loudness exactly; scaffold schema-v3 rejects changed evidence; alpha fixtures
+  cover a natural silhouette, detached fragment, and hard registered
+  rectangle; composition, trajectory, spatial, VOX, state, and renderer tests
+  use the new offset contract; source-order coverage keeps render gating first;
+  CLI tests cover idempotent close, fixture-only proof rejection, and pure help.
+  Storyboard tests reject removed `audioCue`, require explicit event-only
+  `soundCue`, and reject numbered camera aliases; package tests expose only
+  `project:style-proof`.
+- **Status:** implemented and verified on 2026-07-28. The source suite passes
+  231/231; the packaged runtime suite passes 216/216 from a fresh workspace.
+  Source, packaged plugin, and installed cache share runtime fingerprint
+  `e73687f7fe02608ca5ebd53c94c1c4856621f5d959531dd93b5ef5a35d2c0cde`.
+  The fresh workspace also passes doctor, type checking, Schema v11, both
+  deterministic family proofs, delivery-equivalent 96k/192k AAC preflight, and
+  side-effect-free CLI help.
+
+## 2026-07-28 — Executable spatial truth, gait, and causal continuity
+
+- **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F044–F057.
+- **Observed failure:** composition could satisfy a coarse visual review while
+  the farmer or rabbit floated above the ground, a support/field strip occupied
+  the sky, an internal foreground could not actually paint over a top-level
+  subject, a seated subject drifted, the rabbit's gait froze before the scene
+  ended, or the stump/world/grounding changed across one cause-and-effect cut.
+  Moving the heroes upward to avoid subtitles merely traded occlusion for
+  floating, and duplicate semi-transparent foreground nodes could create an
+  unexplained drifting wheat layer.
+- **Required capability:** authoring must declare reusable `spatialContracts[]`
+  rather than rely on visually plausible coordinates. A grounding contract
+  binds a subject anchor to an authored support polyline and legal screen band,
+  optional true front occlusion, subtitle clearance, and locked relative
+  contact. A continuity contract binds adjacent scene world/subject/prop/support
+  pairs, camera tolerances, and grounding evidence. A gait contract measures
+  actual state changes through the entire action window. Composition validation
+  must also reject an exact duplicate visible asset instance.
+- **Acceptance evidence:** schema, storyboard authoring, project compilation,
+  runtime proof, debug overlays, quality targets, motion fingerprints, type
+  definitions, tests, documentation, and packaged plugin all carry the same
+  contract. Deterministic tests reject floating contact, support geometry in a
+  declared sky band, false foreground stacking, locked-contact drift, subtitle
+  collision, adjacent-scene world/framing/grounding drift, early gait freeze,
+  and duplicate visible assets.
+- **Status:** implemented and verified on 2026-07-28. The full suite passes
+  224/224; source, packaged plugin, and installed cache share runtime fingerprint
+  `59ebf378fa7e2819e26c63a96a8c6ae0bd07078eb9ceec4cc66045857113d6a3`.
+  A workspace bootstrapped from that cache passes doctor, type checking, Schema
+  v11, and 19 focused spatial/composition tests. This catches executable
+  geometry and topology errors; interpreting an opaque illustration as a
+  semantically impossible floating wheat field remains a required human
+  composite review rather than an invented pixel-semantic detector.
+
+## 2026-07-28 — Work-item closure must gate preview and final delivery
+
+- **Origin:** `shou-zhu-dai-tu-film` / 《守株待兔》 F061.
+- **Observed failure:** a preview-directing revision created a pending
+  `directing-revision-scene-02` work item. A later current preview, preview
+  approval, and final render all succeeded while resume continued to report
+  that item as unfinished.
+- **Required capability:** the canonical assets-ready seal must be the only
+  automatic completion authority for pending/in-progress directing-revision
+  sync items. Unrelated unfinished work and every blocked item must stop
+  assets-ready; preview approval, preview rendering, and final rendering must
+  reject any unresolved item.
+- **Acceptance evidence:** production-state tests prove automatic
+  directing-revision settlement only at assets-ready, rejection of unrelated
+  and blocked work, and rejection at preview approval/final render. Resume no
+  longer exposes a stale directing item after the canonical seal. Skill,
+  project-contract, execution-control, source, and packaged plugin agree.
+- **Status:** implemented and verified on 2026-07-28. Targeted state-machine
+  tests pass, the full suite passes 215/215, source/package/installed-cache
+  runtime identities agree, and a fresh installed-cache workspace passes
+  doctor plus the packaged production-state tests.
+
 ## 2026-07-24 — Cue-gated looping-world travel
 
 - **Origin:** `projects/gui-tu-sai-pao` / 《龟兔赛跑》 preview revision.
@@ -165,3 +288,54 @@ documentation, and packaged-plugin copy are updated together.
   lifecycle records, so callers can query phase/artifact/error without
   re-enabling noisy per-frame logs; it deliberately reports exact percentage
   as unavailable when the underlying quiet CLI provides no authoritative value.
+
+## 2026-07-30 — Complete rejected state-sheet recovery without a new provider call
+
+- **Origin:** `wu-ya-he-shui-v2` horizontal-flight pose-family repair.
+- **Observed failure:** a complete 2x2 state sheet with safe explicit cells was
+  rejected by boundary color checks, but rejected-output recovery could not
+  represent a whole registered state family.
+- **Required capability:** recover one complete 2–6 state sheet with exact
+  state membership, non-overlapping in-cell source rectangles, per-cell
+  observed key colors, immutable ledger evidence, and normal state processing.
+- **Acceptance evidence:** schema/CLI/processor/provenance tests prove zero
+  provider calls, no ledger mutation, exact family membership, and active
+  registered state derivatives.
+- **Status:** implemented in the current update.
+
+## 2026-07-30 — Editable primitive world-motion proof
+
+- **Origin:** `wu-ya-he-shui-v2` carried-stone traverse.
+- **Observed failure:** an editable ellipse rendered correctly but composition
+  proof rejected it because only raster assets exposed an isolatable source.
+  After geometric isolation, a character-sized occupancy threshold still
+  rejected the intentionally small prop.
+- **Required capability:** isolate editable shapes from authored geometry,
+  preserve camera-compensated displacement and viewport visibility proof, and
+  apply a nonzero small-prop occupancy floor without weakening raster targets.
+- **Acceptance evidence:** deterministic tests cover geometric isolation and
+  the small-prop floor; a real composition report records `editable-shape`,
+  complete visibility, measurable travel, and a passing proof.
+- **Status:** implemented in the current update.
+
+## 2026-07-30 — Locomotion method must cover the visible travel window
+
+- **Origin:** `wu-ya-he-shui-v2` scene 04 initially translated a static
+  carry-stone pose from the ground to the bottle.
+- **Observed failure:** endpoint position and direction can be correct while a
+  bird, runner, walker, or swimmer visibly slides through space in a
+  non-locomotion pose.
+- **Required capability:** authoring guidance must bind visible travel to at
+  least two registered locomotion states over the travel window, reserve
+  contact poses for endpoints, and give independently editable carried props
+  their own visibility and world-motion proof.
+- **Acceptance evidence:** state cadence, travel-facing, endpoint grounding,
+  full motion-strip review, and independent prop motion all pass.
+- **Status:** implemented in the current update. Every explicit
+  `travel-facing` role now requires a matching `gait` cadence contract for the
+  same scene/node, and authoring/quality guidance treats gait as the generic
+  registered-state cadence proof for running, walking, flying, and swimming.
+  A loop may also exit through an ordered brake/landing/contact sequence
+  beginning at `activeUntil`, with `holdStateId` as the final state. Automatic
+  semantic classification of undeclared locomotion verbs remains a future
+  compiler enhancement.

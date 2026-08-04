@@ -3,6 +3,10 @@ import {
   applyResponsiveDirectingPlan,
   stableEditorialHash,
 } from '../src/editorialPrimitives.mjs';
+import {
+  createMotionDirectionFixture,
+  FIXTURE_STYLE_PROFILE,
+} from './motion-contract-fixture.mjs';
 
 export const PHASE2_PROOF_SLUG = 'vox-phase2-proof';
 export const PHASE2_PROOF_FPS = 30;
@@ -141,7 +145,7 @@ const typography = ({
   depth: 0.5,
   transform: transform(x, y, width, height),
   motion: {
-    keyframes: [{at: 0, y: 0.01}, {at: 1, y: -0.005}],
+    keyframes: [{at: 0, offsetY: 0.01}, {at: 1, offsetY: -0.005}],
   },
 });
 
@@ -351,9 +355,9 @@ const registeredFamilyGroup = () => ({
   transform: transform(0.08, 0.32, 0.28, 0.34),
   motion: {
     keyframes: [
-      {at: 0, x: 0, y: 0, rotation: -0.4},
-      {at: 0.55, x: 0.008, y: -0.006, rotation: 0.5},
-      {at: 1, x: 0, y: 0, rotation: -0.2},
+      {at: 0, offsetX: 0, offsetY: 0, rotation: -0.4},
+      {at: 0.55, offsetX: 0.008, offsetY: -0.006, rotation: 0.5},
+      {at: 1, offsetX: 0, offsetY: 0, rotation: -0.2},
     ],
   },
   registration: PHASE2_REGISTERED_FAMILY.registration,
@@ -380,8 +384,8 @@ const registeredFamilyGroup = () => ({
     transform: transform(0, 0, 1, 1),
     motion: {
       keyframes: [
-        {at: 0, x: [-0.005, 0.003, 0.008][index]},
-        {at: 1, x: [0.005, -0.003, -0.008][index]},
+        {at: 0, offsetX: [-0.005, 0.003, 0.008][index]},
+        {at: 1, offsetX: [0.005, -0.003, -0.008][index]},
       ],
     },
   })),
@@ -503,15 +507,17 @@ const storyboardBeat = ({
   sceneIndex,
   id,
   at,
+  performanceRole,
   purpose,
   proofTimeId,
   targetId,
 }) => ({
   id,
   at,
+  performanceRole,
   purpose,
   visual: `Deterministic editorial state ${id}.`,
-  audioCue: null,
+  soundCue: null,
   proofTimeId,
   treatments: [{
     id: `${id}-treatment`,
@@ -531,9 +537,9 @@ const storyboardBeat = ({
 const storyboardScene = (sceneIndex) => {
   const id = `phase2-scene-${sceneIndex}`;
   const beats = [
-    storyboardBeat({sceneIndex, id: `s${sceneIndex}-open-beat`, at: 0.08, purpose: 'establish', proofTimeId: `s${sceneIndex}-establish`, targetId: `title-${sceneIndex}`}),
-    storyboardBeat({sceneIndex, id: `s${sceneIndex}-action-beat`, at: 0.52, purpose: 'explain', proofTimeId: `s${sceneIndex}-action`, targetId: sceneIndex === 1 ? 'annotation-card' : 'data-switch'}),
-    storyboardBeat({sceneIndex, id: `s${sceneIndex}-final-beat`, at: 0.9, purpose: 'resolve', proofTimeId: `s${sceneIndex}-final`, targetId: `match-${sceneIndex === 1 ? 'source' : 'destination'}`}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-open-beat`, at: 0.08, performanceRole: 'establish', purpose: 'establish', proofTimeId: `s${sceneIndex}-establish`, targetId: `title-${sceneIndex}`}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-action-beat`, at: 0.52, performanceRole: 'action', purpose: 'explain', proofTimeId: `s${sceneIndex}-action`, targetId: sceneIndex === 1 ? 'annotation-card' : 'data-switch'}),
+    storyboardBeat({sceneIndex, id: `s${sceneIndex}-final-beat`, at: 0.9, performanceRole: 'settle', purpose: 'resolve', proofTimeId: `s${sceneIndex}-final`, targetId: `match-${sceneIndex === 1 ? 'source' : 'destination'}`}),
   ];
   if (sceneIndex === 1) {
     beats[1].treatments.push({
@@ -912,7 +918,7 @@ export const createPhase2EditorialAuthoring = ({media}) => {
 
 export const createPhase2StoryboardAuthoring = ({media}) => ({
   $schema: '../../schemas/storyboard-authoring.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 12,
   slug: PHASE2_PROOF_SLUG,
   status: 'ready',
   arc: 'Actual local audio becomes deterministic edit points, which direct reusable typography, annotation, data, responsive, and transition primitives.',
@@ -922,12 +928,12 @@ export const createPhase2StoryboardAuthoring = ({media}) => ({
       'Keep text, data, annotation routes, and match anchors inside each compiled responsive plan.',
       'Use SVG and component primitives rather than baked editorial overlays.',
     ],
-    motionLanguage: [
-      'Reveal words, lines, counters, data states, and switches only from compiled edit points.',
-      'Use a true hard anchor cut at the actual-audio boundary.',
-    ],
     layerStrategy: 'Paper field, editorial typography, semantic targets, SVG data layer, and vector annotation overlay.',
   },
+  motionDirection: createMotionDirectionFixture({
+    summary:
+      'Establish the editorial surface, execute every authored audio-synchronized action, then settle on an inspectable final state.',
+  }),
   editorial: createPhase2EditorialAuthoring({media}),
   scenes: [storyboardScene(1), storyboardScene(2)],
   sceneTransitions: [{
@@ -957,8 +963,8 @@ export const createPhase2Plan = () => ({
     characterSheets: 2,
     styleSamples: 1,
     baseImageAttempts: 9,
-    layerPackageAttemptReserve: 12,
-    maxGeneratedImages: 21,
+    layerPackageAttemptReserve: 16,
+    maxGeneratedImages: 25,
   },
   motionBudget: {
     maxPoseSheetCalls: 2,
@@ -968,7 +974,7 @@ export const createPhase2Plan = () => ({
   approvedImageBudget: {
     imageAttemptLimit: 1,
     expectedProviderImageCalls: 1,
-    profileHardCeiling: 21,
+    profileHardCeiling: 25,
     approvedAt: PHASE2_PROOF_UPDATED_AT,
   },
   requested: {durationSeconds: 6, sceneCount: 2},
@@ -984,7 +990,10 @@ export const createPhase2Plan = () => ({
 
 export const compilePhase2Storyboard = ({media}) => {
   const plan = createPhase2Plan();
-  return compileStoryboardDirecting(createPhase2StoryboardAuthoring({media}), {plan});
+  return compileStoryboardDirecting(createPhase2StoryboardAuthoring({media}), {
+    plan,
+    styleProfile: FIXTURE_STYLE_PROFILE,
+  });
 };
 
 const projectScene = ({sceneIndex, media}) => {
@@ -998,7 +1007,7 @@ const projectScene = ({sceneIndex, media}) => {
     tailSeconds: 0,
     appearance: {
       background: sceneIndex === 1 ? '#e9d8a6' : '#dce8d2',
-      paperTexture: {visible: true, opacity: 0.08, blendMode: 'multiply'},
+      surfaceTexture: {visible: true, opacity: 0.08, blendMode: 'multiply'},
       chapter: {visible: false},
       subtitles: {variant: 'hidden'},
     },
@@ -1072,9 +1081,24 @@ export const createPhase2Project = ({media, profileId}) => {
   if (!profile) throw new Error(`未知 Phase 2 proof profile：${profileId}`);
   const project = {
     $schema: '../../schemas/project.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 12,
     slug: PHASE2_PROOF_SLUG,
     title: `VOX Phase 2 Editorial System · ${profileId}`,
+    intake: {
+      schemaVersion: 2,
+      status: 'pending',
+      aspectRatio: null,
+      visualStylePreset: null,
+      parallaxPreference: null,
+      styleCatalogVersion: null,
+      styleCatalogFingerprint: null,
+      styleProfileFingerprint: null,
+      confirmedAt: null,
+      note: 'Deterministic engineering proof fixture.',
+      updatedAt: PHASE2_PROOF_UPDATED_AT,
+    },
+    styleProfile: null,
+    motionContract: storyboard.motionContract,
     plan: createPhase2Plan(),
     quality: {minimumAssetScale: 1},
     video: {width: profile.width, height: profile.height, fps: PHASE2_PROOF_FPS},
@@ -1085,10 +1109,27 @@ export const createPhase2Project = ({media, profileId}) => {
       ink: '#162b35',
       subtitle: '#fffaf0',
       subtitleBackground: 'rgba(22,43,53,.78)',
-      paperEdge: '#fffaf0',
       foreground: '#162b35',
-      texture: 'textures/paper-grain.png',
       fontFamily: 'Arial, Helvetica, sans-serif',
+      surface: {
+        texture: {
+          src: 'textures/paper-grain.png',
+          opacity: 0.08,
+          blendMode: 'multiply',
+        },
+        subjectEdge: {
+          mode: 'paper-outline',
+          color: '#fffaf0',
+          widthPx: 3,
+        },
+        subjectShadow: {
+          mode: 'drop-shadow',
+          offsetXPx: 0,
+          offsetYPx: 10,
+          blurPx: 7,
+          color: 'rgba(20,15,12,.28)',
+        },
+      },
     },
     voice: {
       mode: 'fictional',

@@ -38,6 +38,29 @@ export const STORY_SCOPE_GUIDANCE = {
   },
 };
 
+const SOURCE_PACKAGE_COSTS = {
+  'single-background': {
+    providerCalls: 1,
+    localDerivatives: 0,
+    avoidedCalls: 0,
+  },
+  'rigid-master': {
+    providerCalls: 1,
+    localDerivatives: 0,
+    avoidedCalls: 0,
+  },
+  'registered-layer-sheet': {
+    providerCalls: 1,
+    localDerivatives: 3,
+    avoidedCalls: 3,
+  },
+  'context-preserving-layer-edits': {
+    providerCalls: 4,
+    localDerivatives: 3,
+    avoidedCalls: 0,
+  },
+};
+
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const isPositive = (value) =>
   typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -273,6 +296,21 @@ const compileProviderEstimate = (option, assetBudget) => {
   const sourcePackages = option.scenes.flatMap(
     ({sourcePackages}) => sourcePackages ?? [],
   );
+  for (const source of sourcePackages) {
+    const expected = SOURCE_PACKAGE_COSTS[source.strategy];
+    if (!expected) {
+      throw new Error(
+        `${option.id}.${source.id}.strategy 必须是 ${Object.keys(SOURCE_PACKAGE_COSTS).join('、')}。`,
+      );
+    }
+    for (const key of ['providerCalls', 'localDerivatives', 'avoidedCalls']) {
+      if (source[key] !== expected[key]) {
+        throw new Error(
+          `${option.id}.${source.id}.${key} 必须与 ${source.strategy} 成本合同一致：expected ${expected[key]}, received ${source[key] ?? 'missing'}。`,
+        );
+      }
+    }
+  }
   const sourcePackageProviderCalls = sourcePackages.reduce(
     (sum, source) => sum + source.providerCalls,
     0,
@@ -459,6 +497,11 @@ export const buildPlanningScenarios = ({
     slug,
     status: 'ready',
     intakeFingerprint: intakeDecisionFingerprint(intake),
+    styleProfileBinding: {
+      id: intake.visualStylePreset,
+      catalogVersion: intake.styleCatalogVersion,
+      profileFingerprint: intake.styleProfileFingerprint,
+    },
     requested,
     commonStory: input.commonStory,
     options,
@@ -640,8 +683,30 @@ export const buildCreativePlanFromScenario = ({
     rationale: option.rationale,
     at,
   });
+  const families = collectStateFamilies(option.scenes);
+  const fulfillment = summarizeScenarioFulfillment(option);
+  const scenarioMotionBudget = {
+    maxPoseSheetCalls: Math.max(
+      base.motionBudget.maxPoseSheetCalls,
+      families.size,
+    ),
+    maxStatesPerSheet: Math.max(
+      base.motionBudget.maxStatesPerSheet,
+      ...[...families.values()].map(({states}) => states.size),
+    ),
+    maxContinuousTargets: Math.max(
+      base.motionBudget.maxContinuousTargets,
+      fulfillment.minLocalMotionTargets,
+    ),
+  };
   return {
     ...base,
+    // The generic profile budget is a scene-count heuristic. The human-selected
+    // scenario is the exact semantic contract and may legitimately contain more
+    // independently animated identities or motion targets inside one long shot.
+    // Its total provider demand is still bounded by providerEstimate and the
+    // profile hard ceiling below.
+    motionBudget: scenarioMotionBudget,
     storyScope: option.storyScope,
     scenarioBinding: {
       scenarioSetFingerprint: scenarios.fingerprint,

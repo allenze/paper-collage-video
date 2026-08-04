@@ -1,11 +1,13 @@
 # Asset, Composite, Motion, and Delivery Quality
 
-Read this before style sampling, bulk images, v10 composition/v9 editorial
+Read this before style sampling, bulk images, v12 composition/motion-contract/v9 editorial
 authoring, proof review, or delivery tuning.
 
 ## Two Quality Scopes
 
-`quality-report.json` v6 contains `eventTimeline`, current `assets`,
+`quality-report.json` v7 contains the current executable `styleProfile`
+reference/fingerprint/review focus, current `motionContract` summary and both
+fingerprints, `eventTimeline`, current `assets`,
 `composites`, non-current `assetHistory`, per-entry `reviewScope`, and one
 `reviewSurfaceFingerprint` over the exact review targets, technical results, and
 evidence hashes. A visible consumer uses `runtime-visible`; an active provider or
@@ -20,15 +22,29 @@ unless the execution tree still reaches that file. A passing file does not prove
 that a person is inside a boat or trees remain above water. Both current quality
 scopes must pass.
 
-Run `project:quality <slug> prepare` after files exist. Then generate a fillable review batch with `project:quality <slug> scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`. The scaffold lists required/pending checks and current evidence paths but never pre-populates `passedChecks`; inspect original-resolution assets in small same-type batches, make real decisions, and record the edited file. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
+Run `project:quality <slug> prepare` after files exist. Then generate a fillable review batch with `project:quality <slug> scaffold --output=projects/<slug>/quality-review-scaffold.json --reviewer=<reviewer>`. The scaffold lists required/pending checks and current evidence records as `{file, sha256}` but never pre-populates `passedChecks`; inspect original-resolution assets in small same-type batches, make real decisions, and record the edited file. SHA-256 changes invalidate affected file reviews; changing a bound semantic contract or generation family also invalidates them.
 
-The schema-v2 scaffold binds both the complete report fingerprint and every target fingerprint. `record-batch` rejects the whole input atomically when either has changed, so an old scaffold cannot approve removed targets or miss new ones. Generate a current bound review surface with `project:quality <slug> contact-sheet --input=projects/<slug>/quality-review-scaffold.json`; its index records the report fingerprint, source evidence hashes, and generated page hashes. Never display an older unbound contact sheet as current.
+The schema-v3 scaffold binds the complete report fingerprint, every target fingerprint, and every evidence-file hash. A composite is eligible only when a proof report contains both its current id and current fingerprint; scaffold generation stops instead of attaching an older same-id proof. `record-batch` rejects the whole input atomically when a report, target, or evidence file has changed, so an old scaffold cannot approve removed targets, miss new ones, or present stale frames. Generate a current bound review surface with `project:quality <slug> contact-sheet --input=projects/<slug>/quality-review-scaffold.json`; its index records the report fingerprint, source evidence hashes, and generated page hashes. Never display an older unbound contact sheet as current.
 
 Generating a non-empty scaffold starts one quality-review metric session and persists the scaffold's current evidence paths and hashes in the report; a successful `record-batch` closes it. If reviews remain, the command writes `quality-review-scaffold.pending.json`, reports the exact remaining IDs, and starts the next review session. The edited batch normally submits reviewer, pass/fail checks, and note. Omit `evidenceFiles` to inherit the current fingerprint-bound set, or provide it explicitly only to override that set. Keep those operations adjacent to the actual inspection so the session remains useful. The window intentionally includes host vision/tool orchestration and must not be described as raw model inference latency.
 
 Registered members add topology-sensitive asset checks: `silhouette-fidelity`, `negative-space-clean`, and `background-leak-free`. A `supported-subject` composite also requires `motion-isolation-clean`. Passing any of those checks requires `evidenceFiles` from the current proof bundle. `key-edge-clean` only detects matte/color contamination; hard 0/255 alpha can pass that check while still deleting a limb or carrying background pixels.
 
 Every transparent foreground also receives `rectangular-alpha-band-free`. The detector scans horizontal and vertical runs whose alpha is 4–96, requires at least 24 pixels and 42% of the relevant axis, merges adjacent scan lines, and treats a band as thin at no more than 2.5% of the cross-axis. It correlates candidates within 1.2% of canvas edges, crop edges, or registered placement/rectangular clip edges; four compatible sides form an explicit rectangular-residue error. Broad soft transitions remain informational so ordinary paper shadows do not fail, while an unusually long uncorrelated straight band is a warning. Diagnostics name scale, orientation, exact coordinates, span, correlation, classification, and severity.
+
+Every alpha-bearing asset also receives `alpha-topology-clean`. A bounded
+connected-component pass rejects small, separated, rectangle-like fragments
+that can escape long-band detection. When registered placement or rectangle
+crop provenance exists, it also rejects a mostly filled component whose hard
+edges align with perpendicular derivation boundaries. This check is for
+detached residue and hard crop topology; irregular intentional silhouettes and
+soft shadows remain subject to the existing evidence-backed visual review.
+The detached-fragment heuristic is disabled, while hard derivation-boundary
+checks remain active, for `scenery`/`foreground-occluder` looping strips and
+the subject/front members of a `registered-depth-stack`: those contracts
+explicitly represent multiple disconnected rocks, roots, leaves, or reeds.
+Do not apply that exception to characters, props, ground/backdrop strips, or
+untyped transparent images.
 
 The same inspection runs once at original resolution and again after Lanczos
 scaling to the asset's actual proof/render dimensions. Proof bundles contain
@@ -62,15 +78,36 @@ Semantic risk adds evidence-backed checks:
 
 The runtime deterministically rejects `feTurbulence`, `feDisplacementMap`, and `feBlend` in diagram-critical SVG files. Raster diagrams and physical correctness still require original-resolution semantic evidence.
 
+## Executable Style Profile Review
+
+Every current source or visible asset inherits the selected profile's
+`requiredAssetChecks`; its quality fingerprint binds the profile fingerprint
+even when the file bytes are unchanged. Composition quality adds exactly one
+whole-film `style-profile:<id>` target with the profile's
+`requiredCompositeChecks`. Its fingerprint binds the profile snapshot, render
+theme, transition set, visual-SFX policy, runtime, scenes, and participating
+asset hashes. Therefore changing a palette, surface texture/edge/shadow
+treatment, directive, required check, reference card, or profile id invalidates
+stale asset/composite approvals.
+
+The scaffold includes the frozen style-card reference as evidence and repeats
+`styleProfile.quality.reviewFocus` for the reviewer. Asset approval must verify
+`style-profile-conformant`; whole-film approval must verify
+`style-profile-consistent`. A technically valid alpha edge or registered family
+does not prove either check. Compare the actual evidence with the bundled
+reference at useful resolution and judge the profile's named visual traits
+across scenes, not just one isolated sample.
+
 For the style gate, run:
 
 ```bash
-npm run style:proof -- <slug> --duration=4
-npm run project:quality -- <slug> prepare
+npm run project:style-proof -- <slug> --duration=4
+npm run project:quality -- <slug> prepare --scope=style
 ```
 
-The schema-v6 style report uses `scope=style`, binds the complete
-`styleProofPlan`, and emits a structured composite for every selected directing
+The schema-v7 style report uses `scope=style`, binds the complete
+`styleProofPlan`, the motion execution fingerprint, and the attributable
+motion approval fingerprint, then emits a structured composite for every selected directing
 target, including `free` targets. Its current composite can satisfy the matching
 quality target directly; a separate full-project composition proof is not
 required merely to approve style. Inspect
@@ -82,6 +119,14 @@ view, and both reveal-envelope extremes for 16:9, 9:16, and 1:1. These six
 family artifacts must be current and show zero transparent output pixels;
 isolated member motion stress cannot prove hidden content. Record participating
 assets and the representative composite with those paths.
+When the stack uses `stackingContext=scene`, render those extremes through the
+same validated static carrier transform used by the scene. An oversized carrier
+is part of the authored coverage surface; shrinking it back to one viewport in
+the proof creates a false transparent-edge failure.
+The same `--scope=style` must be retained for scaffold, contact-sheet, and
+record-batch. It defers semantic evidence whose planned node has not yet been
+produced, while keeping every currently rendered style target reviewable and
+fingerprint-bound.
 
 ```json
 {
@@ -102,7 +147,7 @@ assets and the representative composite with those paths.
 }
 ```
 
-After final local audio, actual timing data, and real v10 composition/v9
+After final local audio, actual timing data, and real v12 composition/v9
 editorial groups/state sequences exist, run (the proof command synchronizes
 measured narration duration first and reuses only project-, asset-, and
 runtime-fingerprint-current frames/targets):
@@ -111,6 +156,24 @@ runtime-fingerprint-current frames/targets):
 npm run project:composition-proof -- <slug>
 npm run project:quality -- <slug> prepare
 ```
+
+For a path-bound state sequence, explicit `stateAssertions` remain the authority
+when they exist. When none are authored, quality evidence automatically binds
+the sequence to the matching `path-locomotion` contract's start, turn, and
+through proof times. A path-bound companion with the same `poseFamilyId` may
+inherit those state-review times from the contracted lead in the same scene;
+this does not make the companion another spatial-contract target or duplicate
+the camera/world proof. This keeps continuously cycling, depth-directed
+locomotion reviewable without pretending that one static state owns an entire
+path phrase. One assertion for a node at one proof time is an exact visible-state
+claim. Multiple assertions for the same node at the same proof time instead form
+a registered-family coverage set: every named state must receive proof coverage,
+while the state resolved at that instant must be one member of the set. They do
+not claim that mutually exclusive states are visible simultaneously.
+The project execution tree may append state assertions for newly realized
+assets at an existing approved proof time. It must preserve every approved
+proof id, time, label, kind, visible assertion, and storyboard state assertion;
+it may not delete or rewrite the approved proof to make validation pass.
 
 To deliberately bypass every proof cache layer, append `--force`. The generated report must say `cache.forced=true` and show zero reused frames, composites, and asset evidence.
 
@@ -145,6 +208,15 @@ npm run project:quality -- <slug> record-batch --input=<reviews.json> --quiet
 Never pass a semantic check merely to unblock production. Changing a member, mask, group transform, boundary, anchor, keyframe, event, scene transition, or proof time changes the composite fingerprint and invalidates that review.
 Replacing or editing a recorded evidence file also invalidates its review. At the style gate, each member review must reference that proof bundle's alpha mask, checkerboard, tight crop, and motion-stress sheet; the composite review must reference its full/crop/debug proof frames and member motion-stress sheets. An unrelated screenshot cannot satisfy the gate.
 
+Quality also creates exactly one `motion-contract:whole-film` target whenever a
+compiled motion contract exists. Review establish/action/settle phrase coverage,
+pacing cadence, camera strategy, transition strategy, ambient strategy, and
+event/proof synchronization across all scenes. The target fingerprint binds the
+exact contract, runtime surface, scene motion/camera/composition/events,
+transitions, editorial fingerprint, and participating asset hashes. A passing
+3–5 second style sample is necessary for the style gate but cannot substitute
+for this whole-film motion review.
+
 Composition-proof fingerprints use the `composition-proof` runtime surface
 rather than the complete package identity. That surface excludes subtitle-only
 renderer and subtitle-contract files, and the proof command renders a dedicated
@@ -152,6 +224,22 @@ project input with subtitles removed. A subtitle-only change therefore
 invalidates final visual/subtitle evidence while preserving current asset and
 composition reviews. Changes to composition, proof, quality, schema, or shared
 renderer inputs still invalidate the affected proof targets.
+Composite quality timing fingerprints include narration start/duration and
+scene tails, but not narration transcript text or derived subtitle cues.
+Whitespace-only phrasing and cue repartition therefore preserve visual reviews;
+changing narration timing still invalidates them.
+
+Subtitle review is bound to the encoded output, not only the React/CSS intent.
+Inspect `subtitle-contact-sheet.jpg` for every narrated scene at the real
+preview resolution. Confirm the requested punctuation policy, glyph clarity,
+subject clearance, and the absence of unintended ink bleed. The final report's
+`subtitle-typography-surface` check must list the resolved per-scene font
+family, weight, and edge treatment. A passing composition proof cannot satisfy
+this subtitle check because composition-proof intentionally hides subtitles.
+The report's `subtitle-segmentation-surface` must also list cue count, longest
+non-space cue length, and whether authored phrase spacing is present. Inspect
+the encoded sheet to confirm that spaces read as semantic pauses and that cue
+changes do not leave an orphaned one- or two-character tail.
 
 ## Pattern-Specific Review
 
@@ -162,13 +250,56 @@ renderer inputs still invalidate the affected proof targets.
   extreme of every responsive reveal envelope, and clean bounded relative
   motion. When `subjectTravelEnvelope` is authored, also inspect all three
   responsive lower-left/upper-right subject-only travel pairs and confirm the
-  subject crosses the world while rear/front remain locally stable.
+  subject crosses the world while rear/front remain locally stable. When
+  `stackingContext=scene`, also inspect the resolved static carrier size and at
+  least one frame for every intended external interleave relation.
+- `semantic-slice-derivative`: full source canvas preserved, current source
+  SHA, exact alpha-component ownership, no component assigned twice or omitted,
+  zero boundary-cut pixels, semantic role matches the visible object, and the
+  final scene demonstrates the declared depth relation rather than only an
+  isolated checkerboard.
 - `registered-environment`: registration alignment, boundary respected, no duplicated semantic band, readable depth, readable final composition.
-- `looping-environment`: every active strip binding matches its manifest derivative; RGB and alpha seams pass at source and render scale; every semantic surface has visible full-span source support; a ground strip has real alpha support at both repeat edges; three-tile stitches are clean; 16:9, 9:16, and 1:1 have zero uncovered pixels at worst phase; far-to-near speed is strictly ordered; measured ground displacement has the authored sign and crosses a real seam; every tracked/participant subject follows its screen/world anchor contract; and requested near-strip occlusion has real higher-z and vertical overlap.
-- `state-sequence`: state order correct, canvas and declared anchors stable within `anchorPolicy.maximumDrift`, every state has reviewable facing metadata, every derived state carries a current anchor-overlay proof, every identity-reference SHA matches an active manifest asset, identity is visually consistent, transitions are clean, and every state is bound to a current proof frame.
+- `canonical-container`: source plate/frame/content-sheet hashes and family fingerprint are current; the frame and state sheet contain real transparency; there is exactly one clean-plate/contents/frame child in fixed paint order; all children preserve one registration canvas and have no independent motion; exactly one contents sequence owns the authoritative internal surface; every state has zero pixels outside the shared interior mask and passes center, bottom, fill-deviation, and retention thresholds; the final state passes minimum fill, maximum rim gap, and bottom-band coverage. Inspect the current mask overlay, complete progression, and terminal panel; a separate waterline/fill node cannot pass as decoration.
+- `looping-environment`: the current provider-free topology proof matches the compiled world; every active strip binding matches its manifest derivative; RGB and alpha seams pass at source and render scale; outer tile-boundary salience passes, and `mirror-crop` also passes its internal fold; every semantic surface has visible full-span source support; a ground strip has real alpha support at both repeat edges; three-tile stitches are clean; 16:9, 9:16, and 1:1 have zero uncovered pixels at worst phase; far-to-near speed is strictly ordered; measured ground displacement has the authored sign and crosses a real seam; every tracked/participant subject follows its screen/world anchor contract; near-strip z-order is always proven, while real vertical overlap is required only when that subject binding does not explicitly set `requireNearOverlap=false`.
+- `encounter-contract`: exactly one correct world participant owns enter/approach/answer/exit events in authored order; the answer event alone binds the intended narration cue within tolerance; the target traverses the declared entry/exit edges and minimum world distance; and no visibility event creates an opacity teleport. Inspect the four proof moments with the narration cue label and target id visible.
+- `state-sequence`: state order correct, canvas and declared anchors stable within `anchorPolicy.maximumDrift`, every state has reviewable facing metadata that visually matches the actual silhouette, every identity-reference SHA matches an active manifest asset, identity is visually consistent, transitions are clean, and every state is bound to a current proof frame. A pose-state family requires a current anchor-overlay proof for every state. A state sequence authored as the `subject` inside one `supported-subject` or `registered-depth-stack` instead passes registration through complete full-canvas registered-family context for every visual state; do not require pose overlays in addition. Its parent group's alpha-band evidence count is the number of rendered family sources, including all state sources, not merely the number of child nodes.
+- `spatial-contract/grounding`: every sampled registered foot/seat anchor resolves, remains within gap/penetration tolerance of the declared support polyline and inside its authored screen-space support band, and stays relatively stable for `locked-contact`; requested foreground relations use the actual cross-group paint order and alpha-tight overlap; requested subtitle clearance uses alpha-tight subject bounds against the active subtitle exclusion zone.
+- `spatial-contract/continuity`: the endpoints are adjacent scenes; every typed pair stays within position/scale tolerance and, when requested, preserves its registered visual family; camera pose remains bounded and both sides bind their own passing grounding contract.
+- `spatial-contract/gait`: all requested registered locomotion states occur inside the window, measured state changes per second meet the authored minimum, `activeUntil` does not precede the final locomotion proof, and the last active transition is close enough to the window end to reject a terminal freeze. If an exit sequence follows, additionally prove its ordered brake/landing/contact states and the final held contact state.
+- `spatial-contract/travel-facing`: the assembled pre-camera subject path has the authored signed displacement, contains no reverse segment, every active state both declares and visibly exhibits the expected facing, and a matching `gait` contract proves that the moving character is actually cycling locomotion states. Inspect the arrow overlay and both endpoint crops; metadata alone cannot pass the human `travel-facing-readable` check.
+- `spatial-contract/path-locomotion`: the assembled subject travels the required physical screen and optical-depth distance and directions; perspective scale and dynamic depth order visibly follow `z`; rendered rotation stays within the authored heading-error and turn-rate limits; every requested registered locomotion state cycles at the minimum cadence through the proof window; camera follow binds the same target and coherent world; and every sampled viewport stays inside declared world bounds. Inspect start, every named turn/depth reversal, end, the 3D path polyline, depth values, and heading arrows. Human review must pass `path-travel-clean`, `path-heading-readable`, `turn-continuity-clean`, `depth-projection-readable`, `depth-order-clean`, `camera-follow-coverage-clean`, and `locomotion-cycle-bound`.
+- Alpha-topology inspection treats detached components as intentional when
+  their full-canvas bounds are declared by a current `semanticSliceBinding`, or
+  when the asset is a typed multi-component scenery/foreground strip or a
+  subject/front member of a `registered-depth-stack`. The typed exception
+  suppresses only the detached-fragment heuristic; hard rectangular derivation
+  boundaries still fail deterministically.
+- Semantic alpha-component slices must also reproduce the exact declared
+  component bounds and alpha-pixel counts in the encoded PNG. Provenance counts
+  alone cannot pass `semantic-slice-alpha-current`.
+- When a semantic slice is intentionally derived from a preserved source
+  revision whose asset id was later reused by a registered-family output, bind
+  `sources[].sourceSha256` in `semantic-slices.json`. The derivation must resolve
+  that exact manifest record instead of silently switching to the current
+  active record.
+- Chroma-key edge inspection requires both matching chroma direction and close
+  RGB distance to the declared key color. Paper colors that merely share a hue
+  direction with the key are not counted as key residue.
+
+When a spatial contract is selected by `styleProofPlan`, `project:style-proof`
+runs the same deterministic contract evaluator used by composition proof, stores
+the passing `spatialProof` in the style report, and renders the contract-specific
+debug overlay. Generic red-box endpoint crops are not executable evidence and
+must not pass style approval.
 - `parallax-rig`: depth order readable, camera coupling clean, registered groups stable, final composition readable.
-- `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable. For `rise-drift`, verify monotonic bottom-to-top travel, slight expansion, and invisible respawn.
+- `motif-field`: density readable, bounds clean, exclusion zones clean, motion clean, loop clean, final composition readable. For `rise-drift`, verify monotonic bottom-to-top travel, slight expansion, and invisible respawn. For a world-bound field, also verify the referenced strip exists, horizontal travel has the same sign and phase family as that strip, instances wrap inside the field bounds, and local horizontal drift never exceeds `relativeDriftAmplitude`.
 - `typography`: fit/overflow, font loading, reveal/emphasis edit-point binding, mixed-script legibility, and safe-area/exclusion compliance.
+- `visual-sfx`: the short word is editable `role=visual-sfx` typography; its
+  audible cue and show/emphasis event are synchronized; its hide event preserves
+  the Profile duration; it never covers subtitles or the focal subject; the
+  scene stays within the Profile density limit; and lettering, color, contour,
+  and motion are consistent with the selected style. Dialogue, narration, and
+  environmental ambience do not pass as visual-SFX content.
 - `annotation`: semantic anchors, route validity, title/subtitle/motif exclusion clearance, lifecycle binding, and counter state.
 - `data-graphic`: data/domain/format/geometry mapping, focus/reveal states, edit-point binding, and deterministic SVG output.
 - `editorial-transition`: declared shape/position/scale/color/value continuity, hard-cut enforcement for match types, fallback policy, and before/at/after frames.
@@ -187,7 +318,7 @@ is intact; that remains evidence-backed semantic review.
 
 ## Motion, Visibility, and Event Authoring
 
-The scene camera, camera-coupled depth offset, group transform, child local transform, keyframes, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes are local deltas and cover normalized `0..1`; narration resync therefore preserves the spatial relationship. `looping-environment` keeps its viewport carrier fixed, folds camera/parallax into the internal strip phase and non-shrinking content scale, and repeats enough copies for gap-free coverage. `motif-field` then expands its fixed-seed instances inside node-local bounds, deterministically rejects protected zones, and proves a closed or invisible loop edge.
+The scene camera, camera-coupled depth offset, group transform, child local transform, ordinary keyframes plus optional path translation/orientation, idle motion, transient emphasis, and persistent visibility state compose in that order. A group carries its attached family once. Child keyframes use explicit parent-normalized additive `offsetX`/`offsetY` deltas and cover normalized time `0..1`; absolute node placement remains `transform.x`/`transform.y`, while camera keyframes retain pixel `x`/`y`. A path target forbids competing keyframe x/y/rotation and resolves arc length plus tangent in physical parent pixels, preserving speed and heading across aspect ratios. Narration resync therefore preserves the spatial relationship. `camera.follow` consumes the same resolved top-level path and clamps its viewport to one declared world surface; it is not a duplicate camera-keyframe animation. `looping-environment` keeps its viewport carrier fixed, folds camera/parallax into the internal strip phase and non-shrinking content scale, and repeats enough copies for gap-free coverage. Adjacent copies retain their logical phase spacing but overlap by a bounded raster guard so Chromium cannot expose a one-pixel antialiasing rail at fractional CSS coordinates. `motif-field` then expands its fixed-seed instances inside node-local bounds, deterministically rejects protected zones, and proves a closed or invisible loop edge. When `worldBinding` is present, the field uses the chosen strip displacement instead of duplicate scene-camera travel, wraps horizontal instance positions inside its own bounds, and composes the bounded local drift on top.
 
 Map every approved beat to one or more ordered events. Target the group when the entire registered assembly reacts, or a child for a genuinely local action. `scene.events` schedules both visuals and sound; do not create a second audio event list. A visibility event persists after its window and requires a truthful initial state; an emphasis event is transient. Bind critical events to authored proof ids.
 
@@ -197,8 +328,9 @@ Do not count imperceptible camera drift as story activity. Use `static` when sti
 
 ## Subtitles and Audio
 
-`project:assets-ready` owns narration synchronization, subtitle derivation, v10
-composition/v9 editorial validation, current-proof enforcement, and both
+`project:assets-ready` owns motion-approval validation, narration
+synchronization, subtitle derivation, v12 composition/motion-contract/v9
+editorial validation, current-proof enforcement, and all asset/composite/motion
 quality gates. Provider or forced-alignment timing wins; actual final-audio
 edit-point evidence is authoritative for editorial bindings. Review
 reading-speed warnings. Every narration source must have non-empty transcript
@@ -214,6 +346,6 @@ that sheet as the human visual proof for legibility, occlusion, clipping, and
 font appearance; its existence is not OCR proof that the pixels spell the
 expected text.
 
-After narration registration and synchronization, `project:assets-ready` runs `project:audio-calibration propose`, builds an audio-only timeline mix, and measures LUFS/true peak. A passing mix needs no decision. A failing mix writes a source-fingerprinted proposal and stops with an exact `project:audio-calibration accept` command; acceptance requires the matching fingerprint and a human note, updates `audio.narration.volume`, and reruns preflight. Changed source audio or timing invalidates the decision. The final artifact report remains authoritative. When only audio sources/gain change and the cached visual fingerprint is current, preview/final rendering reuses the encoded video stream and remuxes audio instead of rerendering frames.
+After narration registration and synchronization, `project:assets-ready` builds the deterministic timeline mix, encodes the real 96k preview AAC and 192k final AAC surfaces, and measures LUFS/true peak on both. If either encoded surface misses the mastering contract, the runtime automatically performs fingerprinted two-pass `loudnorm` mastering with codec headroom and up to three measured correction passes. This is a technical delivery operation, not a human approval gate: do not ask the user to choose narration gain, compression, or limiting. The report retains the unmastered mix, mastering method, targets, attempts, and both final probes. If automatic mastering still cannot pass, treat it as a technical audio defect to diagnose and repair, not a decision to delegate. Fresh renders and audio-only cache refreshes mux the exact measured mode-specific AAC stream with codec copy, so artifact audio never takes a second unverified gain/codec path; the final artifact report confirms equivalence and remains authoritative for the complete container.
 
 Reports also intersect detected silence with sampled low-motion ranges. Silence with meaningful animation and a static explanatory image with narration are valid; only their unapproved overlap fails. Read `timing-continuity.md` for thresholds and proof-backed quiet holds. Never add background music solely to hide a continuity failure.

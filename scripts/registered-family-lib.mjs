@@ -168,7 +168,7 @@ export const validateRegisteredFamilySpec = (spec) => {
       errors.push(`${location}.output 缺失或重复`);
     }
     if (
-      !['registered-layer-sheet', 'layer-package-member']
+      !['registered-layer-sheet', 'layer-package-member', 'state-sheet-cell']
         .includes(member?.source?.kind) ||
       !nonEmpty(member?.source?.assetId)
     ) {
@@ -176,12 +176,38 @@ export const validateRegisteredFamilySpec = (spec) => {
     }
     if (
       member?.source?.kind === 'registered-layer-sheet' &&
-      member.source.packageRole !== member.role
+      member.source.packageRole !== member.role &&
+      !(
+        member.source.packageRole === 'support-front' &&
+        member.source.reuseAsRole === 'support-rear' &&
+        member.role === 'support-rear' &&
+        member.derivation?.keying !== undefined &&
+        member.derivation?.clip === undefined
+      )
     ) {
-      errors.push(`${location} 的 registered-layer-sheet packageRole 必须与 role 相同`);
+      errors.push(
+        `${location} 的 registered-layer-sheet packageRole 必须与 role 相同；` +
+        '只有完整透明 support-front 单元可显式 reuseAsRole=support-rear，且后层不得裁掉主体。',
+      );
+    }
+    if (
+      member?.source?.kind === 'state-sheet-cell' &&
+      (
+        member.role !== 'subject' ||
+        !nonEmpty(member.source.poseFamilyId) ||
+        !nonEmpty(member.source.stateId)
+      )
+    ) {
+      errors.push(`${location} 的 state-sheet-cell 只能作为 subject，并且必须声明 poseFamilyId/stateId`);
     }
     const derivation = member?.derivation;
     if (!isObject(derivation)) errors.push(`${location}.derivation 必须是对象`);
+    if (
+      member?.source?.kind === 'state-sheet-cell' &&
+      derivation?.placement === undefined
+    ) {
+      errors.push(`${location} 的 state-sheet-cell 必须显式声明完整注册画布 placement`);
+    }
     if (
       derivation?.placement !== undefined &&
       !rectWithin(derivation.placement, registration?.canvas ?? {})
@@ -203,7 +229,8 @@ export const validateRegisteredFamilySpec = (spec) => {
     if (derivation?.keying !== undefined) {
       const keying = derivation.keying;
       if (
-        member?.source?.kind !== 'registered-layer-sheet' ||
+        !['registered-layer-sheet', 'layer-package-member']
+          .includes(member?.source?.kind) ||
         typeof keying !== 'object' ||
         !/^#[0-9a-fA-F]{6}$/.test(keying.keyColor ?? '') ||
         !Number.isFinite(keying.transparentThreshold) ||
@@ -222,7 +249,7 @@ export const validateRegisteredFamilySpec = (spec) => {
         keying.edgePadding < 0 ||
         keying.edgePadding > 32
       ) {
-        errors.push(`${location}.derivation.keying 必须是 registered-layer-sheet 的完整色键参数`);
+        errors.push(`${location}.derivation.keying 必须是分层母版或完整上下文分层成员的完整色键参数`);
       }
     }
     if (derivation?.maskAssetId !== undefined) {
@@ -305,6 +332,38 @@ const assertImageRecord = (
   }
   return record;
 };
+
+const layerPackageSourceRecord = ({
+  manifest,
+  assetId,
+  registration,
+  sourcePackage,
+}) =>
+  [...(manifest.assets ?? [])].reverse().find((record) => {
+    if (
+      record.assetId !== assetId ||
+      record.capability !== 'image' ||
+      !['active', 'recovery-source', 'superseded'].includes(
+        record.lifecycle?.status,
+      ) ||
+      record.adapter === 'registered-family-member'
+    ) {
+      return false;
+    }
+    const binding =
+      record.compositionBinding?.layerPackageBinding ??
+      record.request?.layerPackageBinding;
+    return (
+      binding?.registrationId === registration.id &&
+      binding?.sourceMasterAssetId === registration.sourceMasterAssetId &&
+      binding?.sourcePackageId === sourcePackage.id &&
+      binding?.sourceStrategy === sourcePackage.strategy &&
+      binding?.packageRole === sourcePackage.role &&
+      binding?.completeness === sourcePackage.completeness &&
+      binding?.canvas?.width === registration.canvas.width &&
+      binding?.canvas?.height === registration.canvas.height
+    );
+  }) ?? null;
 
 const workspacePath = (root, input, label) => {
   const resolved = path.resolve(root, input);
@@ -532,12 +591,26 @@ const sourceImage = async ({
   registration,
   sourcePackage,
 }) => {
-  const record = assertImageRecord(
-    manifest,
-    source.assetId,
-    source.kind,
-    {allowRecoverySource: source.kind === 'registered-layer-sheet'},
-  );
+  const record = source.kind === 'layer-package-member'
+    ? layerPackageSourceRecord({
+        manifest,
+        assetId: source.assetId,
+        registration,
+        sourcePackage,
+      })
+    : assertImageRecord(
+        manifest,
+        source.assetId,
+        source.kind,
+        {
+          allowRecoverySource: source.kind === 'registered-layer-sheet',
+        },
+      );
+  if (!record) {
+    throw new Error(
+      `${source.kind} 必须指向保留的 provider layer-package image 记录：${source.assetId}`,
+    );
+  }
   const file = workspacePath(root, record.file, `${source.kind} source`);
   const actualSha256 = await sha256File(file);
   if (record.sha256 !== actualSha256) {
@@ -558,6 +631,49 @@ const sourceImage = async ({
     };
   }
   const metadata = await imageMetadata(file);
+  if (source.kind === 'state-sheet-cell') {
+    if (
+      record.adapter !== 'registered-sheet-cell' ||
+      record.lifecycle?.status !== 'active' ||
+      record.compositionBinding?.pattern !== 'state-sequence' ||
+      record.compositionBinding?.outputRole !== 'registered-state' ||
+      record.stateBinding?.poseFamilyId !== source.poseFamilyId ||
+      record.stateBinding?.stateId !== source.stateId ||
+      record.media?.hasAlpha !== true
+    ) {
+      throw new Error(
+        `state-sheet-cell ${record.assetId} 必须是匹配 poseFamilyId/stateId 的 active real-alpha 注册状态`,
+      );
+    }
+    return {
+      record,
+      buffer: await sharp(file).ensureAlpha().png().toBuffer(),
+      width: metadata.width,
+      height: metadata.height,
+      sha256: actualSha256,
+      sourceSurface: {
+        mode: 'alpha',
+        keyColor: null,
+        tolerance: null,
+        requestedKeyColor: null,
+        observedKeyColor: null,
+        observationPolicyId: null,
+        observationPolicyFingerprint: null,
+        observationFingerprint: null,
+      },
+      keying: null,
+      keyingMetadata: null,
+      lineage: {
+        kind: 'state-sheet-cell',
+        assetId: record.assetId,
+        stateId: record.stateBinding.stateId,
+        sourceSheetAssetId:
+          record.sourceSheetAssetId ??
+          record.stateBinding.sourceMasterAssetId,
+        sourceFamilyFingerprint: record.familyFingerprint ?? null,
+      },
+    };
+  }
   if (source.kind === 'layer-package-member') {
     const binding =
       record.compositionBinding?.layerPackageBinding ??
@@ -577,20 +693,104 @@ const sourceImage = async ({
         `layer-package-member ${record.assetId} 必须绑定同一 registration/source master 与完整画布`,
       );
     }
-    if (
-      metadata.width !== registration.canvas.width ||
-      metadata.height !== registration.canvas.height
-    ) {
+    const widthDelta = registration.canvas.width - metadata.width;
+    const heightDelta = registration.canvas.height - metadata.height;
+    const exactCanvas = widthDelta === 0 && heightDelta === 0;
+    const recoverableProviderEdgeDrift =
+      record.lifecycle?.status === 'recovery-source' &&
+      [widthDelta, heightDelta].every((delta) => delta >= 0 && delta <= 1);
+    if (!exactCanvas && !recoverableProviderEdgeDrift) {
       throw new Error(
-        `layer-package-member ${record.assetId} 必须保留完整注册画布`,
+        `layer-package-member ${record.assetId} 必须保留完整注册画布；` +
+        `仅 recovery-source 允许每轴至多短 1 像素并由显式 placement 补齐透明边界`,
       );
+    }
+    const surface = record.request?.outputSurface ?? null;
+    const providerObservation = record.providerObservation?.cells?.find(
+      (candidate) => candidate.packageRole === 'image',
+    ) ?? null;
+    let buffer;
+    let keyingMetadata = null;
+    if (surface?.mode === 'chroma-key') {
+      if (!derivation?.keying) {
+        throw new Error(
+          `layer-package-member ${record.assetId} 的 chroma-key 来源缺少正式 keying 参数`,
+        );
+      }
+      if (
+        record.lifecycle?.status === 'recovery-source' &&
+        (
+          record.providerObservation?.mode !== 'provider-native-observed' ||
+          !providerObservation?.passed ||
+          !providerObservation?.observedKeyColor
+        )
+      ) {
+        throw new Error(
+          `recovery-source ${record.assetId} 缺少通过的完整画布 observed key plane provenance`,
+        );
+      }
+      const effectiveKeyColor =
+        providerObservation?.observedKeyColor ?? surface.keyColor;
+      if (
+        derivation.keying.keyColor.toLowerCase() !==
+        effectiveKeyColor.toLowerCase()
+      ) {
+        throw new Error(
+          `layer-package-member ${record.assetId} 的 keying 颜色必须匹配 ` +
+          `${providerObservation ? 'provider observed key plane' : 'provider request'}`,
+        );
+      }
+      ({buffer, metadata: keyingMetadata} = await chromaKeyCell({
+        input: file,
+        keying: derivation.keying,
+      }));
+      if (providerObservation) {
+        keyingMetadata = {
+          ...keyingMetadata,
+          providerObservation: {
+            requestedKeyColor: providerObservation.requestedKeyColor,
+            observedKeyColor: providerObservation.observedKeyColor,
+            policyFingerprint: providerObservation.policyFingerprint,
+            observationFingerprint:
+              record.providerObservation.observationFingerprint,
+            metrics: providerObservation.metrics,
+          },
+        };
+      }
+    } else if (derivation?.keying) {
+      throw new Error(
+        `layer-package-member ${record.assetId} 的非色键来源不得声明 keying`,
+      );
+    } else {
+      buffer = await sharp(file).ensureAlpha().png().toBuffer();
     }
     return {
       record,
-      buffer: await sharp(file).ensureAlpha().png().toBuffer(),
+      buffer,
       width: metadata.width,
       height: metadata.height,
       sha256: actualSha256,
+      sourceSurface: surface
+        ? {
+            mode: surface.mode,
+            keyColor:
+              providerObservation?.observedKeyColor ??
+              surface.keyColor ??
+              null,
+            tolerance: surface.tolerance ?? null,
+            requestedKeyColor: surface.keyColor ?? null,
+            observedKeyColor:
+              providerObservation?.observedKeyColor ?? null,
+            observationPolicyId:
+              record.providerObservation?.policyId ?? null,
+            observationPolicyFingerprint:
+              providerObservation?.policyFingerprint ?? null,
+            observationFingerprint:
+              record.providerObservation?.observationFingerprint ?? null,
+          }
+        : null,
+      keying: derivation?.keying ?? null,
+      keyingMetadata,
       lineage: {
         kind: 'layer-package-member',
         assetId: record.assetId,
@@ -852,16 +1052,7 @@ const providerRootsFor = (manifest, derivedMembers) => {
 };
 
 const providerPackageRootsFor = (manifest, spec, derivedMembers) => {
-  if (spec.sourceStrategy === 'registered-layer-sheet') {
-    return providerRootsFor(manifest, derivedMembers);
-  }
-  return (manifest.assets ?? []).filter((record) => {
-    if (record.lifecycle?.status !== 'active') return false;
-    const binding =
-      record.compositionBinding?.layerPackageBinding ??
-      record.request?.layerPackageBinding;
-    return binding?.sourcePackageId === spec.sourcePackageId;
-  });
+  return providerRootsFor(manifest, derivedMembers);
 };
 
 export const deriveRegisteredFamily = async ({
@@ -1220,4 +1411,120 @@ export const assertRegisteredFamilyRecords = ({
   if (familyIds.size !== 1) errors.push('registered family 成员 familyId 不一致');
   if (fingerprints.size !== 1) errors.push('registered family 成员 fingerprint 不一致');
   return {passed: errors.length === 0, errors};
+};
+
+export const assertRegisteredFamilyGroupMembers = ({
+  group,
+  members,
+  allRecords = [],
+}) => {
+  const errors = [];
+  const activeMembers = (members ?? []).filter(
+    ({node}) => ['asset', 'state-sequence'].includes(node?.kind),
+  );
+  const bySlot = new Map();
+  for (const member of activeMembers) {
+    if (!REGISTERED_FAMILY_ROLES.includes(member.node?.slot)) {
+      errors.push(`${member.node?.id ?? 'missing'} 缺少合法 registered family slot`);
+      continue;
+    }
+    if (bySlot.has(member.node.slot)) {
+      errors.push(`registered family active slot 重复：${member.node.slot}`);
+      continue;
+    }
+    bySlot.set(member.node.slot, member);
+  }
+  for (const role of REGISTERED_FAMILY_ROLES) {
+    if (!bySlot.has(role)) errors.push(`registered family 缺少 active ${role}`);
+  }
+  if (activeMembers.length !== REGISTERED_FAMILY_ROLES.length) {
+    errors.push('registered family 必须恰好包含三个 active 视觉成员');
+  }
+
+  const records = activeMembers.flatMap(({records: memberRecords}) =>
+    memberRecords ?? [],
+  );
+  const sourcePackageIds = new Set();
+  const sourceStrategies = new Set();
+  const familyIds = new Set();
+  for (const {node, records: memberRecords = []} of activeMembers) {
+    const expectedSources =
+      node.kind === 'state-sequence'
+        ? node.states?.length ?? 0
+        : 1;
+    if (memberRecords.length !== expectedSources || memberRecords.some((record) => !record)) {
+      errors.push(`${node.id} 的 registered family 来源记录不完整`);
+      continue;
+    }
+    for (const record of memberRecords) {
+      const binding = record.registeredFamilyBinding;
+      if (
+        !binding ||
+        record.adapter !== 'registered-family-member' ||
+        record.lifecycle?.status !== 'active' ||
+        binding.role !== node.slot ||
+        binding.slot !== node.slot ||
+        binding.registrationId !== group.registration?.id ||
+        binding.sourceMasterAssetId !==
+          group.registration?.sourceMasterAssetId ||
+        binding.canvas?.width !== group.registration?.canvas?.width ||
+        binding.canvas?.height !== group.registration?.canvas?.height ||
+        binding.origin !== 'top-left' ||
+        binding.pattern !== group.pattern ||
+        binding.motionCapability !== 'bounded-relative'
+      ) {
+        errors.push(`${record?.assetId ?? node.id} 没有保持 active 状态成员注册契约`);
+        continue;
+      }
+      if (node.kind === 'asset' && binding.nodeId !== node.id) {
+        errors.push(`${record.assetId} nodeId 与 active 成员 ${node.id} 不一致`);
+      }
+      sourcePackageIds.add(binding.sourcePackageId);
+      sourceStrategies.add(binding.sourceStrategy);
+      familyIds.add(binding.familyId);
+    }
+  }
+
+  const expectedSourcePackageId =
+    group.pattern === 'registered-depth-stack'
+      ? group.layerStack?.sourcePackageId
+      : null;
+  if (sourcePackageIds.size !== 1) {
+    errors.push('registered family 状态变体 sourcePackageId 不一致');
+  } else if (
+    expectedSourcePackageId &&
+    !sourcePackageIds.has(expectedSourcePackageId)
+  ) {
+    errors.push('registered family 状态变体 sourcePackageId 与景深组不一致');
+  }
+  if (sourceStrategies.size !== 1) {
+    errors.push('registered family 状态变体 sourceStrategy 不一致');
+  }
+
+  const contextRecords = allRecords.length > 0 ? allRecords : records;
+  for (const familyId of familyIds) {
+    const familyRecords = contextRecords.filter(
+      (record) =>
+        record?.lifecycle?.status === 'active' &&
+        record?.registeredFamilyBinding?.familyId === familyId,
+    );
+    const result = assertRegisteredFamilyRecords({
+      records: familyRecords,
+      registration: group.registration,
+      familyId,
+      pattern: group.pattern,
+      sourcePackageId: expectedSourcePackageId,
+    });
+    if (!result.passed) {
+      errors.push(
+        `registered family 状态来源 ${familyId} 上下文不完整：${result.errors.join('；')}`,
+      );
+    }
+  }
+  return {
+    passed: errors.length === 0,
+    errors,
+    familyIds: [...familyIds].sort(),
+    stateful: activeMembers.some(({node}) => node.kind === 'state-sequence'),
+  };
 };

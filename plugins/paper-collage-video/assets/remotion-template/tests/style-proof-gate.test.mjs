@@ -6,6 +6,8 @@ import test from 'node:test';
 import sharp from 'sharp';
 import {
   assertStyleProofReady,
+  assertStyleTargetPatternProof,
+  buildStyleTargetPatternProof,
   selectTargetAssetEvidence,
   selectTargetQualityAssetGroups,
   styleFingerprintForTarget,
@@ -33,6 +35,44 @@ test('evidence padding converts fractional layout bounds into an enclosing integ
       32,
     ),
     {left: 306, top: 274, width: 641, height: 641},
+  );
+});
+
+test('style spatial targets require an executable matching spatial proof', async () => {
+  const target = {
+    pattern: 'spatial-contract',
+    spatialContract: {
+      id: 'crow-flies-right',
+      kind: 'travel-facing',
+    },
+  };
+  assert.throws(
+    () => assertStyleTargetPatternProof({
+      target,
+      proof: {
+        compositeId: 'spatial-contract:crow-flies-right',
+        spatialProof: null,
+      },
+    }),
+    /缺少通过且匹配当前契约的空间样式证明/,
+  );
+  assert.doesNotThrow(() => assertStyleTargetPatternProof({
+    target,
+    proof: {
+      compositeId: 'spatial-contract:crow-flies-right',
+      spatialProof: {
+        contractId: 'crow-flies-right',
+        kind: 'travel-facing',
+        passed: true,
+      },
+    },
+  }));
+  assert.deepEqual(
+    await buildStyleTargetPatternProof({
+      project: {},
+      target: {pattern: 'parallax-rig'},
+    }),
+    {spatialProof: null},
   );
 });
 const manifestFixture = (projectSlug, assets) => ({
@@ -140,7 +180,7 @@ const writeFixture = async (slug) => {
     z: 0,
     registrationId: 'family',
     transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-    motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
   });
   const project = withCompiledEditorialFixture({
     slug,
@@ -167,7 +207,7 @@ const writeFixture = async (slug) => {
           z: 0,
           coordinateSpace: {width: 100, height: 100},
           transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-          motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+          motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
           registration: {id: 'family', sourceMasterAssetId: 'master', canvas: {width: 100, height: 100}, origin: 'top-left'},
           support: {
             subjectId: 'subject',
@@ -187,11 +227,12 @@ const writeFixture = async (slug) => {
     sceneTransitions: [],
   });
   const storyboard = {
-    schemaVersion: 10,
+    schemaVersion: 12,
     slug,
     status: 'ready',
     directingSummary: {
       styleProofPlan: {
+        motionContractFingerprint: 'd'.repeat(64),
         requiredCoverage: ['relationship:coupled', 'relationship:supported-subject', 'semantic:topology'],
         targets: [{
           sceneId: 'scene',
@@ -206,6 +247,37 @@ const writeFixture = async (slug) => {
         sourceFamilyKeys: ['target:subject'],
         fingerprint: 'c'.repeat(64),
       },
+    },
+    motionContract: {
+      schemaVersion: 1,
+      direction: {
+        summary: 'Fixture motion direction',
+      },
+      styleProfileBinding: {
+        id: 'childrens-picture-book-paper',
+        profileFingerprint: 'f'.repeat(64),
+        pacing: 'gentle',
+      },
+      scenes: [{
+        sceneId: 'scene',
+        phrases: [
+          {role: 'establish', beatId: 'establish', proofTimeId: 'establish'},
+          {role: 'action', beatId: 'action', proofTimeId: 'action'},
+          {role: 'settle', beatId: 'settle', proofTimeId: 'final'},
+        ],
+      }],
+      transitions: [],
+      editorialFingerprint: 'b'.repeat(64),
+      requiredCompositeChecks: [
+        'motion-grammar-consistent',
+        'pacing-cadence-consistent',
+        'camera-strategy-consistent',
+        'transition-strategy-consistent',
+        'ambient-strategy-consistent',
+        'sync-anchors-current',
+      ],
+      fingerprint: 'd'.repeat(64),
+      approvalFingerprint: 'e'.repeat(64),
     },
     scenes: [{
       id: 'scene',
@@ -268,10 +340,12 @@ const writeProofEvidence = async ({slug, project, files}) => {
   await fs.writeFile(
     styleProofReportPath(slug),
     `${JSON.stringify({
-      schemaVersion: 6,
+      schemaVersion: 7,
       scope: 'style',
       slug,
       planFingerprint: 'c'.repeat(64),
+      motionContractFingerprint: 'd'.repeat(64),
+      motionApprovalFingerprint: 'e'.repeat(64),
       directingTargets: [{
         sceneId: 'scene',
         treatmentId: 'subject-on-support',
@@ -435,6 +509,18 @@ test('style topology gate rejects hard-alpha false confidence, unrelated evidenc
     await assert.rejects(() => assertStyleProofReady(slug), /尚未全部通过|尚未通过完整素材质量检查/);
     await fs.copyFile(fixture.files.subject, evidencePath);
     await assert.doesNotReject(() => assertStyleProofReady(slug));
+    fixture.project.motionContract = {
+      ...JSON.parse(
+        await fs.readFile(
+          path.join(fixture.projectDirectory, 'storyboard.json'),
+          'utf8',
+        ),
+      ).motionContract,
+    };
+    await fs.writeFile(
+      path.join(fixture.projectDirectory, 'project.json'),
+      `${JSON.stringify(fixture.project, null, 2)}\n`,
+    );
     const approvedAdvance = spawnSync(
       process.execPath,
       [path.join(ROOT, 'scripts', 'project-advance.mjs'), slug, 'approve-style-voice', '--note=fixture approval'],

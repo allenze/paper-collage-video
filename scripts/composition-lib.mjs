@@ -31,6 +31,11 @@ import {
   resolveWorldStripTileGeometry,
   validateClosedWorldStripLoop,
 } from '../src/worldStrip.mjs';
+import {resolvePathMotionAtFrame} from '../src/pathMotion.mjs';
+import {
+  samplePathPolyline,
+  validatePathMotion,
+} from '../src/pathMotion.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
@@ -67,6 +72,9 @@ const LAYER_ROLES = ['support-rear', 'subject', 'support-front'];
 const RESPONSIVE_LAYER_PROFILES = ['16:9', '9:16', '1:1'];
 const maximumAuthoredMotion = (motion = {}) => {
   const keyframes = motion.keyframes ?? [];
+  const pathPoints = motion.path
+    ? samplePathPolyline(motion.path, 129)
+    : [];
   const idle = motion.idle;
   const idleIntensity = idle?.intensity ?? 0;
   const idleMaximum = {
@@ -97,10 +105,12 @@ const maximumAuthoredMotion = (motion = {}) => {
   };
   return {
     x:
-      Math.max(0, ...keyframes.map(({x = 0}) => Math.abs(x))) +
+      Math.max(0, ...keyframes.map(({offsetX = 0}) => Math.abs(offsetX))) +
+      Math.max(0, ...pathPoints.map(({x = 0}) => Math.abs(x))) +
       idleMaximum.x,
     y:
-      Math.max(0, ...keyframes.map(({y = 0}) => Math.abs(y))) +
+      Math.max(0, ...keyframes.map(({offsetY = 0}) => Math.abs(offsetY))) +
+      Math.max(0, ...pathPoints.map(({y = 0}) => Math.abs(y))) +
       idleMaximum.y,
     scale:
       Math.max(
@@ -159,6 +169,11 @@ export const flattenCompositionNodes = (
 
 export const collectCompositionGroups = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'group');
+
+export const collectCanonicalContainers = (composition) =>
+  collectCompositionGroups(composition).filter(
+    ({node}) => node.pattern === 'canonical-container',
+  );
 
 export const collectCompositionAssets = (composition) =>
   flattenCompositionNodes(composition?.nodes).filter(({node}) => node.kind === 'asset');
@@ -234,7 +249,7 @@ export const validateMotionKeyframes = (keyframes, location, add) => {
       add('error', 'motion-keyframe-at', '关键帧 at 必须位于 0..1 且严格递增。', `${keyframeLocation}.at`);
     }
     previousAt = keyframe.at;
-    for (const property of ['x', 'y', 'scale', 'rotation', 'opacity']) {
+    for (const property of ['offsetX', 'offsetY', 'scale', 'rotation', 'opacity']) {
       if (keyframe[property] !== undefined) {
         authoredValues += 1;
         if (!finite(keyframe[property])) add('error', 'motion-keyframe-value', `${property} 必须是有限数字。`, `${keyframeLocation}.${property}`);
@@ -289,6 +304,21 @@ export const validateCompositionStructure = ({
   if (!Array.isArray(composition.nodes) || composition.nodes.length === 0) add('error', 'composition-nodes', 'composition.nodes 至少需要一个节点。', `${location}.nodes`);
 
   const flat = flattenCompositionNodes(composition.nodes);
+  const pathSequenceCoverageByFamily = new Map();
+  for (const {node} of flat) {
+    if (
+      node.kind !== 'state-sequence' ||
+      node.motion?.path?.kind !== 'cubic-bezier-3d'
+    ) {
+      continue;
+    }
+    const coverage =
+      pathSequenceCoverageByFamily.get(node.poseFamilyId) ?? new Set();
+    for (const stateId of collectSequenceProofCoverage({node, proofTimes})) {
+      coverage.add(stateId);
+    }
+    pathSequenceCoverageByFamily.set(node.poseFamilyId, coverage);
+  }
   const freeNodes = flat.filter(({node, parent}) => parent === null && node.kind !== 'group');
   const nodeIds = new Set();
   const derivationOnlyNodeIds = new Set();
@@ -325,6 +355,59 @@ export const validateCompositionStructure = ({
       );
     }
     validateMotionKeyframes(node.motion?.keyframes, `${nodeLocation}.motion.keyframes`, add);
+    if (node.motion?.path) {
+      for (const issue of validatePathMotion(node.motion.path)) {
+        add(
+          'error',
+          issue.code,
+          issue.message,
+          `${nodeLocation}.motion.${issue.location}`,
+        );
+      }
+      if (node.kind !== 'state-sequence') {
+        add(
+          'error',
+          'composition-path-state-sequence',
+          'path locomotion 必须由 state-sequence 节点执行，不能移动冻结单帧。',
+          `${nodeLocation}.motion.path`,
+        );
+      }
+      if (
+        (node.motion.keyframes ?? []).some(
+          (keyframe) =>
+            keyframe.offsetX !== undefined ||
+            keyframe.offsetY !== undefined ||
+            keyframe.scale !== undefined ||
+            keyframe.rotation !== undefined,
+        )
+      ) {
+        add(
+          'error',
+          'composition-path-keyframe-conflict',
+          'path locomotion 已拥有三维位置、透视尺寸与朝向；普通关键帧不得再次声明 offsetX、offsetY、scale 或 rotation。',
+          `${nodeLocation}.motion.keyframes`,
+        );
+      }
+      if (
+        node.motion.idle &&
+        !['still', 'breathe'].includes(node.motion.idle.preset)
+      ) {
+        add(
+          'error',
+          'composition-path-idle-conflict',
+          'path locomotion 目标的 idle 只能使用 still 或 breathe，避免额外位置/旋转漂移。',
+          `${nodeLocation}.motion.idle`,
+        );
+      }
+      if ((node.transform?.rotation ?? 0) !== 0) {
+        add(
+          'error',
+          'composition-path-transform-rotation',
+          'path locomotion 的静态 transform.rotation 必须为 0；素材前向请使用 orientation.forwardAngleDegrees。',
+          `${nodeLocation}.transform.rotation`,
+        );
+      }
+    }
     if (node.visibility !== undefined && !['visible', 'hidden'].includes(node.visibility?.initial)) {
       add('error', 'composition-node-visibility', 'visibility.initial 必须是 visible 或 hidden。', `${nodeLocation}.visibility.initial`);
     }
@@ -416,8 +499,8 @@ export const validateCompositionStructure = ({
         }
       }
       const hasLocalTravel = (node.motion?.keyframes ?? []).some(
-        ({x = 0, y = 0, scale = 1, rotation = 0}) =>
-          x !== 0 || y !== 0 || scale !== 1 || rotation !== 0,
+        ({offsetX = 0, offsetY = 0, scale = 1, rotation = 0}) =>
+          offsetX !== 0 || offsetY !== 0 || scale !== 1 || rotation !== 0,
       );
       if (hasLocalTravel || (node.motion?.idle && node.motion.idle.preset !== 'still')) {
         add('error', 'composition-world-strip-duplicate-motion', 'world-strip 的世界位移由父级 loopingEnvironment 独占；节点不得重复关键帧或 idle 位移。', `${nodeLocation}.motion`);
@@ -482,11 +565,54 @@ export const validateCompositionStructure = ({
         }
         if (node.states[0]?.at !== 0) add('error', 'composition-sequence-start', '状态序列必须从 at=0 开始。', `${nodeLocation}.states[0].at`);
         const coverage = collectSequenceProofCoverage({node, proofTimes});
+        const inheritedPathCoverage =
+          node.motion?.path?.kind === 'cubic-bezier-3d'
+            ? pathSequenceCoverageByFamily.get(node.poseFamilyId)
+            : null;
         for (const state of node.states) {
-          if (!coverage.has(state.id)) add('error', 'composition-sequence-proof-coverage', `状态 ${state.id} 缺少 proofTime.stateAssertions 证明。`, `${nodeLocation}.states`);
+          if (
+            !node.pathViewBinding &&
+            !coverage.has(state.id) &&
+            !inheritedPathCoverage?.has(state.id)
+          ) {
+            add('error', 'composition-sequence-proof-coverage', `状态 ${state.id} 缺少 proofTime.stateAssertions 证明。`, `${nodeLocation}.states`);
+          }
         }
       }
       if (!['once', 'loop', 'ping-pong'].includes(node.playback?.mode) || !(Number.isInteger(node.playback?.cycles) && node.playback.cycles > 0)) add('error', 'composition-sequence-playback', 'state-sequence playback 必须声明有效 mode 与正整数 cycles。', `${nodeLocation}.playback`);
+      if (node.pathViewBinding !== undefined) {
+        const binding = node.pathViewBinding;
+        const groups = [
+          ['planarStateIds', binding?.planarStateIds],
+          ['towardStateIds', binding?.towardStateIds],
+          ['awayStateIds', binding?.awayStateIds],
+        ];
+        const allIds = groups.flatMap(([, ids]) => Array.isArray(ids) ? ids : []);
+        const knownIds = new Set((node.states ?? []).map(({id}) => id));
+        if (
+          !finite(binding?.depthVelocityThreshold) ||
+          binding.depthVelocityThreshold <= 0 ||
+          !finite(binding?.transitionWidth) ||
+          binding.transitionWidth < 0 ||
+          binding.transitionWidth > binding.depthVelocityThreshold
+        ) {
+          add('error', 'composition-path-view-threshold', 'pathViewBinding 必须声明正 depthVelocityThreshold，且 transitionWidth 位于 0..threshold。', `${nodeLocation}.pathViewBinding`);
+        }
+        for (const [field, ids] of groups) {
+          if (!Array.isArray(ids) || ids.length < 2 || new Set(ids).size !== ids.length) {
+            add('error', 'composition-path-view-group', `${field} 必须包含至少两个不重复循环状态。`, `${nodeLocation}.pathViewBinding.${field}`);
+          }
+          for (const id of ids ?? []) {
+            if (!knownIds.has(id)) add('error', 'composition-path-view-state', `pathViewBinding 状态 ${id} 不存在。`, `${nodeLocation}.pathViewBinding.${field}`);
+          }
+        }
+        if (new Set(allIds).size !== allIds.length) {
+          add('error', 'composition-path-view-overlap', 'planar/toward/away 状态组不得互相重叠。', `${nodeLocation}.pathViewBinding`);
+        }
+        if (node.motion?.path?.kind !== 'cubic-bezier-3d') {
+          add('error', 'composition-path-view-motion', 'pathViewBinding 只能绑定 cubic-bezier-3d 路径。', `${nodeLocation}.motion.path`);
+        }
+      }
       if (node.playback?.mode === 'once' && node.playback.cycles !== 1) add('error', 'composition-sequence-once-cycles', 'once playback 的 cycles 必须为 1。', `${nodeLocation}.playback.cycles`);
       const hasActiveFrom = node.playback?.activeFrom !== undefined;
       const hasActiveUntil = node.playback?.activeUntil !== undefined || node.playback?.holdStateId !== undefined;
@@ -506,8 +632,30 @@ export const validateCompositionStructure = ({
         for (const id of activeIds ?? []) if (!stateIndex.has(id)) add('error', 'composition-sequence-active-state', `活动状态 ${id} 不存在。`, `${nodeLocation}.playback.activeStateIds`);
         for (let index = 1; index < (activeIds?.length ?? 0); index += 1) if (stateIndex.get(activeIds[index - 1]) >= stateIndex.get(activeIds[index])) add('error', 'composition-sequence-active-state-order', 'activeStateIds 必须与 states 的顺序一致。', `${nodeLocation}.playback.activeStateIds`);
         const activeSet = new Set(activeIds);
+        const exitStates = [];
         for (const state of node.states) {
-          if (!activeSet.has(state.id) && state.id !== node.playback?.holdStateId && state.at >= (node.playback?.activeFrom ?? 1)) add('error', 'composition-sequence-prelude-state', `非活动状态 ${state.id} 必须在 activeFrom 前出现，或作为结束定格。`, `${nodeLocation}.states`);
+          if (activeSet.has(state.id) || state.id === node.playback?.holdStateId) continue;
+          if (state.at < (node.playback?.activeFrom ?? 1)) continue;
+          if (
+            node.playback?.activeUntil !== undefined &&
+            state.at >= node.playback.activeUntil
+          ) {
+            exitStates.push(state);
+            continue;
+          }
+          add('error', 'composition-sequence-segment-state', `非活动状态 ${state.id} 必须在 activeFrom 前出现，或在 activeUntil 后作为结束序列。`, `${nodeLocation}.states`);
+        }
+        if (exitStates.length > 0) {
+          const hold = node.states.find(
+            ({id}) => id === node.playback?.holdStateId,
+          );
+          if (
+            exitStates[0].at !== node.playback?.activeUntil ||
+            !hold ||
+            hold.at < exitStates.at(-1).at
+          ) {
+            add('error', 'composition-sequence-exit-order', '结束序列必须从 activeUntil 开始，并以 holdStateId 作为最后状态。', `${nodeLocation}.states`);
+          }
         }
       }
       if (!['cut', 'crossfade'].includes(node.transition?.type) || !(finite(node.transition?.durationSeconds) && node.transition.durationSeconds >= 0)) add('error', 'composition-sequence-transition', 'state-sequence transition 无效。', `${nodeLocation}.transition`);
@@ -735,6 +883,25 @@ export const validateCompositionStructure = ({
           }
         }
       }
+      if (node.worldBinding !== undefined) {
+        const binding = node.worldBinding;
+        if (
+          !nonEmpty(binding?.worldNodeId) ||
+          !['far', 'mid', 'ground', 'near'].includes(binding?.stripRole) ||
+          !(
+            finite(binding?.relativeDriftAmplitude) &&
+            binding.relativeDriftAmplitude >= 0 &&
+            binding.relativeDriftAmplitude <= 0.05
+          )
+        ) {
+          add(
+            'error',
+            'composition-motif-world-binding',
+            'motif-field worldBinding 必须声明 worldNodeId、有效 stripRole 与 0..0.05 relativeDriftAmplitude。',
+            `${nodeLocation}.worldBinding`,
+          );
+        }
+      }
       if (!finite(node.transform?.height) || node.transform.height <= 0) {
         add('error', 'composition-motif-height', 'motif-field 必须声明 transform.height。', `${nodeLocation}.transform.height`);
       }
@@ -766,6 +933,83 @@ export const validateCompositionStructure = ({
         'group.renderParticipation 必须是 visible 或 derivation-only。',
         `${nodeLocation}.renderParticipation`,
       );
+    }
+    if (
+      node.stackingContext !== undefined &&
+      !['isolated', 'scene'].includes(node.stackingContext)
+    ) {
+      add(
+        'error',
+        'composition-stacking-context',
+        'group.stackingContext 必须是 isolated 或 scene。',
+        `${nodeLocation}.stackingContext`,
+      );
+    }
+    if (node.stackingContext === 'scene') {
+      const transform = node.transform ?? {};
+      const staticAxisAlignedCarrier =
+        finite(transform.x) &&
+        finite(transform.y) &&
+        finite(transform.width) &&
+        transform.width > 0 &&
+        (transform.height === undefined ||
+          (finite(transform.height) && transform.height > 0)) &&
+        finite(transform.anchorX) &&
+        transform.anchorX >= 0 &&
+        transform.anchorX <= 1 &&
+        finite(transform.anchorY) &&
+        transform.anchorY >= 0 &&
+        transform.anchorY <= 1 &&
+        (transform.scale === undefined || transform.scale === 1) &&
+        (transform.rotation === undefined || transform.rotation === 0) &&
+        (transform.opacity === undefined || transform.opacity === 1);
+      const authored = maximumAuthoredMotion(node.motion);
+      const identityMotion =
+        authored.x === 0 &&
+        authored.y === 0 &&
+        authored.scale === 0 &&
+        authored.rotationDegrees === 0 &&
+        (node.motion?.keyframes ?? []).every(
+          ({opacity = 1}) => opacity === 1,
+        );
+      const childZ = (node.children ?? []).map(({z}) => z);
+      if (
+        parent !== null ||
+        node.pattern !== 'registered-depth-stack' ||
+        renderParticipation !== 'visible'
+      ) {
+        add(
+          'error',
+          'composition-scene-stacking-scope',
+          'scene stacking 只能用于顶层可见 registered-depth-stack。',
+          `${nodeLocation}.stackingContext`,
+        );
+      }
+      if (
+        !staticAxisAlignedCarrier ||
+        !identityMotion ||
+        node.visibility !== undefined ||
+        node.motion?.idle !== undefined ||
+        node.motion?.path !== undefined
+      ) {
+        add(
+          'error',
+          'composition-scene-stacking-carrier',
+          'scene stacking 组只能使用静态、轴对齐、全不透明的布局载体；不得动画、旋转、缩放、淡入淡出或声明 visibility。',
+          nodeLocation,
+        );
+      }
+      if (
+        childZ.some((value) => !Number.isInteger(value)) ||
+        new Set(childZ).size !== childZ.length
+      ) {
+        add(
+          'error',
+          'composition-scene-stacking-z',
+          'scene stacking 的三个成员必须声明互不重复的整数 z，以便与场景兄弟节点确定性交错。',
+          `${nodeLocation}.children`,
+        );
+      }
     }
     if (
       node.renderParticipation === 'derivation-only' &&
@@ -809,8 +1053,8 @@ export const validateCompositionStructure = ({
         const registrationId = child.kind === 'asset' ? child.registrationId : child.registration?.id;
         if (registrationId !== node.registration?.id) add('error', 'composition-registration-member', `耦合成员 ${child.id} 必须共享 registrationId。`, `${nodeLocation}.children`);
         const groupHasCarrierMotion = (node.motion?.keyframes ?? []).some((keyframe) =>
-          (keyframe.x ?? 0) !== 0 ||
-          (keyframe.y ?? 0) !== 0 ||
+          (keyframe.offsetX ?? 0) !== 0 ||
+          (keyframe.offsetY ?? 0) !== 0 ||
           (keyframe.scale ?? 1) !== 1 ||
           (keyframe.rotation ?? 0) !== 0,
         );
@@ -820,8 +1064,8 @@ export const validateCompositionStructure = ({
       }
       for (const proof of proofTimes) {
         if (node.support?.detachProofTimeIds?.includes(proof.id)) continue;
-        const subjectX = node.support?.contactAnchor?.x + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'x');
-        const subjectY = node.support?.contactAnchor?.y + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'y');
+        const subjectX = node.support?.contactAnchor?.x + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'offsetX');
+        const subjectY = node.support?.contactAnchor?.y + resolveAxisAt(subject?.motion?.keyframes, proof.at, 'offsetY');
         if (!pointInPolygon([subjectX, subjectY], node.support?.contactZone)) add('error', 'composition-support-contact', `证明时刻 ${proof.id} 的主体支撑点离开 contactZone。`, `${nodeLocation}.support.contactZone`);
       }
     }
@@ -1081,14 +1325,14 @@ export const validateCompositionStructure = ({
         strips.length < 2 ||
         subjectBindings.length < 1 ||
         subjects.length !== subjectBindings.length ||
-        subjects.some(({kind}) => !['asset', 'state-sequence'].includes(kind)) ||
+        subjects.some(({kind}) => !['asset', 'state-sequence', 'group'].includes(kind)) ||
         trackedBindings.length !== 1 ||
         (node.children ?? []).length !== strips.length + subjectBindings.length
       ) {
         add(
           'error',
           'composition-looping-members',
-          'looping-environment 必须只包含至少两个 world-strip 与 subjectBindings 中声明的 asset/state-sequence 主体，且只能有一个 tracked 主体。',
+          'looping-environment 必须只包含至少两个 world-strip 与 subjectBindings 中声明的 asset/state-sequence/group 主体，且只能有一个 tracked 主体。',
           `${nodeLocation}.children`,
         );
       }
@@ -1134,6 +1378,10 @@ export const validateCompositionStructure = ({
           !['tracked', 'participant'].includes(binding.role) ||
           !['screen', 'world'].includes(binding.anchorMode) ||
           !['behind-near', 'above-near'].includes(binding.nearOcclusion) ||
+          (
+            binding.requireNearOverlap !== undefined &&
+            typeof binding.requireNearOverlap !== 'boolean'
+          ) ||
           !Array.isArray(binding.proofTimeIds) ||
           binding.proofTimeIds.length < 2 ||
           new Set(binding.proofTimeIds).size !== binding.proofTimeIds.length ||
@@ -1143,7 +1391,7 @@ export const validateCompositionStructure = ({
           add(
             'error',
             'composition-looping-subject-binding',
-            '每个 subjectBinding 必须唯一绑定组内 asset/state-sequence，并声明有效 role、anchorMode 与 nearOcclusion。',
+            '每个 subjectBinding 必须唯一绑定组内 asset/state-sequence，并声明有效 role、anchorMode、nearOcclusion 与可选 requireNearOverlap。',
             `${nodeLocation}.loopingEnvironment.subjectBindings[${index}]`,
           );
         }
@@ -1242,6 +1490,306 @@ export const validateCompositionStructure = ({
         }
       }
     }
+
+    if (node.pattern === 'canonical-container') {
+      const container = node.canonicalContainer;
+      if (!node.registration) {
+        add(
+          'error',
+          'composition-container-registration',
+          'canonical-container 必须声明唯一母版 registration。',
+          `${nodeLocation}.registration`,
+        );
+      }
+      if (
+        node.registration &&
+        (
+          node.registration.canvas.width !== node.coordinateSpace.width ||
+          node.registration.canvas.height !== node.coordinateSpace.height
+        )
+      ) {
+        add(
+          'error',
+          'composition-container-registration-canvas',
+          '容器 registration.canvas 必须与 group.coordinateSpace 一致。',
+          `${nodeLocation}.registration.canvas`,
+        );
+      }
+      if (
+        container?.schemaVersion !== 1 ||
+        !nonEmpty(container?.familyId) ||
+        container?.sourceStrategy !==
+          'canonical-frame-with-content-sheet' ||
+        !/^[a-f0-9]{64}$/.test(
+          container?.familyFingerprint ?? '',
+        )
+      ) {
+        add(
+          'error',
+          'composition-container-binding',
+          'canonical-container 必须绑定当前 schema-v1 family fingerprint。',
+          `${nodeLocation}.canonicalContainer`,
+        );
+      }
+      const children = node.children ?? [];
+      const cleanPlate = children.find(
+        ({id}) => id === container?.cleanPlateNodeId,
+      );
+      const frame = children.find(
+        ({id}) => id === container?.canonicalFrameNodeId,
+      );
+      const contents = children.find(
+        ({id}) => id === container?.contentsNodeId,
+      );
+      if (
+        children.length !== 3 ||
+        cleanPlate?.kind !== 'asset' ||
+        cleanPlate.slot !== 'container-clean-plate' ||
+        frame?.kind !== 'asset' ||
+        frame.slot !== 'container-frame' ||
+        contents?.kind !== 'state-sequence' ||
+        contents.slot !== 'container-contents'
+      ) {
+        add(
+          'error',
+          'composition-container-members',
+          'canonical-container 必须且只能包含 container-clean-plate、container-contents、container-frame 三个权威成员。',
+          `${nodeLocation}.children`,
+        );
+      }
+      const expectedCoverage = {
+        [container?.cleanPlateNodeId]:
+          `container-clean-plate:${container?.familyId}`,
+        [container?.contentsNodeId]:
+          `container-surface:${container?.authoritativeSurfaceId}`,
+        [container?.canonicalFrameNodeId]:
+          `container-frame:${container?.familyId}`,
+      };
+      const coverageIds = new Set();
+      for (const child of children) {
+        const childLocation = `${nodeLocation}.children#${child.id}`;
+        const registrationId =
+          child.kind === 'state-sequence'
+            ? child.registration?.id
+            : child.registrationId;
+        if (registrationId !== node.registration?.id) {
+          add(
+            'error',
+            'composition-container-member-registration',
+            `容器成员 ${child.id} 必须共享 registrationId。`,
+            childLocation,
+          );
+        }
+        const transform = child.transform ?? {};
+        if (
+          transform.x !== 0 ||
+          transform.y !== 0 ||
+          transform.width !== 1 ||
+          transform.height !== 1 ||
+          transform.anchorX !== 0 ||
+          transform.anchorY !== 0
+        ) {
+          add(
+            'error',
+            'composition-container-member-transform',
+            `容器成员 ${child.id} 必须保持完整母版画布，禁止独立缩放或错位。`,
+            `${childLocation}.transform`,
+          );
+        }
+        const hasLocalMotion = (
+          child.motion?.keyframes ?? []
+        ).some(
+          ({
+            offsetX = 0,
+            offsetY = 0,
+            scale = 1,
+            rotation = 0,
+            opacity = 1,
+          }) =>
+            offsetX !== 0 ||
+            offsetY !== 0 ||
+            scale !== 1 ||
+            rotation !== 0 ||
+            opacity !== 1,
+        );
+        if (
+          hasLocalMotion ||
+          (
+            child.motion?.idle &&
+            child.motion.idle.preset !== 'still'
+          )
+        ) {
+          add(
+            'error',
+            'composition-container-member-motion',
+            `容器成员 ${child.id} 不得独立漂移；整体运动只能由父组承载。`,
+            `${childLocation}.motion`,
+          );
+        }
+        const expected = expectedCoverage[child.id];
+        const coverage = child.semanticCoverage ?? [];
+        if (
+          !expected ||
+          coverage.length !== 1 ||
+          coverage[0] !== expected ||
+          coverageIds.has(coverage[0])
+        ) {
+          add(
+            'error',
+            'composition-container-authority',
+            `容器成员 ${child.id} 必须且只能声明自身的一个权威语义覆盖。`,
+            `${childLocation}.semanticCoverage`,
+          );
+        }
+        coverageIds.add(coverage[0]);
+      }
+      if (
+        contents?.poseFamilyId !== container?.familyId ||
+        JSON.stringify(
+          contents?.states?.map(({id}) => id),
+        ) !==
+          JSON.stringify(
+            container?.states?.map(({id}) => id),
+          )
+      ) {
+        add(
+          'error',
+          'composition-container-state-family',
+          'container-contents 的状态 id 必须与 canonicalContainer.states 完全一致。',
+          `${nodeLocation}.canonicalContainer.states`,
+        );
+      }
+      const containerStateIds = new Set();
+      let previousFill = -Infinity;
+      for (const [index, state] of (
+        container?.states ?? []
+      ).entries()) {
+        const stateLocation =
+          `${nodeLocation}.canonicalContainer.states[${index}]`;
+        if (
+          !nonEmpty(state?.id) ||
+          containerStateIds.has(state.id) ||
+          !finite(state?.fillLevel) ||
+          state.fillLevel <= previousFill ||
+          !/^[a-f0-9]{64}$/.test(state?.sha256 ?? '') ||
+          state.metrics?.outsideMaskPixels !== 0 ||
+          state.metrics?.centerDrift >
+            (container?.alignmentPolicy?.maximumCenterDrift ??
+              -Infinity) ||
+          state.metrics?.bottomGap >
+            (container?.alignmentPolicy?.maximumBottomGap ??
+              -Infinity) ||
+          state.metrics?.fillLevelDeviation >
+            (container?.alignmentPolicy
+              ?.maximumFillLevelDeviation ?? -Infinity) ||
+          state.metrics?.interiorRetention <
+            (container?.alignmentPolicy
+              ?.minimumInteriorRetention ?? Infinity)
+        ) {
+          add(
+            'error',
+            'composition-container-state-metrics',
+            '每个容器状态必须唯一、fillLevel 递增、无内腔溢出，并满足对齐与填充偏差阈值。',
+            stateLocation,
+          );
+        }
+        containerStateIds.add(state?.id);
+        previousFill = state?.fillLevel ?? previousFill;
+      }
+      const terminal = container?.states?.find(
+        ({id}) => id === container?.terminalStateId,
+      );
+      if (
+        !terminal ||
+        terminal !== container?.states?.at(-1) ||
+        terminal.metrics?.fillLevel <
+          (container?.terminalPolicy?.minimumFillLevel ??
+            Infinity) ||
+        terminal.metrics?.rimGap >
+          (container?.terminalPolicy?.maximumRimGap ??
+            -Infinity) ||
+        terminal.metrics?.bottomBandCoverage <
+          (container?.terminalPolicy
+            ?.minimumBottomBandCoverage ?? Infinity)
+      ) {
+        add(
+          'error',
+          'composition-container-terminal',
+          '容器终态必须是最后状态，并满足最小填充、最大瓶口间隙和底部承载覆盖。',
+          `${nodeLocation}.canonicalContainer.terminalStateId`,
+        );
+      }
+    }
+  }
+  const topLevelWorlds = new Map(
+    flat
+      .filter(({node, parent}) =>
+        parent === null &&
+        node.kind === 'group' &&
+        node.pattern === 'looping-environment'
+      )
+      .map(({node}) => [node.id, node]),
+  );
+  for (const {node} of motifFields) {
+    if (!node.worldBinding) continue;
+    const world = topLevelWorlds.get(node.worldBinding.worldNodeId);
+    const strip = world?.children?.find(
+      (child) =>
+        child.kind === 'world-strip' &&
+        child.role === node.worldBinding.stripRole,
+    );
+    if (!world || !strip) {
+      add(
+        'error',
+        'composition-motif-world-target',
+        `motif-field ${node.id} 必须绑定顶层 looping-environment 中实际存在的 ${node.worldBinding.stripRole} strip。`,
+        `${location}.nodes#${node.id}.worldBinding`,
+      );
+    }
+  }
+  const authoritativeContainerSurfaces = new Map();
+  for (const {node, renderParticipation} of flat) {
+    if (
+      renderParticipation !== 'visible' ||
+      !['asset', 'state-sequence'].includes(node.kind)
+    ) {
+      continue;
+    }
+    for (const coverage of node.semanticCoverage ?? []) {
+      if (!coverage.startsWith('container-surface:')) continue;
+      const previous = authoritativeContainerSurfaces.get(coverage);
+      if (previous) {
+        add(
+          'error',
+          'composition-container-surface-duplicate',
+          `权威容器表面 ${coverage} 被 ${previous.id} 与 ${node.id} 重复表示；水体、水面或其他同义贴图只能保留一个消费者。`,
+          `${location}.nodes#${node.id}.semanticCoverage`,
+        );
+      } else {
+        authoritativeContainerSurfaces.set(coverage, node);
+      }
+    }
+  }
+  const visibleAssetUses = new Map();
+  for (const {node, parent, renderParticipation} of flat) {
+    if (node.kind !== 'asset' || renderParticipation !== 'visible') continue;
+    const key = stableStringify({
+      source: node.src,
+      parentId: parent?.id ?? 'scene-root',
+      transform: node.transform,
+      clip: node.clip ?? null,
+    });
+    const previous = visibleAssetUses.get(key);
+    if (previous) {
+      add(
+        'error',
+        'composition-duplicate-visible-asset',
+        `可见资产 ${node.src} 在同一父坐标中以完全相同的 transform/clip 重复使用（${previous.id}、${node.id}）；这会造成半透明漂移或重影。重复装饰请使用 motif-field，前景只保留一个权威消费者。`,
+        `${location}.nodes#${node.id}`,
+      );
+    } else {
+      visibleAssetUses.set(key, node);
+    }
   }
   const motifInstanceCount = motifFields.reduce(
     (total, {node}) =>
@@ -1256,7 +1804,15 @@ export const validateCompositionStructure = ({
       `${location}.nodes`,
     );
   }
+  const proofFps = video.fps ?? 30;
   for (const proof of proofTimes) {
+    const assertionStateIdsByNode = new Map();
+    for (const assertion of proof.stateAssertions ?? []) {
+      const stateIds = assertionStateIdsByNode.get(assertion.nodeId) ?? [];
+      stateIds.push(assertion.stateId);
+      assertionStateIdsByNode.set(assertion.nodeId, stateIds);
+    }
+    const checkedSequenceNodes = new Set();
     for (const assertion of proof.stateAssertions ?? []) {
       const entry = sequences.find(({node}) => node.id === assertion.nodeId);
       if (!entry) {
@@ -1273,9 +1829,41 @@ export const validateCompositionStructure = ({
         continue;
       }
       if (!entry.node.states.some(({id}) => id === assertion.stateId)) add('error', 'composition-sequence-proof-state', `证明 ${proof.id} 引用了不存在的状态 ${assertion.stateId}。`, `${location}.proofTimes#${proof.id}`);
-      const resolved = resolveSequenceState({node: entry.node, progress: proof.at});
-      if (resolved?.id !== assertion.stateId) add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${assertion.stateId}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
-      const layersAtProof = resolveSequenceLayers({node: entry.node, progress: proof.at, durationSeconds});
+      if (checkedSequenceNodes.has(assertion.nodeId)) continue;
+      checkedSequenceNodes.add(assertion.nodeId);
+      const allowedStateIds = [
+        ...new Set(assertionStateIdsByNode.get(assertion.nodeId) ?? []),
+      ];
+      const parentWidth = entry.parent?.coordinateSpace?.width ?? video.width;
+      const parentHeight = entry.parent?.coordinateSpace?.height ?? video.height;
+      const pathAtProof = resolvePathMotionAtFrame({
+        pathMotion: entry.node.motion?.path,
+        frame: Math.round(
+          proof.at * Math.max(1, Math.round(durationSeconds * proofFps) - 1),
+        ),
+        durationInFrames: Math.max(1, Math.round(durationSeconds * proofFps)),
+        fps: proofFps,
+        parentWidth,
+        parentHeight,
+      });
+      const pathDepthVelocity = pathAtProof.depthVelocity ?? 0;
+      const resolved = resolveSequenceState({
+        node: entry.node,
+        progress: proof.at,
+        pathDepthVelocity,
+      });
+      if (!allowedStateIds.includes(resolved?.id)) {
+        const expectation = allowedStateIds.length === 1
+          ? allowedStateIds[0]
+          : `覆盖集合 [${allowedStateIds.join(', ')}] 中的一种状态`;
+        add('error', 'composition-sequence-proof-mismatch', `证明 ${proof.id} 期望 ${expectation}，但时间调度解析为 ${resolved?.id ?? 'none'}。`, `${location}.proofTimes#${proof.id}`);
+      }
+      const layersAtProof = resolveSequenceLayers({
+        node: entry.node,
+        progress: proof.at,
+        durationSeconds,
+        pathDepthVelocity,
+      });
       if (entry.node.transition.type === 'crossfade' && layersAtProof.length > 1) add('error', 'composition-sequence-proof-transition', `证明 ${proof.id} 落在 ${resolved?.id ?? 'none'} 的交叉淡化中，此时状态尚未完全可见。`, `${location}.proofTimes#${proof.id}`);
       if (proof.kind === 'final') {
         const stabilitySpan = entry.node.transition.type === 'crossfade'
@@ -1288,10 +1876,26 @@ export const validateCompositionStructure = ({
           1,
         ])];
         const stable = samplePoints.every((progress) => {
-          const layers = resolveSequenceLayers({node: entry.node, progress, durationSeconds});
-          return layers.length === 1 && layers[0].id === assertion.stateId && Math.abs(layers[0].opacity - 1) < 1e-6;
+          const frame = Math.round(
+            progress * Math.max(1, Math.round(durationSeconds * proofFps) - 1),
+          );
+          const pathAtSample = resolvePathMotionAtFrame({
+            pathMotion: entry.node.motion?.path,
+            frame,
+            durationInFrames: Math.max(1, Math.round(durationSeconds * proofFps)),
+            fps: proofFps,
+            parentWidth,
+            parentHeight,
+          });
+          const layers = resolveSequenceLayers({
+            node: entry.node,
+            progress,
+            durationSeconds,
+            pathDepthVelocity: pathAtSample.depthVelocity ?? 0,
+          });
+          return layers.length === 1 && allowedStateIds.includes(layers[0].id) && Math.abs(layers[0].opacity - 1) < 1e-6;
         });
-        if (!stable) add('error', 'composition-sequence-final-unstable', `最终证明 ${proof.id} 的状态 ${assertion.stateId} 必须避开交叉淡化，并稳定保持到镜头结束。`, `${location}.proofTimes#${proof.id}`);
+        if (!stable) add('error', 'composition-sequence-final-unstable', `最终证明 ${proof.id} 的状态集合 [${allowedStateIds.join(', ')}] 必须避开交叉淡化，并稳定保持到镜头结束。`, `${location}.proofTimes#${proof.id}`);
       }
     }
   }

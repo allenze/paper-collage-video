@@ -440,10 +440,18 @@ export const compileLayerStackPlan = ({
 
 export const summarizeLayerSourcePackages = (
   scenes,
-  {poseSheetCalls = 0, hardCeiling = null} = {},
+  {
+    poseSheetCalls = 0,
+    hardCeiling = null,
+    additionalPlans = [],
+  } = {},
 ) => {
-  const plans = scenes
-    .flatMap((scene) => scene.compositionPlan?.layerStacks ?? [])
+  const plans = [
+    ...scenes.flatMap(
+      (scene) => scene.compositionPlan?.layerStacks ?? [],
+    ),
+    ...additionalPlans,
+  ]
     .sort(
       (left, right) =>
         left.sceneId.localeCompare(right.sceneId) ||

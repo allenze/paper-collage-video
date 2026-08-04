@@ -35,9 +35,17 @@ import {
   EditorialSwitchView,
   TypographyView,
 } from './EditorialNodes';
-import {resolveMotifFieldInstances, resolveMotifFieldMotion} from './motifField.mjs';
+import {
+  resolveMotifFieldInstances,
+  resolveMotifFieldMotion,
+  resolveWorldBoundMotifX,
+} from './motifField.mjs';
 import {resolveEmphasisState, resolveIdleState, resolveMotionState, resolveVisibilityState} from './motion';
 import {resolveParallaxState} from './parallax.mjs';
+import {
+  resolveCameraFollowAtFrame,
+  resolvePathMotionAtFrame,
+} from './pathMotion.mjs';
 import {resolveSceneTransitionPresentation} from './sceneTimeline.mjs';
 import {resolveSequenceLayers} from './stateSequence';
 import {SubtitleOverlay} from './SubtitleOverlay';
@@ -52,6 +60,26 @@ const clamp = {
   extrapolateLeft: 'clamp',
   extrapolateRight: 'clamp',
 } as const;
+
+export const subjectSurfaceFilter = (
+  surface: ProjectTheme['surface'],
+) => {
+  const filters: string[] = [];
+  if (surface.subjectEdge.mode === 'paper-outline') {
+    const {color, widthPx} = surface.subjectEdge;
+    filters.push(
+      `drop-shadow(${widthPx}px 0 ${color})`,
+      `drop-shadow(${-widthPx}px 0 ${color})`,
+    );
+  }
+  if (surface.subjectShadow.mode === 'drop-shadow') {
+    const {offsetXPx, offsetYPx, blurPx, color} = surface.subjectShadow;
+    filters.push(
+      `drop-shadow(${offsetXPx}px ${offsetYPx}px ${blurPx}px ${color})`,
+    );
+  }
+  return filters.length > 0 ? filters.join(' ') : undefined;
+};
 
 const phaseFor = (id: string, seed: number) => {
   let value = seed >>> 0;
@@ -72,6 +100,9 @@ const slotOrder = (node: CompositionNode, layering: 'between-supports' | 'subjec
     subject: -10,
     'support-front': 0,
   } as Record<string, number>;
+  fixed['container-clean-plate'] = -30;
+  fixed['container-contents'] = -20;
+  fixed['container-frame'] = -10;
   return fixed[node.slot ?? ''] ?? node.z;
 };
 
@@ -105,6 +136,14 @@ const composeNodeTransform = ({
   worldAnchorOffsetX?: number;
 }) => {
   const authored = resolveMotionState(node.motion.keyframes, progress);
+  const pathMotion = resolvePathMotionAtFrame({
+    pathMotion: node.motion.path,
+    frame,
+    durationInFrames: Math.max(1, Math.round(durationSeconds * fps)),
+    fps,
+    parentWidth: parent.width,
+    parentHeight: parent.height,
+  });
   const idle = resolveIdleState({
     idle: node.motion.idle,
     frame,
@@ -134,8 +173,13 @@ const composeNodeTransform = ({
     top: transform.y * parent.height,
     width,
     height,
-    opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * emphasis.opacity * visibility.opacity,
-    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x + worldAnchorOffsetX}px, ${(authored.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale}) rotate(${(transform.rotation ?? 0) + authored.rotation + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
+    opacity: (transform.opacity ?? 1) * authored.opacity * idle.opacity * emphasis.opacity * visibility.opacity * pathMotion.projectionOpacity,
+    pathFilter: pathMotion.projectionBlurPx > 0
+      ? `blur(${pathMotion.projectionBlurPx}px)`
+      : undefined,
+    depthOrder: pathMotion.depthOrder,
+    pathDepthVelocity: pathMotion.depthVelocity,
+    css: `translate(${-transform.anchorX * 100}%, ${-transform.anchorY * 100}%) translate3d(${(authored.x + pathMotion.x + idle.x + emphasis.x + visibility.x) * parent.width + depth.x + worldAnchorOffsetX}px, ${(authored.y + pathMotion.y + idle.y + emphasis.y + visibility.y) * parent.height + depth.y}px, 0) scale(${(transform.scale ?? 1) * authored.scale * idle.scale * emphasis.scale * visibility.scale * depth.scale * pathMotion.projectionScale}) rotate(${(transform.rotation ?? 0) + authored.rotation + pathMotion.rotationDegrees + idle.rotation + emphasis.rotation + visibility.rotation}deg)`,
   };
 };
 
@@ -181,7 +225,7 @@ const containerStyle = ({
   top: resolved.top,
   width: resolved.width,
   ...(resolved.height === undefined ? {} : {height: resolved.height}),
-  zIndex: renderZ,
+  zIndex: renderZ + resolved.depthOrder,
   opacity: resolved.opacity,
   transform: resolved.css,
   transformOrigin: `${(node.motion.pivot?.x ?? node.transform.anchorX) * 100}% ${(node.motion.pivot?.y ?? node.transform.anchorY) * 100}%`,
@@ -198,7 +242,7 @@ const AssetView = ({
   durationSeconds,
   seed,
   renderZ,
-  paperEdge,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -215,7 +259,7 @@ const AssetView = ({
   durationSeconds: number;
   seed: number;
   renderZ: number;
-  paperEdge: string;
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -230,9 +274,10 @@ const AssetView = ({
       data-composition-kind="asset"
       style={{
         ...containerStyle({node, resolved, renderZ}),
-        filter: cutout
-          ? `drop-shadow(3px 0 ${paperEdge}) drop-shadow(-3px 0 ${paperEdge}) drop-shadow(0 10px 7px rgba(20,15,12,.28))`
-          : undefined,
+        filter: [
+          cutout ? subjectSurfaceFilter(surface) : null,
+          resolved.pathFilter,
+        ].filter(Boolean).join(' ') || undefined,
         ...clipStyle({node, boundaries}),
       }}
     >
@@ -256,7 +301,7 @@ const StateSequenceView = ({
   durationSeconds,
   seed,
   renderZ,
-  paperEdge,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -273,7 +318,7 @@ const StateSequenceView = ({
   durationSeconds: number;
   seed: number;
   renderZ: number;
-  paperEdge: string;
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -281,7 +326,12 @@ const StateSequenceView = ({
   worldAnchorOffsetX?: number;
 }) => {
   const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX});
-  const layers = resolveSequenceLayers({node, progress, durationSeconds});
+  const layers = resolveSequenceLayers({
+    node,
+    progress,
+    durationSeconds,
+    pathDepthVelocity: resolved.pathDepthVelocity,
+  });
   const registeredHeight = resolved.height ?? resolved.width * node.registration.canvas.height / node.registration.canvas.width;
   return (
     <div
@@ -292,7 +342,10 @@ const StateSequenceView = ({
       style={{
         ...containerStyle({node, resolved, renderZ}),
         height: registeredHeight,
-        filter: `drop-shadow(3px 0 ${paperEdge}) drop-shadow(-3px 0 ${paperEdge}) drop-shadow(0 10px 7px rgba(20,15,12,.28))`,
+        filter: [
+          subjectSurfaceFilter(surface),
+          resolved.pathFilter,
+        ].filter(Boolean).join(' '),
         ...clipStyle({node, boundaries}),
       }}
     >
@@ -378,6 +431,7 @@ const MotifFieldView = ({
   cameraY,
   cameraZoom,
   parallax,
+  rootNodes,
 }: {
   node: CompositionMotifFieldNode;
   parent: CoordinateSpace;
@@ -392,11 +446,61 @@ const MotifFieldView = ({
   cameraY: number;
   cameraZoom: number;
   parallax: NormalizedProjectScene['camera']['parallax'];
+  rootNodes: CompositionNode[];
 }) => {
-  const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
+  const world = node.worldBinding
+    ? rootNodes.find(
+        (candidate): candidate is CompositionGroupNode =>
+          candidate.kind === 'group' &&
+          candidate.pattern === 'looping-environment' &&
+          candidate.id === node.worldBinding?.worldNodeId,
+      )
+    : null;
+  const strip = world && node.worldBinding
+    ? world.children.find(
+        (candidate): candidate is CompositionWorldStripNode =>
+          candidate.kind === 'world-strip' &&
+          candidate.role === node.worldBinding?.stripRole,
+      )
+    : null;
+  const resolved = composeNodeTransform({
+    node,
+    parent,
+    progress,
+    frame,
+    fps,
+    events,
+    durationSeconds,
+    seed,
+    cameraX: world ? 0 : cameraX,
+    cameraY: world ? 0 : cameraY,
+    cameraZoom: world ? 1 : cameraZoom,
+    parallax: world && parallax
+      ? {...parallax, enabled: false}
+      : parallax,
+  });
   const height = resolved.height ?? resolved.width;
   const size = node.baseSize * resolved.width;
   const instances = resolveMotifFieldInstances(node);
+  const worldDisplacementPx = world?.loopingEnvironment && strip
+    ? resolveWorldStripFrame({
+        progress: world.loopingEnvironment.travel.frozen === true ? 0 : progress,
+        viewportWidth: resolved.width,
+        tileWidth: resolved.width,
+        direction: world.loopingEnvironment.travel.direction,
+        distanceViewports: world.loopingEnvironment.travel.distanceViewports,
+        speedFactor: resolveWorldStripSpeedFactor({
+          depth: strip.depth,
+          far: world.loopingEnvironment.speedRange.far,
+          near: world.loopingEnvironment.speedRange.near,
+        }),
+        startPhase: world.loopingEnvironment.travel.startPhase,
+        activeFrom: world.loopingEnvironment.travel.activeFrom ?? 0,
+        activeUntil: world.loopingEnvironment.travel.activeUntil ?? 1,
+        easing: world.loopingEnvironment.travel.easing,
+        overscanPx: world.loopingEnvironment.overscanPx,
+      }).cameraCompensatedDisplacement
+    : 0;
   return (
     <div
       data-composition-node={node.id}
@@ -415,7 +519,17 @@ const MotifFieldView = ({
           preset: node.fieldMotion.preset,
           progress,
           cycles: node.fieldMotion.cycles,
+          horizontalAmplitude: node.worldBinding?.relativeDriftAmplitude,
         });
+        const instanceX = node.worldBinding
+          ? resolveWorldBoundMotifX({
+              instanceX: instance.x,
+              localOffsetX: field.x,
+              worldDisplacementPx,
+              viewportWidth: resolved.width,
+              bounds: node.bounds,
+            })
+          : instance.x;
         return (
           <Img
             key={instance.id}
@@ -424,13 +538,13 @@ const MotifFieldView = ({
             data-motif-instance={instance.id}
             style={{
               position: 'absolute',
-              left: instance.x * resolved.width,
+              left: instanceX * resolved.width,
               top: instance.y * height,
               width: size,
               height: size,
               objectFit: 'contain',
               opacity: instance.opacity * field.opacity,
-              transform: `translate(-50%, -50%) translate3d(${field.x * resolved.width}px, ${field.y * height}px, 0) scale(${instance.scale * field.scale}) rotate(${instance.rotation + field.rotation}deg)`,
+              transform: `translate(-50%, -50%) translate3d(${node.worldBinding ? 0 : field.x * resolved.width}px, ${field.y * height}px, 0) scale(${instance.scale * field.scale}) rotate(${instance.rotation + field.rotation}deg)`,
               transformOrigin: '50% 50%',
             }}
           />
@@ -581,7 +695,7 @@ const GroupView = ({
   durationSeconds,
   seed,
   renderZ,
-  paperEdge,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -590,6 +704,7 @@ const GroupView = ({
   editorial,
   rootNodes,
   zones,
+  worldAnchorOffsetX,
 }: {
   node: CompositionGroupNode;
   parent: CoordinateSpace;
@@ -600,7 +715,7 @@ const GroupView = ({
   durationSeconds: number;
   seed: number;
   renderZ: number;
-  paperEdge: string;
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -609,7 +724,63 @@ const GroupView = ({
   editorial: EditorialSystem;
   rootNodes: CompositionNode[];
   zones: EditorialSystem['responsiveProfiles'][number]['exclusionZones'];
+  worldAnchorOffsetX?: number;
 }) => {
+  if (node.stackingContext === 'scene') {
+    const width = node.transform.width * parent.width;
+    const height =
+      node.transform.height === undefined
+        ? width *
+          node.coordinateSpace.height /
+          node.coordinateSpace.width
+        : node.transform.height * parent.height;
+    const left =
+      node.transform.x * parent.width -
+      node.transform.anchorX * width;
+    const top =
+      node.transform.y * parent.height -
+      node.transform.anchorY * height;
+    return (
+      <div
+        data-composition-node={node.id}
+        data-composition-kind={node.pattern}
+        data-stacking-context="scene"
+        style={{
+          position: 'absolute',
+          left,
+          top,
+          width,
+          height,
+        }}
+      >
+        {[...node.children]
+          .sort((left, right) => left.z - right.z)
+          .map((child) => (
+            <CompositionNodeView
+              key={child.id}
+              node={child}
+              parent={{width, height}}
+              progress={progress}
+              frame={frame}
+              fps={fps}
+              events={events}
+              durationSeconds={durationSeconds}
+              seed={seed}
+              renderZ={child.z}
+              surface={surface}
+              cameraX={cameraX}
+              cameraY={cameraY}
+              cameraZoom={cameraZoom}
+              parallax={parallax}
+              sceneId={sceneId}
+              editorial={editorial}
+              rootNodes={rootNodes}
+              zones={zones}
+            />
+          ))}
+      </div>
+    );
+  }
   const loopingWorld = node.pattern === 'looping-environment';
   const resolved = composeNodeTransform({
     node,
@@ -627,6 +798,7 @@ const GroupView = ({
       loopingWorld && parallax
         ? {...parallax, enabled: false}
         : parallax,
+    worldAnchorOffsetX,
   });
   const ratio = node.coordinateSpace.height / node.coordinateSpace.width;
   const height = resolved.height ?? resolved.width * ratio;
@@ -700,8 +872,8 @@ const GroupView = ({
             events={events}
             durationSeconds={durationSeconds}
             seed={seed}
-            renderZ={['supported-subject', 'registered-depth-stack'].includes(node.pattern) ? slotOrder(child, node.support?.layering) : child.z}
-            paperEdge={paperEdge}
+            renderZ={['supported-subject', 'registered-depth-stack', 'canonical-container'].includes(node.pattern) ? slotOrder(child, node.support?.layering) : child.z}
+            surface={surface}
             cameraX={cameraX}
             cameraY={cameraY}
             cameraZoom={cameraZoom}
@@ -729,7 +901,7 @@ const CompositionNodeView = ({
   durationSeconds,
   seed,
   renderZ = node.z,
-  paperEdge,
+  surface,
   cameraX,
   cameraY,
   cameraZoom,
@@ -751,7 +923,7 @@ const CompositionNodeView = ({
   durationSeconds: number;
   seed: number;
   renderZ?: number;
-  paperEdge: string;
+  surface: ProjectTheme['surface'];
   cameraX: number;
   cameraY: number;
   cameraZoom: number;
@@ -766,9 +938,9 @@ const CompositionNodeView = ({
   if (node.kind === 'group' && node.renderParticipation === 'derivation-only') {
     return null;
   }
-  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones}} />;
-  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
-  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, paperEdge, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
+  if (node.kind === 'group') return <GroupView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, sceneId, editorial, rootNodes, zones, worldAnchorOffsetX}} />;
+  if (node.kind === 'asset') return <AssetView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
+  if (node.kind === 'state-sequence') return <StateSequenceView {...{node, parent, boundaries, progress, frame, fps, events, durationSeconds, seed, renderZ, surface, cameraX, cameraY, cameraZoom, parallax, worldAnchorOffsetX}} />;
   if (node.kind === 'typography') {
     const resolved = composeNodeTransform({node, parent, progress, frame, fps, events, durationSeconds, seed, cameraX, cameraY, cameraZoom, parallax});
     return <TypographyView node={node as CompositionTypographyNode} sceneId={sceneId} frame={frame} editorial={editorial} container={containerStyle({node, resolved, renderZ})} width={resolved.width} height={resolved.height ?? parent.height} />;
@@ -804,7 +976,7 @@ const CompositionNodeView = ({
             events={events}
             durationSeconds={durationSeconds}
             seed={seed}
-            paperEdge={paperEdge}
+            surface={surface}
             cameraX={0}
             cameraY={0}
             cameraZoom={1}
@@ -818,7 +990,7 @@ const CompositionNodeView = ({
       />
     );
   }
-  if (node.kind === 'motif-field') return <MotifFieldView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax}} />;
+  if (node.kind === 'motif-field') return <MotifFieldView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax, rootNodes}} />;
   if (node.kind === 'world-strip') {
     if (!loopingEnvironment) return null;
     return <WorldStripView {...{node, parent, progress, frame, fps, events, durationSeconds, seed, renderZ, cameraX, cameraY, cameraZoom, parallax, loopingEnvironment}} />;
@@ -833,7 +1005,7 @@ const ChapterLabel = ({eyebrow, label, theme, variant = 'plain'}: Pick<Normalize
   const enter = spring({frame, fps, config: {damping: 20, stiffness: 90}});
   const opacity = interpolate(frame, [0, Math.round(0.4 * fps), Math.round(3 * fps), Math.round(3.93 * fps)], [0, 1, 1, 0], clamp);
   return (
-    <div style={{position: 'absolute', zIndex: 70, top: 62 * scale, left: 76 * scale, opacity, transform: `translateX(${(1 - enter) * -42}px) rotate(-0.6deg)`, color: theme.ink, padding: variant === 'paper-tab' ? `${18 * scale}px ${28 * scale}px ${20 * scale}px` : 0, background: variant === 'paper-tab' ? 'rgba(247,241,228,.94)' : undefined, border: variant === 'paper-tab' ? `2px solid ${theme.paperEdge}` : undefined, boxShadow: variant === 'paper-tab' ? '0 8px 22px rgba(28,22,15,.24), 0 2px 0 rgba(255,255,255,.65) inset' : undefined, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif')}}>
+    <div style={{position: 'absolute', zIndex: 70, top: 62 * scale, left: 76 * scale, opacity, transform: `translateX(${(1 - enter) * -42}px) rotate(-0.6deg)`, color: theme.ink, padding: variant === 'paper-tab' ? `${18 * scale}px ${28 * scale}px ${20 * scale}px` : 0, background: variant === 'paper-tab' ? 'rgba(247,241,228,.94)' : undefined, border: variant === 'paper-tab' ? `2px solid ${theme.surface.subjectEdge.mode === 'paper-outline' ? theme.surface.subjectEdge.color : theme.accent}` : undefined, boxShadow: variant === 'paper-tab' ? '0 8px 22px rgba(28,22,15,.24), 0 2px 0 rgba(255,255,255,.65) inset' : undefined, fontFamily: theme.fontFile ? 'PaperCollageProjectFont, serif' : (theme.fontFamily ?? 'STKaiti, KaiTi, "Noto Serif SC", serif')}}>
       <div style={{fontSize: 24 * scale, fontWeight: 700, letterSpacing: 7 * scale, color: variant === 'paper-tab' ? '#7A5B18' : theme.accent, textShadow: variant === 'paper-tab' ? '0 1px 0 rgba(255,255,255,.8)' : undefined}}>{eyebrow}</div>
       <div style={{marginTop: 8 * scale, fontSize: 56 * scale, fontWeight: 800, letterSpacing: 6 * scale, textShadow: variant === 'paper-tab' ? '0 1px 0 rgba(255,255,255,.8)' : undefined}}>{label}</div>
       <div style={{width: 290 * scale * enter, height: 5 * scale, marginTop: 12 * scale, background: `linear-gradient(90deg, ${theme.accent}, transparent)`}} />
@@ -867,15 +1039,29 @@ const cameraValue = ({frame, durationInFrames, keyframes, property, fallback}: {
 
 export const ReplicaChapterScene = ({scene, narrationVolume, theme, editorial}: {scene: NormalizedProjectScene; narrationVolume: number; theme: ProjectTheme; editorial: EditorialSystem}) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const progress = Math.max(0, Math.min(1, frame / Math.max(1, scene.durationInFrames - 1)));
   const durationSeconds = scene.durationInFrames / fps;
   const cameraFrames = scene.camera.keyframes && scene.camera.keyframes.length >= 2 ? [...scene.camera.keyframes].sort((a, b) => a.at - b.at) : cameraDefaults(scene.camera.preset, scene.camera.intensity);
-  const cameraZoom = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'zoom', fallback: 1});
-  const cameraX = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'x', fallback: 0});
-  const cameraY = cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'y', fallback: 0});
+  const followedCamera = resolveCameraFollowAtFrame({
+    scene,
+    video: {width, height},
+    frame,
+    fps,
+  });
+  const cameraZoom = followedCamera?.zoom ?? cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'zoom', fallback: 1});
+  const cameraX = followedCamera?.x ?? cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'x', fallback: 0});
+  const cameraY = followedCamera?.y ?? cameraValue({frame, durationInFrames: scene.durationInFrames, keyframes: cameraFrames, property: 'y', fallback: 0});
   const boundary = resolveSceneTransitionPresentation({transition: scene.enterTransition, frame});
-  const paperTexture = scene.appearance?.paperTexture ?? {visible: true, opacity: 0.14, blendMode: 'multiply' as const};
+  const surfaceTexture = scene.appearance?.surfaceTexture ?? (
+    theme.surface.texture
+      ? {
+          visible: true,
+          opacity: theme.surface.texture.opacity,
+          blendMode: theme.surface.texture.blendMode,
+        }
+      : {visible: false, opacity: 0, blendMode: 'normal' as const}
+  );
   const profile = editorial.responsiveProfiles.find(({id}) => id === editorial.activeProfile);
   const zones = profile?.exclusionZones ?? [];
   return (
@@ -884,10 +1070,10 @@ export const ReplicaChapterScene = ({scene, narrationVolume, theme, editorial}: 
       <AbsoluteFill>
         <AbsoluteFill style={{transform: `translate3d(${cameraX}px, ${cameraY}px, 0) scale(${cameraZoom})`, transformOrigin: '50% 54%'}}>
           {[...scene.composition.nodes].sort((a, b) => a.z - b.z).map((node) => (
-            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} paperEdge={theme.paperEdge} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} sceneId={scene.id} editorial={editorial} rootNodes={scene.composition.nodes} zones={zones} />
+            <CompositionNodeView key={node.id} node={node} parent={scene.composition.coordinateSpace} progress={progress} frame={frame} fps={fps} events={scene.events} durationSeconds={durationSeconds} seed={scene.motion.seed} surface={theme.surface} cameraX={cameraX} cameraY={cameraY} cameraZoom={cameraZoom} parallax={scene.camera.parallax} sceneId={scene.id} editorial={editorial} rootNodes={scene.composition.nodes} zones={zones} />
           ))}
         </AbsoluteFill>
-        {paperTexture.visible ? <AbsoluteFill style={{opacity: paperTexture.opacity, mixBlendMode: paperTexture.blendMode, backgroundImage: `url(${staticFile(theme.texture)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}
+        {surfaceTexture.visible && theme.surface.texture ? <AbsoluteFill style={{opacity: surfaceTexture.opacity, mixBlendMode: surfaceTexture.blendMode, backgroundImage: `url(${staticFile(theme.surface.texture.src)})`, backgroundSize: 'cover', zIndex: 60, pointerEvents: 'none'}} /> : null}
       </AbsoluteFill>
       {scene.appearance?.chapter?.visible === false ? null : <ChapterLabel eyebrow={scene.eyebrow} label={scene.label} theme={theme} variant={scene.appearance?.chapter?.variant} />}
       <SubtitleOverlay cues={scene.subtitles} theme={theme} appearance={scene.appearance?.subtitles} safeArea={profile?.safeArea} />

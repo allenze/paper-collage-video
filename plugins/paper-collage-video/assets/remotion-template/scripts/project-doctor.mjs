@@ -71,12 +71,13 @@ const requiredWorkspaceScripts = [
   'project:audio-preflight',
   'project:audio-calibration',
   'project:stitch-narration',
+  'project:world-topology-proof',
   'project:preview',
   'project:scene-preview',
   'project:render',
   'project:render-status',
   'provider:attempt',
-  'style:proof',
+  'project:style-proof',
 ];
 let workspaceDetails = ROOT;
 let workspaceReady = false;

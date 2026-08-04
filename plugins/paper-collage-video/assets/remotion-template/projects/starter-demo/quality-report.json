@@ -1,8 +1,31 @@
 {
   "$schema": "../../schemas/quality-report.schema.json",
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "projectSlug": "starter-demo",
   "updatedAt": "2026-01-01T00:00:00.000Z",
+  "styleProfile": {
+    "id": "childrens-picture-book-paper",
+    "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
+    "referenceFile": "public/style-catalog/childrens-picture-book-paper.png",
+    "referenceSha256": "2b9267a155929bcd742321027a9edbd17e2d2a31414e983e41a584d657a64d23",
+    "reviewFocus": [
+      "Rounded warm paper shapes match the selected reference card.",
+      "The frame remains inviting, uncluttered, and readable for children."
+    ]
+  },
+  "motionContract": {
+    "approvalFingerprint": "13f317323e6777f5a858bc95a5165b3ced4cbb2efa6e6516de87535affb57a5d",
+    "executionFingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320",
+    "summary": "先建立纸面空间，再让主体完成清晰动作，最后留出可读稳定段。",
+    "requiredCompositeChecks": [
+      "motion-grammar-consistent",
+      "pacing-cadence-consistent",
+      "camera-strategy-consistent",
+      "transition-strategy-consistent",
+      "ambient-strategy-consistent",
+      "sync-anchors-current"
+    ]
+  },
   "eventTimeline": [
     {
       "sceneId": "starter",
@@ -55,8 +78,13 @@
       ],
       "reviewScope": "runtime-visible",
       "semanticBinding": null,
+      "semanticSliceBinding": null,
+      "alphaTopologyExpectedComponents": [],
+      "alphaTopologyAllowDetachedComponents": false,
       "registeredFamilyBinding": null,
+      "canonicalContainerBinding": null,
       "stateSheetBinding": null,
+      "outputSurface": null,
       "stateSheetRecoveryBinding": null,
       "recoverySourceFile": null,
       "recoverySourceSha256": null,
@@ -64,14 +92,19 @@
       "manifestRecordId": null,
       "manifestSha256": null,
       "semanticContractFingerprints": {},
+      "styleProfileBinding": {
+        "id": "childrens-picture-book-paper",
+        "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e"
+      },
       "sha256": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
-      "fingerprint": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57",
+      "fingerprint": "10a62a8c853be4d53aba55289b2abe9ec40287a7080c7bd2f4de968ab2b14cbd",
       "requiredChecks": [
         "no-text",
         "no-watermark",
         "no-people",
         "safe-area-clear",
-        "style-consistent"
+        "style-consistent",
+        "style-profile-conformant"
       ],
       "technical": {
         "passed": true,
@@ -130,6 +163,53 @@
               "failures": [],
               "failureMessage": null
             }
+          },
+          {
+            "id": "alpha-topology-clean",
+            "passed": true,
+            "expected": "no detached rectangular alpha fragment or hard rectangular derivation boundary",
+            "actual": {
+              "schemaVersion": 1,
+              "sourceSize": {
+                "width": 1920,
+                "height": 1080
+              },
+              "analysisSize": {
+                "width": 1024,
+                "height": 576
+              },
+              "derivationRegions": [],
+              "expectedComponents": [],
+              "allowDetachedComponents": false,
+              "width": 1024,
+              "height": 576,
+              "thresholds": {
+                "alphaMinimum": 12,
+                "maximumAnalysisDimension": 1024,
+                "minimumDetachedPixels": 20,
+                "minimumDetachedAreaRatio": 0.00004,
+                "minimumDetachedSeparationRatio": 0.015,
+                "minimumRectangularFillRatio": 0.68,
+                "derivationRectangleFillRatio": 0.82,
+                "derivationBoundaryToleranceRatio": 0.012,
+                "minimumDerivationComponentAreaRatio": 0.004
+              },
+              "components": [
+                {
+                  "id": "component-1",
+                  "pixels": 589824,
+                  "areaRatio": 1,
+                  "left": 0,
+                  "top": 0,
+                  "right": 1023,
+                  "bottom": 575,
+                  "fillRatio": 1
+                }
+              ],
+              "diagnostics": [],
+              "failures": [],
+              "passed": true
+            }
           }
         ]
       },
@@ -138,11 +218,12 @@
         "no-watermark": "passed",
         "no-people": "passed",
         "safe-area-clear": "passed",
-        "style-consistent": "passed"
+        "style-consistent": "passed",
+        "style-profile-conformant": "passed"
       },
       "reviewer": "bundled-fixture",
       "reviewedAt": "2026-01-01T00:00:00.000Z",
-      "note": "Repository-owned technical fixture",
+      "note": "Repository-owned technical fixture asset",
       "evidenceFiles": [],
       "status": "passed"
     },
@@ -155,8 +236,13 @@
       ],
       "reviewScope": "runtime-visible",
       "semanticBinding": null,
+      "semanticSliceBinding": null,
+      "alphaTopologyExpectedComponents": [],
+      "alphaTopologyAllowDetachedComponents": false,
       "registeredFamilyBinding": null,
+      "canonicalContainerBinding": null,
       "stateSheetBinding": null,
+      "outputSurface": null,
       "stateSheetRecoveryBinding": null,
       "recoverySourceFile": null,
       "recoverySourceSha256": null,
@@ -164,13 +250,18 @@
       "manifestRecordId": null,
       "manifestSha256": null,
       "semanticContractFingerprints": {},
+      "styleProfileBinding": {
+        "id": "childrens-picture-book-paper",
+        "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e"
+      },
       "sha256": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
-      "fingerprint": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
+      "fingerprint": "5aa0adc43fcb08b3bcabffc5e9c971015e7825ac81eeaca43ef46a60ed04405e",
       "requiredChecks": [
         "subject-complete",
         "identity-consistent",
         "edge-clean",
-        "style-consistent"
+        "style-consistent",
+        "style-profile-conformant"
       ],
       "technical": {
         "passed": true,
@@ -234,6 +325,53 @@
               "failures": [],
               "failureMessage": null
             }
+          },
+          {
+            "id": "alpha-topology-clean",
+            "passed": true,
+            "expected": "no detached rectangular alpha fragment or hard rectangular derivation boundary",
+            "actual": {
+              "schemaVersion": 1,
+              "sourceSize": {
+                "width": 1920,
+                "height": 1080
+              },
+              "analysisSize": {
+                "width": 1024,
+                "height": 576
+              },
+              "derivationRegions": [],
+              "expectedComponents": [],
+              "allowDetachedComponents": false,
+              "width": 1024,
+              "height": 576,
+              "thresholds": {
+                "alphaMinimum": 12,
+                "maximumAnalysisDimension": 1024,
+                "minimumDetachedPixels": 20,
+                "minimumDetachedAreaRatio": 0.00004,
+                "minimumDetachedSeparationRatio": 0.015,
+                "minimumRectangularFillRatio": 0.68,
+                "derivationRectangleFillRatio": 0.82,
+                "derivationBoundaryToleranceRatio": 0.012,
+                "minimumDerivationComponentAreaRatio": 0.004
+              },
+              "components": [
+                {
+                  "id": "component-1",
+                  "pixels": 40410,
+                  "areaRatio": 0.068511962890625,
+                  "left": 188,
+                  "top": 251,
+                  "right": 548,
+                  "bottom": 544,
+                  "fillRatio": 0.3807450958222624
+                }
+              ],
+              "diagnostics": [],
+              "failures": [],
+              "passed": true
+            }
           }
         ]
       },
@@ -241,11 +379,12 @@
         "subject-complete": "passed",
         "identity-consistent": "passed",
         "edge-clean": "passed",
-        "style-consistent": "passed"
+        "style-consistent": "passed",
+        "style-profile-conformant": "passed"
       },
       "reviewer": "bundled-fixture",
       "reviewedAt": "2026-01-01T00:00:00.000Z",
-      "note": "Repository-owned technical fixture",
+      "note": "Repository-owned technical fixture asset",
       "evidenceFiles": [],
       "status": "passed"
     }
@@ -263,7 +402,7 @@
         "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
       },
       "compositionHash": "9f99e72cb300cc5e8bd58ca115ca06115e677ced2261303824342466747f7c01",
-      "fingerprint": "776d53c5075d587c236cab4a7c8d6612931cc7741dd2abcea6f4403ffeee6366",
+      "fingerprint": "785bfb0a7944e9f3ad06f360cda8f0e4612bd6099bd06f3d590aa9df68b8092c",
       "proofTimeIds": [
         "proof-establish"
       ],
@@ -297,8 +436,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "776d53c5075d587c236cab4a7c8d6612931cc7741dd2abcea6f4403ffeee6366",
-            "actual": "776d53c5075d587c236cab4a7c8d6612931cc7741dd2abcea6f4403ffeee6366"
+            "expected": "785bfb0a7944e9f3ad06f360cda8f0e4612bd6099bd06f3d590aa9df68b8092c",
+            "actual": "785bfb0a7944e9f3ad06f360cda8f0e4612bd6099bd06f3d590aa9df68b8092c"
           },
           {
             "id": "proof-artifacts-present",
@@ -345,8 +484,8 @@
       "memberHashes": {
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
-      "compositionHash": "fa68dd4364ec2771470f7fc185f31cb023bd33736f0066df4044339ddeaea941",
-      "fingerprint": "8254e55472f3cf6b61fed57a868396201848957b11bbe16e2b2e6d0de75f853e",
+      "compositionHash": "33ca0da49ad6545fd8c4c140d191c3b619c876ab40e435a6514496d94f6000cb",
+      "fingerprint": "3a0368804159f91798ee0eda4fcd03b2820395db5093dce76549a8d75980319e",
       "proofTimeIds": [
         "proof-action"
       ],
@@ -380,8 +519,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "8254e55472f3cf6b61fed57a868396201848957b11bbe16e2b2e6d0de75f853e",
-            "actual": "8254e55472f3cf6b61fed57a868396201848957b11bbe16e2b2e6d0de75f853e"
+            "expected": "3a0368804159f91798ee0eda4fcd03b2820395db5093dce76549a8d75980319e",
+            "actual": "3a0368804159f91798ee0eda4fcd03b2820395db5093dce76549a8d75980319e"
           },
           {
             "id": "proof-artifacts-present",
@@ -428,8 +567,8 @@
       "memberHashes": {
         "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f"
       },
-      "compositionHash": "2fd24fa9491ccc0c2497848473aad57bcaf7b25b24fed12aba11410e8117968e",
-      "fingerprint": "313e7dbce6b2f6dd1777308ecd86062ad63cbfee6be4f30849421a23e2cc2297",
+      "compositionHash": "e0b2febd866012364c55f448cee0cca01ad63359e1ffe7776b238f7996a82e39",
+      "fingerprint": "43952d84d31ce025b6f07f00ecd0c5182d629a2360b12c96a182cdd0ce768c18",
       "proofTimeIds": [
         "proof-final"
       ],
@@ -463,8 +602,8 @@
           {
             "id": "proof-current",
             "passed": true,
-            "expected": "313e7dbce6b2f6dd1777308ecd86062ad63cbfee6be4f30849421a23e2cc2297",
-            "actual": "313e7dbce6b2f6dd1777308ecd86062ad63cbfee6be4f30849421a23e2cc2297"
+            "expected": "43952d84d31ce025b6f07f00ecd0c5182d629a2360b12c96a182cdd0ce768c18",
+            "actual": "43952d84d31ce025b6f07f00ecd0c5182d629a2360b12c96a182cdd0ce768c18"
           },
           {
             "id": "proof-artifacts-present",
@@ -499,7 +638,232 @@
         }
       ],
       "status": "passed"
+    },
+    {
+      "compositeId": "style-profile:childrens-picture-book-paper",
+      "sceneId": "starter",
+      "pattern": "style-target",
+      "nodeId": "project-style",
+      "memberNodeIds": [
+        "starter:background",
+        "starter:traveler"
+      ],
+      "memberHashes": {
+        "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
+        "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
+      },
+      "compositionHash": "e06069badae5aca97615b854159703f808db6ebab186121be251114657dc1ab0",
+      "fingerprint": "83a36232e4768e96811b449b95b7da710d15d88172efd6b5c8bd2e68e41bd555",
+      "proofTimeIds": [
+        "proof-establish",
+        "proof-action",
+        "proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-establish",
+          "absoluteFrame": 3,
+          "frameFingerprint": "bundled-proof-establish",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-action",
+          "absoluteFrame": 22,
+          "frameFingerprint": "bundled-proof-action",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-final",
+          "absoluteFrame": 32,
+          "frameFingerprint": "bundled-proof-final",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "reviewScope": "runtime-visible",
+      "requiredChecks": [
+        "style-profile-consistent"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "83a36232e4768e96811b449b95b7da710d15d88172efd6b5c8bd2e68e41bd555",
+            "actual": "83a36232e4768e96811b449b95b7da710d15d88172efd6b5c8bd2e68e41bd555"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          }
+        ]
+      },
+      "semanticChecks": {
+        "style-profile-consistent": "passed"
+      },
+      "reviewer": "bundled-fixture",
+      "reviewedAt": "2026-01-01T00:00:00.000Z",
+      "note": "Repository-owned technical fixture proof",
+      "evidenceFiles": [
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "compositeId": "motion-contract:whole-film",
+      "sceneId": "starter",
+      "pattern": "motion-contract",
+      "nodeId": "project-motion",
+      "memberNodeIds": [],
+      "memberHashes": {
+        "projects/starter-demo/assets/characters/alpha/01-traveler.png": "5012594d62cc65af7ea21409f9bff9f8b120bfe348c4f2ec0c7f5c0f89b4dd5f",
+        "projects/starter-demo/assets/plates/01-bg.png": "8b281acc2007312e394832a74ece76229b8c049d48a46c82f4377409a44a0d57"
+      },
+      "compositionHash": "5d49509e53bca73ce5e6e021bfd5f6963e497b332c87aa1351f218df4daaf690",
+      "fingerprint": "feec12f2e7106a93b57784afdca59e35b95882d69c729503207fffdffef69dfb",
+      "proofTimeIds": [
+        "proof-establish",
+        "proof-action",
+        "proof-final"
+      ],
+      "proofFrames": [
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-establish",
+          "absoluteFrame": 3,
+          "frameFingerprint": "bundled-proof-establish",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-action",
+          "absoluteFrame": 22,
+          "frameFingerprint": "bundled-proof-action",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        },
+        {
+          "sceneId": "starter",
+          "proofTimeId": "proof-final",
+          "absoluteFrame": 32,
+          "frameFingerprint": "bundled-proof-final",
+          "fullFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "crop": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "debugFrame": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "bounds": {
+            "left": 0,
+            "top": 0,
+            "width": 1920,
+            "height": 1080
+          }
+        }
+      ],
+      "reviewScope": "runtime-visible",
+      "requiredChecks": [
+        "motion-grammar-consistent",
+        "pacing-cadence-consistent",
+        "camera-strategy-consistent",
+        "transition-strategy-consistent",
+        "ambient-strategy-consistent",
+        "sync-anchors-current"
+      ],
+      "technical": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "proof-current",
+            "passed": true,
+            "expected": "feec12f2e7106a93b57784afdca59e35b95882d69c729503207fffdffef69dfb",
+            "actual": "feec12f2e7106a93b57784afdca59e35b95882d69c729503207fffdffef69dfb"
+          },
+          {
+            "id": "proof-artifacts-present",
+            "passed": true,
+            "actual": 3
+          }
+        ]
+      },
+      "semanticChecks": {
+        "motion-grammar-consistent": "passed",
+        "pacing-cadence-consistent": "passed",
+        "camera-strategy-consistent": "passed",
+        "transition-strategy-consistent": "passed",
+        "ambient-strategy-consistent": "passed",
+        "sync-anchors-current": "passed"
+      },
+      "reviewer": "bundled-fixture",
+      "reviewedAt": "2026-01-01T00:00:00.000Z",
+      "note": "Repository-owned technical fixture proof",
+      "evidenceFiles": [
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-establish.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-action.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        },
+        {
+          "file": "dist/starter-demo/composition-proof/frames/proof-final.svg",
+          "sha256": "0cb23f171e9062bb4c781507b28dbd53d069323ca272cb536d6d4b14e13cbc73"
+        }
+      ],
+      "status": "passed"
     }
   ],
-  "reviewSurfaceFingerprint": "0909dc042f1030a887acd8be3bc566af89430b62ebb8c448960d3eea4139f478"
+  "reviewSurfaceFingerprint": "2344f04134dd2b8daee1e98f6f2b9a2ee5596c68353c45b6288452079ec2e40f"
 }

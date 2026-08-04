@@ -17,6 +17,22 @@ const rectsOverlap = (left, right) =>
 const validFacing = (value) =>
   ['left', 'right', 'front', 'back', 'neutral'].includes(value);
 
+export const resolveOutputStateRegistration = (state) => {
+  if (state?.orientationTransform?.kind !== 'horizontal-mirror') {
+    return {
+      facing: state?.facing,
+      anchors: state?.anchors ?? [],
+    };
+  }
+  return {
+    facing: state.orientationTransform.outputFacing,
+    anchors: (state.anchors ?? []).map((anchor) => ({
+      ...anchor,
+      x: 1 - anchor.x,
+    })),
+  };
+};
+
 const anchorMap = (anchors) =>
   new Map((anchors ?? []).map((anchor) => [anchor.id, anchor]));
 
@@ -88,6 +104,19 @@ export const validateStateSheetSpec = (spec) => {
     if (state.row !== expectedRow || state.column !== expectedColumn) errors.push(`state ${state.id ?? index} 必须按行优先连续排布在 ${expectedRow}:${expectedColumn}`);
     if (state.row >= rows || state.column >= columns) errors.push(`state ${state.id ?? index} 格位越界`);
     if (!validFacing(state.facing)) errors.push(`state ${state.id ?? index} facing 无效`);
+    if (state.orientationTransform !== undefined) {
+      const transform = state.orientationTransform;
+      const validHorizontalMirror =
+        transform?.kind === 'horizontal-mirror' &&
+        ['left', 'right'].includes(state.facing) &&
+        ['left', 'right'].includes(transform.outputFacing) &&
+        transform.outputFacing !== state.facing;
+      if (!validHorizontalMirror) {
+        errors.push(
+          `state ${state.id ?? index} orientationTransform 必须把 left/right 水平镜像为相反 outputFacing`,
+        );
+      }
+    }
     const anchors = anchorMap(state.anchors);
     if (
       !Array.isArray(state.anchors) ||
@@ -113,13 +142,38 @@ export const validateStateSheetSpec = (spec) => {
   }
   if (spec?.states?.length > columns * rows) errors.push('states 数量超过 sheet 容量');
   const anchorRegistration = inspectStateAnchorRegistration({
-    states: spec?.states ?? [],
+    states: (spec?.states ?? []).map((state) => ({
+      ...state,
+      ...resolveOutputStateRegistration(state),
+    })),
     anchorPolicy: spec?.anchorPolicy,
   });
   if (!anchorRegistration.passed) {
     errors.push('逐状态 anchor 漂移超过 anchorPolicy.maximumDrift');
   }
-  if (!nonEmpty(spec?.keying?.keyColor) || !Number.isInteger(spec?.keying?.matteErode) || spec.keying.matteErode < 0 || spec.keying.matteErode > 8) errors.push('keying 无效');
+  const keying = spec?.keying;
+  if (
+    !nonEmpty(keying?.keyColor) ||
+    !Number.isFinite(keying?.transparentThreshold) ||
+    keying.transparentThreshold < 0 ||
+    keying.transparentThreshold > 441.7 ||
+    !Number.isFinite(keying?.opaqueThreshold) ||
+    keying.opaqueThreshold <= keying.transparentThreshold ||
+    keying.opaqueThreshold > 441.7 ||
+    !Number.isFinite(keying?.edgeFeather) ||
+    keying.edgeFeather < 0 ||
+    keying.edgeFeather > 8 ||
+    !Number.isInteger(keying?.matteErode) ||
+    keying.matteErode < 0 ||
+    keying.matteErode > 8 ||
+    !Number.isInteger(keying?.edgePadding) ||
+    keying.edgePadding < 0 ||
+    keying.edgePadding > 32
+  ) {
+    errors.push(
+      'keying 必须声明有效的 keyColor、transparentThreshold、opaqueThreshold、edgeFeather、matteErode 和 edgePadding',
+    );
+  }
   if (spec?.extraction !== undefined) {
     const extraction = spec.extraction;
     if (extraction?.mode !== 'explicit-source-rects') errors.push('extraction.mode 必须为 explicit-source-rects');

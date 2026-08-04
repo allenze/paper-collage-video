@@ -14,7 +14,7 @@ import {resolveSequencePhase, resolveSequenceState} from '../scripts/state-seque
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const still = () => ({keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]});
+const still = () => ({keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]});
 const fullTransform = () => ({x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0});
 const withStateContract = (node) => node.kind !== 'state-sequence' ? node : ({
   ...node,
@@ -130,7 +130,7 @@ test('v5 supported subjects require contact, front occlusion and one carrier mot
   assert.ok(validate(detached).issues.some(({code}) => code === 'composition-support-contact'));
 
   const duplicated = supportedGroup();
-  duplicated.motion = {keyframes: [{at: 0, x: 0}, {at: 1, x: 0.1}]};
+  duplicated.motion = {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0.1}]};
   duplicated.children[1].motion = structuredClone(duplicated.motion);
   assert.ok(validate(duplicated).issues.some(({code}) => code === 'composition-duplicated-carrier-motion'));
 });
@@ -143,6 +143,27 @@ test('v5 registered environments enforce a shared canvas, boundary and exclusive
   const duplicated = registeredGroup();
   duplicated.children[1].semanticCoverage.push('trees');
   assert.ok(validate(duplicated).issues.some(({code}) => code === 'composition-semantic-duplicate'));
+});
+
+test('visible assets cannot be duplicated at the same transform and clip', () => {
+  const first = asset({id: 'foreground-a', role: 'environment'});
+  const second = {
+    ...asset({id: 'foreground-b', role: 'environment'}),
+    src: first.src,
+  };
+  const result = validateCompositionStructure({
+    composition: {
+      coordinateSpace: {width: 100, height: 100},
+      nodes: [first, second],
+    },
+    video: {width: 100, height: 100},
+    proofTimes: [],
+  });
+  assert.ok(
+    result.issues.some(
+      ({code}) => code === 'composition-duplicate-visible-asset',
+    ),
+  );
 });
 
 test('v10 registered depth stacks require full-canvas ordered layers inside every reveal envelope', () => {
@@ -166,7 +187,7 @@ test('v10 registered depth stacks require full-canvas ordered layers inside ever
 
   const overTravel = depthStackGroup();
   overTravel.children[1].motion = {
-    keyframes: [{at: 0, x: 0}, {at: 1, x: 0.035}],
+    keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0.035}],
   };
   assert.ok(
     validate(overTravel).issues.some(
@@ -183,6 +204,39 @@ test('v10 registered depth stacks require full-canvas ordered layers inside ever
       ({code}) => code === 'composition-layer-scale-shrink',
     ),
   );
+
+  const sceneStack = depthStackGroup();
+  sceneStack.stackingContext = 'scene';
+  sceneStack.transform = {
+    x: 0.5,
+    y: 0.5,
+    width: 3,
+    height: 2.5,
+    anchorX: 0.5,
+    anchorY: 0.5,
+  };
+  sceneStack.children[0].z = 0;
+  sceneStack.children[1].z = 1;
+  sceneStack.children[2].z = 4;
+  assert.deepEqual(validate(sceneStack).issues, []);
+
+  const movingSceneStack = structuredClone(sceneStack);
+  movingSceneStack.motion = {
+    keyframes: [{at: 0, scale: 1}, {at: 1, scale: 1.02}],
+  };
+  assert.ok(
+    validate(movingSceneStack).issues.some(
+      ({code}) => code === 'composition-scene-stacking-carrier',
+    ),
+  );
+
+  const duplicateSceneZ = structuredClone(sceneStack);
+  duplicateSceneZ.children[2].z = 1;
+  assert.ok(
+    validate(duplicateSceneZ).issues.some(
+      ({code}) => code === 'composition-scene-stacking-z',
+    ),
+  );
 });
 
 test('geometry, event catalog and fingerprints remain deterministic', () => {
@@ -195,6 +249,10 @@ test('geometry, event catalog and fingerprints remain deterministic', () => {
   changed.support.contactAnchor.x = 0.51;
   assert.notEqual(first, hashCompositionValue(changed));
   assert.equal(first, hashCompositionValue(supportedGroup()));
+  const stackHash = hashCompositionValue(depthStackGroup());
+  const sceneStack = depthStackGroup();
+  sceneStack.stackingContext = 'scene';
+  assert.notEqual(stackHash, hashCompositionValue(sceneStack));
 
   const events = deriveEventTimeline({
     scene: {id: 'scene', durationInFrames: 100, events: [{id: 'impact', beatId: 'fall', at: 0.5, targetId: 'sword', visual: {kind: 'emphasis', action: 'drop-impact', durationSeconds: 0.4, intensity: 1}, proofTimeId: 'proof-impact', sound: {src: 'impact.wav'}}]},
@@ -245,6 +303,24 @@ test('v5 state sequences resolve discrete poses and require proof coverage', () 
   const wrong = structuredClone(proofTimes);
   wrong[1].stateAssertions[0].stateId = 'pointing';
   assert.ok(validate(node, wrong).issues.some(({code}) => code === 'composition-sequence-proof-mismatch'));
+
+  const compoundCoverage = [{
+    id: 'reader-family-coverage',
+    at: 0.5,
+    stateAssertions: [
+      {nodeId: 'reader', stateId: 'book-open'},
+      {nodeId: 'reader', stateId: 'page-turn'},
+      {nodeId: 'reader', stateId: 'pointing'},
+    ],
+  }];
+  assert.deepEqual(validate(node, compoundCoverage).issues, []);
+  const missingResolvedState = structuredClone(compoundCoverage);
+  missingResolvedState[0].stateAssertions.splice(1, 1);
+  assert.ok(
+    validate(node, missingResolvedState).issues.some(
+      ({code}) => code === 'composition-sequence-proof-mismatch',
+    ),
+  );
 });
 
 test('v5 state sequences can loop during motion and hold a registered contact state', () => {
@@ -279,6 +355,52 @@ test('v5 state sequences can loop during motion and hold a registered contact st
   const unknownHold = structuredClone(node);
   unknownHold.playback.holdStateId = 'missing';
   assert.ok(validate(unknownHold, proofTimes).issues.some(({code}) => code === 'composition-sequence-hold-state'));
+});
+
+test('v5 state sequences can exit a locomotion loop through landing states before the final hold', () => {
+  const node = {
+    id: 'crow',
+    kind: 'state-sequence',
+    assetRole: 'character',
+    poseFamilyId: 'crow-flight',
+    registration: {id: 'crow-registration', sourceMasterAssetId: 'crow-sheet', canvas: {width: 100, height: 100}, origin: 'top-left'},
+    states: [
+      {id: 'glide', src: 'glide.png', at: 0},
+      {id: 'flap', src: 'flap.png', at: 0.26},
+      {id: 'brake', src: 'brake.png', at: 0.54},
+      {id: 'grounded', src: 'grounded.png', at: 0.62},
+    ],
+    playback: {
+      mode: 'loop',
+      cycles: 6,
+      activeFrom: 0.01,
+      activeUntil: 0.54,
+      holdStateId: 'grounded',
+      activeStateIds: ['glide', 'flap'],
+    },
+    transition: {type: 'cut', durationSeconds: 0},
+    z: 1,
+    transform: fullTransform(),
+    motion: still(),
+  };
+  assert.equal(resolveSequenceState({node, progress: 0.31}).id, 'glide');
+  assert.equal(resolveSequenceState({node, progress: 0.58}).id, 'brake');
+  assert.equal(resolveSequenceState({node, progress: 0.8}).id, 'grounded');
+  const proofTimes = [
+    {id: 'flap', at: 0.08, stateAssertions: [{nodeId: 'crow', stateId: 'flap'}]},
+    {id: 'glide', at: 0.31, stateAssertions: [{nodeId: 'crow', stateId: 'glide'}]},
+    {id: 'brake', at: 0.58, stateAssertions: [{nodeId: 'crow', stateId: 'brake'}]},
+    {id: 'grounded', at: 0.8, stateAssertions: [{nodeId: 'crow', stateId: 'grounded'}]},
+  ];
+  assert.deepEqual(validate(node, proofTimes).issues, []);
+
+  const gap = structuredClone(node);
+  gap.states.find(({id}) => id === 'brake').at = 0.56;
+  assert.ok(
+    validate(gap, proofTimes).issues.some(
+      ({code}) => code === 'composition-sequence-exit-order',
+    ),
+  );
 });
 
 test('state sequences can hold a prelude, then loop only an authored gait pair', () => {

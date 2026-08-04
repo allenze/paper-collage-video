@@ -43,11 +43,16 @@ const run = (file, commandArgs) => new Promise((resolve, reject) => {
 
 let segment = null;
 try {
-  if (!category || !operation || !script || !slug || !Number.isInteger(slugIndex)) {
+  const helpRequested = childArgs.includes('--help') || childArgs.includes('-h');
+  if (!category || !operation || !script || (!helpRequested && !slug) || !Number.isInteger(slugIndex)) {
     throw new Error(
       '用法：project-metrics-run.mjs --category=<category> --operation=<name> --script=<file> --slug-index=<n> -- <child args>',
     );
   }
+  if (helpRequested) {
+    const result = await run(path.resolve(ROOT, script), childArgs);
+    if (result.code !== 0) process.exitCode = result.code ?? 1;
+  } else {
   segment = await startMetricSegment({
     slug,
     category,
@@ -64,6 +69,7 @@ try {
     metadata: {exitCode: result.code, signal: result.signal ?? null},
   });
   if (result.code !== 0) process.exitCode = result.code ?? 1;
+  }
 } catch (error) {
   if (segment) {
     await finishMetricSegment({

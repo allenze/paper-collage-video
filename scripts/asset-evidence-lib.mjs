@@ -76,14 +76,23 @@ const stableJson = (value) => JSON.stringify(value ?? null);
 export const assetEvidenceIsCurrent = async (
   entry,
   node,
-  {renderSize = null, registeredFamilyBinding = null} = {},
+  {
+    renderSize = null,
+    registeredFamilyBinding = null,
+    canonicalContainerBinding = null,
+  } = {},
 ) => {
   if (!entry || entry.source !== node.src || !entry.sourceSha256) return false;
   if (stableJson(entry.renderSize) !== stableJson(renderSize)) return false;
   if (
     entry.derivationFingerprint !==
     createHash('sha256')
-      .update(stableJson(registeredFamilyBinding))
+      .update(
+        stableJson({
+          registeredFamilyBinding,
+          canonicalContainerBinding,
+        }),
+      )
       .digest('hex')
   ) return false;
   const sourceFile = resolvePublicFile(node.src);
@@ -110,6 +119,7 @@ export const buildAssetEvidence = async ({
   evidenceId = node.id,
   renderSize = null,
   registeredFamilyBinding = null,
+  canonicalContainerBinding = null,
 }) => {
   const sourceFile = resolvePublicFile(node.src);
   const metadata = await sharp(sourceFile).metadata();
@@ -197,7 +207,12 @@ export const buildAssetEvidence = async ({
     sourceSha256: await hashFile(sourceFile),
     renderSize,
     derivationFingerprint: createHash('sha256')
-      .update(stableJson(registeredFamilyBinding))
+      .update(
+        stableJson({
+          registeredFamilyBinding,
+          canonicalContainerBinding,
+        }),
+      )
       .digest('hex'),
     alphaBounds: bounds,
     alphaMask: path.relative(ROOT, alphaMaskFile),

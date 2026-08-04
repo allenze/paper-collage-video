@@ -7,6 +7,12 @@ import {
   createAssetRecordId,
 } from './asset-manifest-lib.mjs';
 import {removeChromaKey} from './chroma-key-lib.mjs';
+import {
+  BAKED_CHECKERBOARD_MODE,
+  BAKED_CHECKERBOARD_POLICY_ID,
+  removeBakedCheckerboard,
+} from './checkerboard-alpha-lib.mjs';
+import {composeDecorativeScatter} from './decorative-scatter-lib.mjs';
 import {hashCompositionValue} from './composition-lib.mjs';
 import {resolveWorldStripTileGeometry} from '../src/worldStrip.mjs';
 
@@ -27,6 +33,13 @@ const MIRROR_CROP_RENDER_TOLERANCE = {
   rgbMaximum: 0.2,
   alphaMean: 0.002,
   alphaMaximum: 0.2,
+};
+export const SEAM_SALIENCE_POLICY = {
+  policyId: 'vertical-rail-v1',
+  contrastThreshold: 0.08,
+  meanMaximum: 0.045,
+  p95Maximum: 0.12,
+  verticalCoverageMaximum: 0.35,
 };
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const nonEmpty = (value) => typeof value === 'string' && value.trim().length > 0;
@@ -77,6 +90,71 @@ const validateChromaKeying = (keying) => {
   return null;
 };
 
+const validateCheckerboardAlpha = (value) => {
+  if (!isObject(value)) return 'baked-checkerboard-alpha 必须声明 checkerboardAlpha';
+  if (
+    !(
+      Number.isFinite(value.transparentDistance) &&
+      value.transparentDistance >= 0 &&
+      value.transparentDistance <= 255
+    )
+  ) {
+    return 'checkerboardAlpha.transparentDistance 必须位于 0..255';
+  }
+  if (
+    !(
+      Number.isFinite(value.opaqueDistance) &&
+      value.opaqueDistance > value.transparentDistance &&
+      value.opaqueDistance <= 255
+    )
+  ) {
+    return 'checkerboardAlpha.opaqueDistance 必须大于 transparentDistance 且不超过 255';
+  }
+  return null;
+};
+
+const validateDecorativeScatter = (scatter) => {
+  if (!isObject(scatter)) return null;
+  if (!Number.isInteger(scatter.seed)) return 'decorativeScatter.seed 必须是整数';
+  if (
+    !Number.isInteger(scatter.canvas?.width) ||
+    scatter.canvas.width < 1 ||
+    !Number.isInteger(scatter.canvas?.height) ||
+    scatter.canvas.height < 1
+  ) {
+    return 'decorativeScatter.canvas 必须是正整数画布';
+  }
+  if (!Array.isArray(scatter.regions) || scatter.regions.length < 1 || scatter.regions.length > 32) {
+    return 'decorativeScatter.regions 必须包含 1..32 个区域';
+  }
+  const ids = new Set();
+  for (const region of scatter.regions) {
+    if (!nonEmpty(region.id) || ids.has(region.id) || !validRect(region)) {
+      return 'decorativeScatter region id 必须唯一且矩形有效';
+    }
+    ids.add(region.id);
+  }
+  if (!Array.isArray(scatter.placements) || scatter.placements.length < 1 || scatter.placements.length > 64) {
+    return 'decorativeScatter.placements 必须包含 1..64 项';
+  }
+  for (const placement of scatter.placements) {
+    if (
+      !ids.has(placement.sourceId) ||
+      ![placement.x, placement.y, placement.scale, placement.rotation, placement.anchorX, placement.anchorY].every(Number.isFinite) ||
+      placement.x < 0 || placement.x > 1 ||
+      placement.y < 0 || placement.y > 1 ||
+      placement.scale <= 0 || placement.scale > 2 ||
+      placement.rotation < -30 || placement.rotation > 30 ||
+      placement.anchorX < 0 || placement.anchorX > 1 ||
+      placement.anchorY < 0 || placement.anchorY > 1 ||
+      typeof placement.flipX !== 'boolean'
+    ) {
+      return 'decorativeScatter placement 必须引用已知区域并声明合法变换与锚点';
+    }
+  }
+  return null;
+};
+
 const validRect = (rect) =>
   isObject(rect) &&
   Number.isInteger(rect.left) &&
@@ -87,6 +165,17 @@ const validRect = (rect) =>
   rect.width > 0 &&
   Number.isInteger(rect.height) &&
   rect.height > 0;
+
+const validAlphaFeather = (value, tileHeight) =>
+  isObject(value) &&
+  Number.isInteger(value.topPixels) &&
+  value.topPixels >= 0 &&
+  value.topPixels <= 1024 &&
+  Number.isInteger(value.bottomPixels) &&
+  value.bottomPixels >= 0 &&
+  value.bottomPixels <= 1024 &&
+  value.topPixels + value.bottomPixels > 0 &&
+  value.topPixels + value.bottomPixels < tileHeight;
 
 const resolveInside = (root, input, label) => {
   const resolved = path.resolve(root, input);
@@ -107,6 +196,23 @@ export const validateLoopingStripSpec = (spec) => {
   if (spec?.axis !== 'x') errors.push('Phase 2.5 只支持 axis=x');
   if (!STRATEGIES.includes(spec?.seamStrategy)) errors.push('seamStrategy 必须是 exact、overlap-crop 或 mirror-crop');
   if (!validRect(spec?.canonicalTile)) errors.push('canonicalTile 必须是正整数像素矩形');
+  if (
+    spec?.alphaFeather !== undefined &&
+    !validAlphaFeather(spec.alphaFeather, spec?.canonicalTile?.height ?? 0)
+  ) {
+    errors.push('alphaFeather 必须声明非零且不覆盖完整条带高度的 topPixels/bottomPixels');
+  }
+  if (
+    spec?.edgeStabilizationPixels !== undefined &&
+    !(
+      Number.isInteger(spec.edgeStabilizationPixels) &&
+      spec.edgeStabilizationPixels >= 0 &&
+      spec.edgeStabilizationPixels <= 64 &&
+      spec.edgeStabilizationPixels * 2 < (spec?.canonicalTile?.width ?? 0)
+    )
+  ) {
+    errors.push('edgeStabilizationPixels 必须是 0..64 且小于 canonicalTile 一半宽度的整数');
+  }
   if (!(Number.isInteger(spec?.edgeBandPixels) && spec.edgeBandPixels >= 1 && spec.edgeBandPixels <= 128)) {
     errors.push('edgeBandPixels 必须是 1..128 的整数');
   }
@@ -139,8 +245,8 @@ export const validateLoopingStripSpec = (spec) => {
     errors.push('recoveryPolicy 必须保持完整条带上下文，禁止 isolated edge generation');
   }
   const sourceSurface = sourceSurfaceFor(spec);
-  if (!isObject(sourceSurface) || !['opaque', 'chroma-key'].includes(sourceSurface.mode)) {
-    errors.push('sourceSurface 必须是 opaque 或 chroma-key');
+  if (!isObject(sourceSurface) || !['opaque', 'chroma-key', BAKED_CHECKERBOARD_MODE].includes(sourceSurface.mode)) {
+    errors.push('sourceSurface 必须是 opaque、chroma-key 或 baked-checkerboard-alpha');
   } else if (sourceSurface.mode === 'chroma-key') {
     if (!validKeyColor(sourceSurface.keyColor)) {
       errors.push('chroma-key sourceSurface 必须声明 #RRGGBB keyColor');
@@ -150,9 +256,17 @@ export const validateLoopingStripSpec = (spec) => {
     if (spec?.keying && !sameKeyColor(sourceSurface.keyColor, spec.keying.keyColor)) {
       errors.push('sourceSurface.keyColor 必须与 keying.keyColor 一致');
     }
-  } else if (spec?.keying !== undefined) {
+  } else if (sourceSurface.mode === BAKED_CHECKERBOARD_MODE) {
+    const checkerboardError = validateCheckerboardAlpha(spec?.checkerboardAlpha);
+    if (checkerboardError) errors.push(checkerboardError);
+    if (spec?.keying !== undefined) {
+      errors.push('baked-checkerboard-alpha 不能声明 chroma keying');
+    }
+  } else if (spec?.keying !== undefined || spec?.checkerboardAlpha !== undefined) {
     errors.push('opaque sourceSurface 不能声明 keying');
   }
+  const scatterError = validateDecorativeScatter(spec?.decorativeScatter);
+  if (scatterError) errors.push(scatterError);
   if (typeof spec?.applyToProject !== 'boolean') errors.push('applyToProject 必须是 boolean');
   return errors;
 };
@@ -251,25 +365,188 @@ export const inspectHorizontalEdgeAlphaCoverage = async (input, edgeBandPixels) 
   };
 };
 
-const deriveTileBuffer = async ({sourceBuffer, spec}) => {
-  const canonical = await sharp(sourceBuffer).extract(spec.canonicalTile).png().toBuffer();
-  if (spec.seamStrategy !== 'mirror-crop') return canonical;
-  const metadata = await sharp(canonical).metadata();
-  const mirrored = await sharp(canonical).flop().png().toBuffer();
-  return sharp({
-    create: {
-      width: metadata.width * 2,
-      height: metadata.height,
-      channels: 4,
-      background: {r: 0, g: 0, b: 0, alpha: 0},
+const percentile = (values, quantile) => {
+  if (values.length === 0) return 0;
+  const ordered = [...values].sort((left, right) => left - right);
+  return ordered[Math.min(
+    ordered.length - 1,
+    Math.max(0, Math.ceil(ordered.length * quantile) - 1),
+  )];
+};
+
+/**
+ * Detect a visually salient vertical rail even when both sides of the repeat
+ * are pixel-identical. The seam band is compared with wider neighborhoods on
+ * both sides, using premultiplied RGBA per scanline. A natural localized plant
+ * may affect a few rows; a repeated construction rail spans much of the image.
+ */
+export const inspectVerticalSeamSalience = async (
+  input,
+  {foldX = null, bandPixels = 2, policy = SEAM_SALIENCE_POLICY} = {},
+) => {
+  const {data, width, height, channels} = await rawRgba(input);
+  const band = Math.max(1, Math.min(
+    Math.floor(width / 8),
+    Math.round(bandPixels),
+  ));
+  const sample = (x, y) => {
+    const wrappedX = ((x % width) + width) % width;
+    const offset = (y * width + wrappedX) * channels;
+    const alpha = data[offset + 3] / 255;
+    return [
+      data[offset] * alpha / 255,
+      data[offset + 1] * alpha / 255,
+      data[offset + 2] * alpha / 255,
+      alpha,
+    ];
+  };
+  const regionMean = (from, to, y) => {
+    const total = [0, 0, 0, 0];
+    let count = 0;
+    for (let x = from; x < to; x += 1) {
+      const pixel = sample(x, y);
+      for (let channel = 0; channel < 4; channel += 1) {
+        total[channel] += pixel[channel];
+      }
+      count += 1;
+    }
+    return total.map((value) => value / Math.max(1, count));
+  };
+  const inspectAt = (seamX, kind) => {
+    const contrasts = [];
+    for (let y = 0; y < height; y += 1) {
+      const seam = regionMean(seamX - band, seamX + band, y);
+      const left = regionMean(seamX - band * 4, seamX - band * 2, y);
+      const right = regionMean(seamX + band * 2, seamX + band * 4, y);
+      const neighbor = left.map((value, channel) => (value + right[channel]) / 2);
+      contrasts.push(Math.max(
+        Math.abs(seam[0] - neighbor[0]),
+        Math.abs(seam[1] - neighbor[1]),
+        Math.abs(seam[2] - neighbor[2]),
+        Math.abs(seam[3] - neighbor[3]),
+      ));
+    }
+    const mean = contrasts.reduce((sum, value) => sum + value, 0) /
+      Math.max(1, contrasts.length);
+    const p95 = percentile(contrasts, 0.95);
+    const maximum = Math.max(...contrasts, 0);
+    const verticalCoverage = contrasts.filter(
+      (value) => value >= policy.contrastThreshold,
+    ).length / Math.max(1, contrasts.length);
+    return {
+      kind,
+      x: seamX,
+      bandPixels: band,
+      mean,
+      p95,
+      maximum,
+      verticalCoverage,
+      passed:
+        mean <= policy.meanMaximum + 1e-12 &&
+        p95 <= policy.p95Maximum + 1e-12 &&
+        verticalCoverage <= policy.verticalCoverageMaximum + 1e-12,
+    };
+  };
+  const seams = [inspectAt(0, 'tile-boundary')];
+  if (Number.isFinite(foldX) && foldX > band * 4 && foldX < width - band * 4) {
+    seams.push(inspectAt(Math.round(foldX), 'mirror-fold'));
+  }
+  return {
+    policy,
+    width,
+    height,
+    seams,
+    passed: seams.every(({passed}) => passed),
+  };
+};
+
+const applyAlphaFeather = async (input, alphaFeather) => {
+  if (!alphaFeather) return input;
+  const {data, info} = await sharp(input)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({resolveWithObject: true});
+  for (let y = 0; y < info.height; y += 1) {
+    const topFactor = alphaFeather.topPixels > 0
+      ? Math.min(1, y / alphaFeather.topPixels)
+      : 1;
+    const bottomFactor = alphaFeather.bottomPixels > 0
+      ? Math.min(1, (info.height - 1 - y) / alphaFeather.bottomPixels)
+      : 1;
+    const factor = Math.min(topFactor, bottomFactor);
+    for (let x = 0; x < info.width; x += 1) {
+      const offset = (y * info.width + x) * info.channels + 3;
+      data[offset] = Math.round(data[offset] * factor);
+    }
+  }
+  return sharp(data, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: info.channels,
     },
-  })
-    .composite([
-      {input: canonical, left: 0, top: 0},
-      {input: mirrored, left: metadata.width, top: 0},
-    ])
-    .png()
-    .toBuffer();
+  }).png().toBuffer();
+};
+
+const deriveTileBuffer = async ({sourceBuffer, spec}) => {
+  let canonical = await sharp(sourceBuffer).extract(spec.canonicalTile).png().toBuffer();
+  if ((spec.edgeStabilizationPixels ?? 0) > 0) {
+    const pixels = await sharp(canonical)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({resolveWithObject: true});
+    const stabilized = Buffer.from(pixels.data);
+    const band = spec.edgeStabilizationPixels;
+    for (let y = 0; y < pixels.info.height; y += 1) {
+      const leftSource = (y * pixels.info.width + band) * pixels.info.channels;
+      const rightSource =
+        (y * pixels.info.width + pixels.info.width - band - 1) *
+        pixels.info.channels;
+      for (let x = 0; x < band; x += 1) {
+        pixels.data.copy(
+          stabilized,
+          (y * pixels.info.width + x) * pixels.info.channels,
+          leftSource,
+          leftSource + pixels.info.channels,
+        );
+        pixels.data.copy(
+          stabilized,
+          (y * pixels.info.width + pixels.info.width - 1 - x) *
+            pixels.info.channels,
+          rightSource,
+          rightSource + pixels.info.channels,
+        );
+      }
+    }
+    canonical = await sharp(stabilized, {
+      raw: {
+        width: pixels.info.width,
+        height: pixels.info.height,
+        channels: pixels.info.channels,
+      },
+    }).png().toBuffer();
+  }
+  const tile = spec.seamStrategy !== 'mirror-crop'
+    ? canonical
+    : await (async () => {
+      const metadata = await sharp(canonical).metadata();
+      const mirrored = await sharp(canonical).flop().png().toBuffer();
+      return sharp({
+        create: {
+          width: metadata.width * 2,
+          height: metadata.height,
+          channels: 4,
+          background: {r: 0, g: 0, b: 0, alpha: 0},
+        },
+      })
+        .composite([
+          {input: canonical, left: 0, top: 0},
+          {input: mirrored, left: metadata.width, top: 0},
+        ])
+        .png()
+        .toBuffer();
+    })();
+  return applyAlphaFeather(tile, spec.alphaFeather);
 };
 
 export const edgeMetricsPass = (metrics, thresholds) =>
@@ -383,6 +660,19 @@ export const deriveLoopingStrip = async ({
       `source asset ${spec.sourceAssetId} 必须保留匹配的 provider chroma-key provenance`,
     );
   }
+  if (
+    sourceSurface.mode === BAKED_CHECKERBOARD_MODE &&
+    (
+      sourceRecord.lifecycle?.status !== 'recovery-source' ||
+      sourceRecord.providerObservation?.mode !== BAKED_CHECKERBOARD_MODE ||
+      sourceRecord.providerObservation?.policyId !== BAKED_CHECKERBOARD_POLICY_ID ||
+      sourceRequestSurface?.mode !== 'alpha'
+    )
+  ) {
+    throw new Error(
+      `source asset ${spec.sourceAssetId} 必须保留通过的 baked-checkerboard recovery provenance`,
+    );
+  }
   let sourceBuffer = await fs.readFile(sourceFile);
   let keyingMetadata = null;
   if (sourceSurface.mode === 'chroma-key') {
@@ -390,6 +680,17 @@ export const deriveLoopingStrip = async ({
       input: sourceFile,
       ...spec.keying,
     }));
+  } else if (sourceSurface.mode === BAKED_CHECKERBOARD_MODE) {
+    ({buffer: sourceBuffer, metadata: keyingMetadata} = await removeBakedCheckerboard({
+      input: sourceFile,
+      ...spec.checkerboardAlpha,
+    }));
+  }
+  if (spec.decorativeScatter) {
+    sourceBuffer = await composeDecorativeScatter({
+      source: sourceBuffer,
+      ...spec.decorativeScatter,
+    });
   }
   const sourceMetadata = await sharp(sourceBuffer).metadata();
   if (
@@ -419,11 +720,20 @@ export const deriveLoopingStrip = async ({
     spec.role !== 'ground' ||
     sourceEdgeAlphaCoverage.minimum + 1e-12 >= GROUND_MINIMUM_EDGE_ALPHA_COVERAGE;
   const renderScaleThresholds = thresholdsForRenderScale(spec);
+  const sourceSalience = await inspectVerticalSeamSalience(tileBuffer, {
+    foldX: mirrorRight ? tileMetadata.width / 2 : null,
+    bandPixels: Math.min(4, spec.edgeBandPixels),
+  });
   const renderScale = [];
   for (const viewport of spec.proofViewports) {
     const scaled = await sharp(tileBuffer).resize({height: viewport.renderHeight}).png().toBuffer();
     const scaledBand = Math.max(1, Math.round(spec.edgeBandPixels * viewport.renderHeight / tileMetadata.height));
     const metrics = await compareHorizontalEdgeBands(scaled, scaledBand, {mirrorRight});
+    const scaledMetadata = await sharp(scaled).metadata();
+    const seamSalience = await inspectVerticalSeamSalience(scaled, {
+      foldX: mirrorRight ? scaledMetadata.width / 2 : null,
+      bandPixels: Math.min(4, scaledBand),
+    });
     const geometry = resolveWorldStripTileGeometry({
       viewportWidth: viewport.width,
       viewportHeight: viewport.height,
@@ -446,6 +756,8 @@ export const deriveLoopingStrip = async ({
       edgeAlphaCoverage: await inspectHorizontalEdgeAlphaCoverage(scaled, scaledBand),
       thresholds: renderScaleThresholds,
       seamPassed: edgeMetricsPass(metrics, renderScaleThresholds),
+      seamSalience,
+      saliencePassed: seamSalience.passed,
       spanPassed: geometry.viewportSpan + 1e-9 >= spec.minimumViewportSpan,
     });
   }
@@ -457,6 +769,8 @@ export const deriveLoopingStrip = async ({
     axis: spec.axis,
     seamStrategy: spec.seamStrategy,
     canonicalTile: spec.canonicalTile,
+    alphaFeather: spec.alphaFeather ?? null,
+    edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
     edgeBandPixels: spec.edgeBandPixels,
     thresholds: spec.thresholds,
     renderScaleThresholds,
@@ -465,20 +779,27 @@ export const deriveLoopingStrip = async ({
     recoveryPolicy: spec.recoveryPolicy,
     sourceSurface,
     keying: spec.keying ?? null,
+    checkerboardAlpha: spec.checkerboardAlpha ?? null,
+    decorativeScatter: spec.decorativeScatter ?? null,
+    seamSaliencePolicy: SEAM_SALIENCE_POLICY,
   });
   if (
     !sourcePassed ||
+    !sourceSalience.passed ||
     !sourceGroundEdgePassed ||
-    renderScale.some(({seamPassed, spanPassed, edgeAlphaCoverage}) =>
+    renderScale.some(({seamPassed, saliencePassed, spanPassed, edgeAlphaCoverage}) =>
       !seamPassed ||
+      !saliencePassed ||
       !spanPassed ||
       (spec.role === 'ground' && edgeAlphaCoverage.minimum + 1e-12 < GROUND_MINIMUM_EDGE_ALPHA_COVERAGE),
     )
   ) {
     const failed = [
       ...(sourcePassed ? [] : ['source-resolution seam']),
+      ...(sourceSalience.passed ? [] : ['source-resolution seam salience']),
       ...(sourceGroundEdgePassed ? [] : ['source-resolution ground edge alpha coverage']),
       ...renderScale.filter(({seamPassed}) => !seamPassed).map(({profile}) => `${profile} render-scale seam`),
+      ...renderScale.filter(({saliencePassed}) => !saliencePassed).map(({profile}) => `${profile} seam salience`),
       ...renderScale.filter(({spanPassed}) => !spanPassed).map(({profile}) => `${profile} viewport span`),
       ...renderScale
         .filter(({edgeAlphaCoverage}) =>
@@ -492,7 +813,7 @@ export const deriveLoopingStrip = async ({
   await fs.writeFile(outputFile, tileBuffer);
   const outputSha256 = await sha256File(outputFile);
   const outputMetadata = await sharp(outputFile).metadata();
-  const keyingMetadataFile = sourceSurface.mode === 'chroma-key'
+  const keyingMetadataFile = ['chroma-key', BAKED_CHECKERBOARD_MODE].includes(sourceSurface.mode)
     ? `${outputFile}.key.json`
     : null;
   const keyingRecord = keyingMetadataFile
@@ -501,7 +822,9 @@ export const deriveLoopingStrip = async ({
       sourceAssetId: spec.sourceAssetId,
       sourceSha256,
       sourceSurface,
-      keying: spec.keying,
+      keying: spec.keying ?? null,
+      checkerboardAlpha: spec.checkerboardAlpha ?? null,
+      decorativeScatter: spec.decorativeScatter ?? null,
       outputSha256,
       ...keyingMetadata,
     }
@@ -528,9 +851,13 @@ export const deriveLoopingStrip = async ({
       recordId: sourceRecord.recordId,
       surface: sourceSurface,
       keying: spec.keying ?? null,
+      checkerboardAlpha: spec.checkerboardAlpha ?? null,
+      decorativeScatter: spec.decorativeScatter ?? null,
       keyingMetadataSha256,
     },
     canonicalTile: spec.canonicalTile,
+    alphaFeather: spec.alphaFeather ?? null,
+    edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
     output: {
       width: outputMetadata.width,
       height: outputMetadata.height,
@@ -575,9 +902,13 @@ export const deriveLoopingStrip = async ({
       derivation: 'looping-strip',
       sourceAssetId: spec.sourceAssetId,
       canonicalTile: spec.canonicalTile,
+      alphaFeather: spec.alphaFeather ?? null,
+      edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
       seamStrategy: spec.seamStrategy,
       sourceSurface,
       keying: spec.keying ?? null,
+      checkerboardAlpha: spec.checkerboardAlpha ?? null,
+      decorativeScatter: spec.decorativeScatter ?? null,
     },
     compositionBinding: {
       sceneId: spec.sceneId,
@@ -629,10 +960,14 @@ export const deriveLoopingStrip = async ({
       localDerivatives: 1,
       avoidedCalls: 1,
       seamStrategy: spec.seamStrategy,
+      alphaFeather: spec.alphaFeather ?? null,
+      edgeStabilizationPixels: spec.edgeStabilizationPixels ?? 0,
       sourceSurface,
       keyingMetadataSha256,
       thresholds: spec.thresholds,
       renderScaleThresholds,
+      seamSaliencePolicy: SEAM_SALIENCE_POLICY,
+      sourceSalience,
       sourceMetrics: {
         rgbMean: sourceMetrics.rgbMean,
         rgbMaximum: sourceMetrics.rgbMaximum,

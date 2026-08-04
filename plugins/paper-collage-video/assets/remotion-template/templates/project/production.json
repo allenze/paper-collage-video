@@ -18,6 +18,8 @@
     "storyboard": "projects/{{slug}}/storyboard.json",
     "prompts": "projects/{{slug}}/prompts.json",
     "review": "projects/{{slug}}/review.md",
+    "motionLanguageCard": null,
+    "motionApproval": null,
     "validationReport": null,
     "assetsReadySeal": null,
     "preview": null,

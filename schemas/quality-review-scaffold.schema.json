@@ -7,6 +7,7 @@
     "$schema",
     "schemaVersion",
     "projectSlug",
+    "reviewScope",
     "generatedAt",
     "sourceReport",
     "instructions",
@@ -14,11 +15,12 @@
   ],
   "properties": {
     "$schema": {"type": "string"},
-    "schemaVersion": {"const": 2},
+    "schemaVersion": {"const": 3},
     "projectSlug": {
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
     },
+    "reviewScope": {"enum": ["all", "style"]},
     "generatedAt": {"type": "string", "format": "date-time"},
     "sourceReport": {"$ref": "#/$defs/sourceReport"},
     "instructions": {"type": "string", "minLength": 1},
@@ -37,7 +39,7 @@
       "required": ["file", "schemaVersion", "fingerprint"],
       "properties": {
         "file": {"type": "string", "minLength": 1},
-        "schemaVersion": {"const": 5},
+        "schemaVersion": {"const": 7},
         "fingerprint": {"$ref": "#/$defs/fingerprint"}
       },
       "additionalProperties": false
@@ -81,7 +83,7 @@
         },
         "evidenceFiles": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1},
+          "items": {"$ref": "#/$defs/evidenceFile"},
           "uniqueItems": true
         },
         "note": {"type": "string"}
@@ -96,6 +98,15 @@
           "not": {"required": ["assetId"]}
         }
       ],
+      "additionalProperties": false
+    },
+    "evidenceFile": {
+      "type": "object",
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/fingerprint"}
+      },
       "additionalProperties": false
     }
   },

@@ -1,20 +1,23 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 12,
   "slug": "{{slug}}",
   "title": "{{title}}",
   "intake": {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "status": "pending",
     "aspectRatio": null,
     "visualStylePreset": null,
     "parallaxPreference": null,
     "styleCatalogVersion": null,
     "styleCatalogFingerprint": null,
+    "styleProfileFingerprint": null,
     "confirmedAt": null,
     "note": "",
     "updatedAt": "{{createdAt}}"
   },
+  "styleProfile": null,
+  "motionContract": null,
   "plan": {
     "schemaVersion": 4,
     "slug": "{{slug}}",
@@ -46,9 +49,26 @@
     "ink": "#4a291f",
     "subtitle": "#fff8ea",
     "subtitleBackground": "rgba(58, 25, 18, .72)",
-    "paperEdge": "#f5eedc",
     "foreground": "#8d251e",
-    "texture": "textures/paper-grain.png"
+    "surface": {
+      "texture": {
+        "src": "textures/paper-grain.png",
+        "opacity": 0.14,
+        "blendMode": "multiply"
+      },
+      "subjectEdge": {
+        "mode": "paper-outline",
+        "color": "#f5eedc",
+        "widthPx": 3
+      },
+      "subjectShadow": {
+        "mode": "drop-shadow",
+        "offsetXPx": 0,
+        "offsetYPx": 10,
+        "blurPx": 7,
+        "color": "rgba(20, 15, 12, .28)"
+      }
+    }
   },
   "voice": {
     "mode": "fictional",

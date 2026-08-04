@@ -15,14 +15,21 @@ import {
   createQualityReviewScaffold,
   prepareQualityReport,
   recordQualityReviews,
+  requiresTransparentAssetSurface,
 } from '../scripts/quality-lib.mjs';
 import {deriveTimeline, validateProject} from '../scripts/project-lib.mjs';
 import {resolvePythonCommand} from '../scripts/python-runtime.mjs';
-import {deriveSubtitleCues, segmentSubtitleText} from '../scripts/subtitle-lib.mjs';
+import {
+  defaultSubtitleMaximumCharacters,
+  deriveSubtitleCues,
+  ensureVisibleNarrationSubtitles,
+  segmentSubtitleText,
+} from '../scripts/subtitle-lib.mjs';
 import {createSubtitleContract} from '../scripts/subtitle-contract-lib.mjs';
 import {
   resolveSubtitleFadeFrames,
   resolveSubtitleLayout,
+  resolveSubtitleTypography,
 } from '../src/subtitleSurface.mjs';
 import {
   compileEditorialFixture,
@@ -121,22 +128,90 @@ test('request fingerprints ignore project-specific destinations but preserve gen
   assert.notEqual(registered, otherFamily);
 });
 
-test('quality scaffold exposes pending checks and current proof evidence without pre-approving them', () => {
+test('opaque registered source sheets do not pretend to require runtime alpha', () => {
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'prop',
+      reviewScope: 'source-asset',
+      outputSurface: {mode: 'layer-sheet'},
+    }),
+    false,
+  );
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'character',
+      reviewScope: 'source-asset',
+      outputSurface: {mode: 'chroma-key'},
+    }),
+    false,
+  );
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'character',
+      reviewScope: 'runtime-visible',
+      outputSurface: null,
+    }),
+    true,
+  );
+  assert.equal(
+    requiresTransparentAssetSurface({
+      kind: 'prop',
+      reviewScope: 'derivation-only',
+      registeredFamilyBinding: {
+        derivation: {sourceSurface: {mode: 'chroma-key'}},
+      },
+    }),
+    true,
+  );
+});
+
+test('quality scaffold binds pending checks to current proof hashes without pre-approving them', async () => {
+  const slug = `scaffold-${process.pid}`;
+  const publicDirectory = path.join(ROOT, 'public', 'projects', slug);
+  const distDirectory = path.join(ROOT, 'dist', slug);
+  const evidenceDirectory = path.join(distDirectory, 'evidence');
+  const relative = (file) => path.relative(ROOT, file);
+  const files = {
+    subject: path.join(publicDirectory, 'subject.png'),
+    reference: path.join(publicDirectory, 'reference.png'),
+    alpha: path.join(evidenceDirectory, 'alpha.png'),
+    checker: path.join(evidenceDirectory, 'checker.png'),
+    tight: path.join(evidenceDirectory, 'tight.png'),
+    stress: path.join(evidenceDirectory, 'stress.jpg'),
+    frame: path.join(distDirectory, 'frame.png'),
+    crop: path.join(distDirectory, 'crop.png'),
+    debug: path.join(distDirectory, 'debug.png'),
+    layerProof: path.join(distDirectory, 'layer-proof.png'),
+  };
+  await fs.mkdir(publicDirectory, {recursive: true});
+  await fs.mkdir(evidenceDirectory, {recursive: true});
+  for (const file of Object.values(files)) {
+    await sharp({
+      create: {width: 8, height: 8, channels: 4, background: '#884422'},
+    })
+      .toFormat(path.extname(file) === '.jpg' ? 'jpeg' : 'png')
+      .toFile(file);
+  }
+  try {
   const status = {
     report: {
+      styleProfile: {
+        referenceFile: relative(files.reference),
+      },
       assets: [{
         assetId: 'subject',
-        file: 'public/projects/scaffold/subject.png',
+        file: relative(files.subject),
         sources: ['scene:scene-01:node:subject-node'],
-        requiredChecks: ['subject-complete', 'silhouette-fidelity'],
-        semanticChecks: {'subject-complete': 'passed', 'silhouette-fidelity': 'pending'},
+        requiredChecks: ['subject-complete', 'silhouette-fidelity', 'style-profile-conformant'],
+        semanticChecks: {'subject-complete': 'passed', 'silhouette-fidelity': 'pending', 'style-profile-conformant': 'pending'},
         status: 'pending',
       }],
       composites: [{
         compositeId: 'group:scene-01:rig',
+        fingerprint: 'a'.repeat(64),
         memberNodeIds: ['subject-node'],
-        requiredChecks: ['support-contact'],
-        semanticChecks: {'support-contact': 'pending'},
+        requiredChecks: ['support-contact', 'style-profile-consistent'],
+        semanticChecks: {'support-contact': 'pending', 'style-profile-consistent': 'pending'},
         status: 'pending',
       }],
     },
@@ -144,39 +219,188 @@ test('quality scaffold exposes pending checks and current proof evidence without
   const compositionProof = {
     assetEvidence: [{
       nodeId: 'subject-node',
-      source: 'projects/scaffold/subject.png',
-      alphaMask: 'dist/scaffold/evidence/alpha.png',
-      checkerboard: 'dist/scaffold/evidence/checker.png',
-      tightCrop: 'dist/scaffold/evidence/tight.png',
-      motionStress: 'dist/scaffold/evidence/stress.jpg',
+      source: `projects/${slug}/subject.png`,
+      alphaMask: relative(files.alpha),
+      checkerboard: relative(files.checker),
+      tightCrop: relative(files.tight),
+      motionStress: relative(files.stress),
     }],
     composites: [{
       compositeId: 'group:scene-01:rig',
+      fingerprint: 'a'.repeat(64),
       proofFrames: [{
-        fullFrame: 'dist/scaffold/frame.png',
-        crop: 'dist/scaffold/crop.png',
-        debugFrame: 'dist/scaffold/debug.png',
+        fullFrame: relative(files.frame),
+        crop: relative(files.crop),
+        debugFrame: relative(files.debug),
       }],
+      layerStackProof: {
+        artifacts: {
+          neutralReconstruction: relative(files.layerProof),
+        },
+      },
     }],
   };
-  const scaffold = createQualityReviewScaffold({
+  await assert.rejects(
+    () => createQualityReviewScaffold({
+      status: structuredClone(status),
+      projectSlug: slug,
+      reviewer: 'host-vision',
+      compositionProof: {
+        ...compositionProof,
+        composites: compositionProof.composites.map((composite) => ({
+          ...composite,
+          fingerprint: 'b'.repeat(64),
+        })),
+      },
+    }),
+    /缺少与当前组合指纹一致的视觉证明/,
+  );
+  const scaffold = await createQualityReviewScaffold({
     status,
-    projectSlug: 'scaffold',
+    projectSlug: slug,
     reviewer: 'host-vision',
     compositionProof,
   });
   assert.equal(scaffold.reviews.length, 2);
-  assert.equal(scaffold.schemaVersion, 2);
+  assert.equal(scaffold.schemaVersion, 3);
   assert.match(scaffold.sourceReport.fingerprint, /^[a-f0-9]{64}$/);
   assert.ok(
     scaffold.reviews.every(({targetFingerprint}) =>
       /^[a-f0-9]{64}$/.test(targetFingerprint),
     ),
   );
-  assert.deepEqual(scaffold.reviews[0].pendingChecks, ['silhouette-fidelity']);
+  assert.deepEqual(scaffold.reviews[0].pendingChecks, [
+    'silhouette-fidelity',
+    'style-profile-conformant',
+  ]);
   assert.deepEqual(scaffold.reviews[0].passedChecks, []);
-  assert.ok(scaffold.reviews[0].evidenceFiles.includes('dist/scaffold/evidence/alpha.png'));
-  assert.ok(scaffold.reviews[1].evidenceFiles.includes('dist/scaffold/debug.png'));
+  assert.ok(scaffold.reviews[0].evidenceFiles.some(({file}) => file === relative(files.alpha)));
+  assert.ok(
+    scaffold.reviews[0].evidenceFiles.some(({file}) => file === relative(files.reference)),
+  );
+  assert.ok(scaffold.reviews[1].evidenceFiles.some(({file}) => file === relative(files.debug)));
+  assert.ok(
+    scaffold.reviews[1].evidenceFiles.some(
+      ({file}) => file === relative(files.layerProof),
+    ),
+  );
+  assert.ok(
+    scaffold.reviews[1].evidenceFiles.some(({file}) => file === relative(files.reference)),
+  );
+  assert.ok(
+    scaffold.reviews.every(({evidenceFiles}) =>
+      evidenceFiles.every(({sha256}) => /^[a-f0-9]{64}$/.test(sha256)),
+    ),
+  );
+
+  const styleScopedStatus = structuredClone(status);
+  styleScopedStatus.report.composites.push({
+    compositeId: 'group:scene-02:future-rig',
+    fingerprint: 'c'.repeat(64),
+    memberNodeIds: [],
+    requiredChecks: ['final-composition-readable'],
+    semanticChecks: {'final-composition-readable': 'pending'},
+    status: 'needs-revision',
+  });
+  const styleScoped = await createQualityReviewScaffold({
+    status: styleScopedStatus,
+    projectSlug: slug,
+    reviewer: 'host-vision',
+    compositionProof: {
+      composites: [{
+        compositeId: 'group:scene-02:future-rig',
+        fingerprint: 'c'.repeat(64),
+        proofFrames: [],
+      }],
+    },
+    styleProof: compositionProof,
+    reviewScope: 'style',
+  });
+  assert.equal(styleScoped.reviewScope, 'style');
+  assert.ok(
+    styleScoped.reviews.some(
+      ({compositeId}) => compositeId === 'group:scene-01:rig',
+    ),
+  );
+  assert.ok(
+    !styleScoped.reviews.some(
+      ({compositeId}) => compositeId === 'group:scene-02:future-rig',
+    ),
+  );
+  } finally {
+    await fs.rm(publicDirectory, {recursive: true, force: true});
+    await fs.rm(distDirectory, {recursive: true, force: true});
+  }
+});
+
+test('executable style profiles create one fingerprinted whole-film quality target', async () => {
+  const project = withCompiledEditorialFixture({
+    slug: 'style-profile-target',
+    styleProfile: {
+      id: 'hand-drawn-cutout-explainer',
+      profileFingerprint: 'a'.repeat(64),
+      quality: {
+        requiredCompositeChecks: ['style-profile-consistent'],
+      },
+    },
+    theme: {
+      canvas: '#000000',
+      sceneBackground: '#111111',
+      accent: '#ffffff',
+      ink: '#ffffff',
+      subtitle: '#ffffff',
+      subtitleBackground: '#000000',
+      foreground: '#111111',
+      surface: {
+        texture: {src: 'textures/paper-grain.png', opacity: 0.14, blendMode: 'multiply'},
+        subjectEdge: {mode: 'paper-outline', color: '#ffffff', widthPx: 3},
+        subjectShadow: {
+          mode: 'drop-shadow',
+          offsetXPx: 0,
+          offsetYPx: 10,
+          blurPx: 7,
+          color: 'rgba(20,15,12,.28)',
+        },
+      },
+    },
+    video: {width: 100, height: 100, fps: 30},
+    audio: {narration: {volume: 1}},
+    scenes: [{
+      id: 'scene',
+      label: 'Scene',
+      eyebrow: '',
+      tailSeconds: 0,
+      motion: {
+        blueprint: 'layered-reveal',
+        intensity: 1,
+        seed: 1,
+        proofTimes: [{
+          id: 'final',
+          at: 0.9,
+          label: 'Final',
+          kind: 'final',
+          assertions: ['Style is readable'],
+          stateAssertions: [],
+        }],
+      },
+      camera: {preset: 'static', intensity: 0},
+      narration: {src: 'missing.wav', startSeconds: 0, durationSeconds: 1, text: 'x'},
+      subtitles: [],
+      events: [],
+      composition: {
+        coordinateSpace: {width: 100, height: 100},
+        nodes: [],
+      },
+    }],
+    sceneTransitions: [],
+  });
+  const targets = await collectCompositeQualityTargets(project);
+  const target = targets.find(
+    ({compositeId}) =>
+      compositeId === 'style-profile:hand-drawn-cutout-explainer',
+  );
+  assert.deepEqual(target.requiredChecks, ['style-profile-consistent']);
+  assert.match(target.fingerprint, /^[a-f0-9]{64}$/);
 });
 
 test('v9 scene transitions use one seconds-based intent-routed opaque-boundary protocol', () => {
@@ -200,8 +424,8 @@ test('v9 scene transitions use one seconds-based intent-routed opaque-boundary p
       },
     ],
     sceneTransitions: [
-      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', treatment: {type: 'paper-wipe', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.4}},
-      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', treatment: {type: 'dip-to-paper', motivation: 'authored', durationSeconds: 0.4}},
+      {id: 'one-two', fromSceneId: 'one', toSceneId: 'two', intent: 'location-change', rationale: 'Move the paper stage into a new location.', treatment: {type: 'wipe', edgeStyle: 'paper', motivation: 'authored', direction: 'left-to-right', durationSeconds: 0.4}},
+      {id: 'two-three', fromSceneId: 'two', toSceneId: 'three', intent: 'chapter-reset', rationale: 'Close the chapter behind opaque paper.', treatment: {type: 'dip', edgeStyle: 'paper', motivation: 'authored', durationSeconds: 0.4}},
     ],
   });
   assert.equal(timeline.scenes[0].from, 0);
@@ -210,7 +434,7 @@ test('v9 scene transitions use one seconds-based intent-routed opaque-boundary p
   assert.equal(timeline.durationInFrames, 216);
 });
 
-test('pre-v10 projects are rejected instead of migrated', async () => {
+test('pre-v12 projects are rejected instead of migrated', async () => {
   const report = await validateProject({
     schemaVersion: 1,
     slug: 'old-project',
@@ -224,14 +448,14 @@ test('pre-v10 projects are rejected instead of migrated', async () => {
   assert.ok(
     report.issues.some(
       ({code, message}) =>
-          code === 'schema-version' && message.includes('必须为 10'),
+          code === 'schema-version' && message.includes('必须为 12'),
     ),
   );
 });
 
-test('v10 projects require an explicit bounded narration gain', async () => {
+test('v12 projects require an explicit bounded narration gain', async () => {
   const base = {
-    schemaVersion: 10,
+    schemaVersion: 12,
     slug: 'narration-gain-test',
     title: 'Narration gain test',
     quality: {minimumAssetScale: 1},
@@ -323,6 +547,39 @@ test('subtitle segmentation keeps Chinese closing punctuation with its sentence'
   assert.ok(segments.every((segment) => !/^[”’」』）》】〕〉》]/u.test(segment)));
 });
 
+test('subtitle segmentation preserves phrase spaces and balances punctuation-free text', () => {
+  const text =
+    '古时候有个农夫 每天早早下田 挥着锄头 一心一意地照料庄稼';
+  const segments = segmentSubtitleText(text, 16);
+  assert.deepEqual(segments, [
+    '古时候有个农夫 每天早早下田',
+    '挥着锄头 一心一意地照料庄稼',
+  ]);
+  assert.equal(
+    segments.join(' ').replace(/\s+/gu, ' '),
+    text.replace(/\s+/gu, ' '),
+  );
+  assert.ok(
+    segments.every(
+      (segment) => [...segment.replace(/\s/gu, '')].length <= 16,
+    ),
+  );
+
+  const balanced = segmentSubtitleText('甲'.repeat(30), 28);
+  assert.deepEqual(
+    balanced.map((segment) => [...segment].length),
+    [15, 15],
+  );
+  assert.equal(
+    defaultSubtitleMaximumCharacters({width: 1920, height: 1080}),
+    18,
+  );
+  assert.equal(
+    defaultSubtitleMaximumCharacters({width: 1080, height: 1920}),
+    16,
+  );
+});
+
 test('subtitle fades stay monotonic for short cues and layout honors portrait safe area', () => {
   const fades = Array.from({length: 12}, (_, index) =>
     resolveSubtitleFadeFrames({from: 0, to: index + 1}),
@@ -341,6 +598,42 @@ test('subtitle fades stay monotonic for short cues and layout honors portrait sa
   assert.ok(layout.bottomPixels > 96);
   assert.ok(layout.leftPercent >= 8);
   assert.ok(layout.rightPercent >= 8);
+});
+
+test('subtitle typography can use a screen font and crisp non-blurred edge independently of the theme', () => {
+  const typography = resolveSubtitleTypography({
+    appearance: {
+      variant: 'boxed',
+      fontFamily: '"PingFang SC", sans-serif',
+      fontWeight: 600,
+      edgeTreatment: 'crisp-outline',
+    },
+    theme: {fontFamily: 'STKaiti, serif'},
+    scale: 0.5,
+  });
+  assert.equal(typography.contract, 'subtitle-typography-v1');
+  assert.equal(typography.fontFamily, '"PingFang SC", sans-serif');
+  assert.equal(typography.fontWeight, 600);
+  assert.equal(typography.edgeTreatment, 'crisp-outline');
+  assert.doesNotMatch(typography.textShadow, /14px/u);
+  assert.doesNotMatch(typography.textShadow, /blur/u);
+});
+
+test('subtitle derivation restores visible crisp subtitles for narrated scenes', () => {
+  const scene = {
+    narration: {
+      src: 'projects/example/narration.mp3',
+      durationSeconds: 2,
+    },
+    subtitles: [{fromSeconds: 0, toSeconds: 2, text: '清晰字幕'}],
+    appearance: {subtitles: {variant: 'hidden'}},
+  };
+  assert.equal(ensureVisibleNarrationSubtitles(scene), true);
+  assert.deepEqual(scene.appearance.subtitles, {
+    variant: 'boxed',
+    edgeTreatment: 'crisp-outline',
+  });
+  assert.equal(ensureVisibleNarrationSubtitles(scene), false);
 });
 
 test('subtitle delivery contract checks transcript, timing, safe area, and font source', async () => {
@@ -375,6 +668,19 @@ test('subtitle delivery contract checks transcript, timing, safe area, and font 
   assert.equal(contract.passed, true);
   assert.equal(contract.summary.requiredScenes, 1);
   assert.ok(contract.checks.every(({passed}) => passed));
+  assert.deepEqual(
+    contract.checks.find(({id}) => id === 'subtitle-segmentation-surface')
+      .actual,
+    [
+      {
+        sceneId: 'race',
+        maximumCharactersPerCue: 16,
+        longestCueCharacters: 7,
+        cueCount: 1,
+        phraseSpacingPresent: false,
+      },
+    ],
+  );
 
   const broken = await createSubtitleContract({
     ...project,
@@ -480,7 +786,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
                     src: `projects/${slug}/assets/characters/alpha/hero.png`,
                     z: 1,
                     transform: {x: 0.5, y: 1, width: 0.2, anchorX: 0.5, anchorY: 1},
-                    motion: {keyframes: [{at: 0, y: 0}, {at: 1, y: 0}]},
+                    motion: {keyframes: [{at: 0, offsetY: 0}, {at: 1, offsetY: 0}]},
                   },
                 ],
               },
@@ -550,7 +856,7 @@ test('required asset quality resets on hashes and batch reviews write atomically
 
     const built = await buildQualityReviewScaffold({slug, reviewer: 'test-vision'});
     assert.ok(built.scaffold.reviews.every(({evidenceFiles}) => evidenceFiles.length > 0));
-    assert.equal(built.scaffold.schemaVersion, 2);
+    assert.equal(built.scaffold.schemaVersion, 3);
     assert.equal(
       built.scaffold.sourceReport.fingerprint,
       built.status.report.reviewSurfaceFingerprint,
@@ -703,7 +1009,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
     slot,
     registrationId: 'boat-family',
     transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-    motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+    motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
   });
   try {
     await fs.mkdir(publicDirectory, {recursive: true});
@@ -728,7 +1034,7 @@ test('asset approval cannot bypass a pending or stale supported-subject composit
             id: 'boat-rig', kind: 'group', pattern: 'supported-subject', z: 0,
             coordinateSpace: {width: 100, height: 100},
             transform: {x: 0, y: 0, width: 1, height: 1, anchorX: 0, anchorY: 0},
-            motion: {keyframes: [{at: 0, x: 0}, {at: 1, x: 0}]},
+            motion: {keyframes: [{at: 0, offsetX: 0}, {at: 1, offsetX: 0}]},
             registration: {id: 'boat-family', sourceMasterAssetId: 'boat-master', canvas: {width: 100, height: 100}, origin: 'top-left'},
             support: {
               subjectId: 'traveler', contactAnchor: {x: 0.5, y: 0.7},

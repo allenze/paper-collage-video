@@ -1,8 +1,195 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 12,
   "slug": "starter-demo",
   "title": "Paper Collage Starter",
+  "intake": {
+    "schemaVersion": 2,
+    "status": "confirmed",
+    "aspectRatio": "16:9",
+    "visualStylePreset": "childrens-picture-book-paper",
+    "parallaxPreference": "auto",
+    "styleCatalogVersion": "2026-07-30.2",
+    "styleCatalogFingerprint": "23cac75124f93100ffdf08ad61cae9cd68d7872c8f87886de17d63d613b9135f",
+    "styleProfileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
+    "confirmedAt": "2026-01-01T00:00:00.000Z",
+    "note": "Bundled fixture",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "styleProfile": {
+    "schemaVersion": 2,
+    "id": "childrens-picture-book-paper",
+    "label": "儿童绘本纸片",
+    "summary": "圆润、温暖、层次清楚，适合儿童故事和轻松寓言。",
+    "catalogVersion": "2026-07-30.2",
+    "catalogFingerprint": "23cac75124f93100ffdf08ad61cae9cd68d7872c8f87886de17d63d613b9135f",
+    "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
+    "referenceImage": "style-catalog/childrens-picture-book-paper.png",
+    "generation": {
+      "promptDirectives": [
+        "Use rounded hand-cut paper shapes with warm watercolor grain and soft child-friendly proportions.",
+        "Keep faces, silhouettes, and foreground actions simple, readable, and emotionally clear."
+      ],
+      "negativeDirectives": [
+        "Photorealism, hard 3D plastic surfaces, and dense adult editorial detail."
+      ],
+      "compositionPrinciples": [
+        "Favor broad color blocks and generous breathing room around the main action.",
+        "Use three clearly separated paper depths without hiding the character silhouette."
+      ],
+      "preferredSurfaces": [
+        "alpha",
+        "opaque",
+        "layer-sheet"
+      ]
+    },
+    "motion": {
+      "pacing": "gentle",
+      "preferredIdlePresets": [
+        "breathe",
+        "float",
+        "sway"
+      ],
+      "transitionSet": "paper-story",
+      "visualSfx": {
+        "policy": "rare",
+        "maxPerScene": 1,
+        "allowedKinds": [
+          "impact",
+          "motion"
+        ],
+        "durationRangeSeconds": [
+          0.2,
+          0.55
+        ]
+      }
+    },
+    "render": {
+      "theme": {
+        "canvas": "#6f3d2f",
+        "sceneBackground": "#d89b63",
+        "accent": "#d65a4a",
+        "ink": "#4a3027",
+        "subtitle": "#fff8e8",
+        "subtitleBackground": "rgba(74, 48, 39, .78)",
+        "foreground": "#9f563d",
+        "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
+        "surface": {
+          "texture": {
+            "src": "textures/paper-grain.png",
+            "opacity": 0.14,
+            "blendMode": "multiply"
+          },
+          "subjectEdge": {
+            "mode": "paper-outline",
+            "color": "#fff4dc",
+            "widthPx": 4
+          },
+          "subjectShadow": {
+            "mode": "drop-shadow",
+            "offsetXPx": 0,
+            "offsetYPx": 8,
+            "blurPx": 8,
+            "color": "rgba(64, 39, 28, .24)"
+          }
+        }
+      }
+    },
+    "quality": {
+      "requiredAssetChecks": [
+        "style-consistent",
+        "style-profile-conformant"
+      ],
+      "requiredCompositeChecks": [
+        "style-profile-consistent"
+      ],
+      "reviewFocus": [
+        "Rounded warm paper shapes match the selected reference card.",
+        "The frame remains inviting, uncluttered, and readable for children."
+      ]
+    }
+  },
+  "motionContract": {
+    "schemaVersion": 1,
+    "direction": {
+      "schemaVersion": 1,
+      "summary": "先建立纸面空间，再让主体完成清晰动作，最后留出可读稳定段。",
+      "pacing": "gentle",
+      "performance": {
+        "grammar": [
+          "establish",
+          "action",
+          "settle"
+        ],
+        "anticipation": "selective",
+        "followThrough": "selective",
+        "poseStrategy": "mixed",
+        "minimumFinalHoldRatio": 0.1
+      },
+      "camera": {
+        "strategy": "motivated"
+      },
+      "transitions": {
+        "strategy": "story-led"
+      },
+      "ambient": {
+        "strategy": "selective"
+      },
+      "styleDeviationRationale": null
+    },
+    "styleProfileBinding": {
+      "id": "childrens-picture-book-paper",
+      "profileFingerprint": "2188718c60920f8709f9e74c14175a6800f2a5a3695ce34b9c27ca94800c7f2e",
+      "pacing": "gentle"
+    },
+    "scenes": [
+      {
+        "sceneId": "starter",
+        "motionPolicy": "standard",
+        "phrases": [
+          {
+            "role": "establish",
+            "beatId": "establish",
+            "at": 0,
+            "proofTimeId": "proof-establish"
+          },
+          {
+            "role": "action",
+            "beatId": "subject-arrives",
+            "at": 0.5,
+            "proofTimeId": "proof-action"
+          },
+          {
+            "role": "settle",
+            "beatId": "lockup",
+            "at": 0.9,
+            "proofTimeId": "proof-final"
+          }
+        ],
+        "heroActionBeatIds": [
+          "subject-arrives"
+        ],
+        "stateSequenceTreatmentIds": [],
+        "continuousTreatmentIds": [],
+        "cameraTreatmentIds": [],
+        "ambientTreatmentIds": [],
+        "finalHoldRatio": 0.1,
+        "exception": null
+      }
+    ],
+    "transitions": [],
+    "editorialFingerprint": "d42157ad921b36c1976ae7b1220dcb4da544af88fe600532426877cd2d1eee61",
+    "requiredCompositeChecks": [
+      "motion-grammar-consistent",
+      "pacing-cadence-consistent",
+      "camera-strategy-consistent",
+      "transition-strategy-consistent",
+      "ambient-strategy-consistent",
+      "sync-anchors-current"
+    ],
+    "approvalFingerprint": "13f317323e6777f5a858bc95a5165b3ced4cbb2efa6e6516de87535affb57a5d",
+    "fingerprint": "1ae3150d35c2e272a042b9d3651b6cb5c6cffe16ab529968edeca9dfb077a320"
+  },
   "plan": {
     "schemaVersion": 4,
     "slug": "starter-demo",
@@ -51,15 +238,33 @@
     "fps": 30
   },
   "theme": {
-    "canvas": "#6e1e19",
-    "sceneBackground": "#8a271f",
-    "accent": "#a33a2d",
-    "ink": "#4a291f",
-    "subtitle": "#fff8ea",
-    "subtitleBackground": "rgba(58, 25, 18, .72)",
-    "paperEdge": "#f5eedc",
-    "foreground": "#8d251e",
-    "texture": "textures/paper-grain.png"
+    "canvas": "#6f3d2f",
+    "sceneBackground": "#d89b63",
+    "accent": "#d65a4a",
+    "ink": "#4a3027",
+    "subtitle": "#fff8e8",
+    "subtitleBackground": "rgba(74, 48, 39, .78)",
+    "foreground": "#9f563d",
+    "fontFamily": "STKaiti, KaiTi, \"Noto Serif SC\", serif",
+    "surface": {
+      "texture": {
+        "src": "textures/paper-grain.png",
+        "opacity": 0.14,
+        "blendMode": "multiply"
+      },
+      "subjectEdge": {
+        "mode": "paper-outline",
+        "color": "#fff4dc",
+        "widthPx": 4
+      },
+      "subjectShadow": {
+        "mode": "drop-shadow",
+        "offsetXPx": 0,
+        "offsetYPx": 8,
+        "blurPx": 8,
+        "color": "rgba(64, 39, 28, .24)"
+      }
+    }
   },
   "voice": {
     "mode": "fictional",
@@ -180,20 +385,20 @@
               "keyframes": [
                 {
                   "at": 0,
-                  "x": -0.01,
+                  "offsetX": -0.01,
                   "opacity": 0.72,
                   "ease": "ease-out"
                 },
                 {
                   "at": 0.5,
-                  "x": 0.003,
+                  "offsetX": 0.003,
                   "scale": 1.03,
                   "opacity": 1,
                   "ease": "ease-in-out"
                 },
                 {
                   "at": 1,
-                  "x": 0,
+                  "offsetX": 0,
                   "scale": 1,
                   "opacity": 1,
                   "ease": "ease-out"

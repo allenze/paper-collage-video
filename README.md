@@ -3,11 +3,11 @@
 [![CI](https://github.com/cyberlesterr/paper-collage-video/actions/workflows/ci.yml/badge.svg)](https://github.com/cyberlesterr/paper-collage-video/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-一个配置驱动的本地纸片分层视频生产系统。人负责内容意图、审美选择和最终批准；Codex 与本地工具负责节奏故事板、素材组织、分层关键帧、持久显隐与视听事件、旁白同步、渲染和技术验收。
+一个配置驱动的本地插画视频生产系统，既支持纸片分层，也支持漫画化视觉语言。人负责内容意图、审美选择和最终批准；Codex 与本地工具负责节奏故事板、素材组织、分层关键帧、持久显隐与视听事件、旁白同步、渲染和技术验收。
 
-当前开发协议为 project/storyboard v10（editorial subsystem 仍为 v9）；旧项目不会自动迁移或回退。v10 保留递归组合、注册源家族、camera-coupled parallax、节奏硬切、确定性 `motif-field`、统一 edit point、编辑型字体、解释型注释、数据驱动 SVG、三画幅导演计划与高级编辑切换，并新增生图前的 layer-complete source package、`registered-depth-stack`、responsive reveal envelope 和精确 provider/local/avoided 调用账目。所有这些行为都由 authoring、compiled plan、运行时、质量报告和正式证明共同约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
+当前开发协议为 project/storyboard v12（editorial subsystem 仍为 v9）；旧项目不会自动迁移或回退。v12 在既有递归组合、注册源家族、camera-coupled parallax、节奏硬切、确定性 `motif-field`、统一 edit point、编辑型字体、说明图、layer-complete source package 和精确调用账目的基础上，加入动态 Style Catalog、与纸张无关的中性表面主题、Profile 驱动的 `paper-story|clean-video` 转场集合、只服务离散碰撞/运动音效的可编辑视觉拟声字，以及绑定注册循环帧、切线自动朝向、景深视角循环和世界边界摄像机跟随的三维 Bézier 路径运动。所有行为都由 authoring、compiled plan、运行时、质量报告和正式证明共同约束。插件发行包带一个 2 秒低电平测试音技术夹具 `starter-demo`。
 
-当前公开稳定版本为 [`0.8.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.8.0)，仓库中正在验证的开发版为 `0.16.0-dev.8`。新协议加入节奏故事板、注册组合模式、完整图层源包、provider-native observed key plane、逐格 opaque/chroma-key registered sheet、rejected-output recovery-source、人工批准的精确图片 attempt 上限、本地关键帧、持久显隐/短暂强调/声音共源事件、7 种动画纸张转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、无缝 looping world strips、camera-compensated world-motion proof、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
+当前公开稳定版本为 [`0.19.0`](https://github.com/cyberlesterr/paper-collage-video/releases/tag/v0.19.0)。新协议加入节奏故事板、注册组合模式、完整图层源包、provider-native observed key plane、逐格 opaque/chroma-key registered sheet、rejected-output recovery-source、人工批准的精确图片 attempt 上限、本地关键帧、持久显隐/短暂强调/声音共源事件、两套确定性视频转场与意图路由、人物/拓扑/机构/说明图语义契约、真实生成尝试账本、VOX Phase 2 编辑系统、registered-family 本地派生、无缝 looping world strips、三维 Bézier 路径运动与景深视角循环、camera-compensated world-motion proof、整片可执行 Motion Contract、双尺度低 alpha 矩形残留检测与资产/组合双质量门；功能和协议仍可能在 `1.0.0` 前调整。
 
 ## 完整演示
 
@@ -15,14 +15,14 @@
 
 Release 页的旧演示用于展示上一代质量门、六幕时间线、景深运动、字幕、虚构旁白和技术验收能力，不代表当前 v9 数据合同；使用边界见 [ASSET_LICENSES.md](ASSET_LICENSES.md)。
 
-当前 v10 还保留一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、带排除区与循环证明的固定种子 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
+当前 v12 还保留一个 6 秒、零生图调用的 VOX 工程样片。它同时覆盖三层 camera-coupled parallax、带排除区与循环证明的固定种子 `motif-field`、可编辑大字标题，以及绑定边界节拍的 rhythmic cut：
 
 ```bash
 npm run sample:vox
 npm run sample:vox:verify
 ```
 
-输入与正式证明合同位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`，证明报告与固定帧联系表位于 `dist/vox-primitives/proof/`。验证命令会绑定 v10 项目/故事板、runtime build、全部夹具素材、编码规格、六个 proof time 与第 90 帧 rhythmic cut。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
+输入与正式证明合同位于 `fixtures/vox-primitives/`，输出为 `dist/vox-primitives/preview.mp4`，证明报告与固定帧联系表位于 `dist/vox-primitives/proof/`。验证命令会绑定 v12 项目/故事板、runtime build、全部夹具素材、编码规格、六个 proof time 与第 90 帧 rhythmic cut。该夹具用于验证可复现的制作原语，不替代带旁白、音乐和人工质量审查的正式成片。
 
 Phase 2 另带完全本地、无需 provider 的三画幅 proof gallery：
 
@@ -82,14 +82,14 @@ codex plugin add paper-collage-video@paper-collage-video
 用 $make-paper-collage-video 做一条约 30 秒的玄奘西行纸片分层视频。
 ```
 
-Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于插件包中。标题型请求先用三张内置对比图选择画幅、视觉风格和视差偏好，再比较轻量成片、均衡动画、完整纵深三个故事/制作/成本方案；选定方案、精确预算和 provider 后才允许任何图片调用。之后只在故事专属风格/虚构音色/运动证明和预览节点停下来。正式成片在本地技术验收通过后即完成交付，只有真正上传、发送或发布时才请求一次外部操作授权。中断后用精简的 `project:resume` 从未完成批次继续。
+Skill 的维护源位于 `skills/make-paper-collage-video/`，发行副本位于插件包中。标题型请求先展示动态内置风格目录，选择画幅、视觉风格和视差偏好，再比较轻量成片、均衡动画、完整纵深三个故事/制作/成本方案；选定方案、精确预算和 provider 后才允许任何图片调用。之后只在故事专属风格/虚构音色/运动证明和预览节点停下来。正式成片在本地技术验收通过后即完成交付，只有真正上传、发送或发布时才请求一次外部操作授权。中断后用精简的 `project:resume` 从未完成批次继续。
 
 ## 人在流程中的位置
 
 正常制作一条新视频时，人参与四个内容节点：
 
-1. 选择 16:9 / 9:16、三种内置视觉风格之一和分层视差偏好。
-2. 比较三档故事与制作方案，一次确认所选 scenario、Storyboard v10、精确图片上限和文本/生图/虚构语音 provider。
+1. 选择 16:9 / 9:16、当前内置目录中的一种视觉风格和分层视差偏好。
+2. 比较三档故事与制作方案，一次确认所选 scenario、Storyboard v12、精确图片上限和文本/生图/虚构语音 provider。
 3. 确认故事专属风格样张、短试听和 3–5 秒动作证明。
 4. 查看 `preview.mp4`，批准或用自然语言提出修改意见。
 
@@ -163,7 +163,7 @@ public/projects/silk-road/
   audio/sfx/
 ```
 
-新项目先处于 `capability-review`。`project:intake` 用三张内置文生图风格卡收集画幅、视觉风格和视差偏好；风格卡在插件开发时一次生成并随包分发，用户选择时不调用 provider。`project:scenarios` 再用共同故事骨架比较轻量成片、均衡动画和完整纵深的时长、幕数、动作、分层、预计调用、建议 cap 和 hard ceiling，全程不调用 provider。选定方案后，Creative Plan v4 写入 scenario 指纹和 `profilePromise`，Storyboard v10 同时检查制作上限与质量下限。人一次确认 `scenarioDecision`、故事板、概念、精确 `sourcePackageDecision`、`budgetDecision.imageAttemptLimit` 和三类 provider 后，`project:confirm-concept` 才允许进入故事专属风格样张阶段。可以用 `--dry-run` 预览将创建的路径而不写文件：
+新项目先处于 `capability-review`。`project:intake` 用动态内置风格目录收集画幅、视觉风格和视差偏好；风格卡在插件开发时一次生成并随包分发，用户选择时不调用 provider。`project:scenarios` 再用共同故事骨架比较轻量成片、均衡动画和完整纵深的时长、幕数、动作、分层、预计调用、建议 cap 和 hard ceiling，全程不调用 provider。选定方案后，Creative Plan v4 写入 scenario 指纹和 `profilePromise`，Storyboard v12 同时检查制作上限、动作语言与质量下限。人一次确认 `scenarioDecision`、故事板、概念、精确 `sourcePackageDecision`、`budgetDecision.imageAttemptLimit` 和三类 provider 后，`project:confirm-concept` 才允许进入故事专属风格样张阶段。可以用 `--dry-run` 预览将创建的路径而不写文件：
 
 ```bash
 npm run project:new -- silk-road --title="玄奘西行" --dry-run
@@ -174,10 +174,10 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | 命令 | 作用 |
 |---|---|
 | `npm run project:new -- <slug>` | 创建人类简报、机器配置和素材目录 |
-| `npm run project:intake -- <slug> --json` | 输出画幅、三张内置风格卡与视差偏好的初始选择 |
+| `npm run project:intake -- <slug> --json` | 输出画幅、动态内置风格卡与视差偏好的初始选择 |
 | `npm run project:scenarios -- <slug> --input=<file> --json` | 编译共同故事骨架和三档故事/制作/成本卡 |
 | `npm run project:plan -- <slug> --scenario=<id>` | 将人选中的 scenario 锁定为 Creative Plan、预算上限和质量下限 |
-| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v10 节拍 treatments、layer source packages、edit points、三画幅导演计划、高级切换、多维风格证明与证明时刻 |
+| `npm run project:storyboard -- <slug> --input=<file>` | 编译并锁定 Storyboard v12 整片动作方向、节拍角色/treatments、layer source packages、edit points、三画幅导演计划、高级切换、多维风格证明与证明时刻 |
 | `npm run project:revise-preview-directing -- <slug> --input=<file>` | 在预览退回后保护概念/风格并按既定 motion budget 正式重编导演字段 |
 | `npm run project:semantic-contracts -- <slug> --input=<file>` | 锁定人物身份、结构拓扑、功能机构、说明图和证明目标 |
 | `npm run project:confirm-concept -- <slug> --input=<file>` | 一次记录概念、预算和 text/image/voice provider 决定 |
@@ -200,16 +200,16 @@ npm run project:new -- silk-road --title="玄奘西行" --dry-run
 | `npm run project:review-sync -- <slug>` | 从生产状态重新生成 `review.md` 的审批摘要 |
 | `npm run project:advance -- <slug> <action>` | 记录明确的审批或确定性阶段完成事件 |
 | `npm run project:composition-proof -- <slug> [--force]` | 用无字幕 proof 输入和 `composition-proof` runtime surface 指纹增量生成关系/语义证明；字幕独立改动不清空资产/组合审核，`--force` 显式禁用全部证明缓存 |
-| `npm run project:assets-ready -- <slug>` | 一次完成旁白同步、字幕、v10 composition/v9 editorial 校验、证明指纹与双质量门和阶段推进 |
+| `npm run project:assets-ready -- <slug>` | 一次完成动作批准核对、旁白同步、字幕、v12 composition/motion contract/v9 editorial 校验、证明指纹与资产/组合/整片动作质量门和阶段推进 |
 | `npm run project:audio-calibration -- <slug> propose` | 为当前旁白与时间线生成带指纹的响度校准草案 |
 | `npm run project:sync -- <slug>` | 低层恢复命令：用 ffprobe 写回真实旁白时长 |
 | `npm run project:subtitles -- <slug>` | 低层恢复命令：同步或生成字幕时间 |
 | `npm run project:quality -- <slug> record-batch --input=<file>` | 原子记录与哈希/组合指纹绑定的资产或组合语义检查 |
-| `npm run project:validate -- <slug>` | 检查 v10 组合/源包、edit-point 帧映射、编辑原语、注册/支撑、场景交接、字幕和时长 |
+| `npm run project:validate -- <slug>` | 检查 v12 动作契约、组合/源包、edit-point 帧映射、编辑原语、注册/支撑、场景交接、字幕和时长 |
 | `npm run project:preview -- <slug>` | 校验后渲染 50% 预览，并生成报告 |
 | `npm run project:render -- <slug>` | 校验后渲染正式成片，并生成报告 |
 | `npm run project:report -- <slug>` | 对已有成片生成技术报告和关键帧联系表 |
-| `npm run style:proof -- <slug>` | 用真实 v10 组合生成覆盖语义、注册深度家族、耦合关系与状态序列的 schema-v6 多目标样式证明 |
+| `npm run project:style-proof -- <slug>` | 用真实 v12 组合生成覆盖语义、注册深度家族、耦合关系与状态序列并绑定动作契约双指纹的 schema-v7 多目标样式证明 |
 | `npm run sample:vox:verify` | 对 VOX 工程样片生成固定帧联系表，并校验媒体、边界、素材与 runtime 指纹 |
 | `npm run doctor -- --ready` | 检查 Node、FFmpeg、ffprobe、npm 和 Python 图像依赖 |
 | `npm run plugin:sync` | 从维护源重新生成插件 Skill 和轻量 Remotion 工作区模板 |
@@ -272,8 +272,8 @@ python3 scripts/remove_chroma_key.py --input KEY.png --out ALPHA.png --key-color
 - `theme`：纸张、字幕、描边和前景颜色。
 - `voice`：虚构音色或后续可选的克隆音色元数据。
 - `audio`：旁白、背景音乐和必填 LUFS/true-peak 交付规格。
-- `scenes`：故事板蓝图、带断言的证明时刻、递归 `composition` 树、本地 keyframe、旁白、逐节拍持久/短暂/声音事件和字幕。
-- `sceneTransitions`：每对相邻场景唯一的交接契约。`intent` 只声明 `continuity | location-change | time-passage | focus-reveal | chapter-reset | impact` 叙事意图，`treatment` 独立声明执行方式。普通意图默认路由到注册纸张转场，也可用绑定边界节拍的 `motivation=rhythmic` 硬切；`impact` 则使用 `motivation=impact` 硬切。
+- `scenes`：故事板蓝图、带断言的证明时刻、递归 `composition` 树、本地 keyframe、旁白、逐节拍持久/短暂/声音事件和字幕。节点 keyframe 的位移字段为相对父级的 `offsetX`/`offsetY`；绝对布局仍使用 `transform.x`/`transform.y`，相机 keyframe 的 `x`/`y` 仍是像素。
+- `sceneTransitions`：每对相邻场景唯一的交接契约。`intent` 只声明 `continuity | location-change | time-passage | focus-reveal | chapter-reset | impact` 叙事意图，`treatment` 独立声明执行方式。普通意图按 Style Profile 的 `paper-story|clean-video` 集合路由到确定性视频转场，也可用绑定边界节拍的 `motivation=rhythmic` 硬切；`impact` 则使用 `motivation=impact` 硬切。
 - `camera.parallax` 与节点 `depth=-1..1`：由同一镜头运动确定性驱动背景/焦平面/前景差速，不接受没有实际镜头运动或没有景深层次的伪视差。
 - `motif-field`：用一个带固定 `seed`、安全区、数量上限、分布和内部运动的节点展开重复装饰素材，无需手写几十个图片节点。
 
@@ -306,7 +306,7 @@ round(旁白开始秒数 × fps) + ceil(真实旁白秒数 × fps) + ceil(尾部
 - 字幕范围、重叠、越界、单条长度和阅读速度。
 - 支撑主体在各证明时刻是否仍位于接触区，注册环境是否只声明一次语义区域。
 
-`project:quality` 同时检查单文件和跨文件组合；文件哈希变化使资产审查失效，成员、mask、变换、环境边界、事件、场景交接或证明变化使对应组合审查失效。`project:report` 继续检查成片编码、分辨率、帧率、音轨、响度/峰值，并纳入事件时间线、场景边界联系表和真实组合证明摘要。
+`project:quality` 同时检查单文件和跨文件组合；文件哈希变化使资产审查失效，成员、mask、变换、环境边界、事件、场景交接或证明变化使对应组合审查失效。schema-v3 scaffold 还逐文件绑定证明 SHA-256，并拒绝同 id 但不同组合指纹的旧证明。透明素材同时检查低 alpha 长条/矩形残留、远离主体的矩形碎片和与登记裁切边界吻合的硬矩形轮廓。音频预检实际编码并检测 96k/192k AAC，预览和最终成片复用同一条已检码流；`project:report` 继续检查完整容器、分辨率、帧率、音轨、响度/峰值，并纳入事件时间线、场景边界联系表和真实组合证明摘要。
 
 ## 历史项目
 

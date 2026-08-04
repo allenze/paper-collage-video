@@ -1,17 +1,32 @@
 {
   "$schema": "../../schemas/project.schema.json",
-  "schemaVersion": 10,
+  "schemaVersion": 12,
+  "motionContract": null,
   "slug": "vox-primitives",
   "title": "VOX Production Primitives",
+  "intake": {
+    "schemaVersion": 2,
+    "status": "pending",
+    "aspectRatio": null,
+    "visualStylePreset": null,
+    "parallaxPreference": null,
+    "styleCatalogVersion": null,
+    "styleCatalogFingerprint": null,
+    "styleProfileFingerprint": null,
+    "confirmedAt": null,
+    "note": "Bundled deterministic fixture.",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "styleProfile": null,
   "plan": {
     "schemaVersion": 4,
     "slug": "vox-primitives",
     "status": "resolved",
     "inputMode": "both",
     "productionProfile": "full-depth",
-    "assetBudget": {"backgrounds": 2, "environmentLayers": 4, "characterSheets": 2, "styleSamples": 1, "baseImageAttempts": 9, "layerPackageAttemptReserve": 12, "maxGeneratedImages": 21},
+    "assetBudget": {"backgrounds": 2, "environmentLayers": 4, "characterSheets": 2, "styleSamples": 1, "baseImageAttempts": 9, "layerPackageAttemptReserve": 16, "maxGeneratedImages": 25},
     "motionBudget": {"maxPoseSheetCalls": 2, "maxStatesPerSheet": 6, "maxContinuousTargets": 12},
-    "approvedImageBudget": {"imageAttemptLimit": 0, "expectedProviderImageCalls": 0, "profileHardCeiling": 21, "approvedAt": "2026-07-23T00:00:00.000Z"},
+    "approvedImageBudget": {"imageAttemptLimit": 0, "expectedProviderImageCalls": 0, "profileHardCeiling": 25, "approvedAt": "2026-07-23T00:00:00.000Z"},
     "requested": {"durationSeconds": 6, "sceneCount": 2},
     "resolved": {"durationSeconds": 6, "sceneCount": 2, "estimatedNarrationSeconds": 1, "rationale": "A compact deterministic engineering sample.", "resolvedAt": "2026-07-23T00:00:00.000Z"},
     "updatedAt": "2026-07-23T00:00:00.000Z"
@@ -25,10 +40,13 @@
     "ink": "#263a3d",
     "subtitle": "#fff8ea",
     "subtitleBackground": "rgba(38,58,61,.78)",
-    "paperEdge": "#f5eedc",
     "foreground": "#263a3d",
-    "texture": "textures/paper-grain.png",
-    "fontFamily": "Arial, Helvetica, sans-serif"
+    "fontFamily": "Arial, Helvetica, sans-serif",
+    "surface": {
+      "texture": {"src": "textures/paper-grain.png", "opacity": 0.14, "blendMode": "multiply"},
+      "subjectEdge": {"mode": "paper-outline", "color": "#f5eedc", "widthPx": 3},
+      "subjectShadow": {"mode": "drop-shadow", "offsetXPx": 0, "offsetYPx": 10, "blurPx": 7, "color": "rgba(20,15,12,.28)"}
+    }
   },
   "voice": {"mode": "fictional", "provider": "local-fixture", "displayName": "Engineering tone"},
   "audio": {
@@ -44,7 +62,7 @@
       "tailSeconds": 2.5,
       "appearance": {
         "background": "#d9c7a5",
-        "paperTexture": {"visible": true, "opacity": 0.12, "blendMode": "multiply"},
+        "surfaceTexture": {"visible": true, "opacity": 0.12, "blendMode": "multiply"},
         "chapter": {"visible": false},
         "subtitles": {"variant": "hidden"}
       },
@@ -117,7 +135,7 @@
             "z": 3,
             "depth": 0.55,
             "transform": {"x": 0.17, "y": 0.38, "width": 0.58, "height": 0.32, "anchorX": 0, "anchorY": 0},
-            "motion": {"keyframes": [{"at": 0, "x": -0.015}, {"at": 1, "x": 0.01}]}
+            "motion": {"keyframes": [{"at": 0, "offsetX": -0.015}, {"at": 1, "offsetX": 0.01}]}
           },
           {
             "id": "world-foreground",
@@ -152,7 +170,7 @@
       "tailSeconds": 2.5,
       "appearance": {
         "background": "#c85b45",
-        "paperTexture": {"visible": true, "opacity": 0.1, "blendMode": "multiply"},
+        "surfaceTexture": {"visible": true, "opacity": 0.1, "blendMode": "multiply"},
         "chapter": {"visible": false},
         "subtitles": {"variant": "hidden"}
       },

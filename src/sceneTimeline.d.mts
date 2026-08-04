@@ -8,10 +8,14 @@ import type {
 export const SCENE_TRANSITION_TYPES: readonly SceneBoundaryTransition['treatment']['type'][];
 export const SCENE_TRANSITION_INTENTS: readonly SceneBoundaryTransition['intent'][];
 export const SCENE_TRANSITION_MOTIVATIONS: readonly SceneBoundaryTransition['treatment']['motivation'][];
-export const PAPER_MOTION_DIRECTIONS: readonly NonNullable<SceneBoundaryTransition['treatment']['direction']>[];
-export const TRANSITION_RECIPES: Readonly<Record<SceneBoundaryTransition['intent'], Partial<SceneBoundaryTransition>>>;
+export const TRANSITION_DIRECTIONS: readonly NonNullable<SceneBoundaryTransition['treatment']['direction']>[];
+export const TRANSITION_RECIPE_SETS: Readonly<Record<
+  'paper-story' | 'clean-video',
+  Readonly<Record<SceneBoundaryTransition['intent'], Partial<SceneBoundaryTransition>>>
+>>;
 export function materializeSceneTransitionRecipes(
   sceneTransitions?: Array<Partial<SceneBoundaryTransition>>,
+  transitionSet?: 'paper-story' | 'clean-video',
 ): Array<Partial<SceneBoundaryTransition>>;
 export function summarizeSceneTransitions(
   sceneTransitions?: Array<Partial<SceneBoundaryTransition>>,
@@ -40,7 +44,7 @@ export type SceneTransitionPresentation = {
   incomingClipPath: string;
   incomingTransform: string;
   incomingTransformOrigin: string;
-  paperOpacity: number;
+  coverOpacity: number;
   edgeProgress: number | null;
   tornEdgePoints: Array<{x: number; y: number}> | null;
   irisRadius: number | null;

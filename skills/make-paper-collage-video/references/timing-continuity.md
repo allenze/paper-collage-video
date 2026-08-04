@@ -16,6 +16,11 @@ keeps Chinese closing quotes/brackets with the preceding punctuation. Default
 cue gaps may leave brief reading separation, but ordered cues must cover at
 least 80% of narrated frames. Cues shorter than three frames render fully
 opaque; longer cues use a fade no greater than half their usable duration.
+When visible subtitles intentionally omit punctuation, retain single spaces in
+`narration.text` at semantic phrase boundaries. The subtitle derivation keeps
+those spaces on screen, prefers them as cue breaks, balances unpunctuated text
+instead of leaving one- or two-character tail cues, and defaults to at most 18
+non-space characters per landscape cue or 16 per portrait cue.
 
 `project:plan --json` exposes this choice as `decision.durationAuthority`: `human-target` for an explicit duration and `content-derived` otherwise. Copy it into concept `planDecision`; do not describe an inferred estimate as a locked delivery target.
 

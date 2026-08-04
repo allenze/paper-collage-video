@@ -6,6 +6,11 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {createProductionMetrics} from './production-metrics-lib.mjs';
 import {compileStoryboardDirecting} from './motion-treatment-lib.mjs';
 import {createRuntimeBuildManifest} from './runtime-build-lib.mjs';
+import {
+  loadStyleCatalog,
+  materializeStyleProfile,
+} from './style-catalog-lib.mjs';
+import {motionLanguageCard} from './motion-contract-lib.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -96,6 +101,8 @@ for (const entry of [
   'scripts/asset-evidence-lib.mjs',
   'scripts/asset-manifest-lib.mjs',
   'scripts/chroma-key-lib.mjs',
+  'scripts/checkerboard-alpha-lib.mjs',
+  'scripts/decorative-scatter-lib.mjs',
   'scripts/observed-key-plane-lib.mjs',
   'scripts/audio-preflight-lib.mjs',
   'scripts/audio-calibration-lib.mjs',
@@ -106,16 +113,27 @@ for (const entry of [
   'scripts/style-catalog-lib.mjs',
   'scripts/composition-lib.mjs',
   'scripts/layer-source-plan-lib.mjs',
+  'scripts/container-source-plan-lib.mjs',
   'scripts/layer-stack-proof-lib.mjs',
   'scripts/looping-strip-lib.mjs',
+  'scripts/world-topology-proof-lib.mjs',
+  'scripts/encounter-contract-lib.mjs',
   'scripts/motion-treatment-lib.mjs',
+  'scripts/motion-contract-lib.mjs',
+  'scripts/motion-approval-lib.mjs',
   'scripts/process-character-sheet.mjs',
   'scripts/derive-registered-family.mjs',
+  'scripts/derive-semantic-slices.mjs',
+  'scripts/derive-canonical-container.mjs',
   'scripts/derive-looping-strip.mjs',
+  'scripts/normalize-provider-source.mjs',
   'scripts/registered-family-lib.mjs',
+  'scripts/semantic-slices-lib.mjs',
+  'scripts/canonical-container-lib.mjs',
   'scripts/process-state-sheet.mjs',
   'scripts/state-sheet-lib.mjs',
   'scripts/state-sequence-lib.mjs',
+  'scripts/spatial-contract-lib.mjs',
   'scripts/python-runtime.mjs',
   'scripts/provider-lib.mjs',
   'scripts/generation-attempt-lib.mjs',
@@ -144,6 +162,7 @@ for (const entry of [
   'scripts/project-intake.mjs',
   'scripts/project-composition-proof.mjs',
   'scripts/project-budget.mjs',
+  'scripts/project-increase-image-budget.mjs',
   'scripts/project-doctor.mjs',
   'scripts/project-handoff-check.mjs',
   'scripts/project-lib.mjs',
@@ -151,6 +170,7 @@ for (const entry of [
   'scripts/world-motion-proof-lib.mjs',
   'scripts/prepare-phase2-proof.mjs',
   'scripts/prepare-looping-world-proof.mjs',
+  'scripts/prepare-path-locomotion-proof.mjs',
   'scripts/project-metrics-run.mjs',
   'scripts/project-metrics.mjs',
   'scripts/project-new.mjs',
@@ -165,19 +185,23 @@ for (const entry of [
   'scripts/project-review-sync.mjs',
   'scripts/project-status.mjs',
   'scripts/project-storyboard.mjs',
+  'scripts/project-world-topology-proof.mjs',
   'scripts/project-revise-preview-directing.mjs',
   'scripts/project-revise-preview-semantic.mjs',
   'scripts/project-semantic-contracts.mjs',
   'scripts/storyboard-lib.mjs',
   'scripts/render-phase2-proof.mjs',
   'scripts/render-looping-world-proof.mjs',
-  'scripts/schema-v10.mjs',
-  'scripts/validate_v10_schemas.py',
+  'scripts/render-path-locomotion-proof.mjs',
+  'scripts/schema-v12.mjs',
+  'scripts/validate_v12_schemas.py',
   'scripts/verify-phase2-proof.mjs',
   'scripts/verify-looping-world-proof.mjs',
+  'scripts/verify-path-locomotion-proof.mjs',
   'scripts/verify-vox-sample.mjs',
   'scripts/prove-alpha-bands.mjs',
   'scripts/prove-registered-family.mjs',
+  'scripts/prove-canonical-container.mjs',
   'scripts/vox-sample-proof-lib.mjs',
   'scripts/project-sync.mjs',
   'scripts/project-subtitles.mjs',
@@ -195,6 +219,7 @@ for (const entry of [
   'scripts/style-motion-proof.mjs',
   'scripts/style-proof-lib.mjs',
   'scripts/world-trajectory-lib.mjs',
+  'src/Root.tsx',
   'src/MainVideo.tsx',
   'src/EditorialNodes.tsx',
   'src/editorialPrimitives.mjs',
@@ -208,6 +233,8 @@ for (const entry of [
   'src/motifField.d.mts',
   'src/parallax.mjs',
   'src/parallax.d.mts',
+  'src/pathMotion.mjs',
+  'src/pathMotion.d.mts',
   'src/worldStrip.mjs',
   'src/worldStrip.d.mts',
   'src/project.ts',
@@ -226,32 +253,44 @@ for (const entry of [
   'tests/composition-v4.test.mjs',
   'tests/world-trajectory-contract.test.mjs',
   'tests/editorial-system-v9.test.mjs',
+  'tests/canonical-container.test.mjs',
   'tests/registered-family-hardening.test.mjs',
+  'tests/semantic-slices.test.mjs',
   'tests/observed-key-plane-recovery.test.mjs',
   'tests/state-sequence-v5.test.mjs',
   'tests/production-state.test.mjs',
   'tests/directing-revision.test.mjs',
+  'tests/motion-contract.test.mjs',
   'tests/quality-motion-runtime.test.mjs',
   'tests/runtime-surface-scope.test.mjs',
   'tests/storyboard-motion.test.mjs',
   'tests/looping-world.test.mjs',
+  'tests/p0-p1-hardening.test.mjs',
+  'tests/checkerboard-alpha.test.mjs',
+  'tests/path-locomotion.test.mjs',
   'tests/vox-primitives.test.mjs',
   'tests/vox-sample-proof.test.mjs',
   'tests/style-proof-gate.test.mjs',
   'tests/semantic-contracts-and-attempts.test.mjs',
+  'tests/spatial-contract.test.mjs',
   'tests/timeline-continuity.test.mjs',
   'tests/render-continuity.test.mjs',
   'tests/visibility-scene-transition.test.mjs',
   'fixtures/composition-v4',
+  'fixtures/canonical-container',
+  'fixtures/starter-demo/project.json',
   'fixtures/vox-primitives',
   'fixtures/directing-revision-fixture.mjs',
   'fixtures/editorial-fixture.mjs',
+  'fixtures/motion-contract-fixture.mjs',
   'fixtures/phase2-proof-fixture.mjs',
   'fixtures/looping-world-fixture.mjs',
+  'fixtures/path-locomotion-fixture.mjs',
   'public/fixtures/composition-v4',
   'public/fixtures/vox-primitives',
   'public/fixtures/vox-phase2-proof',
   'public/fixtures/looping-world',
+  'public/fixtures/path-locomotion',
   'public/textures/paper-grain.png',
   'public/style-catalog',
 ]) {
@@ -272,8 +311,12 @@ const workspacePackage = {
     'assets:process-sheet': rootPackage.scripts['assets:process-sheet'],
     'assets:process-state-sheet': rootPackage.scripts['assets:process-state-sheet'],
     'assets:derive-registered-family': rootPackage.scripts['assets:derive-registered-family'],
+    'assets:derive-semantic-slices': rootPackage.scripts['assets:derive-semantic-slices'],
+    'assets:derive-canonical-container': rootPackage.scripts['assets:derive-canonical-container'],
     'assets:derive-looping-strip': rootPackage.scripts['assets:derive-looping-strip'],
+    'assets:normalize-provider-source': rootPackage.scripts['assets:normalize-provider-source'],
     'proof:registered-family': rootPackage.scripts['proof:registered-family'],
+    'proof:canonical-container': rootPackage.scripts['proof:canonical-container'],
     'proof:alpha-bands': rootPackage.scripts['proof:alpha-bands'],
     'provider:status': rootPackage.scripts['provider:status'],
     'provider:select': rootPackage.scripts['provider:select'],
@@ -289,6 +332,7 @@ const workspacePackage = {
     'project:scenarios': rootPackage.scripts['project:scenarios'],
     'project:plan': rootPackage.scripts['project:plan'],
     'project:storyboard': rootPackage.scripts['project:storyboard'],
+    'project:world-topology-proof': rootPackage.scripts['project:world-topology-proof'],
     'project:revise-preview-directing': rootPackage.scripts['project:revise-preview-directing'],
     'project:revise-preview-semantic': rootPackage.scripts['project:revise-preview-semantic'],
     'project:semantic-contracts': rootPackage.scripts['project:semantic-contracts'],
@@ -297,6 +341,7 @@ const workspacePackage = {
     'project:composition-proof': rootPackage.scripts['project:composition-proof'],
     'project:metrics': rootPackage.scripts['project:metrics'],
     'project:budget': rootPackage.scripts['project:budget'],
+    'project:increase-image-budget': rootPackage.scripts['project:increase-image-budget'],
     'project:resume': rootPackage.scripts['project:resume'],
     'project:status': rootPackage.scripts['project:status'],
     'project:handoff-check': rootPackage.scripts['project:handoff-check'],
@@ -316,7 +361,7 @@ const workspacePackage = {
     'project:render': rootPackage.scripts['project:render'],
     'project:render-status': rootPackage.scripts['project:render-status'],
     'project:report': rootPackage.scripts['project:report'],
-    'style:proof': rootPackage.scripts['style:proof'],
+    'project:style-proof': rootPackage.scripts['project:style-proof'],
     doctor: 'node scripts/project-doctor.mjs',
     'sample:vox': rootPackage.scripts['sample:vox'],
     'sample:vox:verify': rootPackage.scripts['sample:vox:verify'],
@@ -328,7 +373,11 @@ const workspacePackage = {
     'proof:looping-world:render': rootPackage.scripts['proof:looping-world:render'],
     'proof:looping-world:verify': rootPackage.scripts['proof:looping-world:verify'],
     'proof:looping-world': rootPackage.scripts['proof:looping-world'],
-    'schema:v10': rootPackage.scripts['schema:v10'],
+    'proof:path-locomotion:prepare': rootPackage.scripts['proof:path-locomotion:prepare'],
+    'proof:path-locomotion:render': rootPackage.scripts['proof:path-locomotion:render'],
+    'proof:path-locomotion:verify': rootPackage.scripts['proof:path-locomotion:verify'],
+    'proof:path-locomotion': rootPackage.scripts['proof:path-locomotion'],
+    'schema:v12': rootPackage.scripts['schema:v12'],
     dev: 'remotion studio src/index.ts --props=projects/starter-demo/project.json',
     check: rootPackage.scripts.check,
     bundle: rootPackage.scripts.bundle,
@@ -359,35 +408,6 @@ lock.packages[''].name = workspacePackage.name;
 lock.packages[''].version = workspacePackage.version;
 lock.packages[''].license = workspacePackage.license;
 await writeJson(path.join(RUNTIME_ROOT, 'package-lock.json'), lock);
-
-const rootSource = `import {Composition, type CalculateMetadataFunction} from 'remotion';
-import starterDemo from '../projects/starter-demo/project.json';
-import {MainVideo} from './MainVideo';
-import {normalizeProject, type PaperCollageProject} from './project';
-
-const defaultProject = starterDemo as PaperCollageProject;
-
-const calculateProjectMetadata: CalculateMetadataFunction<PaperCollageProject> = ({props}) => {
-  const normalized = normalizeProject(props);
-  return {
-    durationInFrames: normalized.durationInFrames,
-    fps: normalized.video.fps,
-    width: normalized.video.width,
-    height: normalized.video.height,
-    defaultOutName: \`${'${normalized.slug}'}.mp4\`,
-  };
-};
-
-export const RemotionRoot = () => (
-  <Composition
-    id="Paper-Collage"
-    component={MainVideo}
-    defaultProps={defaultProject}
-    calculateMetadata={calculateProjectMetadata}
-  />
-);
-`;
-await fs.writeFile(path.join(RUNTIME_ROOT, 'src', 'Root.tsx'), rootSource, 'utf8');
 
 const starterToneBuffer = makeTestToneWav();
 const starterToneSha256 = createHash('sha256').update(starterToneBuffer).digest('hex');
@@ -432,11 +452,30 @@ const starterEditorial = {
   activeProfile: '16:9',
 };
 
+const starterStyleProfile = materializeStyleProfile(
+  await loadStyleCatalog(),
+  'childrens-picture-book-paper',
+);
 const project = {
   $schema: '../../schemas/project.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 12,
   slug: 'starter-demo',
   title: 'Paper Collage Starter',
+  intake: {
+    schemaVersion: 2,
+    status: 'confirmed',
+    aspectRatio: '16:9',
+    visualStylePreset: starterStyleProfile.id,
+    parallaxPreference: 'auto',
+    styleCatalogVersion: starterStyleProfile.catalogVersion,
+    styleCatalogFingerprint: starterStyleProfile.catalogFingerprint,
+    styleProfileFingerprint: starterStyleProfile.profileFingerprint,
+    confirmedAt: '2026-01-01T00:00:00.000Z',
+    note: 'Bundled fixture',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+  styleProfile: starterStyleProfile,
+  motionContract: null,
   plan: {
     schemaVersion: 4,
     slug: 'starter-demo',
@@ -475,17 +514,7 @@ const project = {
   },
   quality: {minimumAssetScale: 0.5},
   video: {width: 1920, height: 1080, fps: 30},
-  theme: {
-    canvas: '#6e1e19',
-    sceneBackground: '#8a271f',
-    accent: '#a33a2d',
-    ink: '#4a291f',
-    subtitle: '#fff8ea',
-    subtitleBackground: 'rgba(58, 25, 18, .72)',
-    paperEdge: '#f5eedc',
-    foreground: '#8d251e',
-    texture: 'textures/paper-grain.png',
-  },
+  theme: structuredClone(starterStyleProfile.render.theme),
   voice: {mode: 'fictional', provider: 'fixture', displayName: 'Test tone fixture'},
   audio: {
     narration: {volume: 1},
@@ -531,9 +560,9 @@ const project = {
             motion: {
               idle: {preset: 'breathe', intensity: 0.5, cycleSeconds: 2.8},
               keyframes: [
-                {at: 0, x: -0.01, opacity: 0.72, ease: 'ease-out'},
-                {at: 0.5, x: 0.003, scale: 1.03, opacity: 1, ease: 'ease-in-out'},
-                {at: 1, x: 0, scale: 1, opacity: 1, ease: 'ease-out'},
+                {at: 0, offsetX: -0.01, opacity: 0.72, ease: 'ease-out'},
+                {at: 0.5, offsetX: 0.003, scale: 1.03, opacity: 1, ease: 'ease-in-out'},
+                {at: 1, offsetX: 0, scale: 1, opacity: 1, ease: 'ease-out'},
               ],
             },
           },
@@ -559,15 +588,30 @@ const project = {
 
 const storyboard = compileStoryboardDirecting({
   $schema: '../../schemas/storyboard.schema.json',
-  schemaVersion: 10,
+  schemaVersion: 12,
   slug: 'starter-demo',
   status: 'ready',
   arc: '从空纸面建立分层空间，再让主体进入并稳定成标题画面。',
   style: {
     visualThesis: '以可见纸张深度和克制动作证明可编辑的拼贴空间。',
     compositionRules: ['主体保持在字幕安全区上方', '前中后景至少形成两个深度层次'],
-    motionLanguage: ['先建立空间，再触发主体，最后稳定锁定'],
     layerStrategy: '背景承载空间，透明主体承载动作，前景纸片负责压边。',
+  },
+  motionDirection: {
+    schemaVersion: 1,
+    summary: '先建立纸面空间，再让主体完成清晰动作，最后留出可读稳定段。',
+    pacing: 'gentle',
+    performance: {
+      grammar: ['establish', 'action', 'settle'],
+      anticipation: 'selective',
+      followThrough: 'selective',
+      poseStrategy: 'mixed',
+      minimumFinalHoldRatio: 0.1,
+    },
+    camera: {strategy: 'motivated'},
+    transitions: {strategy: 'story-led'},
+    ambient: {strategy: 'selective'},
+    styleDeviationRationale: null,
   },
   editorial: starterEditorial,
   scenes: [
@@ -579,9 +623,9 @@ const storyboard = compileStoryboardDirecting({
       blueprint: 'layered-reveal',
       estimatedDurationSeconds: 1.2,
       beats: [
-        {id: 'establish', at: 0, purpose: '建立空间', visual: '纸面与背景出现', audioCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
-        {id: 'subject-arrives', at: 0.5, purpose: '交付主体', visual: '人物纸片进入中心', audioCue: null, proofTimeId: 'proof-action', treatments: [{id: 'show-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'visibility-change', motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体从明确的隐藏状态持续出现，并在事件后保持可见。'}]},
-        {id: 'lockup', at: 0.9, purpose: '稳定结论', visual: '人物与标题形成锁定构图', audioCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
+        {id: 'establish', at: 0, performanceRole: 'establish', purpose: '建立空间', visual: '纸面与背景出现', soundCue: null, proofTimeId: 'proof-establish', treatments: [{id: 'establish-scene', targetId: 'background', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-establish', rationale: '先建立稳定纸面空间。'}]},
+        {id: 'subject-arrives', at: 0.5, performanceRole: 'action', purpose: '交付主体', visual: '人物纸片进入中心', soundCue: null, proofTimeId: 'proof-action', treatments: [{id: 'show-traveler', targetId: 'traveler', importance: 'hero', necessity: 'required', changeClass: 'visibility-change', motion: {kind: 'visibility-transition', action: 'show', transition: 'fade-rise', durationSeconds: 0.5}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-action', rationale: '主体从明确的隐藏状态持续出现，并在事件后保持可见。'}]},
+        {id: 'lockup', at: 0.9, performanceRole: 'settle', purpose: '稳定结论', visual: '人物与标题形成锁定构图', soundCue: null, proofTimeId: 'proof-final', treatments: [{id: 'hold-lockup', targetId: 'traveler', importance: 'supporting', necessity: 'required', changeClass: 'static-hold', motion: {kind: 'static'}, composition: {pattern: 'free'}, graphic: null, semanticRisk: 'decorative', proofTimeId: 'proof-final', rationale: '结尾保持构图稳定。'}]},
       ],
       proofTimes: [
         {id: 'proof-establish', at: 0.08, label: '建立纸面空间', kind: 'establish', assertions: ['背景完整建立'], stateAssertions: []},
@@ -592,7 +636,8 @@ const storyboard = compileStoryboardDirecting({
   ],
   sceneTransitions: [],
   updatedAt: '2026-01-01T00:00:00.000Z',
-}, {plan: project.plan});
+}, {plan: project.plan, styleProfile: project.styleProfile});
+project.motionContract = storyboard.motionContract;
 project.editorial = storyboard.editorial;
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'project.json'),
@@ -601,6 +646,10 @@ await writeJson(
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'storyboard.json'),
   storyboard,
+);
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'motion-language-card.json'),
+  motionLanguageCard(storyboard.motionContract),
 );
 
 const at = '2026-01-01T00:00:00.000Z';
@@ -624,6 +673,8 @@ const production = {
     storyboard: 'projects/starter-demo/storyboard.json',
     prompts: 'projects/starter-demo/prompts.json',
     review: 'projects/starter-demo/review.md',
+    motionLanguageCard: 'projects/starter-demo/motion-language-card.json',
+    motionApproval: 'projects/starter-demo/motion-approval.json',
     validationReport: null,
     assetsReadySeal: null,
     preview: null,
@@ -636,6 +687,23 @@ const production = {
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production.json'),
   production,
+);
+await writeJson(
+  path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'motion-approval.json'),
+  {
+    schemaVersion: 1,
+    slug: 'starter-demo',
+    approvedAt: at,
+    humanNote: 'Bundled fixture',
+    styleProfileBinding: storyboard.motionContract.styleProfileBinding,
+    motionApprovalFingerprint:
+      storyboard.motionContract.approvalFingerprint,
+    approvedExecutionFingerprint: storyboard.motionContract.fingerprint,
+    styleProofPlanFingerprint:
+      storyboard.directingSummary.styleProofPlan.fingerprint,
+    styleProofReport: 'dist/starter-demo/style-motion-proof.json',
+    styleProofReportSha256: '0'.repeat(64),
+  },
 );
 await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'production-metrics.json'),
@@ -729,9 +797,11 @@ await writeJson(
   path.join(RUNTIME_ROOT, 'projects', 'starter-demo', 'quality-report.json'),
   {
     $schema: '../../schemas/quality-report.schema.json',
-    schemaVersion: 6,
+    schemaVersion: 7,
     projectSlug: 'starter-demo',
     updatedAt: at,
+    styleProfile: null,
+    motionContract: null,
     reviewSurfaceFingerprint:
       '0000000000000000000000000000000000000000000000000000000000000000',
     eventTimeline: [],
@@ -875,6 +945,16 @@ const starterPreparedQuality = await runtimeQualityLib.prepareQualityReport(
   {write: false},
 );
 starterPreparedQuality.report.updatedAt = at;
+for (const asset of starterPreparedQuality.report.assets) {
+  asset.semanticChecks = Object.fromEntries(
+    asset.requiredChecks.map((check) => [check, 'passed']),
+  );
+  asset.reviewer = 'bundled-fixture';
+  asset.reviewedAt = at;
+  asset.note = 'Repository-owned technical fixture asset';
+  asset.evidenceFiles = [];
+  asset.status = 'passed';
+}
 for (const composite of starterPreparedQuality.report.composites) {
   composite.semanticChecks = Object.fromEntries(
     composite.requiredChecks.map((check) => [check, 'passed']),

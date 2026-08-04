@@ -3,7 +3,11 @@ const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 export const WORLD_STRIP_MIN_VIEWPORT_SPAN = 1;
 export const WORLD_STRIP_DEFAULT_VIEWPORT_SPAN = 1.5;
 export const WORLD_STRIP_MAX_OVERSCAN_PX = 16;
-export const WORLD_STRIP_RASTER_OVERLAP_PX = 0.5;
+// Chromium can expose a one-device-pixel antialiasing rail when two
+// independently scaled image tiles meet at a fractional CSS coordinate.
+// Two CSS pixels of deterministic overlap keeps the logical phase unchanged
+// while ensuring the later copy fully covers that rasterization edge.
+export const WORLD_STRIP_RASTER_OVERLAP_PX = 2;
 
 export const positiveModulo = (value, modulus) => {
   if (!(finite(modulus) && modulus > 0)) {

@@ -2,11 +2,26 @@ import {AbsoluteFill, staticFile, useCurrentFrame, useVideoConfig} from 'remotio
 import type {NormalizedSceneBoundaryTransition, ProjectTheme} from './project';
 import {resolveSceneTransitionPresentation} from './sceneTimeline.mjs';
 
-const paperSurface = (theme: ProjectTheme): React.CSSProperties => ({
+const transitionSurface = (
+  theme: ProjectTheme,
+  edgeStyle: NormalizedSceneBoundaryTransition['treatment']['edgeStyle'],
+): React.CSSProperties => ({
   backgroundColor: theme.canvas,
-  backgroundImage: `url(${staticFile(theme.texture)})`,
-  backgroundSize: 'cover',
+  ...(edgeStyle === 'paper' && theme.surface.texture
+    ? {
+        backgroundImage: `url(${staticFile(theme.surface.texture.src)})`,
+        backgroundSize: 'cover',
+      }
+    : {}),
 });
+
+const transitionEdgeColor = (
+  theme: ProjectTheme,
+  edgeStyle: NormalizedSceneBoundaryTransition['treatment']['edgeStyle'],
+) =>
+  edgeStyle === 'paper' && theme.surface.subjectEdge.mode === 'paper-outline'
+    ? theme.surface.subjectEdge.color
+    : theme.accent;
 
 const edgeStyle = (
   direction: NormalizedSceneBoundaryTransition['treatment']['direction'],
@@ -66,16 +81,22 @@ export const SceneTransitionOverlay = ({
   const {width, height} = useVideoConfig();
   const presentation = resolveSceneTransitionPresentation({transition, frame});
   if (transition.treatment.type === 'cut') return null;
-  if (transition.treatment.type === 'paper-wipe' || transition.treatment.type === 'paper-slide') {
+  const {edgeStyle = 'clean'} = transition.treatment;
+  const edgeColor = transitionEdgeColor(theme, edgeStyle);
+  if (
+    (transition.treatment.type === 'wipe' ||
+      transition.treatment.type === 'slide') &&
+    edgeStyle === 'paper'
+  ) {
     return (
       <PaperEdge
         direction={transition.treatment.direction}
         progress={presentation.edgeProgress ?? 1}
-        color={theme.paperEdge}
+        color={edgeColor}
       />
     );
   }
-  if (transition.treatment.type === 'torn-wipe') {
+  if (transition.treatment.type === 'wipe' && edgeStyle === 'torn') {
     const points = (presentation.tornEdgePoints ?? [])
       .map(({x, y}) => `${x},${y}`)
       .join(' ');
@@ -85,7 +106,7 @@ export const SceneTransitionOverlay = ({
           <polyline
             points={points}
             fill="none"
-            stroke={theme.paperEdge}
+            stroke={edgeColor}
             strokeWidth="1.8"
             vectorEffect="non-scaling-stroke"
             style={{filter: 'drop-shadow(0 0 7px rgba(25, 16, 11, .42))'}}
@@ -94,7 +115,8 @@ export const SceneTransitionOverlay = ({
       </AbsoluteFill>
     );
   }
-  if (transition.treatment.type === 'paper-iris') {
+  if (transition.treatment.type === 'iris') {
+    if (edgeStyle === 'clean') return null;
     const basis = Math.sqrt(width ** 2 + height ** 2) / Math.sqrt(2);
     const radius = ((presentation.irisRadius ?? 0) / 100) * basis;
     return (
@@ -106,7 +128,7 @@ export const SceneTransitionOverlay = ({
             top: '50%',
             width: radius * 2,
             height: radius * 2,
-            border: `14px solid ${theme.paperEdge}`,
+            border: `14px solid ${edgeColor}`,
             borderRadius: '50%',
             boxSizing: 'border-box',
             transform: 'translate(-50%, -50%)',
@@ -134,8 +156,8 @@ export const SceneTransitionOverlay = ({
             transformOrigin: leftToRight ? 'left center' : 'right center',
             transform: `translateX(${leftToRight ? '-50%' : '50%'}) perspective(900px) rotateY(${(leftToRight ? -1 : 1) * fold * 68}deg)`,
             background: leftToRight
-              ? `linear-gradient(90deg, ${theme.paperEdge}, ${theme.canvas} 42%, rgba(25,16,11,.42))`
-              : `linear-gradient(270deg, ${theme.paperEdge}, ${theme.canvas} 42%, rgba(25,16,11,.42))`,
+              ? `linear-gradient(90deg, ${edgeColor}, ${theme.canvas} 42%, rgba(25,16,11,.42))`
+              : `linear-gradient(270deg, ${edgeColor}, ${theme.canvas} 42%, rgba(25,16,11,.42))`,
             boxShadow: '0 0 26px rgba(25, 16, 11, .38)',
             opacity: fold <= 0.01 ? 0 : 1,
           }}
@@ -143,9 +165,9 @@ export const SceneTransitionOverlay = ({
       </AbsoluteFill>
     );
   }
-  if (transition.treatment.type === 'paper-shutters') {
+  if (transition.treatment.type === 'shutters') {
     const closure = presentation.shutterClosure ?? 0;
-    const surface = paperSurface(theme);
+    const surface = transitionSurface(theme, edgeStyle);
     return (
       <AbsoluteFill style={{zIndex: 1000, pointerEvents: 'none'}}>
         <div
@@ -157,7 +179,7 @@ export const SceneTransitionOverlay = ({
             top: 0,
             height: '50.2%',
             transform: `translateY(${(closure - 1) * 100}%)`,
-            borderBottom: `9px solid ${theme.paperEdge}`,
+            borderBottom: edgeStyle === 'clean' ? undefined : `9px solid ${edgeColor}`,
             boxSizing: 'border-box',
             boxShadow: '0 10px 20px rgba(25, 16, 11, .22)',
           }}
@@ -171,7 +193,7 @@ export const SceneTransitionOverlay = ({
             bottom: 0,
             height: '50.2%',
             transform: `translateY(${(1 - closure) * 100}%)`,
-            borderTop: `9px solid ${theme.paperEdge}`,
+            borderTop: edgeStyle === 'clean' ? undefined : `9px solid ${edgeColor}`,
             boxSizing: 'border-box',
             boxShadow: '0 -10px 20px rgba(25, 16, 11, .22)',
           }}
@@ -184,8 +206,8 @@ export const SceneTransitionOverlay = ({
       style={{
         zIndex: 1000,
         pointerEvents: 'none',
-        opacity: presentation.paperOpacity,
-        ...paperSurface(theme),
+        opacity: presentation.coverOpacity,
+        ...transitionSurface(theme, edgeStyle),
       }}
     />
   );

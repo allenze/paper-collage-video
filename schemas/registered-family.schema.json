@@ -79,7 +79,8 @@
           "properties": {
             "kind": {"const": "registered-layer-sheet"},
             "assetId": {"type": "string", "minLength": 1},
-            "packageRole": {"enum": ["support-rear", "subject", "support-front"]}
+            "packageRole": {"enum": ["support-rear", "subject", "support-front"]},
+            "reuseAsRole": {"const": "support-rear"}
           },
           "additionalProperties": false
         },
@@ -89,6 +90,17 @@
           "properties": {
             "kind": {"const": "layer-package-member"},
             "assetId": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "assetId", "poseFamilyId", "stateId"],
+          "properties": {
+            "kind": {"const": "state-sheet-cell"},
+            "assetId": {"type": "string", "minLength": 1},
+            "poseFamilyId": {"type": "string", "minLength": 1},
+            "stateId": {"type": "string", "minLength": 1}
           },
           "additionalProperties": false
         }

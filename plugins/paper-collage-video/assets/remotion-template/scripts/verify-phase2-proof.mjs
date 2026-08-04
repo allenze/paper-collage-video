@@ -13,7 +13,10 @@ import {
   inspectCompositeTechnical,
 } from './quality-lib.mjs';
 import {buildAssetEvidence} from './asset-evidence-lib.mjs';
-import {buildLayerStackProof} from './layer-stack-proof-lib.mjs';
+import {
+  buildLayerStackProof,
+  referenceCellRectForRegisteredSheet,
+} from './layer-stack-proof-lib.mjs';
 import {createRuntimeBuildFingerprint} from './runtime-build-lib.mjs';
 import {
   lifecycleOpacity,
@@ -606,11 +609,18 @@ for (const profile of PHASE2_PROOF_PROFILES) {
           ({assetId}) =>
             assetId === target.group.registration.sourceMasterAssetId,
         );
+        const referenceFile = referenceRecord?.file
+          ? path.join(PHASE2_ROOT, referenceRecord.file)
+          : null;
         const built = await buildLayerStackProof({
           group: target.group,
           memberFiles,
-          referenceFile: referenceRecord?.file
-            ? path.join(PHASE2_ROOT, referenceRecord.file)
+          referenceFile,
+          referenceRect: referenceFile
+            ? await referenceCellRectForRegisteredSheet({
+                record: referenceRecord,
+                file: referenceFile,
+              })
             : null,
           directory: path.join(
             PHASE2_PROOF_DIR,

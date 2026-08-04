@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import {resolveWorkspacePath} from './provider-lib.mjs';
-import {loadProject, writeJson} from './project-lib.mjs';
-import {loadProduction} from './production-state.mjs';
+import {loadProject, ROOT, writeJson} from './project-lib.mjs';
+import {
+  loadProduction,
+  recordMotionLanguageCard,
+} from './production-state.mjs';
 import {
   compileStoryboardDirecting,
   storyboardFileFor,
@@ -10,6 +14,7 @@ import {
   validateStoryboard,
 } from './storyboard-lib.mjs';
 import {materializeSceneTransitionRecipes} from '../src/sceneTimeline.mjs';
+import {motionLanguageCard} from './motion-contract-lib.mjs';
 
 const args = process.argv.slice(2);
 const slug = args.find((arg) => !arg.startsWith('--'));
@@ -29,21 +34,48 @@ try {
   const authored = {
     ...supplied,
     $schema: '../../schemas/storyboard.schema.json',
-    schemaVersion: 10,
+    schemaVersion: 12,
     slug,
     status: 'ready',
-    sceneTransitions: materializeSceneTransitionRecipes(supplied.sceneTransitions),
+    sceneTransitions: materializeSceneTransitionRecipes(
+      supplied.sceneTransitions,
+      project.styleProfile?.motion?.transitionSet,
+    ),
     updatedAt: new Date().toISOString(),
   };
-  const storyboard = compileStoryboardDirecting(authored, {plan: project.plan});
-  const issues = validateStoryboard(storyboard, {slug, plan: project.plan});
+  const storyboard = compileStoryboardDirecting(authored, {
+    plan: project.plan,
+    styleProfile: project.styleProfile,
+  });
+  const issues = validateStoryboard(storyboard, {
+    slug,
+    plan: project.plan,
+    styleProfile: project.styleProfile,
+  });
   if (issues.length > 0) {
     throw new Error(issues.map(({location, message}) => `${location}: ${message}`).join('\n'));
   }
   await writeJson(storyboardFileFor(slug), storyboard);
-  await writeJson(paths.projectFile, {...project, editorial: storyboard.editorial});
+  await writeJson(
+    paths.motionLanguageCardFile,
+    motionLanguageCard(storyboard.motionContract),
+  );
+  await writeJson(paths.projectFile, {
+    ...project,
+    motionContract: storyboard.motionContract,
+    editorial: storyboard.editorial,
+    spatialContracts: storyboard.spatialContracts ?? [],
+  });
+  await recordMotionLanguageCard(
+    slug,
+    path.relative(ROOT, paths.motionLanguageCardFile),
+  );
   const summary = summarizeStoryboard(storyboard);
   console.log(`✓ 故事板已锁定：${summary.sceneCount} 个镜头`);
+  console.log(
+    `  motion contract: ${storyboard.motionContract.direction.summary} · approval ${storyboard.motionContract.approvalFingerprint}`,
+  );
+  console.log(`  motion card: ${paths.motionLanguageCardFile}`);
   for (const scene of summary.scenes) {
     console.log(`  ${scene.id}: ${scene.blueprint} · ${scene.treatmentCount} treatments · risk ${scene.riskScore} · ${scene.proofCount} proofs`);
   }
